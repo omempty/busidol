@@ -16,3 +16,6 @@ assets/raw/
 
 # 참조 자료 임포트 사이드카 제외
 assets/originals_ref/**/*.import
+
+# 리터칭 샘플 Godot 임포트 메타데이터
+assets/gen/viewers/samples/*.import
