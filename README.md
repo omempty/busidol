@@ -29,7 +29,7 @@
 
 | 프로젝트 | 상태 | 상세 |
 |---|---|---|
-| **sidol_godot** | Phase 0~7 완료 · Phase 8~9 진행 예정 | [문서](remakes/sidol_godot/docs/README.md) |
+| **sidol_godot** | Phase 0~7 완료 · Phase 8 진행 중(오디오 인프라·리터칭 시범) | [문서](remakes/sidol_godot/docs/README.md) |
 | bombman94_godot | 대기 | sidol 파이프라인 재사용 |
 | bombman95_godot | 대기 | 〃 |
 

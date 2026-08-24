@@ -1,35 +1,53 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-24 · **Phase 7 완료** 시점
+> 작성일: 2026-08-25 · Phase 8 진행 중(오디오 인프라+리터칭 시범) · 세션 종료 시점
 
 ## 1. 현재 상태 한 줄 요약
 
-**Phase 0~7 완료.** 컷신/트리거/미니게임(퀴즈·회로)/craft/엔딩 흐름까지 전부 연결.
-다음은 **Phase 8 (도트/오디오 AI 생성 배치)** — G-ART 게이트 확인 후 시작.
+Phase 0~7 완료 + **Phase 8 부분 완료**(AudioManager 실구현·버스, Validator 오디오/
+스펙 검사, DOSBox 포터블화). **스프라이트 시범 리터칭 진행 중 — 미해결 이슈 1건**
+(아래 §3 최상단).
 
 ## 2. 다음 세션 첫 명령
 
 ```bash
-# 게임 실행 확인 (F1 진입 시 프롤로그 컷신 자동 재생)
-remakes\sidol_godot\게임실행.bat
+# 리뷰 뷰어 (유저 리뷰 대기 중)
+start remakes\sidol_godot\assets\gen\viewers\character_bible.html
+start remakes\sidol_godot\assets\gen\viewers\retouch_compare.html
 
 # 검증 관문 6단계
 remakes\sidol_godot\검증실행.bat
-
-# Event Editor v0 — Godot 에디터 하단 패널 "Event Editor"
-remakes\sidol_godot\에디터실행.bat
 ```
 
-## 3. 다음 작업 (Phase 8)
+## 3. ⚠️ 최우선 미해결: 리터치 투명 영역이 캐릭터에 침범
 
-| 순서 | 작업 | 참조 |
+**현상**: 리터치본에서 캐릭터 내부(눈·입·몸통 틈)가 투명하게 뚫려 보임.
+**확인된 사실**(진단 완료):
+- e1 프레임: 경계 100% 순수 검정(0,0,0), 검정 58,070px 중 57,747px가 배경 제거됨,
+  밀폐 잔존 불과 323px -> 스프라이트 내부 검정이 배경과 실제로 연결되어 있음.
+- 원작 엔진이 색상 0=투명 취급이라 이미지 자체에는 정답 마스크가 없음.
+- 적용한 완화(불충분): 밀폐 컴포넌트 복원 + 반경2/75% 핀홀 봉합 (`heal_pinholes`).
+**다음 세션 후보 해법 (순서대로 검토 권장)**:
+1. **원본 코드에서 blit 방식 확인** — originals/1995_sidol_bsd_dos 의 스프라이트
+   드로잉 루틴(XOR? mask plane? 색0 스킵?)을 확인하면 정답 마스크 규칙이 나옴.
+   원작도 색0 스킵이면 게임 화면에서도 해당 부위는 뚫려 보였던 것이므로
+   **리터치가 아니라 원작 그대로가 정답**일 수 있음(유저 판정 필요).
+2. **최대 배경 컴포넌트만 제거**: border flood를 "가장 큰 컴포넌트 1개"로 제한해
+   나머지 검정은 불투명 유지.
+3. **수동 마스크 툴**: 뷰어에 붓으로 투명/불투명 지정 → JSON 저장(소규모라 현실적).
+4. 장기: 리터치는 참조용으로 두고 캐릭터는 AI 재생성 파이프라인(spec 계약)으로.
+
+## 4. Phase 8 남은 작업
+
+| 순서 | 작업 | 상태 |
 |---|---|---|
-| 1 | DOSBox 캡처 지원트 + style_refs 확보 | 07_ai_asset_pipeline |
-| 2 | 스프라이트/타일 일러스트 AI 배치(spec→Validator 게이트) | assets/spec/** |
-| 3 | BGM 6종 + SFX 세트 생성, AudioManager 실구현 | Phase 8 스텁 해소 |
-| 4 | 이벤트 데이터 채우기 — 각 층 게이트 플래그 세팅 흐름(q_f2_hp_gate 등) | 마스터 시나리오 §4.2 |
+| 0 | 위 리터치 투명 이슈 해결 + 유저 리뷰 채택/반려 | **미해결** |
+| 1 | BGM/SFX 실제 파일 생성(AI) -> assets/audio/ 에 배치 | 스펙 21종 준비됨 |
+| 2 | AudioManager LUFS/루프 품질 검수 | 코드 준비됨 |
+| 3 | 도트/타일 AI 생성 배치(spec->Validator 게이트->패킹) | 스펙 존재 |
+| 4 | portraits/keyart 배치 | 스펙 존재 |
 
-### P7에서 완결된 플레이 흐름 (검증용 체인)
+### P7~P8에서 완결된 플레이 흐름 (검증용 체인)
 
 ```
 F1 진입 → opening(@c101~106) → [시나리오] → F2 HP실(q_f2_hp_gate)→크레딧룸
@@ -50,17 +68,25 @@ F5 보스(q_f5_boss_gate)→SYS_BUILDER 결전→승리(q_f5_ai_battle_won)
 | **게임 데이터** | `data/**` | 전면 교체(원작 변환기만 작성) |
 | **게임 전용 로직** | field/battle/credit_room 조립, 성장, 보스 하이브리드 | 부분 재작성 |
 
-### 구현 노트 (이번 세션 추가)
+### 구현 노트 (P8 세션 추가)
 
-- **배터리 회로 퍼즐**: BatteryCircuitMinigame + data/minigames/battery_circuit.json
-  (6슬롯 × 10/100V, 레버 ×1~25, 목표 10,000V — 정답 예: 400V×25).
-- **전투 승리 플래그**: start_battle op의 `on_win_flag` → pending_encounter 경유 →
-  승리 시 GameState.set_flag. 에필로그 트리거가 이 플래그로 발동한다.
-- **Event Editor v0**: addons/event_editor — 하단 패널에서 cutscenes/*.json 스텝
-  열람/op·args 편집/추가·삭제/저장. project.godot에 플러그인 등록됨.
-- **Validator 확장**: minigames 검사(퀴즈 문항/answer 범위, 회로 설정값),
-  change_scene 경로, 신규 op 화이트리스트(minigame_battery/change_scene).
-- QuizMinigame은 "@키"와 원문 텍스트 양쪽 허용(_fmt).
+- **리터칭 파이프라인**(`tools/convert/sprite_retouch.py`): 소스 SHA256 베이스라인
+  무결성 게이트(originals_ref 987파일, 위반 시 중단+복원 안내) / 원본 자체 팔레트 스냅 /
+  5단 명암+남보라 색조 그림자 / 남색 아웃라인 / heal_pinholes(불충분, §3 참고).
+- **⚠️ palette_master.json 함정**: DEFAULT.PAL 기본 VGA DAC(raw768, 6비트) 그대로라
+  처음 16색=EGA색, 나머지=어두운 램프. 여기로 스냅하면 EGA풍 붕괴(실제 발생).
+  또 6비트 값이라 8비트 변환(×255//63) 없이 쓰면 거의 검정. 소비부 주의 or
+  8비트 변환본(palette_master_rgb.json) 별도 생성 권장.
+- **뷰어**: character_bible.html 하단에 리터치 비교 섹션 주입(마커 블록, 재실행 안전),
+  retouch_compare.html = A/B·나란히·스와이프·배경토글. 모두 제너레이터로 재생성
+  (`tools/convert/gen_compare_viewer.py`, `gen_character_retouch.py`).
+- **Validator 확장**: 오디오 ID 교차검증(cutscenes sfx/bgm op, battle_moves audio),
+  minigames 구조 검사, change_scene 경로, sprite spec(kind 분기). 현재 0오류.
+- **AudioManager 실구현**: Master/BGM/SFX/Voice 버스(default_bus_layout.tres 신설),
+  assets/audio/<kind>/<id>.ogg|wav 규약, 시맨틱 루프, SFX 풀, 부재 시 스킵.
+  필드 bgm_field / 전투 bgm_boss(boss 구분) / 인카운터·상자 SFX 배선 완료.
+- **DOSBox**: run_sidol.bat 절대경로 제거(레포 상대 경로 conf 생성),
+  캡처는 assets/raw/dosbox_capture(gitignored).
 
 ## 4. 알려진 미해결
 
