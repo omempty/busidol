@@ -1,92 +1,96 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-25 · Phase 8 진행 중(오디오 인프라+리터칭 시범) · 세션 종료 시점
+> 작성일: 2026-08-25 · Phase 8 진행 중(LLM 스프라이트 워크플로우 구축 완료) · 세션 종료 시점
 
 ## 1. 현재 상태 한 줄 요약
 
-Phase 0~7 완료 + **Phase 8 부분 완료**(AudioManager 실구현·버스, Validator 오디오/
-스펙 검사, DOSBox 포터블화). **스프라이트 시범 리터칭 진행 중 — 미해결 이슈 1건**
-(아래 §3 최상단).
+Phase 0~7 완료 + Phase 8 인프라 완료(AudioManager·Validator·DOSBox·리터칭 파이프라인·
+**LLM 스프라이트 워크플로우**). 다음은 **첫 LLM 납품 수령 → 재가공 → 채택 판정**부터.
 
 ## 2. 다음 세션 첫 명령
 
 ```bash
-# 리뷰 뷰어 (유저 리뷰 대기 중)
-start remakes\sidol_godot\assets\gen\viewers\character_bible.html
-start remakes\sidol_godot\assets\gen\viewers\retouch_compare.html
+# LLM 작업 참조자료 확인 (gitignored 임시区 — 스크립트로 재생성 가능)
+remakes\sidol_godot\assets\raw\llm\00_reference\   # 62그룹 929프레임 + 컨택트시트
+
+# 워크플로우 문서
+remakes\sidol_godot\assets\gen\prompts\LLM_WORKFLOW.md
 
 # 검증 관문 6단계
 remakes\sidol_godot\검증실행.bat
 ```
 
-## 3. ⚠️ 최우선 미해결: 리터치 투명 영역이 캐릭터에 침범
+## 3. 진행 중: 스프라이트 LLM 리터치/생성 (유저 주도)
 
-**현상**: 리터치본에서 캐릭터 내부(눈·입·몸통 틈)가 투명하게 뚫려 보임.
-**확인된 사실**(진단 완료):
-- e1 프레임: 경계 100% 순수 검정(0,0,0), 검정 58,070px 중 57,747px가 배경 제거됨,
-  밀폐 잔존 불과 323px -> 스프라이트 내부 검정이 배경과 실제로 연결되어 있음.
-- 원작 엔진이 색상 0=투명 취급이라 이미지 자체에는 정답 마스크가 없음.
-- 적용한 완화(불충분): 밀폐 컴포넌트 복원 + 반경2/75% 핀홀 봉합 (`heal_pinholes`).
-**다음 세션 후보 해법 (순서대로 검토 권장)**:
-1. **원본 코드에서 blit 방식 확인** — originals/1995_sidol_bsd_dos 의 스프라이트
-   드로잉 루틴(XOR? mask plane? 색0 스킵?)을 확인하면 정답 마스크 규칙이 나옴.
-   원작도 색0 스킵이면 게임 화면에서도 해당 부위는 뚫려 보였던 것이므로
-   **리터치가 아니라 원작 그대로가 정답**일 수 있음(유저 판정 필요).
-2. **최대 배경 컴포넌트만 제거**: border flood를 "가장 큰 컴포넌트 1개"로 제한해
-   나머지 검정은 불투명 유지.
-3. **수동 마스크 툴**: 뷰어에 붓으로 투명/불투명 지정 → JSON 저장(소규모라 현실적).
-4. 장기: 리터치는 참조용으로 두고 캐릭터는 AI 재생성 파이프라인(spec 계약)으로.
+**확정 워크플로우**: 추출(extract_sprites.py, 완료) → LLM 의뢰(프롬프트 패키지
+gen/prompts/ 참조) → 납품을 assets/raw/llm/10_submitted/ 저장 → **재가공 스크립트**
+(마젠타 키잉·스펙 그리드 컷팅·검증 → 20_processed/) → 유저 리뷰 채택 → 패킹.
+
+**다음 세션 할 일 (순서대로)**:
+1. **process_llm_sheet.py 구현** — 마젠타 키잉(key_magenta 이미 sprite_retouch에
+   있음) + 스펙 그리드(셀 128×128) 컷팅 + 빈 셀 제외 프레임 검출 + 검증.
+   첫 실제 납품 형식을 보고 맞추는 것이 정확하다.
+2. 1차 납품(주인공) 검증 결과 유저 보고 — 1차 납품은 이미 반려됨(마젠타 배경,
+   그리드 5행→7행, 재창작). **교훈: 원작은 24×24 도트였다**(셀 64는 패딩 컨테이너)
+   — 프롬프트에 명시 후 재요청 필요.
+3. 스타일 방향 확정: **표준 규격은 assets/spec/sprites/_standard.md** (셀 128×128,
+   세로형 0.6:1, SD 머리:몸 1:1.2, 프레임 가변 최소2/walk 4 권장, idle 4방향 2프레임).
+   유저가 생성 시트(128×128 셀, 캐릭터 ~110px) 비율 채택 의사 표시함.
+
+### 스프라이트 관련 확정 사항 (이번 세션)
+
+- **셀 128×128 / 캐릭터 세로형(~0.6:1, 실높이 ~110px) 채택** — 스펙 갱신 완료
+  (player_sidol.json: cell 128×128, scale 0.75, idle 4방향, 프레임 가변 최소 2)
+- **런타임 수용 코드 완비**: player_entity/battle_presenter 가 cell_w/cell_h(비정형)
+  + scale 메타 + 방향별 idle(폴백 idle_down) 지원. 필드 스모크 PASS.
+- **마젠타 키잉 허용**: LLM이 투명 처리 못 하면 #FF00FF 단색 배경으로 납품 받고
+  파이프라인이 누끼(sprite_retouch.key_magenta). 단 혼색/AA 금지를 프롬프트에 명시.
+- **palette_master.json 함정**(재발 방지): DEFAULT.PAL 기본 VGA DAC(raw768, 6비트) —
+  첫 16색=EGA색, 8비트 스케일 없이 쓰면 검정화. 리터치는 **원본 자체 팔레트** 스냅이 정답.
+- **원작 검정=투명 문제**: 원작 엔진이 색0 스킵이라 스프라이트 내부 검정이 배경과
+  연결되면 뚫림. heal_pinholes(밀폐 복원+핀홀 봉합) 넣었으나 불완전 —
+  원본 코드 blit 방식 확인이 근본 해법(HANDOFF 구판 §3 기록 참조).
+
+### 기타 미해결 (우선순위 낮음)
+
+| ID | 내용 |
+|---|---|
+| B1 | 빈 폴더 껍데기 삭제 |
+| B2 | gdformat/pre-commit 미설정 |
+| B3 | DialogueBox 스킵 visible_characters 음수 방지 |
+| — | battle_scene_controller ~305행(상한 초과 소폭) UI 분리는 완료, 추가 분리 여지 |
 
 ## 4. Phase 8 남은 작업
 
 | 순서 | 작업 | 상태 |
 |---|---|---|
-| 0 | 위 리터치 투명 이슈 해결 + 유저 리뷰 채택/반려 | **미해결** |
-| 1 | BGM/SFX 실제 파일 생성(AI) -> assets/audio/ 에 배치 | 스펙 21종 준비됨 |
-| 2 | AudioManager LUFS/루프 품질 검수 | 코드 준비됨 |
-| 3 | 도트/타일 AI 생성 배치(spec->Validator 게이트->패킹) | 스펙 존재 |
-| 4 | portraits/keyart 배치 | 스펙 존재 |
-
-### P7~P8에서 완결된 플레이 흐름 (검증용 체인)
-
-```
-F1 진입 → opening(@c101~106) → [시나리오] → F2 HP실(q_f2_hp_gate)→크레딧룸
-F3 퀴즈맨(q_f3_quiz_gate)→quiz_paline→퀴즈→팰린→craft→해독제(Q_F3_CURE_DONE)
-F4 회로(q_f4_battery_gate)→battery_puzzle→10,000V(Q_F4_BATTERY)
-F5 보스(q_f5_boss_gate)→SYS_BUILDER 결전→승리(q_f5_ai_battle_won)
-→ epilogue(@c601~605)→크레딧룸 엔딩(Q_ENDING)
-```
-※ 중간 게이트 플래그(q_*_gate)는 아직 수동/이벤트 미연결 — Phase 9 시나리오 반영 시 채움.
+| 0 | 스프라이트 LLM 워크플로우 첫 사이클 완주 (주인공) | **진행 중** |
+| 1 | BGM/SFX 실제 파일 생성 -> assets/audio/ 배치 | 스펙 21종 준비 |
+| 2 | 도트/타일/포트레이트 AI 배치 확산 (주인공 패턴 복제) | 대기 |
+| 3 | 이벤트 데이터 채우기 — q_*_gate 플래그 흐름 | Phase 9 병행 |
 
 ### 재활용 아키텍처 노트 (bombman94/95 포팅 대비)
 
-3계층 분리가 포팅 재활용 단위다 — 신규 리메이크는 2계층만 새로 쓴다:
+3계층 분리 — 신규 리메이크는 2계층만 새로 쓴다:
 
-| 계층 | 위치 | bombman94/95 에서 |
-|---|---|---|
-| **공용 프레임워크** | `src/battle`(BattleController/DamageCalculator/ChoreographyRunner/BattlePresenter/BattleUI), `src/cutscene`, `src/map/trigger_system.gd`, `src/ui`(DialogueBox/QuizMinigame/BatteryCircuit), `_shared` 도구+schemas | **그대로 이식** |
-| **게임 데이터** | `data/**` | 전면 교체(원작 변환기만 작성) |
-| **게임 전용 로직** | field/battle/credit_room 조립, 성장, 보스 하이브리드 | 부분 재작성 |
+| 계층 | 위치 |
+|---|---|
+| **공용 프레임워크** | src/battle, src/cutscene, src/map/trigger_system, src/ui(미니게임·DialogueBox·BattleUI), _shared 도구+schemas+**스프라이트 표준/LLM 워크플로우** |
+| **게임 데이터** | data/**, assets/spec/**, gen/prompts/** |
+| **게임 전용 로직** | 씬 조립, 성장, 보스 하이브리드 |
 
 ### 구현 노트 (P8 세션 추가)
 
-- **리터칭 파이프라인**(`tools/convert/sprite_retouch.py`): 소스 SHA256 베이스라인
-  무결성 게이트(originals_ref 987파일, 위반 시 중단+복원 안내) / 원본 자체 팔레트 스냅 /
-  5단 명암+남보라 색조 그림자 / 남색 아웃라인 / heal_pinholes(불충분, §3 참고).
-- **⚠️ palette_master.json 함정**: DEFAULT.PAL 기본 VGA DAC(raw768, 6비트) 그대로라
-  처음 16색=EGA색, 나머지=어두운 램프. 여기로 스냅하면 EGA풍 붕괴(실제 발생).
-  또 6비트 값이라 8비트 변환(×255//63) 없이 쓰면 거의 검정. 소비부 주의 or
-  8비트 변환본(palette_master_rgb.json) 별도 생성 권장.
-- **뷰어**: character_bible.html 하단에 리터치 비교 섹션 주입(마커 블록, 재실행 안전),
-  retouch_compare.html = A/B·나란히·스와이프·배경토글. 모두 제너레이터로 재생성
-  (`tools/convert/gen_compare_viewer.py`, `gen_character_retouch.py`).
-- **Validator 확장**: 오디오 ID 교차검증(cutscenes sfx/bgm op, battle_moves audio),
-  minigames 구조 검사, change_scene 경로, sprite spec(kind 분기). 현재 0오류.
-- **AudioManager 실구현**: Master/BGM/SFX/Voice 버스(default_bus_layout.tres 신설),
-  assets/audio/<kind>/<id>.ogg|wav 규약, 시맨틱 루프, SFX 풀, 부재 시 스킵.
-  필드 bgm_field / 전투 bgm_boss(boss 구분) / 인카운터·상자 SFX 배선 완료.
-- **DOSBox**: run_sidol.bat 절대경로 제거(레포 상대 경로 conf 생성),
-  캡처는 assets/raw/dosbox_capture(gitignored).
+- **LLM 워크플로우**: extract_sprites.py(numpy 벡터화 flood-fill, 935프레임 수십 초,
+  중복 제거, 컨택트 시트는 표준 128 셀 + 마젠타 배경) — 00_reference는 gitignored
+  임시区, 스크립트로 재생성 가능.
+- **validate_retouch_sheet.py**: 납품 자동 판정(크기/투명도/마젠타/도트 bbox/편차).
+- **export_player_sheet.py(리터칭용) / export_player_gen_package.py(신규 생성용)**:
+  원판+주석+프롬프트 md 생성. 프롬프트에 "실제 도트 크기/오프셋/마젠타 규칙/그리드
+  무변경" 명시 — 누락이 1차 반려 원인.
+- **오디오**: AudioManager 실구현(버스/루프/SFX풀), 필드·전투 BGM 배선,
+  spec sfx 21종. 실제 음원 파일은 미생성(부재 시 조용히 스킵).
+- **DOSBox**: run_sidol.bat 레포 상대경로 conf 생성, 캡처 assets/raw/dosbox_capture.
 
 ## 4. 알려진 미해결
 
