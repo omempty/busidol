@@ -153,7 +153,8 @@ def master_palette() -> list[tuple[int, int, int]]:
     if not _MASTER_PAL:
         with open(PALETTE_PATH, encoding="utf-8") as fh:
             data = json.load(fh)
-        _MASTER_PAL = [tuple(int(c[i:i + 2], 16) for i in (1, 3, 5))
+        # format=raw768: VGA 6비트(0~63) 값을 8비트(0~255)로 스케일
+        _MASTER_PAL = [tuple(int(c[i:i + 2], 16) * 255 // 63 for i in (1, 3, 5))
                        for c in data["colors"]]
     return _MASTER_PAL
 
@@ -239,9 +240,23 @@ def add_outline(img: Image.Image) -> Image.Image:
     return out
 
 
+def crop_content(img: Image.Image) -> Image.Image:
+    """불투명 영역의 bounding box 로 크롭(여백 프레임 제거)."""
+    bbox = img.getchannel("A").getbbox()
+    if bbox:
+        pad = 2
+        l = max(bbox[0] - pad, 0)
+        t = max(bbox[1] - pad, 0)
+        r = min(bbox[2] + pad, img.width)
+        b = min(bbox[3] + pad, img.height)
+        return img.crop((l, t, r, b))
+    return img
+
+
 def retouch(src_path: str) -> Image.Image:
     img = Image.open(src_path)
     img = remove_background(img)
+    img = crop_content(img)
     img = snap_palette(img)
     img = shade_jrpg(img)
     img = add_outline(img)
