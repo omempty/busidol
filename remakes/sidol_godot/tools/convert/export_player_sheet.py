@@ -38,7 +38,7 @@ def main() -> None:
     # 1) 원판 복사 (무손실 원본 전달)
     shutil.copyfile(ATLAS, os.path.join(OUT_DIR, "player_sheet_original.png"))
 
-    # 2) 주석 버전 - 격자 + 행 라벨 (좌측 여백에 라벨 밴드 추가)
+    # 2) 주석 버전 - 격자 + 행 라벨 + 실제 도트 영역(24x24) 표시
     band = 110
     ann = Image.new("RGBA", (atlas.width + band, atlas.height), (18, 20, 26, 255))
     ann.paste(atlas, (band, 0))
@@ -49,6 +49,23 @@ def main() -> None:
     for c in range(int(meta["cols"]) + 1):
         x = band + c * cell
         d.line([(x, 0), (x, atlas.height)], fill=(90, 100, 130, 255))
+    # 실제 도트 영역 표시(녹색 점선 상자) + 셀 대비 흐리게
+    overlay = Image.new("RGBA", ann.size, (0, 0, 0, 0))
+    od = ImageDraw.Draw(overlay)
+    for r in range(rows):
+        for c in range(int(meta["cols"])):
+            x0 = band + c * cell
+            y0 = r * cell
+            od.rectangle((x0, y0, x0 + cell - 1, y0 + cell - 1),
+                         fill=(40, 44, 60, 160))
+    ann = Image.alpha_composite(ann, overlay)
+    d = ImageDraw.Draw(ann)
+    for r in range(rows):
+        for c in range(int(meta["cols"])):
+            x0 = band + c * cell + 20
+            y0 = r * cell + 40
+            d.rectangle((x0 - 1, y0 - 1, x0 + 24, y0 + 24),
+                        outline=(120, 220, 120, 255))
     label = Image.new("RGBA", (band * 4, 20), (0, 0, 0, 0))
     ld = ImageDraw.Draw(label)
     anims = meta.get("animations", {})
@@ -85,7 +102,11 @@ def main() -> None:
 {subject}
 
 ## 입력 (첨부: player_sheet_original.png / 레이아웃 안내: player_sheet_annotated.png)
-- 크기: {atlas.width}x{atlas.height}px, 셀 {cell}x{cell}px, {meta['cols']}열 x {rows}행
+- 시트: {atlas.width}x{atlas.height}px, 셀 {cell}x{cell}px, {meta['cols']}열 x {rows}행
+- **실제 캐릭터 도트는 24x24px**이며 각 셀 내 (20,40) 오프셋에 위치한다.
+  셀의 나머지 영역은 전부 투명 패딩이다. 캐릭터를 키워 셀을 채우지 마라.
+- 권장 작업법: 각 셀의 24x24 도트만 잘라 **8배(192x192) 확대** 후 리터치하고,
+  납품 시 축소해 원래 오프셋에 배치한다.
 - 각 행 = 한 애니메이션, 좌→우가 프레임 순서:
 
 | 행 | 애니 | 프레임 | FPS |
@@ -94,13 +115,14 @@ def main() -> None:
 
 ## 절대 규칙 (위반 시 반려)
 1. **지오메트리 무변경**: 픽셀 위치·실루엣·머리-몸 비율을 한 픽셀도 옮기지 않는다.
+   캐릭터는 24x24 도트 그대로 — 크게 그리거나 셀을 채우면 즉시 반려된다.
 2. **그리드 무변경**: 납품은 반드시 동일 {atlas.width}x{atlas.height} PNG,
-   같은 셀 위치에 같은 프레임. 프레임 추가/삭제/이동 금지.
-3. **배경 완전 투명**: 셀 바깥은 alpha=0. 체커보드/흰색 채움 금지.
-4. **검정(0,0,0) 투명 처리 금지**: 캐릭터内部의 검정 디테일(눈·입·틈)은
+   같은 셀 위치에 같은 프레임, 캐릭터도 같은 (20,40) 오프셋.
+   프레임 추가/삭제/이동 금지.
+3. **배경 완전 투명**: 셀 바깥은 alpha=0. 체커보드/흰색/**마젠타 등 키컬러** 채움 금지.
+4. **검정(0,0,0) 투명 처리 금지**: 캐릭터 내부의 검정 디테일(눈·입·틈)은
    투명으로 만들지 말고 아웃라인색 또는 아주 어두운 남색으로 채워 유지한다.
 5. 안티에일리어싱 금지 / 그라데이션 금지(반드시 단계 밴딩).
-6. 작업은 4~8배 확대 상태에서, 납품은 1배({atlas.width}x{atlas.height}).
 
 ## 스타일 타깃 (후기 클래식 JRPG - 쯔바이/나르실리온/악튜러스풍)
 - 전체 인상: 어두운 VGA 레트로 -> 따뜻하고 채도 있는 필드 톤으로 격상
