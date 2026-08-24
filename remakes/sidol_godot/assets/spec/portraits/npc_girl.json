@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_girl",
+  "category": "portraits",
+  "name": "여학생",
+  "subject_token": "여학생: 단발머리, 당황하지만 필요하면 과감한 학생. 평상복+책가방",
+  "source_ref": "bmp/face3.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "worried",
+    "determined"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "_comment": "층별 NPC 배치 — pos는 앵커 셀(NPC는 1셀 점유). 통행 불가 셀이면 로더가 인접 보정.",
+  "floor": 1,
+  "npcs": [
+    {
+      "id": "tutor_dumb",
+      "name": "멍청 조교",
+      "pos": [13, 9],
+      "sequence_id": "tutor_sample",
+      "tint": [0.7, 0.9, 1.0]
+    },
+    {
+      "id": "prof_chem",
+      "name": "화공과 교수",
+      "pos": [16, 12],
+      "sequence_id": "prof_chem_first",
+      "tint": [1.0, 0.85, 0.6]
+    }
+  ]
+}

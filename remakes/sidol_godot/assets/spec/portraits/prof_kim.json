@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_kim",
+  "category": "portraits",
+  "name": "김경선 교수",
+  "subject_token": "김경선 교수: 서류 뭉치 들고 종종걸음, 바쁜 인상",
+  "source_ref": "bmp_spr/wkim/frame_000.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "busy",
+    "panicking"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

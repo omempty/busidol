@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_tutor_dumb",
+  "category": "portraits",
+  "name": "화공과 조교",
+  "subject_token": "화공과 조교: 젊은 조교, 비니, 미안해하는 강아지 눈",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "apologetic",
+    "confused"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_na",
+  "category": "portraits",
+  "name": "나박사",
+  "subject_token": "나박사: 콜록거리는 은퇴 노교수, 니트 조끼",
+  "source_ref": "bmp_spr/na/frame_000.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "coughing",
+    "wise"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_nam",
+  "category": "portraits",
+  "name": "남앵골 교수",
+  "subject_token": "남앵골 교수: 조용한 노교수, 늘 품에 술병, 반쯤 감긴 눈",
+  "source_ref": "bmp/nam.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "drunk",
+    "sleepy"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "_shared/schemas/sprite_spec.schema.json",
+  "asset_id": "tileset_campus",
+  "kind": "tileset",
+  "tile_px": 32,
+  "terrain_rules": {
+    "floor_corridor": { "border_match": true },
+    "floor_room_lab": { "border_match": true },
+    "floor_room_office": { "border_match": true },
+    "wall_outer_brick": { "border_match": true },
+    "wall_inner_panel": { "border_match": true }
+  },
+  "_multi_tile_rule": "큰 사물은 여러 타일에 쪼개서 표현. 각 조각은 32×32. 스타일: 쯔바이/나르실리온/악튜러스풍 JRPG 디테일",
+  "required_tiles": [
+    "floor_corridor", "floor_room_lab", "floor_room_office", "floor_stair_landing",
+    "floor_basement_dust", "floor_rooftop",
+    "wall_outer_brick", "wall_inner_panel", "wall_window_rain", "wall_blackboard",
+    "door_locked", "door_open", "door_glass",
+    "stairs_up", "stairs_down",
+    "chest_closed", "chest_open"
+  ],
+  "multi_tile_objects": [
+    { "id": "desk_lab",         "w": 2, "h": 1, "_hint": "실험실 긴 책상 — 위에 시약병 디테일" },
+    { "id": "desk_pc",          "w": 2, "h": 2, "_hint": "CRT 모니터+본체+키보드" },
+    { "id": "shelf_books",      "w": 1, "h": 3, "_hint": "높은 책장" },
+    { "id": "vending_machine",  "w": 2, "h": 3, "_hint": "음료 자판기, 디스플레이 발광" },
+    { "id": "lockers",          "w": 3, "h": 2, "_hint": "사물함 열 — 문 손잡이 디테일" },
+    { "id": "bed_dorm",         "w": 2, "h": 3, "_hint": "침대 — 이불 주름" }
+  ],
+  "occlusion_overhead": true,
+  "palette_ref": "../../palette_master.json",
+  "constraints": ["no_aa", "palette_locked"],
+  "style_refs": ["assets/style_bible.md#tiles"],
+  "prompt_vars": {
+    "subject": "1995년 한국 공과대학 건물 — 복도 타일, 실습실 랩 데스크, 교수실 오피스. 도트 감성 + JRPG 밀도"
+  },
+  "output_contract": {
+    "raw_dir": "raw/sprites/tileset_campus/",
+    "file_pattern": "tileset_v{n}.png",
+    "meta_file_pattern": "tileset_v{n}.json",
+    "validator": ["tools/validate_sprite.py --spec {spec} --in {file} --meta {meta}"]
+  }
+}

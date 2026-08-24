@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_cafeteria_girl",
+  "category": "portraits",
+  "name": "식당 아가씨",
+  "subject_token": "식당 아가씨: 앞치마+머리 수건, 활짝 웃는 얼굴",
+  "source_ref": "bmp/store.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "happy",
+    "cheerful"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

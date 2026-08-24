@@ -1,0 +1,33 @@
+; Engine configuration file.
+; Godot 4.x — docs/02_design/02_godot_architecture.md §1 기준
+
+config_version=5
+
+[application]
+
+config/name="BSD Sidol Remake"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.3")
+
+[autoload]
+
+InputBootstrap="*res://src/autoload/input_bootstrap.gd"
+EventBus="*res://src/autoload/event_bus.gd"
+GameState="*res://src/autoload/game_state.gd"
+Database="*res://src/autoload/database.gd"
+AudioManager="*res://src/autoload/audio_manager.gd"
+SceneRouter="*res://src/autoload/scene_router.gd"
+SettingsManager="*res://src/autoload/settings_manager.gd"
+SaveManager="*res://src/autoload/save_manager.gd"
+
+[display]
+
+window/size/viewport_width=640
+window/size/viewport_height=360
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+2d/snap/snap_2d_transforms_to_pixel=true

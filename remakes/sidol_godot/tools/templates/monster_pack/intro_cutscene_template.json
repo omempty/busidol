@@ -1,0 +1,11 @@
+{
+  "$schema": "../../_shared/schemas/event_cutscene.schema.json",
+  "_comment": "인카운터 컷신 템플릿 — 선택 사항",
+  "id": "encounter_my_monster",
+  "skippable": true,
+  "steps": [
+    { "op": "fade_in", "args": { "duration": 0.3 } },
+    { "op": "dialogue", "seq": "@c999" },
+    { "op": "start_battle", "args": { "enemy": "my_monster" } }
+  ]
+}

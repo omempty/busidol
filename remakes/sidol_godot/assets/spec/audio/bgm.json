@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "tracks": [
+    { "id": "bgm_title",     "kind": "bgm_loop", "mood_tags": ["retro", "nostalgic"],           "bpm_range": [90, 110],   "duration_sec": [60, 90],   "loop": "seamless_required", "instrumentation": "FM/PSG 칩튠(square/triangle/noise), 실악기 금지", "mix_target_lufs": -16, "prompt_brief": "1995년 DOS RPG 타이틀 테마. 폭우 내리는 아침의 서늘함과 모험의 시작을 암시하는 차분한 도입" },
+    { "id": "bgm_field",     "kind": "bgm_loop", "mood_tags": ["retro", "adventure"],           "bpm_range": [100, 130],  "duration_sec": [60, 120],  "loop": "seamless_required", "instrumentation": "FM/PSG 칩튠, 실악기 금지", "mix_target_lufs": -16, "prompt_brief": "필드 공용 탐색 테마 — 레트로 60% 톤. 호기심과 긴장이 공존하는 캠퍼스 복도" },
+    { "id": "bgm_battle",    "kind": "bgm_loop", "mood_tags": ["chiptune", "driving"],          "bpm_range": [130, 160],  "duration_sec": [30, 60],   "loop": "seamless_required", "instrumentation": "FM/PSG 칩튠, 노이즈 퍼커션 허용", "mix_target_lufs": -16, "prompt_brief": "일반 전투 — 단순하지만 타격감 있는 드라이브 루프" },
+    { "id": "bgm_boss",      "kind": "bgm_loop", "mood_tags": ["tense", "industrial", "meta"],  "bpm_range": [140, 170],  "duration_sec": [60, 120],  "loop": "seamless_required", "instrumentation": "FM/PSG 칩튠 + 기계적 아르페지오", "mix_target_lufs": -16, "prompt_brief": "SYS_BUILDER 전 — '미완성 vs 완벽' 대립. 기계적 규율 속 불안" },
+    { "id": "bgm_basement",  "kind": "bgm_loop", "mood_tags": ["dusty", "quiet", "retro"],      "bpm_range": [70, 90],    "duration_sec": [60, 120],  "loop": "seamless_required", "instrumentation": "저역 중심 칩튠, 템포 낮음", "mix_target_lufs": -16, "prompt_brief": "지하 서고 탐색 — 먼지와 정적, 잊혀진 80년대 기술의 분위기(탐색 50%)" },
+    { "id": "bgm_emotional", "kind": "bgm_loop", "mood_tags": ["sad", "majestic", "emotional"], "bpm_range": [60, 85],    "duration_sec": [90, 150],  "loop": "seamless_required", "instrumentation": "서정적 칩튠, 코러스 패드 허용", "mix_target_lufs": -16, "prompt_brief": "4층 동료 희생·엔딩 — 쓸쓸하고 장엄한 멜로디(감동 20%↑ 구간)" }
+  ]
+}

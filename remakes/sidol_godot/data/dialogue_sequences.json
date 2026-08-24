@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "_comment": "대화 시퀀스 v2 — text 키는 dialogue.json의 @t(원문 불변)/@c(신규) 참조.",
+  "sequences": {
+    "prof_chem_first": {
+      "steps": [
+        { "speaker": "화공과 교수", "text": "@t0" },
+        { "speaker": "화공과 교수", "text": "@t1" },
+        { "speaker": "화공과 교수", "text": "@t2" },
+        { "speaker": "주인공", "text": "@t4" },
+        { "speaker": "화공과 교수", "text": "@t5" },
+        { "speaker": "주인공", "text": "@t7" }
+      ]
+    },
+    "prof_chem_cure_request": {
+      "_comment": "해독제 의뢰 — v_Howa 플래그 연동",
+      "steps": [
+        { "speaker": "주인공", "text": "@t8" },
+        { "speaker": "화공과 교수", "text": "@t11" },
+        { "speaker": "주인공", "text": "@t12" },
+        { "speaker": "화공과 교수", "text": "@t14" },
+        { "speaker": "화공과 교수", "text": "@t17" },
+        { "speaker": "화공과 교수", "text": "@t20" },
+        { "op": "set_flags", "args": { "howa_jo": 1 } }
+      ]
+    },
+    "tutor_sample": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@t24" },
+        { "speaker": "멍청 조교", "text": "@t25" },
+        { "speaker": "멍청 조교", "text": "@t26" }
+      ]
+    },
+    "npc_girl_rescue": {
+      "_comment": "오프닝 여학생 구출 이벤트 대사",
+      "steps": [
+        { "speaker": "여학생", "text": "@c101" },
+        { "speaker": "부싯돌", "text": "@c102" },
+        { "speaker": "여학생", "text": "@c103" }
+      ]
+    },
+    "guard_idle": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@t203" },
+        { "speaker": "수위 아저씨", "text": "@t204" }
+      ]
+    },
+    "nothing_man": {
+      "steps": [
+        { "speaker": "아무 도움 안 되는 사람", "text": "@t197" },
+        { "speaker": "아무 도움 안 되는 사람", "text": "@t198" }
+      ]
+    },
+    "cafeteria_girl_shop": {
+      "_comment": "상점 진입 트리거 (shop op 연동)",
+      "steps": [
+        { "speaker": "식당 아가씨", "text": "@c001" },
+        { "op": "shop", "args": {} }
+      ]
+    }
+  }
+}

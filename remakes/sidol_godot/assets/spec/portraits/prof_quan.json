@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_quan",
+  "category": "portraits",
+  "name": "권영칠 교수",
+  "subject_token": "권영칠 교수: 소심하고 심부름 잘 시키는 교수, 짜장면 그릇 옆 대기",
+  "source_ref": "bmp/gwon.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "timid",
+    "sweating"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

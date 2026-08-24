@@ -1,0 +1,13 @@
+{
+  "scene_id": "scene_06_epilogue_2026",
+  "title": "에필로그: 1995에서 2026으로",
+  "description": "31년의 시간을 넘어 마침내 엔딩 크레딧이 올라가는 현대의 모니터와 창밖으로 밝아오는 아침 햇살.",
+  "aspect_ratio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "render_native": "480x270_nearest"
+  },
+  "palette": "palette_master.json (8-bit scaled)",
+  "output_path": "raw/keyart/scene_06_epilogue_2026.png"
+}

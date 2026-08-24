@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_student_council",
+  "category": "portraits",
+  "name": "학회장",
+  "subject_token": "학회장: 정장 입은 학생, 피곤한 미소",
+  "source_ref": "bmp/face4.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "tired",
+    "smiling"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

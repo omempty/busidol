@@ -1,0 +1,13 @@
+{
+  "scene_id": "scene_04_4f_sacrifice",
+  "title": "4층 전파실: 동료들의 붕대 투혼",
+  "description": "고전압 스파크가 튀는 4층 메인 브레이커 앞에서 온몸에 붕대를 감고 레버를 사수하는 동료 3인방.",
+  "aspect_ratio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "render_native": "480x270_nearest"
+  },
+  "palette": "palette_master.json (8-bit scaled)",
+  "output_path": "raw/keyart/scene_04_4f_sacrifice.png"
+}

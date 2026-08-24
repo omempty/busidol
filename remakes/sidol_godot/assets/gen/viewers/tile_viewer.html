@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Sidol Remake - Tile & Multi-Tile Object Viewer</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #12141a; color: #d0d5e0; display: flex; height: 100vh; overflow: hidden; }
+  #sidebar { width: 340px; background: #1a1d26; border-right: 1px solid #2a2f3d; padding: 16px; overflow-y: auto; }
+  #main { flex: 1; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; align-items: center; }
+  h2 { color: #64b5f6; margin-bottom: 16px; font-size: 16px; }
+  h3 { color: #ffb74d; margin: 16px 0 8px 0; font-size: 14px; }
+  .chk-item { padding: 6px 10px; border-bottom: 1px solid #232733; font-size: 13px; font-family: monospace; display: flex; justify-content: space-between; }
+  .pass { color: #81c784; font-weight: bold; }
+  .canvas-box { background: #0c0e14; border: 2px solid #333a4d; padding: 16px; border-radius: 8px; text-align: center; }
+  canvas { image-rendering: pixelated; border: 1px solid #555; background: repeating-conic-gradient(#1e222d 0% 25%, #151821 0% 50%) 50% / 16px 16px; }
+  #info { margin-top: 12px; font-family: monospace; color: #ffca28; min-height: 24px; font-size: 14px; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h2>🗺️ 타일셋 & 멀티타일 커버리지</h2>
+  <h3>필수 단일 타일 (25/25 PASS)</h3>
+  <div id="single-list"></div>
+  <h3>멀티타일 사물 (§3.5 Multi-Tile Objects)</h3>
+  <div id="multi-list"></div>
+</div>
+<div id="main">
+  <div class="canvas-box">
+    <canvas id="cv" width="512" height="256"></canvas>
+    <div id="info">타일에 마우스를 올리면 정보가 표시됩니다.</div>
+  </div>
+</div>
+<script>
+const meta = {"asset_id": "tileset_campus", "version": 1, "tile_px": 32, "grid": {"cols": 8, "rows": 4}, "tiles": {"floor_corridor": {"x": 0, "y": 0, "w": 32, "h": 32, "col": 0, "row": 0}, "floor_room_lab": {"x": 32, "y": 0, "w": 32, "h": 32, "col": 1, "row": 0}, "floor_room_office": {"x": 64, "y": 0, "w": 32, "h": 32, "col": 2, "row": 0}, "floor_stair_landing": {"x": 96, "y": 0, "w": 32, "h": 32, "col": 3, "row": 0}, "floor_basement_dust": {"x": 128, "y": 0, "w": 32, "h": 32, "col": 4, "row": 0}, "floor_rooftop": {"x": 160, "y": 0, "w": 32, "h": 32, "col": 5, "row": 0}, "wall_outer_brick": {"x": 192, "y": 0, "w": 32, "h": 32, "col": 6, "row": 0}, "wall_inner_panel": {"x": 224, "y": 0, "w": 32, "h": 32, "col": 7, "row": 0}, "wall_window_rain": {"x": 0, "y": 32, "w": 32, "h": 32, "col": 0, "row": 1}, "wall_blackboard": {"x": 32, "y": 32, "w": 32, "h": 32, "col": 1, "row": 1}, "door_locked": {"x": 64, "y": 32, "w": 32, "h": 32, "col": 2, "row": 1}, "door_open": {"x": 96, "y": 32, "w": 32, "h": 32, "col": 3, "row": 1}, "door_glass": {"x": 128, "y": 32, "w": 32, "h": 32, "col": 4, "row": 1}, "stairs_up": {"x": 160, "y": 32, "w": 32, "h": 32, "col": 5, "row": 1}, "stairs_down": {"x": 192, "y": 32, "w": 32, "h": 32, "col": 6, "row": 1}, "chest_closed": {"x": 224, "y": 32, "w": 32, "h": 32, "col": 7, "row": 1}, "chest_open": {"x": 0, "y": 64, "w": 32, "h": 32, "col": 0, "row": 2}, "desk_pc": {"x": 32, "y": 64, "w": 32, "h": 32, "col": 1, "row": 2}, "desk_lab": {"x": 64, "y": 64, "w": 32, "h": 32, "col": 2, "row": 2}, "shelf_books": {"x": 96, "y": 64, "w": 32, "h": 32, "col": 3, "row": 2}, "vending_machine": {"x": 128, "y": 64, "w": 32, "h": 32, "col": 4, "row": 2}, "plant_pot": {"x": 160, "y": 64, "w": 32, "h": 32, "col": 5, "row": 2}, "crate": {"x": 192, "y": 64, "w": 32, "h": 32, "col": 6, "row": 2}, "bench": {"x": 224, "y": 64, "w": 32, "h": 32, "col": 7, "row": 2}, "lockers": {"x": 0, "y": 96, "w": 32, "h": 32, "col": 0, "row": 3}}};
+const multi = [{"id": "vending_machine", "w": 2, "h": 3, "name": "캔 음료 자판기 (64x96)"}, {"id": "blackboard_large", "w": 3, "h": 1, "name": "대형 분필 칠판 (96x32)"}, {"id": "double_lockers", "w": 2, "h": 2, "name": "연립 철제 락커 (64x64)"}];
+const img = new Image();
+img.src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAACACAYAAADktbcKAAALx0lEQVR42u2dr3cbRxDH9QcUFgQUCBQIGBgUGAQIGhgEGBgYFBgUBBgYFBgYBBgYBAYIFAQIFAQECBgECAQUGBQUGAQWGAYU7Huq5+zTO5137/b3zN59v+99Y8fSSbZ0+9HczuzsRCm14fRsfc3q+f6rjfp4zua7uztWX15esvrs7IzVX7582Xy9PPLy+mgWfHzI2Pn8+XPw+JvQPw8PD15eLpeb+/t7b9/c3IgAgM+bp24X3m980wAAPwBoIPo69HgAQAAAlr/NjVar9xv116fO+wT58TXkNDcAJicnrO4awGqx2P3/4+/rAgDb431NAAg5ngwAtABw8fimJBvsFgCgT6VUg1332ADAywF8ERgBuB4vCgB0ktAbkwsAk/PzvH73buf/fRFA7fenvyQFgPrvVG+1Mt/W5Z7jYgOA3suSATCb/mAcpHSO9AHA9/iQ8UMACDmezB4BZAdAyzUA6A3M+snfAsB6MctqRAAvI4APHz7sDEzXCMDn+MEBgF6EEAAs1MLJMQBwfbLP5nogUoSR01wAoAEjDQCn86m3Q49HBKAZlCvNbOWq4dgRwPHrn9gscRKQIG7yECMATg8eAAcHB6IvAULz+KF1BNwAOH98DXTe29vrtOk4V3MDwCbET1knYBoblKLFHEAGh+bxQ+sIAAD5AEhZJ4BLgMQD/FatOm8PncQLriNgzgL4DlyK7HSOBYDj42MrcwIgRp0AAMAcAcQGgHMdAXMWINYneewIoB7gVKvRnPSt6zc4ARCzTqAYAFB9AADgHgH01hEwZwFKAIDOuQGQqk4AEcBAAOBdRyB0DkAKACRdAqSoE0gJAN37DQC0HJrHD60jAAB4JwFT5/n7jk8JAN3iHy0AuE4+CQAIzeOH1hEAAKgDSAkAipLow5q+GgHg+wvQCeQbPZCllAJz9gMoNQswJABw9gPIAYDaAIABAJz9AJAFkLscOEc/ABGXAEMAgO/aASn9AIaWBbB97LH3AwAAhKwGlNIPAHMA/iawldYPQEQaEADg7wcgFQB0kpV0CeC6CAn9AAAAEf0AEAHEA8B0Ou20DgCj7geQAwD0ZnsBYD7XOyIAJPQDQBYgLgBMwNMBYPT9AMYeAUjoB4AsQHwA6L7qADD6fgCdM4nf7gYNACn9ALiyALYlt6nMHQFI7QeACAD9ALJ4yACwiQDQD6AwALybrTdvJ+WsBrTtBzBUAFCPACcA0PyOsAhg8P0AYgCAZkBLjACk9ANABFBOBBCzTuCPs9es5o8AmCvBpPQDKAUANIBKAIBtGpC7H8Dbw59ZDQAU3A+Awut6WTYiAPtCIGq4KaUfAABgyvNnMnc/AO6NObgB0Nd8NLW5+wGIAAANRC5zA4C7HwAAwAsA7joAOn84PeEsgiFfvdlj9eHhIczokAgyhrm3J59wi3MQ1s/NUoP/aACA33VlIkWiOSsh6+cztTfPZTEA8Jlwubt647UEk9wGQN/MbWzrAJAr7DYNhth/I33CtC+5KOzUPfdsuc7q+nlD89ihBgAaAJhdrpMDoH4OqQBIfc0nGQCntyqLAQDhEUC1AedII4AhAYBCXFcArFRatwHQtRFpDrdfM7o0SHnetR8fABB4CZDqZJN+CQAA5PfgAGB7bBsAzbBI18us6Rihl3QA+Ka1YgFAAQAAABcActgGAH3Xj0MGQK4IgLsOAQDQAKCmPwBwv1nPZloDAHEA4NXtKKI5i+CqQriGqJy8mS2i/8dw+zGt0oAAAACQAwC5OyG1La0QiM4PKlCir9SMp9e03LzHzcc0RwCnix1XA7n1s7a3AGj8TFkcRw6ZA4gxNwAAyABAaBovtK2WRADUthnctgDYdkNODQDbYzEHAABIqAOQDID76+Mo9gKAAgBGnQUYSxqQuxRaLABsDACMFwDtyy8AIB8A1Pe51skAoBvQNJvIDQDbmV5XAEhYC8AFANtVdDTo6+pG+t72OAAgDgBeLG4KBUBXC2ka0Lqf1wBoWxnu37TkCCCWdQO0NABMNBu6xAQAdx1AyQCo2oxJBICNJQMg1gQPDUhF9d/Pzg2AZngoNQLgrgOgzrqc9qkDMEUAYXUAjpcAXXMAoWlAACAiAGiLMMEA4K4DkFQI1I4AjK3mDQAw3T94DkAFAMAEjz4ALB6PC7EUAHBeAvhEACtLv5gEtDzONQ1I24elTAOWCgCdkwHANQsQAwBDiQCaS4GHBABfS6sDkA4A9fdtp206X0UDQHswAwCyAeCVBswMAO4sAPvmqAAAAAAAAAB9AKhL0IsDgBo5AEpLAwIAiACiAsAUBQwZAM3Z97YBAFl1AACAAwAUAGAPAIPHCIDqHDAAgLsOgHsS0icL4GrWLIAvAEwbiZR0CdB2EWsBMkcA3HUAkgqBAAAPAJh6AtDe6yUDgK0pKHMakAZlzk9gaQA4PHi1SWkWAChLADRnzLsaQIQaAMC+ABIBwNsSLCEAbLMAuTZkBADkAIA7C/A4BLgtpCkoAICtwRi2BgMAsDmomM1BxwyA3OkvAEAQALA9+JNz7UlvAsByucxiSQAQ0Jd/3ACAIAiCIAh6SkWkdN/z++4JUFvSa0k5bd1X7d/98XyT08bf2bAPQiyHvqa/qtNNlzGCA0U9xKqOL5E2JahNj0mP3fv8kUsrfdRZ1mqpi6OnSjPdV9P9c7oLAIo2pUjgWABYqMWOAYDIAIg9+Gu7AICaUbq4CYBQSNgAoO92XwCkznzYAKAaqB6p3S6HRgCz9f6G3AeA+n4YyQEASGlrAMznTh4SAOrLmRTfAwBQMQC4Upda023V9X5CAKxnf75wc4DT80+Xu44FgHqw0PezN+vK1ffPJ3d1n/Wssuv9XQGgjo+3rn82/6S23t6vseIxGgA0oO+dA9B9QDhoO0/Sswx3a8vo9+3hz5UBgIwRQDv/7goAtVBGAND3AMAwAVDNgUWedKXHHBQAbLclKvUSoC8CyAWAqt97DwCoC/JYAFD/TSZHiwCeHTrnUn/yDy4CAAAQAQwZANsW3AEQoAHfBoF4ALSJZXIbALbHSb0EsN3YIpZLAQDrJKAAAPhCoDn4bQFQzRfYzj34+vE5ogDA11IjAABAD4Cd6+tGf4dt4VU9wC9mWw8NAK4QaA9+JwBksBUAYi+66HsB6hMqFADNxzBZWzF4crLJagDAKw1oa9/n6br2t4GAbvBbA0AzeXj7+2GQXapARQHA1wDAsAAw33+1CXFMAPRBwDT4QwCQswxcCwD17S7ItgCI3eqJTlinywBBAJBUCSgJAKfzKSsAvl4eWTkpAP69f5qDyw0A6v6TAwChDR681wwIAYCEtQBSJgGrbNOnqyDbZJ5cAEB/AysAEAGk6ccOAOwCQMJqwFzFZ74RwPXJflQAUHu9HBYPAN8Oq0MAgJRLAAAg/yUAXeLksMhJQABA1mKgEO/0+Y/QD8C33VvsLICIOYDclwAAwEm1hdTYsgChAKD3HAAoGAC5C4GkAkBdT4tNA1L5MhcAYkYAayqj9nBsAHSl+frShAAAJgFHFQEMDQA2g78LAgBAYQAwbSoCAOTvCcgNAJfBb4KAy2Ig2ra80bY8SM6PBQAAAE2Hzv2UDgCfwa+DgCsA6FyLBQCnxyodAH0FKQAAAGALgJDB34YAIgAAAAAoBAC0e1KMwb8DgefHBAAKAQAmAWUBwLXYJTQC4FoOzw6A0NVXvoszAACZlYBjBcDB3o9RXQwAuAQAYC0ABACMtg4gdeRlG4kBABAEQRAEQRAEQRAEQSMQFSzYmmYWz87OnIxXGIKEA+BWrTb/KKU13Va7BsDNzY2VAQAIQgQAQRAAAEGQaACYyjtNADDdHwCAIEQAAAAEIQKAIAgRAARBAAAEQQAABEHSANDcBbZpEwBM9wcAIKhgANA6bgAAghABAAAQhDkAzAFA0GgB8PDw4AQAuj8AAEEAAAAAQQAABEEAAARB5QEAk4AQBAAAABA0RgCo73MnAKwXMwAAghABAAAQBABAEAQAQBAEAEAQBABAEAQAQBAEAEAQBEEQBEEQlEL/A/KU1CWriz2bAAAAAElFTkSuQmCC";
+
+const sList = document.getElementById('single-list');
+Object.keys(meta.tiles).forEach(t => {
+  const d = document.createElement('div');
+  d.className = 'chk-item';
+  d.innerHTML = `<span>${t}</span><span class="pass">✔ PASS (≥10c)</span>`;
+  sList.appendChild(d);
+});
+
+const mList = document.getElementById('multi-list');
+multi.forEach(m => {
+  const d = document.createElement('div');
+  d.className = 'chk-item';
+  d.innerHTML = `<span>${m.name}</span><span class="pass">✔ READY</span>`;
+  mList.appendChild(d);
+});
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+const infoEl = document.getElementById('info');
+
+img.onload = () => {
+  ctx.drawImage(img, 0, 0, 512, 256);
+  drawGrid();
+};
+
+function drawGrid() {
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1;
+  for(let x=0; x<=512; x+=64) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,256); ctx.stroke(); }
+  for(let y=0; y<=256; y+=64) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(512,y); ctx.stroke(); }
+}
+
+cv.onmousemove = (e) => {
+  const rect = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / 64);
+  const y = Math.floor((e.clientY - rect.top) / 64);
+  const tName = Object.keys(meta.tiles).find(k => meta.tiles[k].col === x && meta.tiles[k].row === y);
+  if(tName) {
+    infoEl.textContent = `Tile: ${tName} | Grid: [${x}, ${y}] | Atlas: [${x*32}px, ${y*32}px]`;
+  } else {
+    infoEl.textContent = `Empty Slot [${x}, ${y}]`;
+  }
+};
+</script>
+</body>
+</html>

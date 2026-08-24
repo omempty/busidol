@@ -1,0 +1,143 @@
+extends Node
+## 데이터 조회 단일 창구 — dialogue.json / dialogue_sequences.json 로딩 담당.
+## 원칙: 콘텐츠는 소스 하드코딩 금지, 전부 data 파일 경유 (AGENTS.md).
+
+const DATA_DIR := "res://data/"
+
+var _dialogue: Dictionary = {}
+var _sequences: Dictionary = {}
+var _encounters: Dictionary = {}
+var _enemies: Dictionary = {}
+var _items: Dictionary = {}
+var _growth: Dictionary = {}
+
+## 난이도 — "easy"/"normal"/"hard" (SettingsManager에서 변경)
+static var difficulty := "normal"
+
+
+func get_difficulty_mult(key: String) -> float:
+	var presets: Dictionary = _growth.get("difficulty_presets", {})
+	var preset: Dictionary = presets.get(difficulty, {})
+	return float(preset.get(key, 1.0))
+
+
+func level_table() -> Array:
+	return _growth.get("levels", [])
+
+
+func get_enemy_def(id: StringName) -> Dictionary:
+	return _enemies.get(String(id), {
+		"display_name": String(id), "ap": 15, "dp": 5,
+		"hp_range": [20, 40], "exp": [5, 10], "money": [50, 100]
+	})
+
+
+func get_item(id: StringName) -> Dictionary:
+	return _items.get(String(id), {})
+
+
+func load_enemies() -> void:
+	var raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
+	if typeof(raw) != TYPE_DICTIONARY:
+		push_error("monsters.json 파싱 실패")
+		return
+	# floors 내 species 배열에서 고유 id 수집 → 기본 스탯 부여
+	var seen := {}
+	for floor_data: Dictionary in raw.get("floors", {}).values():
+		for s: Variant in floor_data.get("species", []):
+			var sid: String = ""
+			if s is Dictionary:
+				sid = str(s.get("id", ""))
+			elif s is String:
+				sid = str(s)
+			if sid.is_empty() or seen.has(sid):
+				continue
+			seen[sid] = true
+			_enemies[sid] = {
+				"id": sid,
+				"display_name": sid.replace("_", " ").capitalize(),
+				"ap": 15,
+				"dp": 5,
+				"hp_range": [20, 40],
+				"exp": [5, 10],
+				"money": [50, 100],
+			}
+
+
+func load_items() -> void:
+	var raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string(DATA_DIR + "items.json"))
+	if typeof(raw) == TYPE_DICTIONARY:
+		for item in raw.get("items", []):
+			_items[str(item["id"])] = item
+
+
+func _ready() -> void:
+	load_dialogue()
+	load_sequences()
+	load_encounters()
+	load_enemies()
+	load_items()
+	_load_growth()
+
+
+func _load_growth() -> void:
+	var raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string(DATA_DIR + "growth.json"))
+	if typeof(raw) == TYPE_DICTIONARY:
+		_growth = raw
+
+
+func load_dialogue() -> void:
+	var raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string(DATA_DIR + "dialogue.json"))
+	if typeof(raw) == TYPE_DICTIONARY:
+		_dialogue = raw
+	else:
+		push_error("dialogue.json 파싱 실패")
+		_dialogue = {}
+
+
+func load_sequences() -> void:
+	var raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string(DATA_DIR + "dialogue_sequences.json"))
+	if typeof(raw) == TYPE_DICTIONARY:
+		_sequences = raw.get("sequences", {})
+	else:
+		push_error("dialogue_sequences.json 파싱 실패")
+		_sequences = {}
+
+
+## 대사 본문 조회 — 키 형식 "@t17" / "@c101" (마스터 시나리오 §4.1 체계)
+func text(key: String) -> String:
+	return str(_dialogue.get(key, ""))
+
+
+func has_text(key: String) -> bool:
+	return _dialogue.has(key)
+
+
+func sequence(id: StringName) -> Array:
+	var v: Variant = _sequences.get(String(id))
+	if typeof(v) == TYPE_DICTIONARY:
+		var steps: Variant = v.get("steps", [])
+		return steps if typeof(steps) == TYPE_ARRAY else []
+	if typeof(v) == TYPE_ARRAY:
+		return v
+	return []
+
+
+## 층별 인카운터 테이블 조회 — data/monsters.json
+func encounter_table(floor_idx: int) -> Dictionary:
+	var key := "f%d" % floor_idx
+	return _encounters.get(key, {"count": 0, "species": []})
+
+
+func load_encounters() -> void:
+	var raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
+	if typeof(raw) == TYPE_DICTIONARY:
+		_encounters = raw.get("floors", {})
+	else:
+		push_error("monsters.json 파싱 실패")

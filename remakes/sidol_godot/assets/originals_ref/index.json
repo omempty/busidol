@@ -1,0 +1,80 @@
+[
+ {
+  "source": "TEST_F.PCX",
+  "png": "test_f.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "STORE.PCX",
+  "png": "store.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "HP.PCX",
+  "png": "hp.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "FACE1_2.PCX",
+  "png": "face1_2.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "FACE3.PCX",
+  "png": "face3.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "FACE4.PCX",
+  "png": "face4.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "FACE4_W.PCX",
+  "png": "face4_w.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "FACE5.PCX",
+  "png": "face5.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "READY1.PCX",
+  "png": "ready1.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "READY2.PCX",
+  "png": "ready2.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "V-0.PCX",
+  "png": "v-0.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "M-R-0.PCX",
+  "png": "m-r-0.png",
+  "width": 320,
+  "height": 200
+ },
+ {
+  "source": "EFFECT.PCX",
+  "png": "effect.png",
+  "width": 320,
+  "height": 200
+ }
+]

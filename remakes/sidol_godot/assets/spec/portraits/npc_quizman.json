@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_quizman",
+  "category": "portraits",
+  "name": "퀴즈맨",
+  "subject_token": "퀴즈맨: 망토 두른 수수께끼의 인물, ? 머리 장식",
+  "source_ref": "bmp/face5.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "smug",
+    "mysterious"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

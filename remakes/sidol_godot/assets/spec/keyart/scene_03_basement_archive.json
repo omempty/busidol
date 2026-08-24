@@ -1,0 +1,13 @@
+{
+  "scene_id": "scene_03_basement_archive",
+  "title": "지하 1층 F0: 먼지 쌓인 비밀 서고",
+  "description": "먼지 날리는 시멘트 서고 깊은 곳, 캐비닛 속에서 발굴된 5.25인치 디스켓과 원본 소스코드 설계서.",
+  "aspect_ratio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "render_native": "480x270_nearest"
+  },
+  "palette": "palette_master.json (8-bit scaled)",
+  "output_path": "raw/keyart/scene_03_basement_archive.png"
+}

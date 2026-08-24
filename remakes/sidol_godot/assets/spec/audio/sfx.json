@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "tracks": [
+    { "id": "sfx_menu_move",   "kind": "sfx_one_shot", "duration_sec": [0.02, 0.08], "loop": "none", "prompt_brief": "메뉴 커서 이동 — 짧고 마른 클릭음" },
+    { "id": "sfx_item_get",    "kind": "sfx_one_shot", "duration_sec": [0.3, 0.6],   "loop": "none", "prompt_brief": "아이템 획득 — 상승 아르페지오. 원작 play_music[0](220Hz→392Hz 상승 시퀀스) 재해석" },
+    { "id": "sfx_encounter",   "kind": "sfx_one_shot", "duration_sec": [0.4, 0.8],   "loop": "none", "prompt_brief": "인카운터 — 충격음+경보성 상승. 원작 접촉 연출('쾅!~~') 재해석" },
+    { "id": "sfx_hit_player",  "kind": "sfx_one_shot", "duration_sec": [0.1, 0.3],   "loop": "none", "prompt_brief": "플레이어 피격 — 둔탁하고 낮은 타격" },
+    { "id": "sfx_hit_enemy",   "kind": "sfx_one_shot", "duration_sec": [0.1, 0.3],   "loop": "none", "prompt_brief": "적 피격 — 날카로운 타격+스파크 느낌" },
+    { "id": "sfx_door_open",   "kind": "sfx_one_shot", "duration_sec": [0.3, 0.8],   "loop": "none", "prompt_brief": "문 열림 — 원작 DOOR.VOC 참조" },
+    { "id": "sfx_explosion",   "kind": "sfx_one_shot", "duration_sec": [0.8, 1.5],   "loop": "none", "prompt_brief": "폭파 — 2층 철문 대폭발(원작 PROLOG 클라이맥스)" },
+    { "id": "sfx_thunder_arc", "kind": "sfx_one_shot", "duration_sec": [0.5, 1.2],   "loop": "none", "prompt_brief": "10,000V 아크 방전 — 전기 지직거림+방전" },
+    { "id": "voice_dead",      "kind": "voice_sample", "loop": "none", "prompt_brief": "원작 DEAD.VOC 변환본 사용(생성 금지)" },
+    { "id": "voice_win",       "kind": "voice_sample", "loop": "none", "prompt_brief": "원작 WIN.VOC 변환본 사용(생성 금지)" },
+    { "id": "voice_domang",    "kind": "voice_sample", "loop": "none", "prompt_brief": "원작 DOMANG.VOC 변환본 사용(생성 금지)" }
+  ]
+}

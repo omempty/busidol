@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수.",
+  "floors": {
+    "f0": { "count": 2, "species": ["sparker"] },
+    "f1": { "count": 4, "species": [
+      {"id":"dworm","pattern":"burrow"},
+      {"id":"vulgar","pattern":"wander"},
+      {"id":"mad_eye","pattern":"dash","params":{"pause_ticks":3,"dash_cells":3}},
+      {"id":"c_bug","pattern":"zigzag"},
+      {"id":"rogue_vending","pattern":"ambusher"}] },
+    "f2": { "count": 5, "species": [
+      {"id":"mad_eye","pattern":"dash"},
+      {"id":"vulgar","pattern":"chase"},
+      {"id":"ozzy","pattern":"zigzag"},
+      {"id":"c_bug","pattern":"teleport","params":{"interval_ticks":4,"jump_radius":3}},
+      {"id":"flying_thesis","pattern":"wander"}] },
+    "f3": { "count": 4, "species": ["ozzy", "iron_voc", "flying_thesis"] },
+    "f4": { "count": 5, "species": [
+      {"id":"hellcop","pattern":"chase","params":{"aggro_radius":7}},
+      {"id":"o_ray","pattern":"pulse","params":{"interval_ticks":5,"radius":2}},
+      {"id":"sparker","pattern":"teleport"},
+      {"id":"null_pointer","pattern":"phaser"}] },
+    "f5": { "count": 5, "species": [
+      {"id":"hellcop","pattern":"chase"},
+      {"id":"null_pointer","pattern":"phaser"}] }
+  }
+}

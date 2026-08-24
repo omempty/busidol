@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_hong",
+  "category": "portraits",
+  "name": "홍춘발 교수",
+  "subject_token": "홍춘발 교수: 중년, 신경질적으로 치켜진 눈썹, 넥타이 삐뚤음",
+  "source_ref": "bmp/hong.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "annoyed",
+    "shout"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

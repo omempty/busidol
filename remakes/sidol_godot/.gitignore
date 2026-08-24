@@ -1,0 +1,18 @@
+# Godot 4+
+.godot/
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Python (tools/)
+__pycache__/
+*.pyc
+.venv/
+
+# AI 생성 원본(raw)은 대용량 — 게이트 통과분(atlas)만 커밋
+assets/raw/
+
+# 참조 자료 임포트 사이드카 제외
+assets/originals_ref/**/*.import

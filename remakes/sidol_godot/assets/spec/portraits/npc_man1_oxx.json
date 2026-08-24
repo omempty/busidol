@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_man1_oxx",
+  "category": "portraits",
+  "name": "화공과 남학생",
+  "subject_token": "화공과 남학생: 안경+실험복, 다리에 붕대. 진지하지만 사물함 같은 말투",
+  "source_ref": "bmp/face1_2.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "stoic",
+    "injured"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

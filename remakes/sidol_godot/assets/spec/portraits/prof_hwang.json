@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_hwang",
+  "category": "portraits",
+  "name": "황별팔 박사",
+  "subject_token": "황별팔 박사: 위엄+고집의 노박사, 낭만시를 낭송하는 우아한 손짓",
+  "source_ref": "bmp/hwang.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "poetic",
+    "proud"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

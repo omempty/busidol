@@ -1,0 +1,13 @@
+{
+  "scene_id": "scene_05_5f_sys_builder",
+  "title": "5층 메인프레임: SYS_BUILDER 코어",
+  "description": "거대한 녹색 와이어프레임 디지털 얼굴로 발광하며 게임의 완성을 거부하는 SYS_BUILDER와의 최종 대면.",
+  "aspect_ratio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "render_native": "480x270_nearest"
+  },
+  "palette": "palette_master.json (8-bit scaled)",
+  "output_path": "raw/keyart/scene_05_5f_sys_builder.png"
+}

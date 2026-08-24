@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "_comment": "스킬 6종 — 마스터 시나리오 §2.2 성장 트리. 획득은 grant_skill op로만.",
+  "skills": [
+    {
+      "id": "flint_strike",
+      "display_key": "부싯돌 치기",
+      "element": "physical",
+      "targeting": "single",
+      "power": 10,
+      "status_effects": [],
+      "choreography_id": "atk_flint_basic"
+    },
+    {
+      "id": "combo_punch",
+      "display_key": "연속 펀치",
+      "element": "physical",
+      "targeting": "single",
+      "power": 25,
+      "status_effects": [],
+      "choreography_id": "atk_combo_punch"
+    },
+    {
+      "id": "flame_beaker_throw",
+      "display_key": "화염 비커 투척",
+      "element": "fire",
+      "targeting": "all_enemies",
+      "power": 30,
+      "status_effects": ["burn"],
+      "choreography_id": "atk_flame_throw"
+    },
+    {
+      "id": "debug_shield",
+      "display_key": "디버그 쉴드",
+      "element": "none",
+      "targeting": "self",
+      "power": 0,
+      "status_effects": ["buff_damage_taken_50"],
+      "choreography_id": "atk_debug_shield"
+    },
+    {
+      "id": "volt_arc",
+      "display_key": "10,000V 아크 방전",
+      "element": "electric",
+      "targeting": "all_enemies",
+      "power": 50,
+      "status_effects": ["paralysis"],
+      "choreography_id": "atk_volt_arc"
+    },
+    {
+      "id": "ember_of_flint",
+      "display_key": "부싯돌의 불꽃",
+      "element": "none",
+      "targeting": "story",
+      "power": 999,
+      "status_effects": [],
+      "choreography_id": "finisher_ember"
+    }
+  ]
+}

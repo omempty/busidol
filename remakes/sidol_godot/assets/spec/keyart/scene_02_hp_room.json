@@ -1,0 +1,13 @@
+{
+  "scene_id": "scene_02_hp_room",
+  "title": "HP실: 부싯돌 동아리방의 밤",
+  "description": "베이지 CRT 모니터의 초록색 도스 화면과 키보드 연타 소리, 끓고 있는 라면 냄비와 전공 서적 뭉치.",
+  "aspect_ratio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "render_native": "480x270_nearest"
+  },
+  "palette": "palette_master.json (8-bit scaled)",
+  "output_path": "raw/keyart/scene_02_hp_room.png"
+}

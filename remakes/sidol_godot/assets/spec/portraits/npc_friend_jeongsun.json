@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_friend_jeongsun",
+  "category": "portraits",
+  "name": "정선 (친구)",
+  "subject_token": "정선(친구): 동아리 부원, 안경+체크남방, 의리 넘치고 성실한 공대생",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "serious",
+    "determined"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

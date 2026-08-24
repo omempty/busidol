@@ -1,0 +1,6 @@
+{
+ "schema_version": 1,
+ "cell": 32,
+ "cols": 16,
+ "mapping": "tile_id -> col=id%16, row=id//16"
+}

@@ -1,0 +1,13 @@
+{
+  "scene_id": "scene_01_prologue_rain",
+  "title": "오프닝: 폭우 속 공학관 현관",
+  "description": "1995년 여름밤, 쏟아지는 폭우 속 번개가 번쩍이며 공학관 현관에 선 부싯돌과 굳게 닫힌 셔터.",
+  "aspect_ratio": "16:9",
+  "resolution": {
+    "width": 1920,
+    "height": 1080,
+    "render_native": "480x270_nearest"
+  },
+  "palette": "palette_master.json (8-bit scaled)",
+  "output_path": "raw/keyart/scene_01_prologue_rain.png"
+}

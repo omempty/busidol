@@ -1,0 +1,35 @@
+{
+ "cell": 64,
+ "animations": {
+  "walk_down": {
+   "row": 0,
+   "frames": 4,
+   "fps": 9,
+   "loop": true
+  },
+  "walk_up": {
+   "row": 1,
+   "frames": 4,
+   "fps": 9,
+   "loop": true
+  },
+  "walk_left": {
+   "row": 2,
+   "frames": 4,
+   "fps": 9,
+   "loop": true
+  },
+  "walk_right": {
+   "row": 3,
+   "frames": 4,
+   "fps": 9,
+   "loop": true
+  },
+  "idle_down": {
+   "row": 4,
+   "frames": 2,
+   "fps": 2,
+   "loop": true
+  }
+ }
+}

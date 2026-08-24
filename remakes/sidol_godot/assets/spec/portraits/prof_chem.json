@@ -1,0 +1,18 @@
+{
+  "asset_id": "prof_chem",
+  "category": "portraits",
+  "name": "화공과 교수",
+  "subject_token": "화공과 교수: 실험복+보호안경 목걸이, 냉철한 원칙주의자 인상",
+  "source_ref": "bmp/face1_2.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "angry",
+    "surprised"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

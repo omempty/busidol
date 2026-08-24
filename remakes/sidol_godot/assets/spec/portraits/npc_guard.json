@@ -1,0 +1,18 @@
+{
+  "asset_id": "npc_guard",
+  "category": "portraits",
+  "name": "수위 아저씨",
+  "subject_token": "수위 아저씨: 근육질 노인 경비, 모자+조끼, 여유로운 미소. 공대 최강자 개그 캐릭터",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal",
+    "laughing",
+    "mighty"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}
