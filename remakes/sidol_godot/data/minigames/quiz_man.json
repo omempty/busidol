@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "id": "quiz_man",
+  "_comment": "퀴즈맨 공대생 생존 퀴즈 3문항 — 마스터 시나리오 씬 3-2 ③ PALIN (@c316~@c330). 통과 시 Q_F3_PALIN.",
+  "fail_text_key": "@c330",
+  "questions": [
+    {
+      "q": "@c317",
+      "choices": ["@c318", "@c319", "@c320"],
+      "answer": 2
+    },
+    {
+      "q": "@c321",
+      "choices": ["@c322", "@c323", "@c324"],
+      "answer": 1
+    },
+    {
+      "q": "@c325",
+      "choices": ["@c326", "@c327", "@c328"],
+      "answer": 1
+    }
+  ]
+}

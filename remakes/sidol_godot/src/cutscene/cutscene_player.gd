@@ -6,6 +6,8 @@ extends CanvasLayer
 ##   dialogue  {steps:[{speaker,text(@t/@c)}]}   wait {seconds}
 ##   fade_in(밝아짐) / fade_out(어두워짐) {seconds}   shake {power, times}
 ##   sfx/bgm {id}   set_flags {args:{k:v}}   start_battle {enemies:[]}
+##   grant_item {args:{item, count}}   craft {args:{requires:{}, grant:{}, flag}}
+##   minigame_quiz {id} — 통과할 때까지 재도전 후 다음 스텝 진행
 
 signal finished(cutscene_id: StringName)
 
@@ -94,6 +96,14 @@ func _execute(step: Dictionary) -> void:
 			var args: Dictionary = step.get("args", {})
 			for k: String in args:
 				GameState.set_flag(k, args[k])
+		"grant_item":
+			var g: Dictionary = step.get("args", {})
+			GameState.inventory.add(StringName(str(g.get("item", ""))),
+					int(g.get("count", 1)))
+		"craft":
+			_execute_craft(step.get("args", {}))
+		"minigame_quiz":
+			await _run_quiz(StringName(str(step.get("id", ""))))
 		"actor_move":
 			await _actor_move(step)
 		"start_battle":
@@ -151,3 +161,43 @@ static func load_cutscene(cutscene_id: StringName) -> Dictionary:
 		return {}
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	return raw if typeof(raw) == TYPE_DICTIONARY else {}
+
+
+const MINIGAMES_DIR := "res://data/minigames"
+
+## 퀴즈 미니게임 — 통과(passed=true)할 때까지 재도전. 실패해도 컷신은 계속.
+func _run_quiz(minigame_id: StringName) -> void:
+	var path := "%s/%s.json" % [MINIGAMES_DIR, minigame_id]
+	if not FileAccess.file_exists(path):
+		push_warning("미니게임 데이터 없음: %s" % path)
+		return
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		return
+	var quiz := QuizMinigame.new()
+	add_child(quiz)
+	while true:
+		quiz.start(raw)
+		var passed: bool = await quiz.finished
+		if passed:
+			break
+	quiz.queue_free()
+
+
+## craft op — requires 소비 후 grant 지급 + 플래그. 부족 시 경고하고 컷신 중단.
+func _execute_craft(args: Dictionary) -> void:
+	var inv := GameState.inventory
+	var requires: Dictionary = args.get("requires", {})
+	for item_id: String in requires:
+		if inv.count(StringName(item_id)) < int(requires[item_id]):
+			push_warning("craft 재료 부족: %s — 컷신 중단(%s)" %
+					[item_id, _cutscene_id])
+			_running = false
+			return
+	for item_id2: String in requires:
+		inv.remove(StringName(item_id2), int(requires[item_id2]))
+	var grant: Dictionary = args.get("grant", {})
+	for item_id3: String in grant:
+		inv.add(StringName(item_id3), int(grant[item_id3]))
+	if args.has("flag"):
+		GameState.set_flag(str(args["flag"]), true)

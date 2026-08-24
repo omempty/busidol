@@ -48,6 +48,43 @@ func _ready() -> void:
 	if not GameState.has_flag("q_f1_prolog_done"):
 		failures.append("set_flags(q_f1_prolog_done) 미적용")
 
+	# --- 퀴즈 미니게임: 실제 데이터(퀴즈맨 3문항) 정답 순회 → 통과 시그널 ---
+	GameState.flags.clear()
+	var mg_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://data/minigames/quiz_man.json"))
+	if typeof(mg_raw) != TYPE_DICTIONARY:
+		failures.append("quiz_man.json 파싱 실패")
+	else:
+		var quiz := QuizMinigame.new()
+		add_child(quiz)
+		var qpassed := { "v": false }
+		quiz.finished.connect(func(p: bool) -> void: qpassed.v = p)
+		quiz.start(mg_raw)
+		while quiz.is_active():
+			var qs: Array = (mg_raw as Dictionary).get("questions", [])
+			quiz._sel = int(qs[quiz._qi]["answer"])   # 정답 선택 주입
+			quiz._confirm()
+		print("[smoke_cutscene] quiz passed=%s" % qpassed.v)
+		if not qpassed.v:
+			failures.append("퀴즈 finished(true) 미발생")
+
+		# --- craft op 검증: 재료 충족 → 지급 + 플래그 ---
+		GameState.flags.clear()
+		GameState.inventory.clear()
+		GameState.inventory.add(&"reagent_drag")
+		GameState.inventory.add(&"reagent_allin")
+		GameState.inventory.add(&"reagent_palin")
+		cp._execute_craft({
+			"requires": { "reagent_drag": 1, "reagent_allin": 1, "reagent_palin": 1 },
+			"grant": { "antibiotic_x": 1 },
+			"flag": "q_f3_cure_done",
+		})
+		var has_cure: int = GameState.inventory.count(&"antibiotic_x")
+		print("[smoke_cutscene] craft antibiotic_x=%d flag=%s" % [has_cure,
+				GameState.has_flag("q_f3_cure_done")])
+		if has_cure != 1 or not GameState.has_flag("q_f3_cure_done"):
+			failures.append("craft 결과 이상")
+
 	if failures.is_empty():
 		print("[smoke_cutscene] PASS")
 		get_tree().quit(0)

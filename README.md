@@ -60,6 +60,9 @@
 | 데이터 스키마 껍데기 3종 | _shared/schemas/{event,cutscene,battle_move} | ✅ |
 | 크레딧룸(멤버/후일담카드/스탭롤) | credit_room.gd + credits.json | ✅ |
 | 최종보스 각성 컷신+트리거 | boss_sys_builder.json + triggers_f5.json | ✅ |
+| 데이터 Validator(교차참조 검사) | tools/validate.gd (대사키·안무·아이템·컷신) | ✅ |
+| 퀴즈 미니게임 프레임워크 | QuizMinigame + data/minigames/quiz_man.json | ✅ |
+| craft/grant_item op(해독제 합성) | CutscenePlayer + quiz_paline.json | ✅ |
 | 전투 안무(battle_moves JSON 재생) | ChoreographyRunner + BattlePresenter | ✅ |
 | 히트스톱·화면 흔들림 | BattlePresenter | ✅ |
 | 데미지 팝(속성 색상·크기 비례) | BattlePresenter.ELEMENT_COLORS | ✅ |
