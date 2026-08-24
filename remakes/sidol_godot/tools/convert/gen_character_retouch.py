@@ -40,7 +40,10 @@ def main() -> None:
     atlas = Image.open(ATLAS).convert("RGBA")
     meta = json.load(io.open(META, encoding="utf-8"))
     cell = int(meta["cell"])
-    cols = int(meta["cols"])
+    # 아틀라스 전체에서 원본 팔레트 추출(셀마다 색이 갈라지는 것 방지)
+    atlas_bg_free = sr.remove_background(atlas.copy())
+    atlas_pal = sr.build_palette(atlas_bg_free)
+    print(f"atlas palette: {len(atlas_pal)} colors")
     blocks = []
     for anim in ANIMS:
         info = meta.get("animations", {}).get(anim)
@@ -53,14 +56,8 @@ def main() -> None:
                             (row + 1) * cell))
             orig = sr.remove_background(c)
             orig = sr.crop_content(orig)
-            # 프레임 단위 파이프라인(공통 함수 재사용)
-            tmp = sr.remove_background(c)
-            tmp = sr.crop_content(tmp)
-            tmp = sr.snap_palette(tmp)
-            tmp = sr.shade_jrpg(tmp)
-            tmp = sr.add_outline(tmp)
-            tmp = tmp.resize((tmp.width * sr.SCALE, tmp.height * sr.SCALE),
-                             Image.NEAREST)
+            tmp = sr.apply_pipeline(sr.crop_content(
+                    sr.remove_background(c.copy())), atlas_pal)
             frames.append((orig, tmp))
         if not frames:
             continue

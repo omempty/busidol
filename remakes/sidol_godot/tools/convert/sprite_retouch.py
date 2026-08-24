@@ -1,7 +1,10 @@
 """원본 스프라이트 시범 리터칭 - Phase 8 샘플 파이프라인.
 
-스타일 바이블(assets/style_bible.md) 준수:
-  - 팔레트 잠금: palette_master.json(DEFAULT.PAL 유래 256색)만 사용
+스타일 바이블 준수 방식(2026-08-24 개정):
+  - 팔레트: 각 스프라이트의 **원본 색상 세트**에 스냅한다.
+    (palette_master.json은 DEFAULT.PAL 기본 VGA DAC이라 처음 16색이 EGA색 +
+     나머지가 어두운 램프 -> 여기로 스냅하면 EGA풍으로 붕괴. 검증된 교훈.)
+    따라서 팔레트 잠금의 의미는 "외래 색 유입 금지"로 해석하고 원본 팔레트를 쓴다.
   - 명암: 5단 밴딩, 그림자는 색조 그림자(남보라 계열, 블랙 금지)
   - 외곽선: 1px 다크아웃라인(짙은 남색)
   - 구도/실루엣은 원작 그대로(지오메트리 변경 없음)
@@ -15,7 +18,7 @@
 
 처리 체계(절차적):
   1) 배경 제거: 모서리 색 flood-fill 투명화
-  2) 마스터 팔레트 스냅
+  2) 원본 팔레트 추출 후 스냅
   3) JRPG 톤 셰이딩: 5단 명암 + 남보라 색조 그림자 + 웜 하이라이트, 재스냅
   4) 남색 1px 외곽선
   5) 4x nearest 업스케일
@@ -24,7 +27,6 @@
 """
 from __future__ import annotations
 import hashlib
-import json
 import os
 import sys
 from PIL import Image
@@ -32,7 +34,6 @@ from PIL import Image
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 REF = os.path.join(ROOT, "assets", "originals_ref", "bmp_spr")
 OUT = os.path.join(ROOT, "assets", "gen", "viewers", "samples")
-PALETTE_PATH = os.path.join(ROOT, "assets", "palette_master.json")
 BASELINE = os.path.join(OUT, "SOURCES.sha256")
 SCALE = 4
 
@@ -148,20 +149,22 @@ def remove_background(img: Image.Image) -> Image.Image:
 _MASTER_PAL: list[tuple[int, int, int]] = []
 
 
-def master_palette() -> list[tuple[int, int, int]]:
-    global _MASTER_PAL
-    if not _MASTER_PAL:
-        with open(PALETTE_PATH, encoding="utf-8") as fh:
-            data = json.load(fh)
-        # format=raw768: VGA 6비트(0~63) 값을 8비트(0~255)로 스케일
-        _MASTER_PAL = [tuple(int(c[i:i + 2], 16) * 255 // 63 for i in (1, 3, 5))
-                       for c in data["colors"]]
-    return _MASTER_PAL
+def build_palette(img: Image.Image) -> list[tuple[int, int, int]]:
+    """이미지에서 불투명 픽셀의 고유 색 세트를 추출(원본 팔레트 잠금용)."""
+    seen: dict[tuple[int, int, int], None] = {}
+    px = img.load()
+    for y in range(img.height):
+        for x in range(img.width):
+            r, g, b, a = px[x, y]
+            if a > 0:
+                seen[(r, g, b)] = None
+    return list(seen)
 
 
-def snap_palette(img: Image.Image) -> Image.Image:
-    """마스터 팔레트 잠금 - 불투명 픽셀을 최근접 팔레트 색으로 스냅."""
-    pal = master_palette()
+def snap_to(img: Image.Image, pal: list[tuple[int, int, int]]) -> Image.Image:
+    """주어진 팔레트에 최근접 스냅(외래 색 유입 차단)."""
+    if not pal:
+        return img
     px = img.load()
     w, h = img.size
     for y in range(h):
@@ -178,7 +181,8 @@ def snap_palette(img: Image.Image) -> Image.Image:
     return img
 
 
-def shade_jrpg(img: Image.Image) -> Image.Image:
+def shade_jrpg(img: Image.Image,
+               pal: list[tuple[int, int, int]]) -> Image.Image:
     """5단 명암 밴딩 + 남보라 색조 그림자 + 웜 하이라이트(바이블 준수)."""
     px = img.load()
     w, h = img.size
@@ -190,7 +194,7 @@ def shade_jrpg(img: Image.Image) -> Image.Image:
                 lums.append((p[0] * 299 + p[1] * 587 + p[2] * 114) // 1000)
     if not lums:
         return img
-    lo, hi = lums[0], lums[-1]
+    lo, hi = min(lums), max(lums)
     span = max(hi - lo, 1)
 
     def band(l: int) -> float:
@@ -204,17 +208,17 @@ def shade_jrpg(img: Image.Image) -> Image.Image:
                 continue
             t = band((r * 299 + g * 587 + b * 114) // 1000)
             if t <= 0.25:      # 그림자 - 검정 대신 남보라 색조
-                k = 0.45 * (0.25 - t) / 0.25
+                k = 0.35 * (0.25 - t) / 0.25
                 r = int(r + (SHADOW_TINT[0] - r) * k)
                 g = int(g + (SHADOW_TINT[1] - g) * k)
                 b = int(b + (SHADOW_TINT[2] - b) * k)
             elif t >= 0.75:    # 하이라이트 - 따뜻하게 리프트
-                k = 0.22 * (t - 0.75) / 0.25
+                k = 0.18 * (t - 0.75) / 0.25
                 r = int(r + (HIGHLIGHT_TINT[0] - r) * k)
                 g = int(g + (HIGHLIGHT_TINT[1] - g) * k)
                 b = int(b + (HIGHLIGHT_TINT[2] - b) * k)
             px[x, y] = (max(r, 0), max(g, 0), max(b, 0), a)
-    return snap_palette(img)
+    return snap_to(img, pal)
 
 
 def add_outline(img: Image.Image) -> Image.Image:
@@ -257,10 +261,20 @@ def retouch(src_path: str) -> Image.Image:
     img = Image.open(src_path)
     img = remove_background(img)
     img = crop_content(img)
-    img = snap_palette(img)
-    img = shade_jrpg(img)
+    pal = build_palette(img)
+    img = snap_to(img, pal)
+    img = shade_jrpg(img, pal)
     img = add_outline(img)
     return img.resize((img.width * SCALE, img.height * SCALE), Image.NEAREST)
+
+
+## 셀 단위 처리용 — 팔레트를 외부(아틀라스 전체)에서 받는 변형
+def apply_pipeline(cell: Image.Image,
+                   pal: list[tuple[int, int, int]]) -> Image.Image:
+    cell = snap_to(cell, pal)
+    cell = shade_jrpg(cell, pal)
+    cell = add_outline(cell)
+    return cell.resize((cell.width * SCALE, cell.height * SCALE), Image.NEAREST)
 
 
 def main() -> None:
