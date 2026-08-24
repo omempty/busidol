@@ -244,6 +244,70 @@ def add_outline(img: Image.Image) -> Image.Image:
     return out
 
 
+def heal_pinholes(img: Image.Image, radius: int = 2,
+                  min_ratio: float = 0.75) -> Image.Image:
+    """배경과 얇게 연결된 스프라이트 내부 검정(눈·입·틈) 복원.
+
+    원작 엔진은 색상 0(순수 검정)을 투명으로 취급했으므로 배경과 검정이 구분
+    불가능하다. 두 규칙으로 되살린다:
+      1) 이미지 경계에 닿지 않는 투명 컴포넌트(완전 밀폐) -> 전부 검정 복원
+      2) 국소 판정: 반경 r 창의 min_ratio 이상이 불투명이면 검정으로 봉합
+        (실루엣 가장자리는 창의 절반 정도만 불투명이라 옆쪽 배경은 안 건드림)
+    """
+    px = img.load()
+    w, h = img.size
+
+    def neighbors4(x, y):
+        return ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1))
+
+    # 1) 밀폐 투명 컴포넌트 복원
+    seen = bytearray(w * h)
+    for sy in range(h):
+        for sx in range(w):
+            i = sy * w + sx
+            if seen[i] or px[sx, sy][3] > 0:
+                continue
+            comp = []
+            touches_border = False
+            stack = [(sx, sy)]
+            seen[i] = 1
+            while stack:
+                x, y = stack.pop()
+                comp.append((x, y))
+                if x == 0 or y == 0 or x == w - 1 or y == h - 1:
+                    touches_border = True
+                for nx, ny in neighbors4(x, y):
+                    if 0 <= nx < w and 0 <= ny < h:
+                        j = ny * w + nx
+                        if not seen[j] and px[nx, ny][3] == 0:
+                            seen[j] = 1
+                            stack.append((nx, ny))
+            if not touches_border:
+                for x, y in comp:
+                    px[x, y] = (0, 0, 0, 255)
+
+    # 2) 국소 핀홀 봉합
+    opaque = [[px[x, y][3] > 0 for x in range(w)] for y in range(h)]
+    to_fill = []
+    for y in range(h):
+        for x in range(w):
+            if opaque[y][x]:
+                continue
+            cnt = tot = 0
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < w and 0 <= ny < h:
+                        tot += 1
+                        if opaque[ny][nx]:
+                            cnt += 1
+            if tot and cnt / tot >= min_ratio:
+                to_fill.append((x, y))
+    for x, y in to_fill:
+        px[x, y] = (0, 0, 0, 255)
+    return img
+
+
 def crop_content(img: Image.Image) -> Image.Image:
     """불투명 영역의 bounding box 로 크롭(여백 프레임 제거)."""
     bbox = img.getchannel("A").getbbox()
@@ -260,6 +324,7 @@ def crop_content(img: Image.Image) -> Image.Image:
 def retouch(src_path: str) -> Image.Image:
     img = Image.open(src_path)
     img = remove_background(img)
+    img = heal_pinholes(img)
     img = crop_content(img)
     pal = build_palette(img)
     img = snap_to(img, pal)

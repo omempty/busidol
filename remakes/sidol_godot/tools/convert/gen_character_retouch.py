@@ -55,8 +55,9 @@ def main() -> None:
             c = atlas.crop((f * cell, row * cell, (f + 1) * cell,
                             (row + 1) * cell))
             orig = sr.remove_background(c)
+            orig = sr.heal_pinholes(orig)
             orig = sr.crop_content(orig)
-            tmp = sr.apply_pipeline(sr.crop_content(
+            tmp = sr.apply_pipeline(sr.heal_pinholes(
                     sr.remove_background(c.copy())), atlas_pal)
             frames.append((orig, tmp))
         if not frames:

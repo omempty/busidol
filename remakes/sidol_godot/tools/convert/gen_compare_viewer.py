@@ -92,6 +92,7 @@ TEMPLATE = """<!DOCTYPE html>
     <button id="bSwipe">스와이프 (W)</button>
     <label>확대 <input id="zoom" type="range" min="0.2" max="2" step="0.05" value="0.55"></label>
     <span id="pct" style="font-family:monospace;color:#ffb74d"></span>
+    <button id="bBg">배경: 체커</button>
   </div>
   <div class="bar" id="swipeBar" style="display:none">
     <input id="split" type="range" min="0" max="100" value="50">
@@ -202,6 +203,14 @@ document.getElementById('zoom').oninput = e => {
   render();
 };
 document.getElementById('split').oninput = e => { split = +e.target.value; render(); };
+let dark = false;
+document.getElementById('bBg').onclick = () => {
+  dark = !dark;
+  document.getElementById('bBg').textContent = dark ? '배경: 단색' : '배경: 체커';
+  document.getElementById('bBg').classList.toggle('on', dark);
+  stage.style.background = dark ? '#000' :
+    'repeating-conic-gradient(#20242f 0% 25%, #171a23 0% 50%) 50% / 16px 16px';
+};
 document.addEventListener('keydown', e => {
   if (e.key === 'a' || e.key === 'A') setMode('A');
   if (e.key === 'd' || e.key === 'D') setMode('B');
