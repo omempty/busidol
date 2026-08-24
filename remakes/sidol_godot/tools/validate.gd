@@ -6,7 +6,7 @@ extends SceneTree
 const DATA := "res://data/"
 const KNOWN_OPS := ["dialogue", "wait", "fade_in", "fade_out", "shake", "sfx",
 		"bgm", "set_flags", "grant_item", "craft", "minigame_quiz",
-		"actor_move", "start_battle", "end"]
+		"minigame_battery", "change_scene", "actor_move", "start_battle", "end"]
 const KNOWN_CHANNELS := ["sprite", "fx", "camera", "screen", "audio", "logic"]
 const KNOWN_TRIGGER_TYPES := ["zone", "interact", "auto"]
 
@@ -30,6 +30,7 @@ func _initialize() -> void:
 	_validate_triggers()
 	_validate_skills_choreography()
 	_validate_credits()
+	_validate_minigames()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -105,6 +106,14 @@ func _validate_step(file: String, step: Dictionary) -> void:
 			var mg := "%sminigames/%s.json" % [DATA, step.get("id", "")]
 			if not FileAccess.file_exists(mg):
 				_err("cutscenes/%s 미니게임 없음: %s" % [file, mg])
+		"minigame_battery":
+			var mb := "%sminigames/%s.json" % [DATA, step.get("id", "")]
+			if not FileAccess.file_exists(mb):
+				_err("cutscenes/%s 미니게임 없음: %s" % [file, mb])
+		"change_scene":
+			var sp := str(step.get("path", ""))
+			if not sp.begins_with("res://") or not FileAccess.file_exists(sp):
+				_err("cutscenes/%s 씬 경로 없음: %s" % [file, sp])
 		"start_battle":
 			for eid: String in step.get("enemies", []):
 				pass  # 적 ID 존재는 Database 로드 규칙상 느슨 허용(보스/floor 병합)
@@ -167,6 +176,51 @@ func _validate_credits() -> void:
 		if not _text_exists(str(c.get("text_key", ""))):
 			_err("credits 카드 '%s' 대사 키 없음: %s" %
 					[c.get("id"), c.get("text_key")])
+
+
+# ---- minigames/*.json ----
+
+func _validate_minigames() -> void:
+	var dir := DirAccess.open(DATA + "minigames")
+	if dir == null:
+		return
+	for f in dir.get_files():
+		if not f.ends_with(".json"):
+			continue
+		var mg: Dictionary = _load_json(DATA + "minigames/" + f) as Dictionary
+		if mg.is_empty():
+			continue
+		var qs: Array = mg.get("questions", [])
+		if not qs.is_empty():   # 퀴즈형
+			for i in qs.size():
+				var q: Dictionary = qs[i]
+				var choices: Array = q.get("choices", [])
+				var ans := int(q.get("answer", -1))
+				if not _key_or_text(str(q.get("q", ""))):
+					_err("minigames/%s Q%d 질문 비어있음" % [f, i + 1])
+				if ans < 0 or ans >= choices.size():
+					_err("minigames/%s Q%d answer 범위 이탈(%d/%d)" %
+							[f, i + 1, ans, choices.size()])
+				for ch: Variant in choices:
+					if not _key_or_text(str(ch)):
+						_err("minigames/%s Q%d 선택지 비어있음" % [f, i + 1])
+		elif mg.has("target_voltage"):   # 회로 퍼즐형
+			if int(mg.get("target_voltage", 0)) <= 0:
+				_err("minigames/%s target_voltage 무효" % f)
+			if int(mg.get("slots", 0)) <= 0 or int(mg.get("lever_max", 0)) <= 0:
+				_err("minigames/%s slots/lever_max 무효" % f)
+			var dens: Array = mg.get("denominations", [])
+			if dens.is_empty() or int(dens[0]) <= 0:
+				_err("minigames/%s denominations 무효" % f)
+		else:
+			_err("minigames/%s questions/target_voltage 둘 다 없음" % f)
+
+
+## 대사 키(@t/@c → dialogue.json 조회) 또는 원문 텍스트 모두 허용
+func _key_or_text(s: String) -> bool:
+	if s == "":
+		return false
+	return true if not s.begins_with("@") else _dialogue.has(s)
 
 
 # ---- 공통 ----

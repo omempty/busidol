@@ -9,6 +9,7 @@ var controller := BattleController.new()
 var player_combatant: Combatant
 var enemies: Array[Combatant] = []
 var _enemy_ids: Array[String] = []
+var _on_win_flag := ""   # 승리 시 세팅되는 시나리오 플래그 (pending_encounter에서 전달)
 
 var _ui: BattleUI
 var _busy := false
@@ -26,6 +27,7 @@ var _pending_element := &"physical"
 func _ready() -> void:
 	var def: Dictionary = GameState.pending_encounter
 	GameState.pending_encounter = {}
+	_on_win_flag = str(def.get("on_win_flag", ""))
 	_setup_combatants(def)
 	_load_skills()
 	_setup_ui()
@@ -295,6 +297,8 @@ func _exit_battle(result: StringName) -> void:
 	# 전투 결과를 GameState에 반영
 	GameState.player_stats["hp"] = player_combatant.hp
 	GameState.player_stats["money"] += 50 if result == &"win" else 0
+	if result == &"win" and not _on_win_flag.is_empty():
+		GameState.set_flag(_on_win_flag, true)
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 

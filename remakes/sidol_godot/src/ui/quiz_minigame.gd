@@ -76,17 +76,22 @@ func _load_question() -> void:
 		_finish(true)
 		return
 	var q: Dictionary = qs[_qi]
-	_q_lbl.text = "Q%d. %s" % [_qi + 1, Database.text(str(q["q"]))]
+	_q_lbl.text = "Q%d. %s" % [_qi + 1, _fmt(str(q["q"]))]
 	_sel = 0
 	var choices: Array = q.get("choices", [])
 	for i in _choice_lbls.size():
 		if i < choices.size():
 			_choice_lbls[i].visible = true
-			_choice_lbls[i].text = "%d) %s" % [i + 1,
-					Database.text(str(choices[i]))]
+			_choice_lbls[i].text = "%d) %s" % [i + 1, _fmt(str(choices[i]))]
 		else:
 			_choice_lbls[i].visible = false
 	_refresh_highlight()
+
+
+## "@t3" 같은 대사 키면 dialogue.json에서 조회, 아니면 원문 그대로 사용.
+func _fmt(key_or_text: String) -> String:
+	return Database.text(key_or_text) if key_or_text.begins_with("@") \
+			else key_or_text
 
 
 func _refresh_highlight() -> void:
@@ -123,7 +128,7 @@ func _confirm() -> void:
 		_load_question()
 	else:
 		_mistakes += 1
-		_msg_lbl.text = Database.text(str(_config.get("fail_text_key", "")))
+		_msg_lbl.text = _fmt(str(_config.get("fail_text_key", "")))
 
 
 func _finish(passed: bool) -> void:

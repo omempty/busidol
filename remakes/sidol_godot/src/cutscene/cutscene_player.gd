@@ -104,10 +104,17 @@ func _execute(step: Dictionary) -> void:
 			_execute_craft(step.get("args", {}))
 		"minigame_quiz":
 			await _run_quiz(StringName(str(step.get("id", ""))))
+		"minigame_battery":
+			await _run_battery(StringName(str(step.get("id", ""))))
+		"change_scene":
+			_running = false
+			get_tree().change_scene_to_file(str(step.get("path", "")))
 		"actor_move":
 			await _actor_move(step)
 		"start_battle":
 			GameState.pending_encounter = {"enemies": step.get("enemies", [])}
+			if step.has("on_win_flag"):
+				GameState.pending_encounter["on_win_flag"] = str(step["on_win_flag"])
 			_running = false
 			get_tree().change_scene_to_file("res://scenes/battle.tscn")
 		_:
@@ -167,21 +174,38 @@ const MINIGAMES_DIR := "res://data/minigames"
 
 ## 퀴즈 미니게임 — 통과(passed=true)할 때까지 재도전. 실패해도 컷신은 계속.
 func _run_quiz(minigame_id: StringName) -> void:
-	var path := "%s/%s.json" % [MINIGAMES_DIR, minigame_id]
-	if not FileAccess.file_exists(path):
-		push_warning("미니게임 데이터 없음: %s" % path)
-		return
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-	if typeof(raw) != TYPE_DICTIONARY:
+	var cfg := _load_minigame(minigame_id)
+	if cfg.is_empty():
 		return
 	var quiz := QuizMinigame.new()
 	add_child(quiz)
 	while true:
-		quiz.start(raw)
+		quiz.start(cfg)
 		var passed: bool = await quiz.finished
 		if passed:
 			break
 	quiz.queue_free()
+
+
+## 배터리 회로 퍼즐 — 목표 전압 일치 시 통과.
+func _run_battery(minigame_id: StringName) -> void:
+	var cfg := _load_minigame(minigame_id)
+	if cfg.is_empty():
+		return
+	var game := BatteryCircuitMinigame.new()
+	add_child(game)
+	game.start(cfg)
+	await game.finished
+	game.queue_free()
+
+
+func _load_minigame(minigame_id: StringName) -> Dictionary:
+	var path := "%s/%s.json" % [MINIGAMES_DIR, minigame_id]
+	if not FileAccess.file_exists(path):
+		push_warning("미니게임 데이터 없음: %s" % path)
+		return {}
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return raw if typeof(raw) == TYPE_DICTIONARY else {}
 
 
 ## craft op — requires 소비 후 grant 지급 + 플래그. 부족 시 경고하고 컷신 중단.

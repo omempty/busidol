@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "id": "battery_circuit",
+  "_comment": "10,000V 고전압 배터리 회로 퍼즐 — 마스터 시나리오 씬 4-1. 슬롯에 10V/100V 건전지를 넣고 레버 과충전 배율로 정확히 목표 전압을 만든다.",
+  "target_voltage": 10000,
+  "denominations": [10, 100],
+  "slots": 6,
+  "lever_max": 25
+}

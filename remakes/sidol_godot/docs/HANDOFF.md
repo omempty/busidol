@@ -1,11 +1,11 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-24 · Phase 7 대부분 완료(UI 분리·Schema·크레딧룸·보스 트리거) 시점
+> 작성일: 2026-08-24 · **Phase 7 완료** 시점
 
 ## 1. 현재 상태 한 줄 요약
 
-Phase 0~7 완료(전투 UI 분리, Schema 껍데기 3종, 크레딧룸 3모드 — 멤버/후일담 카드/스탭롤,
-SYS_BUILDER 보스 트리거+컷신). 다음은 **craft op + 미니게임 프레임워크**와 **Event Editor v0**.
+**Phase 0~7 완료.** 컷신/트리거/미니게임(퀴즈·회로)/craft/엔딩 흐름까지 전부 연결.
+다음은 **Phase 8 (도트/오디오 AI 생성 배치)** — G-ART 게이트 확인 후 시작.
 
 ## 2. 다음 세션 첫 명령
 
@@ -13,19 +13,32 @@ SYS_BUILDER 보스 트리거+컷신). 다음은 **craft op + 미니게임 프레
 # 게임 실행 확인 (F1 진입 시 프롤로그 컷신 자동 재생)
 remakes\sidol_godot\게임실행.bat
 
-# 검증 관문 확인 — 6단계(import/validate/smoke×4)
+# 검증 관문 6단계
 remakes\sidol_godot\검증실행.bat
+
+# Event Editor v0 — Godot 에디터 하단 패널 "Event Editor"
+remakes\sidol_godot\에디터실행.bat
 ```
 
-## 3. 다음 작업 (Phase 7 잔여)
+## 3. 다음 작업 (Phase 8)
 
-| 순서 | 작업 | 파일 |
+| 순서 | 작업 | 참조 |
 |---|---|---|
-| 1 | Event Editor v0(Godot 플러그인) | docs/02_design/05 §3.3 |
-| 2 | 크레딧룸 입구 연결 — F2 HP실 NPC 대화 → credit_room 씬 전환 | triggers_f2.json |
-| 3 | 엔딩 진입 — q_f5_ai_battle 승리 후 에필로그 컷신(@c601~605) | data/cutscenes/ |
-| 4 | 배터리 회로 퍼즐(minigame_battery_circuit) — 10V/100V 직렬로 10,000V | 마스터 시나리오 씬 4-1 |
-| 5 | 퀴즈맨 원작 메타 10문항(Q_QUIZ_ALL, 레트로 보존판) — quiz_man.json 확장 | 마스터 부록 A3 |
+| 1 | DOSBox 캡처 지원트 + style_refs 확보 | 07_ai_asset_pipeline |
+| 2 | 스프라이트/타일 일러스트 AI 배치(spec→Validator 게이트) | assets/spec/** |
+| 3 | BGM 6종 + SFX 세트 생성, AudioManager 실구현 | Phase 8 스텁 해소 |
+| 4 | 이벤트 데이터 채우기 — 각 층 게이트 플래그 세팅 흐름(q_f2_hp_gate 등) | 마스터 시나리오 §4.2 |
+
+### P7에서 완결된 플레이 흐름 (검증용 체인)
+
+```
+F1 진입 → opening(@c101~106) → [시나리오] → F2 HP실(q_f2_hp_gate)→크레딧룸
+F3 퀴즈맨(q_f3_quiz_gate)→quiz_paline→퀴즈→팰린→craft→해독제(Q_F3_CURE_DONE)
+F4 회로(q_f4_battery_gate)→battery_puzzle→10,000V(Q_F4_BATTERY)
+F5 보스(q_f5_boss_gate)→SYS_BUILDER 결전→승리(q_f5_ai_battle_won)
+→ epilogue(@c601~605)→크레딧룸 엔딩(Q_ENDING)
+```
+※ 중간 게이트 플래그(q_*_gate)는 아직 수동/이벤트 미연결 — Phase 9 시나리오 반영 시 채움.
 
 ### 재활용 아키텍처 노트 (bombman94/95 포팅 대비)
 
@@ -33,35 +46,21 @@ remakes\sidol_godot\검증실행.bat
 
 | 계층 | 위치 | bombman94/95 에서 |
 |---|---|---|
-| **공용 프레임워크** | `src/battle`(BattleController/DamageCalculator/ChoreographyRunner/BattlePresenter/BattleUI), `src/cutscene`, `src/map/trigger_system.gd`, `_shared` 도구(johab/PCX/VOC)+schemas | **그대로 이식** — 안무 JSON 채널 계약은 엔진 무관 |
-| **게임 데이터** | `data/**`(battle_moves/skills/monsters/cutscenes/triggers/credits) | 전면 교체(원작 데이터 변환기만 작성) |
-| **게임 전용 로직** | field/battle/credit_room 씬 조립, Combatant 성장, 보스 하이브리드 | 부분 재작성 |
+| **공용 프레임워크** | `src/battle`(BattleController/DamageCalculator/ChoreographyRunner/BattlePresenter/BattleUI), `src/cutscene`, `src/map/trigger_system.gd`, `src/ui`(DialogueBox/QuizMinigame/BatteryCircuit), `_shared` 도구+schemas | **그대로 이식** |
+| **게임 데이터** | `data/**` | 전면 교체(원작 변환기만 작성) |
+| **게임 전용 로직** | field/battle/credit_room 조립, 성장, 보스 하이브리드 | 부분 재작성 |
 
-원칙: 새 시스템 추가 시 "콘텐츠는 data/**, 메커니즘은 범용 클래스" 경계를 유지할 것.
-Combatant.stats 타입 Resource화(CharacterStats)가 남은 결합도 해소 과제(Phase 4 TODO).
+### 구현 노트 (이번 세션 추가)
 
-### 구현 노트 (이번 세션 결정)
-
-- **Validator 실구현**: validate.gd가 이제 실제 검사 수행 — battle_moves 채널/키프레임,
-  컷신 op 화이트리스트 + 대사 키(@t/@c) 해석, 트리거 action 참조(컷신/시퀀스 파일),
-  skills→battle_moves, craft 아이템 ID(items.json), credits text_key. 오류 시 exit 1.
-  새 콘텐츠 추가 후 반드시 실행. 스키마 자동 검사(JSON Schema 엔진)는 별도.
-- **미니게임 프레임워크**: QuizMinigame(data/minigames/*.json — 문항/선택지/정답 전부 데이터).
-  CutscenePlayer 신규 op: `minigame_quiz`(통과까지 재도전), `craft`(requires 소비→grant
-  지급+플래그, 부족 시 중단), `grant_item`. F3 퀴즈맨 팰린 게이트 완결
-  (triggers_f3 → quiz_paline → Q_F3_CURE_DONE).
-- **전투 UI 분리**: `src/ui/battle_ui.gd` 신설 — HP바/메뉴/결과 라벨이 시그널
-  (`command_selected`/`skill_selected`)으로만 통신. 컨트롤러 455→305행.
-  스프라이트 생성도 presenter.build_sprites() 로 이동.
-- **Schema 껍데기**: `_shared/schemas/{event,cutscene,battle_move}.schema.json`.
-  validate.gd 가 아직 stub 이므로 자동 검사는 미연결(잔여 작업 3번).
-- **크레딧룸**: 콘텐츠 전부 `data/credits.json` 으로 이동(하드코딩 해소).
-  ↑↓ 모드 전환(멤버/엔딩카드/스탭롤), 후일담 카드 3종은 @c601~@c605 참조.
-- **보스 트리거**: `triggers_f5.json` — `q_f5_boss_gate` 플래그에서만 발동하는 auto
-  트리거 → `boss_sys_builder.json` 컷신(@c507~@c515) → `start_battle` op 로 결전 진입.
-- **판정 단일화**: 데미지 적용은 BattleController.submit_player_command 가 유일.
-- **교훈**: 신규 class_name 추가 후 반드시 `--import`(글로벌 클래스 캐시 재구축).
-  Godot 4.7.2 는 `_shared/tools/godot/`.
+- **배터리 회로 퍼즐**: BatteryCircuitMinigame + data/minigames/battery_circuit.json
+  (6슬롯 × 10/100V, 레버 ×1~25, 목표 10,000V — 정답 예: 400V×25).
+- **전투 승리 플래그**: start_battle op의 `on_win_flag` → pending_encounter 경유 →
+  승리 시 GameState.set_flag. 에필로그 트리거가 이 플래그로 발동한다.
+- **Event Editor v0**: addons/event_editor — 하단 패널에서 cutscenes/*.json 스텝
+  열람/op·args 편집/추가·삭제/저장. project.godot에 플러그인 등록됨.
+- **Validator 확장**: minigames 검사(퀴즈 문항/answer 범위, 회로 설정값),
+  change_scene 경로, 신규 op 화이트리스트(minigame_battery/change_scene).
+- QuizMinigame은 "@키"와 원문 텍스트 양쪽 허용(_fmt).
 
 ## 4. 알려진 미해결
 

@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "_comment": "F2 트리거 — 시나리오가 q_f2_hp_gate를 세팅하면(HP실 문 앞 도달) 크레딧룸 진입.",
+  "triggers": [
+    {
+      "id": "f2_hp_room",
+      "type": "auto",
+      "once": true,
+      "requires_flag": "q_f2_hp_gate",
+      "done_flag": "q_f2_hp",
+      "action": { "cutscene": "hp_room_visit" }
+    }
+  ]
+}

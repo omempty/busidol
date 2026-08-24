@@ -85,6 +85,32 @@ func _ready() -> void:
 		if has_cure != 1 or not GameState.has_flag("q_f3_cure_done"):
 			failures.append("craft 결과 이상")
 
+	# --- 배터리 회로 퍼즐: 해답 주입(400V × 25) → 통과 ---
+	var bcfg: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://data/minigames/battery_circuit.json"))
+	if typeof(bcfg) != TYPE_DICTIONARY:
+		failures.append("battery_circuit.json 파싱 실패")
+	else:
+		var game := BatteryCircuitMinigame.new()
+		add_child(game)
+		var bpassed := { "v": false }
+		game.finished.connect(func(p: bool) -> void: bpassed.v = p)
+		game.start(bcfg)
+		for i in 4:
+			game._vals[i] = 100
+		game._lever = 25
+		game._refresh()
+		print("[smoke_cutscene] battery passed=%s" % bpassed.v)
+		if not bpassed.v:
+			failures.append("회로 퍼즐 finished(true) 미발생")
+
+	# --- 메타 퀴즈 데이터 무결성(10문항) ---
+	var meta_raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://data/minigames/quiz_man_meta.json"))
+	if typeof(meta_raw) != TYPE_DICTIONARY \
+			or ((meta_raw as Dictionary).get("questions", []) as Array).size() != 10:
+		failures.append("quiz_man_meta.json 불량(10문항 아님)")
+
 	if failures.is_empty():
 		print("[smoke_cutscene] PASS")
 		get_tree().quit(0)

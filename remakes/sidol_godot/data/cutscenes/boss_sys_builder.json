@@ -16,6 +16,6 @@
       { "speaker": "부싯돌", "text": "@c514" },
       { "speaker": "SYS_BUILDER", "text": "@c515" }
     ] },
-    { "op": "start_battle", "enemies": ["sys_builder"] }
+    { "op": "start_battle", "enemies": ["sys_builder"], "on_win_flag": "q_f5_ai_battle_won" }
   ]
 }

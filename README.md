@@ -29,7 +29,7 @@
 
 | 프로젝트 | 상태 | 상세 |
 |---|---|---|
-| **sidol_godot** | Phase 0~5 완료 · Phase 6~9 진행 중 | [문서](remakes/sidol_godot/docs/README.md) |
+| **sidol_godot** | Phase 0~7 완료 · Phase 8~9 진행 예정 | [문서](remakes/sidol_godot/docs/README.md) |
 | bombman94_godot | 대기 | sidol 파이프라인 재사용 |
 | bombman95_godot | 대기 | 〃 |
 
@@ -63,6 +63,19 @@
 | 데이터 Validator(교차참조 검사) | tools/validate.gd (대사키·안무·아이템·컷신) | ✅ |
 | 퀴즈 미니게임 프레임워크 | QuizMinigame + data/minigames/quiz_man.json | ✅ |
 | craft/grant_item op(해독제 합성) | CutscenePlayer + quiz_paline.json | ✅ |
+| 배터리 회로 퍼즐(10,000V) | BatteryCircuitMinigame + battery_puzzle.json | ✅ |
+| 전투 승리→에필로그→엔딩 흐름 | on_win_flag + epilogue.json | ✅ |
+| Event Editor v0 | addons/event_editor (컷신 스텝 편집) | ✅ |
+
+## Phase 진행
+
+| Phase | 내용 | 상태 |
+|---|---|---|
+| 0~5 | 기반·맵·필드·대화·전투 코어·인벤토리 | ✅ |
+| 6 | 전투 연출(안무/히트스톱/보스 회피 하이브리드) | ✅ |
+| 7 | 컷신·이벤트·미니게임·크래프트·엔딩·에디터 v0 | ✅ |
+| 8 | 도트/오디오 AI 생성 배치 | 다음 |
+| 9 | 세이브·설정·시나리오 데이터 완충 | 대기 |
 | 전투 안무(battle_moves JSON 재생) | ChoreographyRunner + BattlePresenter | ✅ |
 | 히트스톱·화면 흔들림 | BattlePresenter | ✅ |
 | 데미지 팝(속성 색상·크기 비례) | BattlePresenter.ELEMENT_COLORS | ✅ |
