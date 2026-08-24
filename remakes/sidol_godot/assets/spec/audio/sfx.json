@@ -1,16 +1,203 @@
 {
-  "schema_version": 1,
-  "tracks": [
-    { "id": "sfx_menu_move",   "kind": "sfx_one_shot", "duration_sec": [0.02, 0.08], "loop": "none", "prompt_brief": "메뉴 커서 이동 — 짧고 마른 클릭음" },
-    { "id": "sfx_item_get",    "kind": "sfx_one_shot", "duration_sec": [0.3, 0.6],   "loop": "none", "prompt_brief": "아이템 획득 — 상승 아르페지오. 원작 play_music[0](220Hz→392Hz 상승 시퀀스) 재해석" },
-    { "id": "sfx_encounter",   "kind": "sfx_one_shot", "duration_sec": [0.4, 0.8],   "loop": "none", "prompt_brief": "인카운터 — 충격음+경보성 상승. 원작 접촉 연출('쾅!~~') 재해석" },
-    { "id": "sfx_hit_player",  "kind": "sfx_one_shot", "duration_sec": [0.1, 0.3],   "loop": "none", "prompt_brief": "플레이어 피격 — 둔탁하고 낮은 타격" },
-    { "id": "sfx_hit_enemy",   "kind": "sfx_one_shot", "duration_sec": [0.1, 0.3],   "loop": "none", "prompt_brief": "적 피격 — 날카로운 타격+스파크 느낌" },
-    { "id": "sfx_door_open",   "kind": "sfx_one_shot", "duration_sec": [0.3, 0.8],   "loop": "none", "prompt_brief": "문 열림 — 원작 DOOR.VOC 참조" },
-    { "id": "sfx_explosion",   "kind": "sfx_one_shot", "duration_sec": [0.8, 1.5],   "loop": "none", "prompt_brief": "폭파 — 2층 철문 대폭발(원작 PROLOG 클라이맥스)" },
-    { "id": "sfx_thunder_arc", "kind": "sfx_one_shot", "duration_sec": [0.5, 1.2],   "loop": "none", "prompt_brief": "10,000V 아크 방전 — 전기 지직거림+방전" },
-    { "id": "voice_dead",      "kind": "voice_sample", "loop": "none", "prompt_brief": "원작 DEAD.VOC 변환본 사용(생성 금지)" },
-    { "id": "voice_win",       "kind": "voice_sample", "loop": "none", "prompt_brief": "원작 WIN.VOC 변환본 사용(생성 금지)" },
-    { "id": "voice_domang",    "kind": "voice_sample", "loop": "none", "prompt_brief": "원작 DOMANG.VOC 변환본 사용(생성 금지)" }
-  ]
+ "schema_version": 1,
+ "tracks": [
+  {
+   "id": "sfx_menu_move",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.02,
+    0.08
+   ],
+   "loop": "none",
+   "prompt_brief": "메뉴 커서 이동 — 짧고 마른 클릭음"
+  },
+  {
+   "id": "sfx_item_get",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.3,
+    0.6
+   ],
+   "loop": "none",
+   "prompt_brief": "아이템 획득 — 상승 아르페지오. 원작 play_music[0](220Hz→392Hz 상승 시퀀스) 재해석"
+  },
+  {
+   "id": "sfx_encounter",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.4,
+    0.8
+   ],
+   "loop": "none",
+   "prompt_brief": "인카운터 — 충격음+경보성 상승. 원작 접촉 연출('쾅!~~') 재해석"
+  },
+  {
+   "id": "sfx_hit_player",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.1,
+    0.3
+   ],
+   "loop": "none",
+   "prompt_brief": "플레이어 피격 — 둔탁하고 낮은 타격"
+  },
+  {
+   "id": "sfx_hit_enemy",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.1,
+    0.3
+   ],
+   "loop": "none",
+   "prompt_brief": "적 피격 — 날카로운 타격+스파크 느낌"
+  },
+  {
+   "id": "sfx_door_open",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.3,
+    0.8
+   ],
+   "loop": "none",
+   "prompt_brief": "문 열림 — 원작 DOOR.VOC 참조"
+  },
+  {
+   "id": "sfx_explosion",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.8,
+    1.5
+   ],
+   "loop": "none",
+   "prompt_brief": "폭파 — 2층 철문 대폭발(원작 PROLOG 클라이맥스)"
+  },
+  {
+   "id": "sfx_thunder_arc",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.5,
+    1.2
+   ],
+   "loop": "none",
+   "prompt_brief": "10,000V 아크 방전 — 전기 지직거림+방전"
+  },
+  {
+   "id": "voice_dead",
+   "kind": "voice_sample",
+   "loop": "none",
+   "prompt_brief": "원작 DEAD.VOC 변환본 사용(생성 금지)"
+  },
+  {
+   "id": "voice_win",
+   "kind": "voice_sample",
+   "loop": "none",
+   "prompt_brief": "원작 WIN.VOC 변환본 사용(생성 금지)"
+  },
+  {
+   "id": "voice_domang",
+   "kind": "voice_sample",
+   "loop": "none",
+   "prompt_brief": "원작 DOMANG.VOC 변환본 사용(생성 금지)"
+  },
+  {
+   "id": "atk_swish",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.08,
+    0.2
+   ],
+   "loop": "none",
+   "prompt_brief": "공격 휘두르기 — 짧은 바람 소리"
+  },
+  {
+   "id": "impact_light",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.05,
+    0.15
+   ],
+   "loop": "none",
+   "prompt_brief": "경타격 — 마른 타격음(콤보 중간 타)"
+  },
+  {
+   "id": "impact_heavy",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.15,
+    0.35
+   ],
+   "loop": "none",
+   "prompt_brief": "중타격 — 낮은 임팩트+스파크"
+  },
+  {
+   "id": "cast_fire",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.3,
+    0.7
+   ],
+   "loop": "none",
+   "prompt_brief": "화염 시전 — 불꽃 점화 후 투척 위잉"
+  },
+  {
+   "id": "cast_shield",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.3,
+    0.6
+   ],
+   "loop": "none",
+   "prompt_brief": "방어막 전개 — 차오르는 험 사운드(int 21h 느낌의 저역 비프 포함)"
+  },
+  {
+   "id": "charge_volt",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.4,
+    0.9
+   ],
+   "loop": "none",
+   "prompt_brief": "전기 충전 — 상승하는 지직거림 충전음"
+  },
+  {
+   "id": "impact_volt",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.2,
+    0.5
+   ],
+   "loop": "none",
+   "prompt_brief": "방전 임팩트 — 강한 방전+금속성 울림"
+  },
+  {
+   "id": "finisher_charge",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.6,
+    1.2
+   ],
+   "loop": "none",
+   "prompt_brief": "필살기 차지 — 30년의 불씨 테마 모티프 상승 음계"
+  },
+  {
+   "id": "rain_ambience",
+   "kind": "ambience_loop",
+   "duration_sec": [
+    20,
+    60
+   ],
+   "loop": "seamless_required",
+   "prompt_brief": "폭우 앰비언스 — 프롤로그용 빗소리 루프"
+  },
+  {
+   "id": "alarm_system",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.5,
+    1.2
+   ],
+   "loop": "none",
+   "prompt_brief": "시스템 경보 — SYS_BUILDER 기동, 기계적 비프 반복"
+  }
+ ]
 }

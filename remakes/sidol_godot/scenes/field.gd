@@ -87,6 +87,8 @@ func _ready() -> void:
 	cutscene_player.setup(self)
 	cutscene_player.finished.connect(_on_cutscene_finished)
 
+	AudioManager.play_bgm(&"bgm_field")
+
 
 func _physics_process(_delta: float) -> void:
 	if player == null:
@@ -158,6 +160,7 @@ func _open_chest(cell: Vector2i) -> void:
 	var attr := runtime.definition.attr_at(cell)
 	runtime.set_override_attr(cell, 1)   # 빈 상자 처리
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
+	AudioManager.play_sfx(&"sfx_item_get")
 	_show_pickup_popup("아이템 획득!")
 
 
@@ -302,6 +305,7 @@ func _play_sequence(sequence_id: StringName) -> void:
 
 ## 몬스터 접촉 → 전투 씬 전환 (원작 Check_Quang 대응)
 func _trigger_encounter(enemy_id: String) -> void:
+	AudioManager.play_sfx(&"sfx_encounter")
 	GameState.pending_encounter = {"enemies": [enemy_id]}
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
 

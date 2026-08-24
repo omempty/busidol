@@ -14,6 +14,7 @@ var _errors: Array[String] = []
 var _dialogue: Dictionary = {}
 var _sequences: Dictionary = {}
 var _item_ids: Dictionary = {}
+var _audio_ids: Dictionary = {}   # "bgm/xxx", "sfx/xxx", "voice/xxx"
 
 
 func _initialize() -> void:
@@ -24,13 +25,14 @@ func _initialize() -> void:
 	var items: Dictionary = _load_json(DATA + "items.json") as Dictionary
 	for it: Dictionary in items.get("items", []):
 		_item_ids[str(it["id"])] = true
-
+	_load_audio_spec()
 	_validate_battle_moves()
 	_validate_cutscenes()
 	_validate_triggers()
 	_validate_skills_choreography()
 	_validate_credits()
 	_validate_minigames()
+	_validate_sprite_specs()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -68,6 +70,9 @@ func _validate_battle_moves() -> void:
 			for kf: Dictionary in channels[ch]:
 				if float(kf.get("t", -1)) < 0.0:
 					_err("battle_moves/%s 채널 %s t 누락" % [f, ch])
+				if ch == "audio" and kf.has("sfx"):
+					if not _audio_ids.has("sfx/" + str(kf["sfx"])):
+						_err("battle_moves/%s SFX 스펙 없음: %s" % [f, kf["sfx"]])
 
 
 # ---- cutscenes ----
@@ -101,7 +106,11 @@ func _validate_step(file: String, step: Dictionary) -> void:
 					_err("cutscenes/%s 대사 키 없음: %s" %
 							[file, dstep.get("text")])
 		"sfx":
-			pass  # SFX ID는 Phase 8 오디오 확보 후 검사
+			if not _audio_ids.has("sfx/" + str(step.get("id", ""))):
+				_err("cutscenes/%s SFX 스펙 없음: %s" % [file, step.get("id")])
+		"bgm":
+			if not _audio_ids.has("bgm/" + str(step.get("id", ""))):
+				_err("cutscenes/%s BGM 스펙 없음: %s" % [file, step.get("id")])
 		"minigame_quiz":
 			var mg := "%sminigames/%s.json" % [DATA, step.get("id", "")]
 			if not FileAccess.file_exists(mg):
@@ -221,6 +230,58 @@ func _key_or_text(s: String) -> bool:
 	if s == "":
 		return false
 	return true if not s.begins_with("@") else _dialogue.has(s)
+
+
+# ---- 오디오 스펙 (assets/spec/audio/*.json) ----
+
+func _load_audio_spec() -> void:
+	for kind: String in ["bgm", "sfx", "voice"]:
+		var path := "res://assets/spec/audio/%s.json" % kind
+		if not FileAccess.file_exists(path):
+			push_warning("[validate] 오디오 스펙 대기: %s" % path)
+			continue
+		var raw: Variant = _load_json(path)
+		if typeof(raw) != TYPE_DICTIONARY:
+			continue
+		for t: Dictionary in (raw as Dictionary).get("tracks", []):
+			_audio_ids["%s/%s" % [kind, t.get("id", "")]] = true
+
+
+# ---- 스프라이트 스펙 구조 검사 (assets/spec/sprites/*.json) ----
+
+func _validate_sprite_specs() -> void:
+	var dir := DirAccess.open("res://assets/spec/sprites")
+	if dir == null:
+		return
+	for f in dir.get_files():
+		if not f.ends_with(".json"):
+			continue
+		var spec: Dictionary = _load_json("res://assets/spec/sprites/" + f) \
+				as Dictionary
+		if spec.is_empty():
+			continue
+		var stem := f.trim_suffix(".json")
+		if str(spec.get("asset_id", "")) != stem:
+			_err("sprites/%s asset_id 불일치" % f)
+		if str(spec.get("kind", "")) == "tileset":
+			continue   # 타일셋은 grid/애니 구조가 다름(필수 타일 목록만 존재)
+		var grid: Dictionary = spec.get("grid", {})
+		var cell: Dictionary = spec.get("cell", {})
+		var cols := int(grid.get("cols", 0))
+		var rows := int(grid.get("rows", 0))
+		if cols <= 0 or rows <= 0 or int(cell.get("w", 0)) <= 0:
+			_err("sprites/%s grid/cell 무효" % f)
+			continue
+		for anim_name: String in spec.get("animations", {}):
+			var a: Dictionary = spec["animations"][anim_name]
+			if int(a.get("row", -1)) >= rows or int(a.get("row", -1)) < 0:
+				_err("sprites/%s 애니 '%s' row 범위 이탈" % [f, anim_name])
+			if int(a.get("frames", 0)) > cols:
+				_err("sprites/%s 애니 '%s' frames > cols" % [f, anim_name])
+		# 패킹 결과물은 소프트 체크(미생성 = Phase 8 진행 중)
+		var packed := "res://assets/sprites/%s.png" % stem
+		if not FileAccess.file_exists(packed):
+			push_warning("[validate] 패킹 대기: assets/sprites/%s.png" % stem)
 
 
 # ---- 공통 ----

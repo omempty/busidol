@@ -33,7 +33,15 @@ func _ready() -> void:
 	_setup_ui()
 	_setup_presentation()
 	controller.start(player_combatant, enemies)
+	AudioManager.play_bgm(&"bgm_boss" if _is_boss_fight() else &"bgm_battle")
 	_ui.show_command_menu()
+
+
+func _is_boss_fight() -> bool:
+	for eid in _enemy_ids:
+		if bool(Database.get_enemy_def(StringName(eid)).get("is_boss", false)):
+			return true
+	return false
 
 
 func _setup_ui() -> void:

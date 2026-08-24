@@ -3,7 +3,7 @@
   "schema_version": 1,
   "_comment": "F2 동아리 HP실 방문 — 크레딧룸(멤버 소개)로 진입. Q_F2_HP.",
   "steps": [
-    { "op": "sfx", "id": "door_open" },
+    { "op": "sfx", "id": "sfx_door_open" },
     { "op": "set_flags", "args": { "q_f2_hp": true } },
     { "op": "change_scene", "path": "res://scenes/credit_room.tscn" }
   ]
