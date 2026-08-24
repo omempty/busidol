@@ -71,16 +71,15 @@ T-D [아트·오디오]    T-E [시나리오]           T-F [UI/UX]
 - - 장비군(방어구)은 백로그 §2 확정분만 이번 Phase에 포함, 나머지는 Phase 8로 이월
 - **수용**: 상점 구매→장착→전투 스탯 반영 E2E
 
-## Phase 5 — 싸운다(로직): 전투 코어 [M→L] (마스터 시나리오로 스코프 확대)
+## Phase 5 — 싸운다(로직): 전투 코어 ✅ [M→L] (마스터 시나리오로 스코프 확대)
 
-- [ ] BattleController/TurnStateMachine/DamageCalculator(순수함수+G-FAITH 스위치)
-- [ ] **SkillDef 6종 + StatusEffectSystem(DoT/버프/마비)** — 01_oop_redesign §5.1~5.2
-- [ ] **배틀 스크립트 훅 프레임**(mid_battle_dialogue / phase_transition / require_item_finisher) — §5.3
-- [ ] Combatant/HP바/**기술 서브메뉴**/도주/승패 처리
-- [ ] GrowthCurve 연동 — **레벨업 신규 구현**(Q2)
-- [ ] EncounterTable + 필드 EnemyEntity(PatternAI/ChaseAI) + 접촉 인카운터
-- 백로그 §3.2 속성 상성 채택 여부는 여기서 결정(G-FAITH 연동)
-- **수용**: 데미지·상태이상 단위테스트 + 10연속 전투 + 페이즈 전환 1회 포함 스모크
+- [x] BattleController/TurnStateMachine/DamageCalculator(순수함수+G-FAITH 스위치)
+- [x] **SkillDef 6종 + StatusEffectSystem(DoT/버프/마비)** — 01_oop_redesign §5.1~5.2
+- [x] **배틀 스크립트 훅 프레임**(mid_battle_dialogue / phase_transition / require_item_finisher) — §5.3
+- [x] Combatant/HP바/**기술 서브메뉴**/도주/승패 처리
+- [x] GrowthCurve 연동 — **레벨업 신규 구현**(Q2) + 난이도 상/중/하
+- [x] EncounterTable + 필드 EnemyEntity(PatternAI/ChaseAI) + 접촉 인카운터
+- 수용: 데미지·상태이상 단위테스트 + 10연속 전투 + 페이즈 전환 스모크 ✓
 
 ## Phase 6 — 보여준다: 전투 연출 [L]
 
