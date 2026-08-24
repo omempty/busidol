@@ -1,12 +1,11 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-24 · Phase 7 첫 슬라이스(컷신/트리거 런타임) 완료 시점
+> 작성일: 2026-08-24 · Phase 7 대부분 완료(UI 분리·Schema·크레딧룸·보스 트리거) 시점
 
 ## 1. 현재 상태 한 줄 요약
 
-Phase 0~6 완료 + **Phase 7 핵심 런타임 완료**(CutscenePlayer 실구현, TriggerSystem,
-프롤로그 opening 컷신 데이터, 검증 관문 6단계 확장).
-다음은 **Phase 7 잔여**(craft op·미니게임 프레임워크·Event Editor v0)부터.
+Phase 0~7 완료(전투 UI 분리, Schema 껍데기 3종, 크레딧룸 3모드 — 멤버/후일담 카드/스탭롤,
+SYS_BUILDER 보스 트리거+컷신). 다음은 **craft op + 미니게임 프레임워크**와 **Event Editor v0**.
 
 ## 2. 다음 세션 첫 명령
 
@@ -14,7 +13,7 @@ Phase 0~6 완료 + **Phase 7 핵심 런타임 완료**(CutscenePlayer 실구현,
 # 게임 실행 확인 (F1 진입 시 프롤로그 컷신 자동 재생)
 remakes\sidol_godot\게임실행.bat
 
-# 검증 관문 확인 — 이제 6단계(import/validate/smoke×4)
+# 검증 관문 확인 — 6단계(import/validate/smoke×4)
 remakes\sidol_godot\검증실행.bat
 ```
 
@@ -22,11 +21,11 @@ remakes\sidol_godot\검증실행.bat
 
 | 순서 | 작업 | 파일 |
 |---|---|---|
-| 1 | battle_scene_controller UI 분리(~450행, 상한 초과) | `_build_ui`/메뉴 → `src/ui/battle_ui.gd` |
-| 2 | craft op + 미니게임 프레임워크(quiz/배터리 회로) | 마스터 시나리오 §F3 |
-| 3 | Event Editor v0 / battle_moves JSON Schema 껍데기 | `_shared/schemas/` |
-| 4 | 보스 출현 트리거 — start_battle op 연결 | CutscenePlayer.start_battle 이미 구현됨 |
-| 5 | 크레딧룸 골격 완성 + 엔딩 카드 | scenes/credit_room.gd |
+| 1 | craft op(3약품 합성) + 미니게임 프레임워크(quiz/배터리 회로) | 마스터 시나리오 §F3/F4 |
+| 2 | Event Editor v0(Godot 플러그인) | docs/02_design/05 §3.3 |
+| 3 | Validator 실구현 — `_shared/schemas/*.schema.json` 기반 검사 | tools/validate.gd (현재 stub) |
+| 4 | 크레딧룸 입구 연결 — F2 HP실 NPC 대화 → credit_room 씬 전환 | triggers_f2.json |
+| 5 | 엔딩 진입 — q_f5_ai_battle 승리 후 에필로그 컷신(@c601~605) | data/cutscenes/ |
 
 ### 재활용 아키텍처 노트 (bombman94/95 포팅 대비)
 
@@ -34,27 +33,27 @@ remakes\sidol_godot\검증실행.bat
 
 | 계층 | 위치 | bombman94/95 에서 |
 |---|---|---|
-| **공용 프레임워크** | `src/battle`(BattleController/DamageCalculator/ChoreographyRunner/BattlePresenter), `src/cutscene`, `src/map/trigger_system.gd`, `_shared` 도구(johab/PCX/VOC) | **그대로 이식** — 안무 JSON 채널 계약은 엔진 무관 |
-| **게임 데이터** | `data/**`(battle_moves/skills/monsters/cutscenes/triggers) | 전면 교체(원작 데이터 변환기만 작성) |
-| **게임 전용 로직** | field/battle 씬 조립, Combatant 성장, 보스 하이브리드 | 부분 재작성 |
+| **공용 프레임워크** | `src/battle`(BattleController/DamageCalculator/ChoreographyRunner/BattlePresenter/BattleUI), `src/cutscene`, `src/map/trigger_system.gd`, `_shared` 도구(johab/PCX/VOC)+schemas | **그대로 이식** — 안무 JSON 채널 계약은 엔진 무관 |
+| **게임 데이터** | `data/**`(battle_moves/skills/monsters/cutscenes/triggers/credits) | 전면 교체(원작 데이터 변환기만 작성) |
+| **게임 전용 로직** | field/battle/credit_room 씬 조립, Combatant 성장, 보스 하이브리드 | 부분 재작성 |
 
 원칙: 새 시스템 추가 시 "콘텐츠는 data/**, 메커니즘은 범용 클래스" 경계를 유지할 것.
 Combatant.stats 타입 Resource화(CharacterStats)가 남은 결합도 해소 과제(Phase 4 TODO).
 
 ### 구현 노트 (이번 세션 결정)
 
+- **전투 UI 분리**: `src/ui/battle_ui.gd` 신설 — HP바/메뉴/결과 라벨이 시그널
+  (`command_selected`/`skill_selected`)으로만 통신. 컨트롤러 455→305행.
+  스프라이트 생성도 presenter.build_sprites() 로 이동.
+- **Schema 껍데기**: `_shared/schemas/{event,cutscene,battle_move}.schema.json`.
+  validate.gd 가 아직 stub 이므로 자동 검사는 미연결(잔여 작업 3번).
+- **크레딧룸**: 콘텐츠 전부 `data/credits.json` 으로 이동(하드코딩 해소).
+  ↑↓ 모드 전환(멤버/엔딩카드/스탭롤), 후일담 카드 3종은 @c601~@c605 참조.
+- **보스 트리거**: `triggers_f5.json` — `q_f5_boss_gate` 플래그에서만 발동하는 auto
+  트리거 → `boss_sys_builder.json` 컷신(@c507~@c515) → `start_battle` op 로 결전 진입.
 - **판정 단일화**: 데미지 적용은 BattleController.submit_player_command 가 유일.
-  안무의 logic apply_damage 프레임은 기록된 결과(`cmd["damages"]`)를 **표현만** 한다.
-- **보스전 하이브리드**: `monsters.json` bosses 섹션의 `dodge_phase` 설정이 있으면
-  적 턴이 탄막 회피 페이즈로 대체. hits × `dodge_damage_per_hit` = 플레이어 피해.
-  (구판 HANDOFF가 인용한 05_toolchain §5.3 문서는 실제 미존재 — 방침만 준용)
-- **컷신**: CutscenePlayer 비동기 스텝 해석(dialogue/wait/fade/shake/sfx/bgm/
-  set_flags/actor_move/start_battle). DialogueBox에 auto_advance 모드 추가(컷신 전용).
-- **트리거**: zone/interact/auto 3종, done_flag 1회성, requires_flag 조건.
-  F1 프롤로그는 auto 트리거 → opening.json(@c101~@c106) 재생.
-- **교훈**: `else if` 구문에서 파싱 실패(원인 불명, `elif` 로 우회) +
-  글로벌 클래스 캐시 재구축 필요(`--import`). 신규 클래스 추가 후 반드시 import.
-- Godot 4.7.2 를 `_shared/tools/godot/` 에 설치함.
+- **교훈**: 신규 class_name 추가 후 반드시 `--import`(글로벌 클래스 캐시 재구축).
+  Godot 4.7.2 는 `_shared/tools/godot/`.
 
 ## 4. 알려진 미해결
 

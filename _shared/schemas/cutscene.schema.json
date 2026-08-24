@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "busidol/schemas/cutscene.schema.json",
+  "title": "cutscenes 스텝 시퀀스 (v1 껍데기)",
+  "_comment": "계약 문서: docs/02_design/05_toolchain_editors.md §4. op 집합은 CutscenePlayer._execute와 동기 유지.",
+  "type": "object",
+  "required": ["id", "steps"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "_comment": { "type": "string" },
+    "skippable": { "type": "boolean" },
+    "actors": { "type": "object" },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op"],
+        "properties": {
+          "op": { "enum": ["dialogue", "wait", "fade_in", "fade_out", "shake",
+                            "sfx", "bgm", "set_flags", "actor_move",
+                            "start_battle", "end"] },
+          "seconds": { "type": "number", "minimum": 0 },
+          "power": { "type": "number" },
+          "times": { "type": "integer" },
+          "id": { "type": "string" },
+          "args": { "type": "object" },
+          "steps": {
+            "type": "array",
+            "description": "dialogue op 전용: [{speaker,text(@t/@c)}]",
+            "items": {
+              "type": "object",
+              "required": ["speaker", "text"],
+              "properties": {
+                "speaker": { "type": "string" },
+                "text": { "type": "string", "pattern": "^@([tc][0-9]+|.*)$" }
+              }
+            }
+          },
+          "actor": { "type": "string" },
+          "cell": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 },
+          "enemies": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

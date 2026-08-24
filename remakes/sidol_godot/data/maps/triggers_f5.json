@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "_comment": "F5 트리거 — q_f5_boss_gate 플래그가 세팅되면(시나리오 이벤트가 몬스터 제압 후) SYS_BUILDER 각성 컷신 → 최종 결전. 마스터 시나리오 씬 5-2.",
+  "triggers": [
+    {
+      "id": "f5_boss_intro",
+      "type": "auto",
+      "once": true,
+      "requires_flag": "q_f5_boss_gate",
+      "done_flag": "q_f5_ai_battle",
+      "action": { "cutscene": "boss_sys_builder" }
+    }
+  ]
+}

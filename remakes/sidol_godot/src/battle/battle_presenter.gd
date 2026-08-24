@@ -16,25 +16,51 @@ const HITSTOP_SCALE := 0.05
 
 var target_index := 0   ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
 
+var player_sprite: Sprite2D
+var enemy_sprites: Array[Sprite2D] = []
+
 var _root: Node2D
-var _player_sprite: Sprite2D
-var _enemy_sprites: Array[Sprite2D] = []
 var _shake_power := 0.0
 var _root_base := Vector2.ZERO
 var _was_shaken := false
 var _hitstop_busy := false
 
 
-func setup(root: Node2D, player_sprite: Sprite2D,
-		enemy_sprites: Array[Sprite2D]) -> void:
+func setup(root: Node2D) -> void:
 	_root = root
-	_player_sprite = player_sprite
-	_enemy_sprites = enemy_sprites
 	_root_base = root.position
-	if player_sprite != null:
-		player_sprite.set_meta(&"base_pos", player_sprite.position)
-	for es in enemy_sprites:
+
+
+## 전투 스프라이트 구성 — 플레이어(원작 도트 row0 col0) + 적(e1~e8 or 색상 폴백)
+func build_sprites(enemy_count: int) -> void:
+	player_sprite = Sprite2D.new()
+	var ptex: Texture2D = load("res://assets/sprites/player_original.png")
+	if ptex != null:
+		var at := AtlasTexture.new()
+		at.atlas = ptex
+		at.region = Rect2(0, 0, 64, 64)
+		player_sprite.texture = at
+	player_sprite.position = Vector2(80, 140)
+	player_sprite.scale = Vector2(1.5, 1.5)
+	player_sprite.set_meta(&"base_pos", player_sprite.position)
+	_root.add_child(player_sprite)
+
+	for i in enemy_count:
+		var es := Sprite2D.new()
+		var e_tex_path := "res://assets/originals_ref/bmp_spr/e%d/frame_000.bmp" \
+				% (i % 8 + 1)
+		if ResourceLoader.exists(e_tex_path):
+			es.texture = load(e_tex_path)
+		else:
+			var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+			img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6),
+					randf_range(0.2, 0.5)))
+			es.texture = ImageTexture.create_from_image(img)
+		es.position = Vector2(380 + i * 70, 120)
+		es.scale = Vector2(1.5, 1.5)
 		es.set_meta(&"base_pos", es.position)
+		_root.add_child(es)
+		enemy_sprites.append(es)
 
 
 func on_move_start(_move_data: Dictionary) -> void:
@@ -136,24 +162,24 @@ func _process(delta: float) -> void:
 
 func _actor_sprite(actor_id: String) -> Sprite2D:
 	if actor_id == "self":
-		return _player_sprite
-	var idx := clampi(target_index, 0, _enemy_sprites.size() - 1)
-	return _enemy_sprites[idx] if not _enemy_sprites.is_empty() else null
+		return player_sprite
+	var idx := clampi(target_index, 0, enemy_sprites.size() - 1)
+	return enemy_sprites[idx] if not enemy_sprites.is_empty() else null
 
 
 func _reset_sprites() -> void:
-	for spr: Sprite2D in ([_player_sprite] as Array[Sprite2D]) + _enemy_sprites:
+	for spr: Sprite2D in ([player_sprite] as Array[Sprite2D]) + enemy_sprites:
 		if spr != null and is_instance_valid(spr) and spr.has_meta(&"base_pos"):
 			spr.position = spr.get_meta(&"base_pos")
 			spr.modulate = Color.WHITE
 
 
 func _pop_position(on_player: bool, enemy_index: int, font_size: int) -> Vector2:
-	if on_player and _player_sprite != null:
-		var pp := _player_sprite.position
+	if on_player and player_sprite != null:
+		var pp := player_sprite.position
 		return Vector2(pp.x - font_size * 0.5 + randf_range(-8, 8), pp.y - 40)
-	if enemy_index >= 0 and enemy_index < _enemy_sprites.size():
-		var ep := _enemy_sprites[enemy_index].position
+	if enemy_index >= 0 and enemy_index < enemy_sprites.size():
+		var ep := enemy_sprites[enemy_index].position
 		return Vector2(ep.x - font_size * 0.5 + randf_range(-6, 6), ep.y - 48)
 	return Vector2(randf_range(190, 260), randf_range(60, 100))
 

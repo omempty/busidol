@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "busidol/schemas/battle_move.schema.json",
+  "title": "battle_moves 채널 타임라인 (v1 껍데기)",
+  "_comment": "계약 문서: docs/02_design/05_toolchain_editors.md §5.1. Validator는 tools/validate.gd가 이 스키마를 근거로 확장될 예정.",
+  "type": "object",
+  "required": ["id", "length", "channels"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "side": { "enum": ["player", "enemy"] },
+    "length": { "type": "number", "exclusiveMinimum": 0 },
+    "_comment": { "type": "string" },
+    "channels": {
+      "type": "object",
+      "propertyNames": { "enum": ["sprite", "fx", "camera", "screen", "audio", "logic"] },
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": ["t"],
+          "properties": {
+            "t": { "type": "number", "minimum": 0 },
+            "actor": { "type": "string" },
+            "anim": { "type": "string" },
+            "pos": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+            "dur": { "type": "number", "exclusiveMinimum": 0 },
+            "effect": { "type": "string" },
+            "at_actor": { "type": "string" },
+            "shake": { "type": "number", "minimum": 0 },
+            "flash": { "type": "string" },
+            "a": { "type": "number", "minimum": 0, "maximum": 1 },
+            "sfx": { "type": "string" },
+            "apply_damage": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

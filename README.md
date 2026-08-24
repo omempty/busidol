@@ -56,6 +56,10 @@
 | 컷신 재생기(비동기 스텝 해석) | CutscenePlayer + data/cutscenes | ✅ |
 | 이벤트 트리거(zone/interact/auto) | TriggerSystem + triggers_f*.json | ✅ |
 | 프롤로그 컷신(씬 1-1 무대화) | opening.json + @c101~@c106 | ✅ |
+| 전투 UI 계층 분리 | BattleUI(시그널 통신) | ✅ |
+| 데이터 스키마 껍데기 3종 | _shared/schemas/{event,cutscene,battle_move} | ✅ |
+| 크레딧룸(멤버/후일담카드/스탭롤) | credit_room.gd + credits.json | ✅ |
+| 최종보스 각성 컷신+트리거 | boss_sys_builder.json + triggers_f5.json | ✅ |
 | 전투 안무(battle_moves JSON 재생) | ChoreographyRunner + BattlePresenter | ✅ |
 | 히트스톱·화면 흔들림 | BattlePresenter | ✅ |
 | 데미지 팝(속성 색상·크기 비례) | BattlePresenter.ELEMENT_COLORS | ✅ |

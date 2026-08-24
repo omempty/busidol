@@ -1,0 +1,161 @@
+class_name BattleUI
+extends CanvasLayer
+## 전투 UI 계층 — HP바·턴 표시·커맨드/스킬 메뉴·결과 라벨.
+## 로직(BattleSceneController)과 분리. 커맨드 선택은 시그널로만 통지한다.
+
+signal command_selected(cmd_text: String)
+signal skill_selected(skill: Dictionary)
+
+const CMD_TEXTS: Array[String] = ["공격", "기술", "방어", "도망"]
+const PLAYER_BAR_COLOR := Color(0.3, 1.0, 0.5)
+const ENEMY_BAR_COLOR := Color(1, 0.3, 0.3)
+
+var _hp_bars := {}
+var _menu_root: VBoxContainer
+var _skill_panel: VBoxContainer
+var _turn_label: Label
+var _result_label: Label
+var _skills: Array[Dictionary] = []
+var _player: Combatant
+var _enemies: Array[Combatant] = []
+
+
+func build(p_player: Combatant, p_enemies: Array[Combatant],
+		skills: Array[Dictionary]) -> void:
+	layer = 20
+	_player = p_player
+	_enemies = p_enemies
+	_skills = skills
+	_build_background()
+	_build_enemy_status()
+	_build_player_status()
+	_build_labels()
+
+
+func refresh_bars() -> void:
+	for i in _enemies.size():
+		var key := _enemies[i]
+		if _hp_bars.has(key):
+			_hp_bars[key].value = maxi(0, _enemies[i].hp)
+	if _hp_bars.has(&"player"):
+		_hp_bars[&"player"].value = maxi(0, _player.hp)
+
+
+func set_turn_text(text: String) -> void:
+	_turn_label.text = text
+
+
+func show_result(result: StringName) -> void:
+	hide_menu()
+	_result_label.text = "WIN!" if result == &"win" \
+			else ("FLEE" if result == &"flee" else "LOSE...")
+	_result_label.visible = true
+	_result_label.add_theme_color_override("font_color",
+			Color(0.3, 1.0, 0.5) if result == &"win" else Color(1, 0.3, 0.2))
+
+
+func show_command_menu() -> void:
+	hide_menu()
+	_menu_root = _new_menu_box()
+	for cmd_text: String in CMD_TEXTS:
+		var btn := Button.new()
+		btn.text = cmd_text
+		btn.pressed.connect(func() -> void: command_selected.emit(cmd_text))
+		_menu_root.add_child(btn)
+
+
+func show_skill_menu() -> void:
+	hide_menu()
+	_skill_panel = _new_menu_box()
+	for skill: Dictionary in _skills:
+		var btn := Button.new()
+		btn.text = str(skill.get("display_key", skill["id"]))
+		btn.pressed.connect(func() -> void:
+			_close_skill_panel()
+			skill_selected.emit(skill))
+		_skill_panel.add_child(btn)
+
+
+func hide_menu() -> void:
+	if _menu_root != null:
+		_menu_root.queue_free()
+		_menu_root = null
+	_close_skill_panel()
+
+
+func _close_skill_panel() -> void:
+	if _skill_panel != null:
+		_skill_panel.queue_free()
+		_skill_panel = null
+
+
+func _new_menu_box() -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.position = Vector2(420, 200)
+	box.custom_minimum_size = Vector2(120, 0)
+	add_child(box)
+	return box
+
+
+func _build_background() -> void:
+	var bg := ColorRect.new()
+	bg.color = Color(0.06, 0.06, 0.12)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(bg)
+
+
+func _build_enemy_status() -> void:
+	for i in _enemies.size():
+		var e := _enemies[i]
+		var name_lbl := Label.new()
+		name_lbl.text = e.display_name
+		name_lbl.position = Vector2(180 + i * 80, 30)
+		name_lbl.add_theme_font_size_override("font_size", 10)
+		add_child(name_lbl)
+
+		var bar := ProgressBar.new()
+		bar.max_value = e.max_hp
+		bar.value = e.hp
+		bar.position = Vector2(180 + i * 80, 46)
+		bar.size = Vector2(64, 8)
+		bar.show_percentage = false
+		bar.modulate = ENEMY_BAR_COLOR
+		add_child(bar)
+		_hp_bars[e] = bar
+
+
+func _build_player_status() -> void:
+	var pname := Label.new()
+	pname.text = "부싯돌"
+	pname.position = Vector2(16, 14)
+	add_child(pname)
+
+	var php := ProgressBar.new()
+	php.max_value = _player.max_hp
+	php.value = _player.hp
+	php.position = Vector2(16, 32)
+	php.size = Vector2(140, 10)
+	php.show_percentage = false
+	php.modulate = PLAYER_BAR_COLOR
+	add_child(php)
+	_hp_bars[&"player"] = php
+
+	var pap := Label.new()
+	pap.text = "AP %d" % _player.ap
+	pap.position = Vector2(16, 48)
+	add_child(pap)
+
+
+func _build_labels() -> void:
+	_turn_label = Label.new()
+	_turn_label.text = "TURN 1"
+	_turn_label.position = Vector2(280, 14)
+	_turn_label.add_theme_font_size_override("font_size", 14)
+	add_child(_turn_label)
+
+	_result_label = Label.new()
+	_result_label.text = ""
+	_result_label.position = Vector2(240, 100)
+	_result_label.add_theme_font_size_override("font_size", 28)
+	_result_label.visible = false
+	add_child(_result_label)

@@ -1,25 +1,16 @@
 class_name BattleSceneController
 extends Node2D
-## 전투 씬 — 커맨드 선택→해결→적 턴→판정 루프.
-## 스피디·박력 원칙: 데미지 팝+히트스톱+화면 흔들림+속도 배율.
+## 전투 씬 조립 + 턴 흐름 중재. UI는 BattleUI, 연출은 BattlePresenter,
+## 판정은 BattleController — 각 계층 분리(docs/02_design/01_oop_redesign.md §5).
 
 signal battle_ended(result: StringName, rewards: Dictionary)
-
-enum CmdMenu { MAIN, SKILL_SELECT, ITEM_SELECT }
 
 var controller := BattleController.new()
 var player_combatant: Combatant
 var enemies: Array[Combatant] = []
-var enemy_defs: Array[Dictionary] = []
 var _enemy_ids: Array[String] = []
 
-# UI
-var _hp_bars := {}
-var _cmd_buttons: Array[Button] = []
-var _skill_panel: VBoxContainer
-var _menu_root: VBoxContainer
-var _turn_label: Label
-var _result_label: Label
+var _ui: BattleUI
 var _busy := false
 var _skills: Array[Dictionary] = []
 
@@ -31,39 +22,109 @@ var _pending_action := {}
 var _pending_pops: Array[Dictionary] = []   # damages 표현 큐 (apply_damage 프레임마다 1개)
 var _pending_element := &"physical"
 
-# 전투 스프라이트
-var _player_sprite: Sprite2D
-var _enemy_sprites: Array[Sprite2D] = []
+
+func _ready() -> void:
+	var def: Dictionary = GameState.pending_encounter
+	GameState.pending_encounter = {}
+	_setup_combatants(def)
+	_load_skills()
+	_setup_ui()
+	_setup_presentation()
+	controller.start(player_combatant, enemies)
+	_ui.show_command_menu()
 
 
-func _setup_battle_sprites() -> void:
-	# 플레이어 스프라이트 (원작 도트)
-	_player_sprite = Sprite2D.new()
-	var ptex: Texture2D = load("res://assets/sprites/player_original.png")
-	if ptex != null:
-		var at := AtlasTexture.new()
-		at.atlas = ptex
-		at.region = Rect2(0, 0, 64, 64)   # row0 col0 = walk_down f0
-		_player_sprite.texture = at
-	_player_sprite.position = Vector2(80, 140)
-	_player_sprite.scale = Vector2(1.5, 1.5)
-	add_child(_player_sprite)
+func _setup_ui() -> void:
+	_ui = BattleUI.new()
+	add_child(_ui)
+	_ui.build(player_combatant, enemies, _skills)
+	_ui.command_selected.connect(_on_command)
+	_ui.skill_selected.connect(_on_skill_selected)
 
-	# 적 스프라이트 (원작 e1~e8에서 로드 or 색상 사각형 폴백)
-	for i in enemies.size():
-		var es := Sprite2D.new()
-		var e_tex_path := "res://assets/originals_ref/bmp_spr/e%d/frame_000.bmp" % (i % 8 + 1)
-		if ResourceLoader.exists(e_tex_path):
-			es.texture = load(e_tex_path)
-		else:
-			# 폴백: 색상 사각형
-			var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-			img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6), randf_range(0.2, 0.5)))
-			es.texture = ImageTexture.create_from_image(img)
-		es.position = Vector2(380 + i * 70, 120)
-		es.scale = Vector2(1.5, 1.5)
-		add_child(es)
-		_enemy_sprites.append(es)
+
+## 연출 계층 구성 — 안무 실행기와 프리젠터를 바인딩
+func _setup_presentation() -> void:
+	_presenter = BattlePresenter.new()
+	add_child(_presenter)
+	_presenter.setup(self)
+	_presenter.build_sprites(enemies.size())
+
+	_runner = ChoreographyRunner.new()
+	add_child(_runner)
+	_runner.bind_presenter(_presenter)
+	_runner.damage_frame.connect(_on_choreo_damage_frame)
+	_runner.move_finished.connect(_on_choreo_finished)
+
+	_dodge = DodgePhase.new()
+	_dodge.visible = false
+	add_child(_dodge)
+
+
+func _load_skills() -> void:
+	var raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://data/skills.json"))
+	if typeof(raw) == TYPE_DICTIONARY:
+		for s: Dictionary in raw.get("skills", []):
+			_skills.append(s)
+
+
+func _setup_combatants(def: Dictionary) -> void:
+	var stats: Dictionary = GameState.player_stats
+	player_combatant = Combatant.new("부싯돌", int(stats["hp"]), int(stats["ap"]), 10)
+	player_combatant.skills = [&"combo_punch", &"flame_beaker", &"debug_shield",
+			&"volt_arc", &"ember_of_flint"]
+
+	for eid in def.get("enemies", ["mad_eye"]):
+		var edef: Dictionary = Database.get_enemy_def(StringName(str(eid)))
+		var hp_r: Array = edef.get("hp_range", [20, 40])
+		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
+		enemies.append(Combatant.new(str(edef.get("display_name", eid)), hp_val,
+				int(edef.get("ap", 15)), int(edef.get("dp", 5))))
+		_enemy_ids.append(str(eid))
+
+
+func _on_command(cmd_text: String) -> void:
+	if _busy:
+		return
+	match cmd_text:
+		"공격":
+			_begin_player_action({
+				"type": &"attack",
+				"ap": player_combatant.ap,
+				"target": _first_alive_enemy(),
+			}, &"atk_basic")
+		"기술":
+			_ui.show_skill_menu()
+		"방어":
+			player_combatant.attach_effect(
+					{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50})
+			_end_player_defend()
+		"도망":
+			battle_ended.emit(&"flee", {})
+			_exit_battle(&"flee")
+
+
+func _on_skill_selected(skill: Dictionary) -> void:
+	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
+	_begin_player_action({
+		"type": &"skill",
+		"skill": skill,
+		"ap": player_combatant.ap,
+	}, move_id)
+
+
+## 플레이어 액션 개시 — 커맨드 제출(판정) → 안무 재생(표현) → 종료 시 턴 해결
+func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
+	if _busy:
+		return
+	_busy = true
+	_ui.hide_menu()
+	controller.submit_player_command(command)
+	_pending_action = command
+	_pending_pops.assign(command.get("damages", []))
+	var skill: Dictionary = command.get("skill", {})
+	_pending_element = StringName(str(skill.get("element", "physical")))
+	_play_move(move_id)
 
 
 ## 안무 재생 — battle_moves JSON을 러너로 재생(연출은 프리젠터 위임).
@@ -94,8 +155,8 @@ func _on_choreo_damage_frame() -> void:
 	var pop: Dictionary = _pending_pops.pop_front()
 	var idx := int(pop.get("enemy_index", 0))
 	_presenter.show_damage_number(int(pop["amount"]), false, _pending_element, idx)
-	if idx < _enemy_sprites.size():
-		_presenter.hurt_flash(_enemy_sprites[idx])
+	if idx < _presenter.enemy_sprites.size():
+		_presenter.hurt_flash(_presenter.enemy_sprites[idx])
 	_presenter.hitstop()
 
 
@@ -142,200 +203,9 @@ func _first_alive_enemy() -> Combatant:
 	return null
 
 
-func _ready() -> void:
-	var def: Dictionary = GameState.pending_encounter
-	GameState.pending_encounter = {}
-	_setup_combatants(def)
-	_load_skills()
-	_build_ui()
-	controller.start(player_combatant, enemies)
-	_setup_battle_sprites()
-	_setup_presentation()
-	_show_command_menu()
-
-
-## 연출 계층 구성 — 안무 실행기와 프리젠터를 스프라이트에 바인딩
-func _setup_presentation() -> void:
-	_presenter = BattlePresenter.new()
-	add_child(_presenter)
-	_presenter.setup(self, _player_sprite, _enemy_sprites)
-
-	_runner = ChoreographyRunner.new()
-	add_child(_runner)
-	_runner.bind_presenter(_presenter)
-	_runner.damage_frame.connect(_on_choreo_damage_frame)
-	_runner.move_finished.connect(_on_choreo_finished)
-
-	_dodge = DodgePhase.new()
-	_dodge.visible = false
-	add_child(_dodge)
-
-
-func _load_skills() -> void:
-	var raw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string("res://data/skills.json"))
-	if typeof(raw) == TYPE_DICTIONARY:
-		for s: Dictionary in raw.get("skills", []):
-			_skills.append(s)
-
-
-func _setup_combatants(def: Dictionary) -> void:
-	var stats: Dictionary = GameState.player_stats
-	player_combatant = Combatant.new("부싯돌", int(stats["hp"]), int(stats["ap"]), 10)
-	player_combatant.skills = [&"combo_punch", &"flame_beaker", &"debug_shield",
-			&"volt_arc", &"ember_of_flint"]
-
-	for eid in def.get("enemies", ["mad_eye"]):
-		var edef: Dictionary = Database.get_enemy_def(StringName(str(eid)))
-		var hp_r: Array = edef.get("hp_range", [20, 40])
-		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
-		enemies.append(Combatant.new(str(edef.get("display_name", eid)), hp_val,
-				int(edef.get("ap", 15)), int(edef.get("dp", 5))))
-		_enemy_ids.append(str(eid))
-
-
-func _build_ui() -> void:
-	# 배경
-	var bg := ColorRect.new()
-	bg.color = Color(0.06, 0.06, 0.12)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
-
-	# 적 이름 + HP 바
-	for i in enemies.size():
-		var e := enemies[i]
-		var name_lbl := Label.new()
-		name_lbl.text = e.display_name
-		name_lbl.position = Vector2(180 + i * 80, 30)
-		name_lbl.add_theme_font_size_override("font_size", 10)
-		add_child(name_lbl)
-
-		var bar := ProgressBar.new()
-		bar.max_value = e.max_hp
-		bar.value = e.hp
-		bar.position = Vector2(180 + i * 80, 46)
-		bar.size = Vector2(64, 8)
-		bar.show_percentage = false
-		bar.modulate = Color(1, 0.3, 0.3)
-		add_child(bar)
-		_hp_bars[e] = bar
-
-	# 플레이어 상태
-	var pname := Label.new()
-	pname.text = "부싯돌"
-	pname.position = Vector2(16, 14)
-	add_child(pname)
-
-	var php := ProgressBar.new()
-	php.max_value = player_combatant.max_hp
-	php.value = player_combatant.hp
-	php.position = Vector2(16, 32)
-	php.size = Vector2(140, 10)
-	php.show_percentage = false
-	php.modulate = Color(0.3, 1.0, 0.5)
-	add_child(php)
-	_hp_bars[&"player"] = php
-
-	var pap := Label.new()
-	pap.text = "AP %d" % player_combatant.ap
-	pap.position = Vector2(16, 48)
-	add_child(pap)
-
-	# 턴 라벨
-	_turn_label = Label.new()
-	_turn_label.text = "TURN 1"
-	_turn_label.position = Vector2(280, 14)
-	_turn_label.add_theme_font_size_override("font_size", 14)
-	add_child(_turn_label)
-
-	# 결과 라벨 (숨김)
-	_result_label = Label.new()
-	_result_label.text = ""
-	_result_label.position = Vector2(240, 100)
-	_result_label.add_theme_font_size_override("font_size", 28)
-	_result_label.visible = false
-	add_child(_result_label)
-
-
-func _show_command_menu() -> void:
-	if _menu_root != null:
-		_menu_root.queue_free()
-	_menu_root = VBoxContainer.new()
-	_menu_root.position = Vector2(420, 200)
-	_menu_root.custom_minimum_size = Vector2(120, 0)
-	add_child(_menu_root)
-
-	for cmd_text: String in ["공격", "기술", "방어", "도망"]:
-		var btn := Button.new()
-		btn.text = cmd_text
-		btn.pressed.connect(_on_command.bind(cmd_text))
-		_menu_root.add_child(btn)
-		_cmd_buttons.append(btn)
-
-
-func _on_command(cmd_text: String) -> void:
-	if _busy:
-		return
-	match cmd_text:
-		"공격":
-			_begin_player_action({
-				"type": &"attack",
-				"ap": player_combatant.ap,
-				"target": _first_alive_enemy(),
-			}, &"atk_basic")
-		"기술":
-			_show_skill_menu()
-		"방어":
-			player_combatant.attach_effect(
-					{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50})
-			_end_player_defend()
-		"도망":
-			battle_ended.emit(&"flee", {})
-			_exit_battle(&"flee")
-
-
-## 플레이어 액션 개시 — 커맨드 제출(판정) → 안무 재생(표현) → 종료 시 턴 해결
-func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
-	if _busy:
-		return
-	_busy = true
-	_hide_menu()
-	controller.submit_player_command(command)
-	_pending_action = command
-	_pending_pops.assign(command.get("damages", []))
-	var skill: Dictionary = command.get("skill", {})
-	_pending_element = StringName(str(skill.get("element", "physical")))
-	_play_move(move_id)
-
-
-func _show_skill_menu() -> void:
-	_hide_menu()
-	_skill_panel = VBoxContainer.new()
-	_skill_panel.position = Vector2(420, 200)
-	add_child(_skill_panel)
-
-	for skill: Dictionary in _skills:
-		var btn := Button.new()
-		btn.text = str(skill.get("display_key", skill["id"]))
-		btn.pressed.connect(_on_skill_selected.bind(skill))
-		_skill_panel.add_child(btn)
-
-
-func _on_skill_selected(skill: Dictionary) -> void:
-	if _skill_panel != null:
-		_skill_panel.queue_free()
-		_skill_panel = null
-	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
-	_begin_player_action({
-		"type": &"skill",
-		"skill": skill,
-		"ap": player_combatant.ap,
-	}, move_id)
-
-
 func _resolve_turn() -> void:
 	_busy = true
-	_hide_menu()
+	_ui.hide_menu()
 
 	# 적 턴 처리
 	if controller.state == BattleController.TurnState.ENEMY_TURN:
@@ -350,7 +220,7 @@ func _resolve_turn() -> void:
 					var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
 					var actual: int = player_combatant.take_damage(raw)
 					_presenter.show_damage_number(actual, true)
-					_presenter.hurt_flash(_player_sprite)
+					_presenter.hurt_flash(_presenter.player_sprite)
 					_presenter.play_screen_kf({"shake": 3})
 					break
 		controller.turn_count += 1
@@ -362,28 +232,28 @@ func _resolve_turn() -> void:
 		_show_result(result)
 		return
 
-	_refresh_bars()
+	_ui.refresh_bars()
 	_busy = false
-	_show_command_menu()
+	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
+	_ui.show_command_menu()
 
 
 ## 보스전 회피 페이즈 — 탄막을 실시간으로 피해야 한다(턴제+회피 하이브리드).
 ## 피격 횟수 × dodge_damage_per_hit 가 플레이어 피해로 환산된다.
 func _run_dodge_phase(edef: Dictionary) -> int:
 	var cfg: Dictionary = edef["dodge_phase"]
-	_turn_label.text = "!! 피하라 !!"
+	_ui.set_turn_text("!! 피하라 !!")
 	_dodge.visible = true
 	_dodge.start(maxf(float(cfg.get("duration", 4.0)), 0.5), cfg)
 	var hits: int = await _dodge.phase_complete
 	_dodge.stop()
 	_dodge.visible = false
-	_turn_label.text = "TURN %d" % (controller.turn_count + 1)
 
 	var per_hit := maxi(int(edef.get("dodge_damage_per_hit", 3)), 0)
 	var actual: int = player_combatant.take_damage(hits * per_hit)
 	if actual > 0:
 		_presenter.show_damage_number(actual, true)
-		_presenter.hurt_flash(_player_sprite)
+		_presenter.hurt_flash(_presenter.player_sprite)
 		_presenter.play_screen_kf({"shake": 3, "flash": "#ff3333", "a": 0.25})
 	print("[battle] dodge phase done: hits=%d dmg=%d" % [hits, actual])
 	return hits
@@ -396,16 +266,16 @@ func _end_player_defend() -> void:
 			var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
 			var actual: int = player_combatant.take_damage(raw)
 			_presenter.show_damage_number(actual, true)
-			_presenter.hurt_flash(_player_sprite)
+			_presenter.hurt_flash(_presenter.player_sprite)
 			_presenter.play_screen_kf({"shake": 3})
 			break
 	_tick_effects()
-	_refresh_bars()
+	_ui.refresh_bars()
 
 	if player_combatant.is_down():
 		_show_result(&"lose")
 		return
-	_show_command_menu()
+	_ui.show_command_menu()
 
 
 func _tick_effects() -> void:
@@ -413,23 +283,9 @@ func _tick_effects() -> void:
 		c.tick_effects()
 
 
-func _refresh_bars() -> void:
-	for i in enemies.size():
-		var key = enemies[i]
-		if _hp_bars.has(key):
-			_hp_bars[key].value = maxi(0, enemies[i].hp)
-	if _hp_bars.has(&"player"):
-		_hp_bars[&"player"].value = maxi(0, player_combatant.hp)
-
-
 func _show_result(result: StringName) -> void:
 	_busy = true
-	_hide_menu()
-	_result_label.text = "WIN!" if result == &"win" else ("FLEE" if result == &"flee" else "LOSE...")
-	_result_label.visible = true
-	_result_label.add_theme_color_override("font_color",
-			Color(0.3, 1.0, 0.5) if result == &"win" else Color(1, 0.3, 0.2))
-
+	_ui.show_result(result)
 	await get_tree().create_timer(1.2).timeout
 	battle_ended.emit(result, {"exp": 15, "money": 100})
 	_exit_battle(result)
@@ -440,12 +296,6 @@ func _exit_battle(result: StringName) -> void:
 	GameState.player_stats["hp"] = player_combatant.hp
 	GameState.player_stats["money"] += 50 if result == &"win" else 0
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
-
-
-func _hide_menu() -> void:
-	if _menu_root != null:
-		_menu_root.queue_free()
-		_menu_root = null
 
 
 func _all_enemies_down() -> bool:

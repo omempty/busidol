@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "busidol/schemas/event.schema.json",
+  "title": "events 오픈 룩업 테이블 (v1 껍데기)",
+  "_comment": "계약 문서: docs/02_design/05_toolchain_editors.md §3.2. op 집합은 TriggerSystem/CutscenePlayer와 동기 유지.",
+  "type": "object",
+  "required": ["schema_version", "triggers"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "_comment": { "type": "string" },
+    "triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "action"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "type": { "enum": ["zone", "interact", "auto"] },
+          "once": { "type": "boolean", "default": true },
+          "cells": {
+            "type": "array",
+            "description": "zone/interact 판정 대상 그리드 셀 [x,y] 목록",
+            "items": { "type": "array", "items": { "type": "integer" }, "minItems": 2, "maxItems": 2 }
+          },
+          "done_flag": { "type": "string", "description": "발동 후 세팅되는 플래그(1회성 마커)" },
+          "requires_flag": { "type": ["string", "null"], "description": "이 플래그가 있어야 발동 가능" },
+          "action": {
+            "type": "object",
+            "oneOf": [
+              { "required": ["cutscene"] },
+              { "required": ["sequence"] },
+              { "required": ["set_flags"] }
+            ],
+            "properties": {
+              "cutscene": { "type": "string" },
+              "sequence": { "type": "string" },
+              "set_flags": { "type": "object" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

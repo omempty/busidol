@@ -1,0 +1,21 @@
+{
+  "id": "boss_sys_builder",
+  "schema_version": 1,
+  "_comment": "최종보스 각성 — 마스터 시나리오 씬 5-2/5-3 (@c507~@c515). 종료 시 start_battle로 SYS_BUILDER 전투 진입.",
+  "steps": [
+    { "op": "sfx", "id": "alarm_system" },
+    { "op": "shake", "times": 6, "power": 4 },
+    { "op": "dialogue", "steps": [
+      { "speaker": "(기계음)", "text": "@c507" },
+      { "speaker": "부싯돌", "text": "@c508" },
+      { "speaker": "모교수", "text": "@c509" },
+      { "speaker": "SYS_BUILDER", "text": "@c510" },
+      { "speaker": "SYS_BUILDER", "text": "@c511" },
+      { "speaker": "SYS_BUILDER", "text": "@c512" },
+      { "speaker": "부싯돌", "text": "@c513" },
+      { "speaker": "부싯돌", "text": "@c514" },
+      { "speaker": "SYS_BUILDER", "text": "@c515" }
+    ] },
+    { "op": "start_battle", "enemies": ["sys_builder"] }
+  ]
+}
