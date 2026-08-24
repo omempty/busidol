@@ -17,6 +17,11 @@ func _ready() -> void:
 	sprite.sprite_frames = _build_frames()
 	sprite.animation = &"idle_down"
 	sprite.play()
+	# 렌더 스케일 — 메타 scale (아트 해상도와 게임 내 크기 분리)
+	var meta: Dictionary = JSON.parse_string(
+			FileAccess.get_file_as_string(META_PATH))
+	if typeof(meta) == TYPE_DICTIONARY:
+		sprite.scale = Vector2.ONE * float(meta.get("scale", 1.0))
 	add_child(sprite)
 
 
@@ -39,7 +44,7 @@ func teleport(cell: Vector2i) -> void:
 ## 스모크/컷신용 — 지정 방향을 바라보게만 한다.
 func face(dir_name: StringName) -> void:
 	facing = dir_name
-	sprite.play(&"idle_down")
+	_play_idle()
 
 
 func _physics_process(_delta: float) -> void:
@@ -61,7 +66,9 @@ func _physics_process(_delta: float) -> void:
 
 func _on_step_started(dir: Vector2i) -> void:
 	facing = dir_to_name(dir)
-	sprite.play(StringName("walk_" + String(facing)))
+	var want := StringName("walk_" + String(facing))
+	sprite.play(want if sprite.sprite_frames.has_animation(want)
+			else &"walk_down")
 
 
 func _on_step_finished(_pos: Vector2i) -> void:
@@ -70,8 +77,10 @@ func _on_step_finished(_pos: Vector2i) -> void:
 
 
 func _play_idle() -> void:
-	# 플레이스홀더 시트는 idle_down 2프레임만 보유 — 나머지 방향도 이로 대체.
-	sprite.play(&"idle_down")
+	# 방향별 idle 애니 사용(시트가 갖추면), 없으면 idle_down으로 폴백.
+	var want := StringName("idle_" + String(facing))
+	sprite.play(want if sprite.sprite_frames.has_animation(want)
+			else &"idle_down")
 
 
 func dir_to_name(dir: Vector2i) -> StringName:
@@ -87,7 +96,9 @@ func dir_to_name(dir: Vector2i) -> StringName:
 func _build_frames() -> SpriteFrames:
 	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(META_PATH))
 	var tex: Texture2D = load(SHEET_PATH)
-	var cell: int = int(meta["cell"])
+	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환 (비정형 비율 허용)
+	var cw: int = int(meta.get("cell_w", meta.get("cell", 64)))
+	var ch: int = int(meta.get("cell_h", meta.get("cell", 64)))
 	var frames := SpriteFrames.new()
 	frames.remove_animation(&"default")
 	for anim_name: String in meta["animations"]:
@@ -99,6 +110,6 @@ func _build_frames() -> SpriteFrames:
 		for f in int(a["frames"]):
 			var at := AtlasTexture.new()
 			at.atlas = tex
-			at.region = Rect2(f * cell, int(a["row"]) * cell, cell, cell)
+			at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
 			frames.add_frame(anim, at)
 	return frames

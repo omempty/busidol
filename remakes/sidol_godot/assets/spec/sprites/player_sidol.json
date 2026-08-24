@@ -2,28 +2,89 @@
   "$schema": "_shared/schemas/sprite_spec.schema.json",
   "asset_id": "player_sidol",
   "kind": "character_sheet",
-  "cell": { "w": 64, "h": 64 },
-  "grid": { "cols": 4, "rows": 8 },
-  "animations": {
-    "walk_down":  { "row": 0, "frames": 4, "fps": 9, "loop": true },
-    "walk_up":    { "row": 1, "frames": 4, "fps": 9, "loop": true },
-    "walk_left":  { "row": 2, "frames": 4, "fps": 9, "loop": true },
-    "walk_right": { "row": 3, "frames": 4, "fps": 9, "loop": true },
-    "idle_down":  { "row": 4, "frames": 2, "fps": 2, "loop": true },
-    "idle_up":    { "row": 5, "frames": 2, "fps": 2, "loop": true },
-    "idle_left":  { "row": 6, "frames": 2, "fps": 2, "loop": true },
-    "idle_right": { "row": 7, "frames": 2, "fps": 2, "loop": true }
+  "cell": {
+    "w": 128,
+    "h": 128
   },
-  "anchor": { "x": 0.5, "y": 0.92 },
+  "grid": {
+    "cols": 4,
+    "rows": 8
+  },
+  "animations": {
+    "walk_down": {
+      "row": 0,
+      "frames": 4,
+      "fps": 9,
+      "loop": true
+    },
+    "walk_up": {
+      "row": 1,
+      "frames": 4,
+      "fps": 9,
+      "loop": true
+    },
+    "walk_left": {
+      "row": 2,
+      "frames": 4,
+      "fps": 9,
+      "loop": true
+    },
+    "walk_right": {
+      "row": 3,
+      "frames": 4,
+      "fps": 9,
+      "loop": true
+    },
+    "idle_down": {
+      "row": 4,
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    },
+    "idle_up": {
+      "row": 5,
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    },
+    "idle_left": {
+      "row": 6,
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    },
+    "idle_right": {
+      "row": 7,
+      "frames": 2,
+      "fps": 2,
+      "loop": true
+    }
+  },
+  "anchor": {
+    "x": 0.5,
+    "y": 0.92
+  },
   "palette_ref": "../../palette_master.json",
-  "constraints": ["transparent_bg", "no_aa", "1px_outline", "palette_locked", "16px_grid_redraw"],
-  "style_refs": ["assets/style_bible.md#characters"],
+  "constraints": [
+    "transparent_bg",
+    "no_aa",
+    "1px_outline",
+    "palette_locked",
+    "16px_grid_redraw"
+  ],
+  "style_refs": [
+    "assets/style_bible.md#characters"
+  ],
   "prompt_vars": {
     "subject": "부싯돌: 1995년 한국 공대 새내기 남학생. 활달하고 허둥대지만 의리파. 잿빛 교복 재킷+청바지, 손에 작은 부싯돌 조각. 탑다운 JRPG 3/4 시점"
   },
   "output_contract": {
     "raw_dir": "raw/sprites/player_sidol/",
     "file_pattern": "sheet_v{n}.png",
-    "validator": ["tools/validate_sprite.py --spec {spec} --in {file}"]
-  }
+    "validator": [
+      "tools/validate_sprite.py --spec {spec} --in {file}"
+    ]
+  },
+  "_comment_note": "G-ART B안 개정(2026-08-25): 셀 128x128 비정형 허용(세로형 캐릭터), 렌더 scale 메타로 게임 내 크기 조절. 프레임 수 가변(최소 2). walk 4프레임 권장, idle 4방향 각 2프레임.",
+  "scale": 0.75
 }

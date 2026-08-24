@@ -31,17 +31,18 @@ func setup(root: Node2D) -> void:
 	_root_base = root.position
 
 
-## 전투 스프라이트 구성 — 플레이어(원작 도트 row0 col0) + 적(e1~e8 or 색상 폴백)
+## 전투 스프라이트 구성 — 플레이어(셀 크기 메타 기반, 비정형 비율 허용) + 적
 func build_sprites(enemy_count: int) -> void:
 	player_sprite = Sprite2D.new()
+	var cs := _player_cell_size()
 	var ptex: Texture2D = load("res://assets/sprites/player_original.png")
 	if ptex != null:
 		var at := AtlasTexture.new()
 		at.atlas = ptex
-		at.region = Rect2(0, 0, 64, 64)
+		at.region = Rect2(0, 0, cs.x, cs.y)
 		player_sprite.texture = at
 	player_sprite.position = Vector2(80, 140)
-	player_sprite.scale = Vector2(1.5, 1.5)
+	player_sprite.scale = Vector2.ONE * _player_render_scale() * 1.5
 	player_sprite.set_meta(&"base_pos", player_sprite.position)
 	_root.add_child(player_sprite)
 
@@ -65,6 +66,28 @@ func build_sprites(enemy_count: int) -> void:
 
 func on_move_start(_move_data: Dictionary) -> void:
 	_reset_sprites()
+
+
+## 플레이어 시트 셀 크기 — player_original.json 메타 기반(cell_w/cell_h 지원)
+func _player_cell_size() -> Vector2i:
+	var path := "res://assets/sprites/player_original.json"
+	if FileAccess.file_exists(path):
+		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if typeof(m) == TYPE_DICTIONARY:
+			var d: Dictionary = m
+			return Vector2i(int(d.get("cell_w", d.get("cell", 64))),
+					int(d.get("cell_h", d.get("cell", 64))))
+	return Vector2i(64, 64)
+
+
+## 아트 해상도와 게임 내 크기 분리 — 메타 scale (기본 1)
+func _player_render_scale() -> float:
+	var path := "res://assets/sprites/player_original.json"
+	if FileAccess.file_exists(path):
+		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if typeof(m) == TYPE_DICTIONARY:
+			return float(m.get("scale", 1.0))
+	return 1.0
 
 
 ## sprite 채널 — 액터 스프라이트를 base_pos 기준 오프셋으로 tween.

@@ -308,6 +308,26 @@ def heal_pinholes(img: Image.Image, radius: int = 2,
     return img
 
 
+def key_magenta(img: Image.Image, tolerance: int = 90) -> Image.Image:
+    """마젠타 키컬러 누끼 - 그래픽 LLM 납품(#FF00FF 배경) 전용.
+
+    순수 마젠타와 근접 색(혼색 잔재)을 투명화한다. 경계에 마젠타-스프라이트
+    혼색이 많으면 tolerance를 올리되, 스프라이트 자체 마젠타 계열 색이 없는지
+    먼저 확인할 것(있으면 허용 불가 - 프롬프트에서 금지해야 함).
+    """
+    px = img.load()
+    w, h = img.size
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a == 0:
+                continue
+            if r > 200 and b > 200 and g < 255 - tolerance // 2 \
+                    and abs(r - b) < 60:
+                px[x, y] = (0, 0, 0, 0)
+    return img
+
+
 def crop_content(img: Image.Image) -> Image.Image:
     """불투명 영역의 bounding box 로 크롭(여백 프레임 제거)."""
     bbox = img.getchannel("A").getbbox()
