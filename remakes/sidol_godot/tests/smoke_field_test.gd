@@ -10,6 +10,9 @@ const TIMEOUT := 1.5
 func _ready() -> void:
 	var failures: Array[String] = []
 
+	# 프롤로그 컷신(auto 트리거) 스킵 — 이동 검증에 집중
+	GameState.flags["q_f1_prolog_done"] = true
+
 	var field: Node2D = FIELD_SCENE.instantiate()
 	add_child(field)
 	await get_tree().process_frame

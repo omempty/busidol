@@ -6,13 +6,18 @@ signal finished(seq_id: StringName)
 
 const CPS := 40.0          # 초당 글자 수
 const INPUT_COOLDOWN := 0.05
+const AUTO_DELAY := 1.1    # auto_advance 시 타이핑 완료 후 대기(초)
 
 var seq_id := &""
 var steps: Array = []
 var index := 0
 var is_open := false
+## 컷신용 자동 진행 — 타이핑 완료 후 AUTO_DELAY 뒤 스스로 다음 스텝.
+## 필드 대화(입력 중재 모드)에서는 반드시 false.
+var auto_advance := false
 var _revealed := 0.0
 var _cooldown := 0.0
+var _auto_wait := 0.0
 
 
 func is_typing() -> bool:
@@ -53,6 +58,7 @@ func start(p_seq_id: StringName, p_steps: Array) -> void:
 	is_open = true
 	visible = true
 	_cooldown = INPUT_COOLDOWN
+	_auto_wait = -1.0
 	_load_step()
 
 
@@ -88,6 +94,7 @@ func _load_step() -> void:
 	_name_label.text = str(step.get("speaker", ""))
 	_body_label.text = Database.text(str(step["text"]))
 	_revealed = 0.0
+	_auto_wait = -1.0
 	_body_label.visible_characters = 0
 
 
@@ -97,7 +104,16 @@ func _process(delta: float) -> void:
 	if _cooldown > 0.0:
 		_cooldown -= delta
 	var total := _body_label.text.length()
-	if _revealed < total:
+	var typing := _revealed < total
+	if typing:
 		_revealed = minf(_revealed + CPS * delta, float(total))
+	elif auto_advance and _cooldown <= 0.0:
+		if _auto_wait < 0.0:
+			_auto_wait = AUTO_DELAY
+		else:
+			_auto_wait -= delta
+			if _auto_wait <= 0.0:
+				advance()
+				return
 	_body_label.visible_characters = int(_revealed)
 	# 진행 입력은 Field가 중재해 advance()를 호출한다(입력 엣지 유실 방지).

@@ -53,6 +53,9 @@
 | 상점 UI | ShopUI(구매→소지금 차감→Inventory.add) | ✅ |
 | 회피 페이즈(탄막 10패턴) | DodgePhase | ✅ |
 | 보스전 하이브리드(턴제+탄막 회피) | BattleSceneController._run_dodge_phase + monsters.json bosses | ✅ |
+| 컷신 재생기(비동기 스텝 해석) | CutscenePlayer + data/cutscenes | ✅ |
+| 이벤트 트리거(zone/interact/auto) | TriggerSystem + triggers_f*.json | ✅ |
+| 프롤로그 컷신(씬 1-1 무대화) | opening.json + @c101~@c106 | ✅ |
 | 전투 안무(battle_moves JSON 재생) | ChoreographyRunner + BattlePresenter | ✅ |
 | 히트스톱·화면 흔들림 | BattlePresenter | ✅ |
 | 데미지 팝(속성 색상·크기 비례) | BattlePresenter.ELEMENT_COLORS | ✅ |

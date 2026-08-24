@@ -1,0 +1,20 @@
+{
+  "id": "opening",
+  "schema_version": 1,
+  "_comment": "프롤로그 씬 1-1 '비 내리는 아침' — 마스터 시나리오 @c101~@c106 무대화",
+  "steps": [
+    { "op": "fade_out", "seconds": 0.01 },
+    { "op": "wait", "seconds": 0.5 },
+    { "op": "fade_in", "seconds": 0.8 },
+    { "op": "sfx", "id": "rain_ambience" },
+    { "op": "dialogue", "steps": [
+      { "speaker": "부싯돌", "text": "@c101" },
+      { "speaker": "수위 아저씨", "text": "@c102" },
+      { "speaker": "부싯돌", "text": "@c103" },
+      { "speaker": "수위 아저씨", "text": "@c104" },
+      { "speaker": "부싯돌", "text": "@c105" },
+      { "speaker": "수위 아저씨", "text": "@c106" }
+    ] },
+    { "op": "set_flags", "args": { "q_f1_prolog_done": true } }
+  ]
+}

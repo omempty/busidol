@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "_comment": "F1 트리거 — type: auto(층 진입 즉시)/zone(셀 진입)/interact(전방 SPACE). done_flag가 설정되면 재발동 없음.",
+  "triggers": [
+    {
+      "id": "f1_opening",
+      "type": "auto",
+      "once": true,
+      "done_flag": "q_f1_prolog_done",
+      "action": { "cutscene": "opening" }
+    }
+  ]
+}

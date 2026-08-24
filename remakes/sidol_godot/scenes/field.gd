@@ -12,8 +12,11 @@ var minimap: MinimapLayer
 var dialogue_box: DialogueBox
 var npcs: Array[NpcEntity] = []
 var enemy_manager: EnemyManager
+var triggers: TriggerSystem
+var cutscene_player: CutscenePlayer
 var _prompt_label: Label
 var _talking_npc: NpcEntity
+var _trigger_seq_active := false
 var _prev_states := {}
 
 
@@ -73,9 +76,24 @@ func _ready() -> void:
 
 	_spawn_npcs()
 
+	triggers = TriggerSystem.new()
+	add_child(triggers)
+	triggers.load_for_floor(GameState.current_floor)
+	triggers.cutscene_requested.connect(_play_cutscene)
+	triggers.sequence_requested.connect(_play_sequence)
+
+	cutscene_player = CutscenePlayer.new()
+	add_child(cutscene_player)
+	cutscene_player.setup(self)
+	cutscene_player.finished.connect(_on_cutscene_finished)
+
 
 func _physics_process(_delta: float) -> void:
 	if player == null:
+		return
+
+	# 컷신 재생 중 — 입력·인카운터 전면 차단
+	if cutscene_player != null and cutscene_player.is_running():
 		return
 
 	# 몬스터 틱 (EnemyManager에 위임)
@@ -86,6 +104,10 @@ func _physics_process(_delta: float) -> void:
 			_trigger_encounter(contact)
 			return
 
+	# 이벤트 트리거 판정 (zone/auto)
+	if triggers != null:
+		triggers.tick(player.mover.grid_pos, _delta)
+
 	var interact_edge := _edge(&"interact")
 	var cancel_edge := _edge(&"cancel")
 
@@ -93,6 +115,11 @@ func _physics_process(_delta: float) -> void:
 	if dialogue_box.is_open:
 		if interact_edge or cancel_edge:
 			dialogue_box.advance()
+		return
+
+	# interact 트리거 우선 — NPC/상자보다 앞서 판정
+	if triggers != null and interact_edge \
+			and triggers.try_interact(front_cells()):
 		return
 
 	var npc := _npc_in_front()
@@ -238,6 +265,39 @@ func _on_dialogue_finished(_seq_id: StringName) -> void:
 	if _talking_npc != null:
 		player.mover.enabled = true
 		_talking_npc = null
+	elif _trigger_seq_active:
+		_trigger_seq_active = false
+		player.mover.enabled = true
+
+
+## ---- 컷신 / 트리거 (Phase 7) ----
+
+func _play_cutscene(cutscene_id: StringName) -> void:
+	if player == null:
+		return
+	player.mover.enabled = false
+	_prompt_label.visible = false
+	var cfg := CutscenePlayer.load_cutscene(cutscene_id)
+	if cfg.is_empty():
+		push_warning("컷신 데이터 없음: %s" % cutscene_id)
+		player.mover.enabled = true
+		return
+	cutscene_player.play(cfg)
+
+
+func _on_cutscene_finished(_cutscene_id: StringName) -> void:
+	if player != null:
+		player.mover.enabled = true
+
+
+func _play_sequence(sequence_id: StringName) -> void:
+	var steps: Array = Database.sequence(sequence_id)
+	if steps.is_empty():
+		push_warning("빈 시퀀스(트리거): %s" % sequence_id)
+		return
+	player.mover.enabled = false
+	_trigger_seq_active = true
+	dialogue_box.start(sequence_id, steps)
 
 
 ## 몬스터 접촉 → 전투 씬 전환 (원작 Check_Quang 대응)
