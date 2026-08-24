@@ -1,0 +1,20 @@
+{
+  "id": "atk_debug_shield",
+  "side": "player",
+  "length": 0.9,
+  "_comment": "디버그 쉴드 — 자기 버프, apply_damage 없음(피해량 절감 부착은 컨트롤러)",
+  "channels": {
+    "sprite": [
+      { "t": 0.0, "actor": "self", "anim": "guard", "pos": [-4, 2], "dur": 0.2 },
+      { "t": 0.6, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.25 }
+    ],
+    "fx": [],
+    "screen": [
+      { "t": 0.25, "flash": "#44ddaa", "a": 0.15 }
+    ],
+    "audio": [
+      { "t": 0.0, "sfx": "cast_shield" }
+    ],
+    "logic": []
+  }
+}

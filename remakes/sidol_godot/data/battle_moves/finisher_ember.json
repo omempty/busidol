@@ -1,0 +1,32 @@
+{
+  "id": "finisher_ember",
+  "side": "player",
+  "length": 1.8,
+  "_comment": "부싯돌의 불꽃(필살) — scripted finisher, 마스터 시나리오 §2.2 필자 아이템 요구",
+  "channels": {
+    "sprite": [
+      { "t": 0.0, "actor": "self", "anim": "charge", "pos": [-12, -8], "dur": 0.3 },
+      { "t": 0.5, "actor": "self", "anim": "rush", "pos": [36, -10], "dur": 0.12 },
+      { "t": 0.95, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.5 }
+    ],
+    "fx": [
+      { "t": 0.62, "effect": "hit_spark", "at_actor": "target" },
+      { "t": 0.78, "effect": "hit_spark", "at_actor": "target" }
+    ],
+    "screen": [
+      { "t": 0.5, "flash": "#ffcc44", "a": 0.4 },
+      { "t": 0.62, "shake": 9 },
+      { "t": 0.78, "shake": 7 },
+      { "t": 0.85, "flash": "#ffffff", "a": 0.3 }
+    ],
+    "audio": [
+      { "t": 0.0, "sfx": "finisher_charge" },
+      { "t": 0.62, "sfx": "impact_heavy" },
+      { "t": 0.78, "sfx": "impact_volt" }
+    ],
+    "logic": [
+      { "t": 0.62, "apply_damage": true },
+      { "t": 0.78, "apply_damage": true }
+    ]
+  }
+}

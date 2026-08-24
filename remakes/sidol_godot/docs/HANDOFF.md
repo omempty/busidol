@@ -1,11 +1,11 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-24 · Phase 5 완료 시점
+> 작성일: 2026-08-24 · Phase 6 완료 시점
 
 ## 1. 현재 상태 한 줄 요약
 
-Phase 0~5 완료(필드 걷기·대화·전투 코어·몬스터 AI·인벤토리).
-다음은 **Phase 6 전투 연출**부터.
+Phase 0~6 완료(전투 연출 + 보스전 회피 페이즈 하이브리드까지).
+다음은 **Phase 7 (크레딧룸/시나리오 이벤트)**부터 — roadmap 확인.
 
 ## 2. 다음 세션 첫 명령
 
@@ -13,18 +13,36 @@ Phase 0~5 완료(필드 걷기·대화·전투 코어·몬스터 AI·인벤토�
 # 게임 실행 확인
 remakes\sidol_godot\게임실행.bat
 
-# 검증 관문 확인
+# 검증 관문 확인 (Godot 4.7.2 — _shared\tools\godot 설치 완료)
 remakes\sidol_godot\검증실행.bat
+
+# 전투 스모크 (보스 회피 페이즈 포함)
+godot --headless --path remakes/sidol_godot res://tests/smoke_battle.tscn
 ```
 
-## 3. 다음 작업 (Phase 5.5~6)
+## 3. 다음 작업
 
 | 순서 | 작업 | 파일 |
 |---|---|---|
-| 1 | ChoreographyRunner 연결 — battle_moves JSON 재생으로 공격 안무 가시화 | `src/battle/choreography_runner.gd` (작성됨, BattleSceneController 연결만) |
-| 2 | 히트스톱 + 화면 흔들림 구현 | `_shake_power` 변수 존재, 실제 카메라 오프셋 적용만 |
-| 3 | 데미지 팝 개선 — 속성 색상·크기 비례 | `_show_damage_number()` 이미 있음, 강화만 |
-| 4 | DodgePhase → 보스전 연결 | `src/battle/dodge_phase.gd` (작성됨) |
+| 1 | battle_scene_controller UI 분리(~450행, 상한 초과) | `_build_ui`/메뉴 계열 → `src/ui/battle_ui.gd` |
+| 2 | 보스 출현 트리거 — 시나리오 이벤트 op `start_battle`과 연결 | 마스터 시나리오 §Q_ENDING |
+| 3 | battle_moves JSON Schema 껍데기 | `_shared/schemas/` |
+| 4 | 크레딧룸 골격 완성 | scenes/credit_room.gd |
+
+### 구현 노트 (이번 세션 결정)
+
+- **판정 단일화**: 데미지 적용은 BattleController.submit_player_command 가 유일.
+  안무의 logic apply_damage 프레임은 기록된 결과(`cmd["damages"]`)를 **표현만** 한다.
+- **보스전 하이브리드**: `monsters.json` bosses 섹션의 `dodge_phase` 설정이 있으면
+  적 턴이 탄막 회피 페이즈로 대체됨. hits × `dodge_damage_per_hit` = 플레이어 피해.
+  (HANDOFF 구판이 인용한 05_toolchain §5.3 문서는 실제로 미존재 — 방침만 준용)
+- `battle_controller._resolve_skill` all_enemies/self 타게팅 지원,
+  self 버프는 피해 판정 제외. Combatant `.stats.ap` 참조 크래시 수정.
+- **dodge_phase.gd 잠복 파싱 에러 수정**: 미정의 `_float_cfg()` + 형식 추론 실패.
+  지금까지 인스턴스화된 적 없어 발견되지 않았던 것 — 신규 스크립트는 스모크에서
+  반드시 한 번은 로드되게 할 것.
+- 신규 파일: `src/battle/battle_presenter.gd`, `data/battle_moves/*.json`(7종),
+  `tests/smoke_battle.tscn/gd`. Godot 4.7.2 를 `_shared/tools/godot/` 에 설치함.
 
 ## 4. 알려진 미해결
 

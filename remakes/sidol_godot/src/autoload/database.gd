@@ -42,7 +42,7 @@ func load_enemies() -> void:
 	if typeof(raw) != TYPE_DICTIONARY:
 		push_error("monsters.json 파싱 실패")
 		return
-	# floors 내 species 배열에서 고유 id 수집 → 기본 스탯 부여
+	# floors 의 species 배열에서 고유 id 수집 + 기본 스탯 부여
 	var seen := {}
 	for floor_data: Dictionary in raw.get("floors", {}).values():
 		for s: Variant in floor_data.get("species", []):
@@ -63,6 +63,26 @@ func load_enemies() -> void:
 				"exp": [5, 10],
 				"money": [50, 100],
 			}
+	_load_bosses(raw)
+
+
+## bosses 섹션 — dodge_phase(회피 페이즈) 설정 포함 보스 정의
+func _load_bosses(raw: Dictionary) -> void:
+	for bid: String in raw.get("bosses", {}):
+		var bdef: Dictionary = raw["bosses"][bid]
+		_enemies[bid] = {
+			"id": bid,
+			"display_name": str(bdef.get("display_name",
+					bid.replace("_", " ").capitalize())),
+			"ap": int(bdef.get("ap", 20)),
+			"dp": int(bdef.get("dp", 8)),
+			"hp_range": bdef.get("hp_range", [100, 140]),
+			"exp": bdef.get("exp", [80, 120]),
+			"money": bdef.get("money", [400, 600]),
+			"is_boss": true,
+			"dodge_phase": bdef.get("dodge_phase", {}),
+			"dodge_damage_per_hit": int(bdef.get("dodge_damage_per_hit", 3)),
+		}
 
 
 func load_items() -> void:

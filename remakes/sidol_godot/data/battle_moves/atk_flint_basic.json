@@ -1,0 +1,26 @@
+{
+  "id": "atk_flint_basic",
+  "side": "player",
+  "length": 0.6,
+  "_comment": "부싯돌 치기 — 기본 공격 변형(스킬 flint_strike 매핑)",
+  "channels": {
+    "sprite": [
+      { "t": 0.0, "actor": "self", "anim": "rush", "pos": [28, -6], "dur": 0.08 },
+      { "t": 0.32, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.22 }
+    ],
+    "fx": [
+      { "t": 0.15, "effect": "hit_spark", "at_actor": "target" }
+    ],
+    "screen": [
+      { "t": 0.15, "shake": 3 },
+      { "t": 0.15, "flash": "#ffdd88", "a": 0.12 }
+    ],
+    "audio": [
+      { "t": 0.0, "sfx": "atk_swish" },
+      { "t": 0.15, "sfx": "impact_light" }
+    ],
+    "logic": [
+      { "t": 0.15, "apply_damage": true }
+    ]
+  }
+}

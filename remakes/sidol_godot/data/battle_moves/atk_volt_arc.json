@@ -1,0 +1,27 @@
+{
+  "id": "atk_volt_arc",
+  "side": "player",
+  "length": 1.2,
+  "_comment": "10,000V 아크 방전 — 전체 적 대상 전기 속성, 마비 부착은 컨트롤러가 처리",
+  "channels": {
+    "sprite": [
+      { "t": 0.0, "actor": "self", "anim": "cast", "pos": [-8, -6], "dur": 0.18 },
+      { "t": 0.7, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.35 }
+    ],
+    "fx": [
+      { "t": 0.55, "effect": "hit_spark", "at_actor": "target" }
+    ],
+    "screen": [
+      { "t": 0.55, "shake": 7 },
+      { "t": 0.55, "flash": "#aaddff", "a": 0.35 },
+      { "t": 0.68, "flash": "#ffffff", "a": 0.2 }
+    ],
+    "audio": [
+      { "t": 0.0, "sfx": "charge_volt" },
+      { "t": 0.55, "sfx": "impact_volt" }
+    ],
+    "logic": [
+      { "t": 0.55, "apply_damage": true }
+    ]
+  }
+}

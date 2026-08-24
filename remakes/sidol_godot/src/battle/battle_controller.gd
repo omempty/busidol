@@ -60,7 +60,7 @@ func enemy_turn() -> Dictionary:
 	var enemy := _current_enemy()
 	if enemy == null or enemy.is_down():
 		return _advance_enemy()
-	var raw := DamageCalculator.enemy_hit(enemy.stats.ap, EnemyManager.rng)
+	var raw := DamageCalculator.enemy_hit(enemy.ap, EnemyManager.rng)
 	player_combatant.take_damage(raw)
 	return {"damage": raw, "attacker": enemy}
 
@@ -79,19 +79,43 @@ func _advance_enemy() -> Dictionary:
 
 func _resolve_attack(attacker: Combatant, target: Combatant, cmd: Dictionary) -> void:
 	var dmg := DamageCalculator.player_hit(
-		int(cmd.get("ap", attacker.stats.ap)), EnemyManager.rng)
+		int(cmd.get("ap", attacker.ap)), EnemyManager.rng)
 	target.take_damage(dmg)
 	cmd["damage"] = dmg
+	cmd["damages"] = [{"amount": dmg, "enemy_index": _alive_enemy_index(target)}]
 
 
 func _resolve_skill(user: Combatant, target: Combatant, cmd: Dictionary) -> void:
 	var skill: Dictionary = cmd.get("skill", {})
-	var dmg := DamageCalculator.skill_hit(
-		int(skill.get("power", 10)), user.stats.ap,
-		StringName(str(skill.get("element", "physical"))),
-		[], EnemyManager.rng)
-	target.take_damage(dmg)
-	cmd["damage"] = dmg
+	var targeting := str(skill.get("targeting", "single"))
+	var targets: Array[Combatant] = [target]
+	if targeting == "all_enemies":
+		targets.clear()
+		for e in enemy_combatants:
+			if not e.is_down():
+				targets.append(e)
+	elif targeting == "self":
+		targets = [user]
+	var results: Array = []
+	for t in targets:
+		if t == user:
+			continue   # 자기 버프 스킬 — 피해 판정 제외(효과는 상태이상으로만)
+		var dmg := DamageCalculator.skill_hit(
+			int(skill.get("power", 10)), user.ap,
+			StringName(str(skill.get("element", "physical"))),
+			[], EnemyManager.rng)
+		t.take_damage(dmg)
+		results.append({"amount": dmg, "enemy_index": _alive_enemy_index(t)})
+	cmd["damage"] = 0 if results.is_empty() else int(results[0]["amount"])
+	cmd["damages"] = results
+
+
+## 적 배열에서의 생존 인덱스(프리젠테이션 팝 위치용)
+func _alive_enemy_index(c: Combatant) -> int:
+	for i in enemy_combatants.size():
+		if enemy_combatants[i] == c:
+			return i
+	return 0
 
 
 func _tick_status_effects() -> void:

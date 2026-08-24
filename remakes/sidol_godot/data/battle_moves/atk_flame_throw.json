@@ -1,0 +1,26 @@
+{
+  "id": "atk_flame_throw",
+  "side": "player",
+  "length": 1.1,
+  "_comment": "화염 비커 투척 — 전체 적 대상 화염 폭발 + 화상 부착은 컨트롤러가 move 종료 후 처리",
+  "channels": {
+    "sprite": [
+      { "t": 0.0, "actor": "self", "anim": "cast", "pos": [-6, -4], "dur": 0.15 },
+      { "t": 0.55, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.3 }
+    ],
+    "fx": [
+      { "t": 0.45, "effect": "hit_spark", "at_actor": "target" }
+    ],
+    "screen": [
+      { "t": 0.45, "shake": 5 },
+      { "t": 0.45, "flash": "#ff6622", "a": 0.25 }
+    ],
+    "audio": [
+      { "t": 0.0, "sfx": "cast_fire" },
+      { "t": 0.45, "sfx": "impact_heavy" }
+    ],
+    "logic": [
+      { "t": 0.45, "apply_damage": true }
+    ]
+  }
+}

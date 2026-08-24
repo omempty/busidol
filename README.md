@@ -51,7 +51,11 @@
 | 상태이상(DoT/버프/마비) | StatusEffectDef + Combatant.tick_effects | ✅ |
 | 인벤토리(add/remove/count) | Inventory + items.json 63종 | ✅ |
 | 상점 UI | ShopUI(구매→소지금 차감→Inventory.add) | ✅ |
-| 회피 페이즈(탄막 10패턴) | DodgePhase | ✅ 작성 |
+| 회피 페이즈(탄막 10패턴) | DodgePhase | ✅ |
+| 보스전 하이브리드(턴제+탄막 회피) | BattleSceneController._run_dodge_phase + monsters.json bosses | ✅ |
+| 전투 안무(battle_moves JSON 재생) | ChoreographyRunner + BattlePresenter | ✅ |
+| 히트스톱·화면 흔들림 | BattlePresenter | ✅ |
+| 데미지 팝(속성 색상·크기 비례) | BattlePresenter.ELEMENT_COLORS | ✅ |
 | 크레딧룸 | credit_room.tscn/gd | ✅ 골격 |
 | 난이도 상/중/하 | growth.json difficulty_presets | ✅ |
 

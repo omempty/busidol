@@ -11,6 +11,7 @@ var controller := BattleController.new()
 var player_combatant: Combatant
 var enemies: Array[Combatant] = []
 var enemy_defs: Array[Dictionary] = []
+var _enemy_ids: Array[String] = []
 
 # UI
 var _hp_bars := {}
@@ -22,9 +23,13 @@ var _result_label: Label
 var _busy := false
 var _skills: Array[Dictionary] = []
 
-# 카메라 흔들림
-var _shake_power := 0.0
-var _base_pos := Vector2.ZERO
+# 연출 (로직↔연출 분리: ChoreographyRunner + BattlePresenter)
+var _runner: ChoreographyRunner
+var _presenter: BattlePresenter
+var _dodge: DodgePhase   # 보스전 회피 페이즈 (턴제+회피 하이브리드)
+var _pending_action := {}
+var _pending_pops: Array[Dictionary] = []   # damages 표현 큐 (apply_damage 프레임마다 1개)
+var _pending_element := &"physical"
 
 # 전투 스프라이트
 var _player_sprite: Sprite2D
@@ -61,22 +66,80 @@ func _setup_battle_sprites() -> void:
 		_enemy_sprites.append(es)
 
 
-## 공격 애니메이션 — 공격자가 전방으로 러지 → 복귀
-func play_attack_animation(attacker_sprite: Sprite2D, target_pos: Vector2) -> void:
-	var orig := attacker_sprite.position
-	var dir := (target_pos - orig).normalized() * 30
-	var tw := create_tween()
-	tw.tween_property(attacker_sprite, "position", orig + dir, 0.08)\
-			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tw.tween_property(attacker_sprite, "position", orig, 0.12)\
-			.set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+## 안무 재생 — battle_moves JSON을 러너로 재생(연출은 프리젠터 위임).
+func _play_move(move_id: StringName) -> void:
+	_presenter.target_index = _alive_enemy_index()
+	if _runner.is_playing():
+		return
+	var move_data := _runner.load_move_by_id(move_id)
+	if move_data.is_empty():
+		move_finished_fallback()
+		return
+	_runner.play(move_data)
 
 
-## 피격 플래시 — 타겟이 빨갛게 깜빡임
-func play_hurt_flash(target_sprite: Sprite2D) -> void:
-	var tw := create_tween()
-	tw.tween_property(target_sprite, "modulate", Color(5, 0.3, 0.3), 0.05)
-	tw.tween_property(target_sprite, "modulate", Color.WHITE, 0.1)
+## 안무 데이터 부재 시 폴백 — 즉시 턴 해결
+func move_finished_fallback() -> void:
+	push_warning("안무 폴백: 데이터 없음, 즉시 해결")
+	_pending_action = {}
+	_pending_pops.clear()
+	_resolve_turn()
+
+
+## logic 채널 apply_damage 타이밍 — 판정은 이미 BattleController가 수행했고
+## 여기서는 그 결과(damages 큐)를 화면에 표현만 한다(이중 적용 금지).
+func _on_choreo_damage_frame() -> void:
+	if _pending_pops.is_empty():
+		return
+	var pop: Dictionary = _pending_pops.pop_front()
+	var idx := int(pop.get("enemy_index", 0))
+	_presenter.show_damage_number(int(pop["amount"]), false, _pending_element, idx)
+	if idx < _enemy_sprites.size():
+		_presenter.hurt_flash(_enemy_sprites[idx])
+	_presenter.hitstop()
+
+
+func _on_choreo_finished(_move_id: StringName) -> void:
+	if _pending_action.get("type", &"") == &"skill":
+		var skill: Dictionary = _pending_action["skill"]
+		for effect_kind: String in skill.get("status_effects", []):
+			for t in _skill_targets(skill):
+				t.attach_effect({"kind": StringName(effect_kind), "turns": 3,
+						"magnitude": 10})
+	_pending_action = {}
+	_pending_pops.clear()
+	_resolve_turn()
+
+
+## 스킬 targeting에 따른 실제 대상 목록
+func _skill_targets(skill: Dictionary) -> Array[Combatant]:
+	var out: Array[Combatant] = []
+	match str(skill.get("targeting", "single")):
+		"all_enemies":
+			for e in enemies:
+				if not e.is_down():
+					out.append(e)
+		"self":
+			out.append(player_combatant)
+		_:
+			var t := _first_alive_enemy()
+			if t != null:
+				out.append(t)
+	return out
+
+
+func _alive_enemy_index() -> int:
+	for i in enemies.size():
+		if not enemies[i].is_down():
+			return i
+	return 0
+
+
+func _first_alive_enemy() -> Combatant:
+	for e in enemies:
+		if not e.is_down():
+			return e
+	return null
 
 
 func _ready() -> void:
@@ -87,7 +150,25 @@ func _ready() -> void:
 	_build_ui()
 	controller.start(player_combatant, enemies)
 	_setup_battle_sprites()
+	_setup_presentation()
 	_show_command_menu()
+
+
+## 연출 계층 구성 — 안무 실행기와 프리젠터를 스프라이트에 바인딩
+func _setup_presentation() -> void:
+	_presenter = BattlePresenter.new()
+	add_child(_presenter)
+	_presenter.setup(self, _player_sprite, _enemy_sprites)
+
+	_runner = ChoreographyRunner.new()
+	add_child(_runner)
+	_runner.bind_presenter(_presenter)
+	_runner.damage_frame.connect(_on_choreo_damage_frame)
+	_runner.move_finished.connect(_on_choreo_finished)
+
+	_dodge = DodgePhase.new()
+	_dodge.visible = false
+	add_child(_dodge)
 
 
 func _load_skills() -> void:
@@ -110,6 +191,7 @@ func _setup_combatants(def: Dictionary) -> void:
 		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
 		enemies.append(Combatant.new(str(edef.get("display_name", eid)), hp_val,
 				int(edef.get("ap", 15)), int(edef.get("dp", 5))))
+		_enemy_ids.append(str(eid))
 
 
 func _build_ui() -> void:
@@ -196,15 +278,11 @@ func _on_command(cmd_text: String) -> void:
 		return
 	match cmd_text:
 		"공격":
-			controller.submit_player_command({
+			_begin_player_action({
 				"type": &"attack",
 				"ap": player_combatant.ap,
 				"target": _first_alive_enemy(),
-			})
-			_spawn_damage_number(
-					DamageCalculator.player_hit(player_combatant.ap, EnemyManager.rng),
-					false)
-			_resolve_turn()
+			}, &"atk_basic")
 		"기술":
 			_show_skill_menu()
 		"방어":
@@ -214,6 +292,20 @@ func _on_command(cmd_text: String) -> void:
 		"도망":
 			battle_ended.emit(&"flee", {})
 			_exit_battle(&"flee")
+
+
+## 플레이어 액션 개시 — 커맨드 제출(판정) → 안무 재생(표현) → 종료 시 턴 해결
+func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
+	if _busy:
+		return
+	_busy = true
+	_hide_menu()
+	controller.submit_player_command(command)
+	_pending_action = command
+	_pending_pops.assign(command.get("damages", []))
+	var skill: Dictionary = command.get("skill", {})
+	_pending_element = StringName(str(skill.get("element", "physical")))
+	_play_move(move_id)
 
 
 func _show_skill_menu() -> void:
@@ -233,22 +325,12 @@ func _on_skill_selected(skill: Dictionary) -> void:
 	if _skill_panel != null:
 		_skill_panel.queue_free()
 		_skill_panel = null
-	controller.submit_player_command({
+	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
+	_begin_player_action({
 		"type": &"skill",
 		"skill": skill,
 		"ap": player_combatant.ap,
-		"target": _first_alive_enemy(),
-	})
-	var dmg: int = DamageCalculator.skill_hit(
-			int(skill.get("power", 10)), player_combatant.ap,
-			StringName(str(skill.get("element", "physical"))),
-			[], EnemyManager.rng)
-	_spawn_damage_number(dmg, false)
-	# 상태이상 부착
-	for effect_kind: String in skill.get("status_effects", []):
-		enemies[0].attach_effect({"kind": StringName(effect_kind), "turns": 3, "magnitude": 10})
-	_shake_screen(5)
-	_resolve_turn()
+	}, move_id)
 
 
 func _resolve_turn() -> void:
@@ -257,13 +339,20 @@ func _resolve_turn() -> void:
 
 	# 적 턴 처리
 	if controller.state == BattleController.TurnState.ENEMY_TURN:
-		for e in enemies:
-			if not e.is_down():
-				var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
-				var actual: int = player_combatant.take_damage(raw)
-				_spawn_damage_number(actual, true)
-				_shake_screen(3)
-				break
+		var idx := _alive_enemy_index()
+		var edef: Dictionary = Database.get_enemy_def(
+				StringName(_enemy_ids[idx]))
+		if not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
+			await _run_dodge_phase(edef)   # 보스 특수공격 — 회피 페이즈
+		else:
+			for e in enemies:
+				if not e.is_down():
+					var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
+					var actual: int = player_combatant.take_damage(raw)
+					_presenter.show_damage_number(actual, true)
+					_presenter.hurt_flash(_player_sprite)
+					_presenter.play_screen_kf({"shake": 3})
+					break
 		controller.turn_count += 1
 		_tick_effects()
 
@@ -278,12 +367,37 @@ func _resolve_turn() -> void:
 	_show_command_menu()
 
 
+## 보스전 회피 페이즈 — 탄막을 실시간으로 피해야 한다(턴제+회피 하이브리드).
+## 피격 횟수 × dodge_damage_per_hit 가 플레이어 피해로 환산된다.
+func _run_dodge_phase(edef: Dictionary) -> int:
+	var cfg: Dictionary = edef["dodge_phase"]
+	_turn_label.text = "!! 피하라 !!"
+	_dodge.visible = true
+	_dodge.start(maxf(float(cfg.get("duration", 4.0)), 0.5), cfg)
+	var hits: int = await _dodge.phase_complete
+	_dodge.stop()
+	_dodge.visible = false
+	_turn_label.text = "TURN %d" % (controller.turn_count + 1)
+
+	var per_hit := maxi(int(edef.get("dodge_damage_per_hit", 3)), 0)
+	var actual: int = player_combatant.take_damage(hits * per_hit)
+	if actual > 0:
+		_presenter.show_damage_number(actual, true)
+		_presenter.hurt_flash(_player_sprite)
+		_presenter.play_screen_kf({"shake": 3, "flash": "#ff3333", "a": 0.25})
+	print("[battle] dodge phase done: hits=%d dmg=%d" % [hits, actual])
+	return hits
+
+
 func _end_player_defend() -> void:
 	# 적 턴만 진행
 	for e in enemies:
 		if not e.is_down():
 			var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
-			player_combatant.take_damage(raw)
+			var actual: int = player_combatant.take_damage(raw)
+			_presenter.show_damage_number(actual, true)
+			_presenter.hurt_flash(_player_sprite)
+			_presenter.play_screen_kf({"shake": 3})
 			break
 	_tick_effects()
 	_refresh_bars()
@@ -306,25 +420,6 @@ func _refresh_bars() -> void:
 			_hp_bars[key].value = maxi(0, enemies[i].hp)
 	if _hp_bars.has(&"player"):
 		_hp_bars[&"player"].value = maxi(0, player_combatant.hp)
-
-
-func _show_damage_number(amount: int, on_player: bool) -> void:
-	var lbl := Label.new()
-	lbl.text = str(amount)
-	lbl.add_theme_font_size_override("font_size", 22)
-	lbl.add_theme_color_override("font_color",
-			Color(1, 0.25, 0.15) if on_player else Color(1.0, 0.9, 0.15))
-	lbl.position = Vector2(randf_range(190, 260), randf_range(60, 100)) \
-			if not on_player else Vector2(randf_range(20, 60), randf_range(40, 70))
-	add_child(lbl)
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(lbl, "position:y", lbl.position.y - 28, 0.35)
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.35)
-	tw.chain().tween_callback(lbl.queue_free)
-
-
-func _shake_screen(power: int) -> void:
-	_shake_power = float(power)
 
 
 func _show_result(result: StringName) -> void:

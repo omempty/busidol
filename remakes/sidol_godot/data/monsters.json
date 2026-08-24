@@ -24,5 +24,21 @@
     "f5": { "count": 5, "species": [
       {"id":"hellcop","pattern":"chase"},
       {"id":"null_pointer","pattern":"phaser"}] }
+  },
+  "bosses": {
+    "sys_builder": {
+      "display_name": "SYS 빌더",
+      "ap": 30, "dp": 8, "hp_range": [120, 160],
+      "exp": [100, 150], "money": [500, 800],
+      "dodge_phase": {
+        "duration": 4.0,
+        "patterns": [
+          {"pattern_id":"bp1","type":"radial","count":10,"speed":140,"interval":0.9,"initial_delay":0.6},
+          {"pattern_id":"bp2","type":"aimed","speed":200,"interval":1.3,"initial_delay":1.0},
+          {"pattern_id":"bp3","type":"rain","count":2,"speed":160,"interval":0.8,"initial_delay":1.8}
+        ]
+      },
+      "dodge_damage_per_hit": 4
+    }
   }
 }

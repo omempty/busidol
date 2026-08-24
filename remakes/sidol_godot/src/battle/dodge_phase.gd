@@ -45,6 +45,10 @@ func stop() -> void:
 	_lasers.clear()
 
 
+func _float_cfg(key: String, fallback: float) -> float:
+	return float(phase_config.get(key, fallback))
+
+
 func _process(delta: float) -> void:
 	if not active:
 		return
@@ -207,7 +211,7 @@ func _update_projectiles(delta: float) -> void:
 		var p: Dictionary = _projectiles[i]
 		var h: float = float(p.get("homing", 0))
 		if h > 0:
-			var to_player := (_player_pos - p["pos"]).normalized()
+			var to_player: Vector2 = (_player_pos - (p["pos"] as Vector2)).normalized()
 			p["vel"] = (p["vel"] as Vector2).lerp(to_player * (p["vel"] as Vector2).length(),
 					h * delta)
 		p["pos"] = p["pos"] + p["vel"] * delta
