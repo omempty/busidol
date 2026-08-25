@@ -227,6 +227,43 @@ Steam/Itch 패키징·CI(외부 계정·익스포트 템플릿 필요 — 로컬
    실행 시 --quit-after 3600 병행.
 6. 커밋: 자기 파일만(npcs_f*.json, dialogue.json/@c, dialogue_sequences.json).
 
+### WP-3 시나리오 LLM 브리프 (8/25 — WP-2 커밋 227edf5 이후 유효)
+
+목표: 마스터 §3 씬을 zone/interact 트리거 + 소형 컷신(set_flags/grant_item/craft/
+start_battle/dialogue 조합)으로 데이터화. **작성 가능 도구는 기존 CutscenePlayer op
+범위 내**(fade/sfx/dialogue/set_flags/start_battle/grant_item/craft/change_scene/
+shake/wait).
+
+체크리스트(각 항목 = 트리거 행 1개 + 컷신 1개):
+1. S1-3 교무실(F1 zone): 컷신 dialogue(@c 신설 F1=@c107~) + set_flags Q_F1_SOPO
+   → 괴물전투는 신규 몬스터 부재로 기존 species 재활용(e계열) or 무전투 연출 중 선택.
+2. 창고(F1 zone): set_flags Q_F1_GAS + @c 신설.
+3. 폭파 조합(F1 interact, 교무실 인근): craft op — requires는 items.json 실제 id
+   확인 후 사용(부싯돌/휘발유/라이터 계열), flag=Q_F1_BLAST.
+4. S2-3 포스터(F2 interact): set_flags Q_F2_POSTER + @c 신설(F2=@c204~).
+5. S3-2 재료 발굴(F3 zone ×2): grant_item reagent_drag/reagent_allin 각 1 +
+   set_flags Q_F3_DRAG/Q_F3_ALLIN + D6 재활용 대사 @c317~@c328 소비.
+   (팔린은 quiz_paline이 이미 Q_F3_PALIN 세팅 — 중복 금지)
+6. B-1/B-2 지하(F0 zone+interact): 서고 입장 연출, 발굴 grant_item(공디스켓/C서적 —
+   items.json id 확인) + set_flags Q_F0_DISK.
+7. S4-2 희생(F4 interact): 레버 연출 @c405~ + set_flags Q_F4_SACRIFICE.
+
+규칙·주의:
+- 트리거 스키마: {"id","type":"zone|interact","cells":[[x,y]...],"once":true,
+  "done_flag","action":{"cutscene":"..."}} — done_flag는 quests_v2 id만.
+  requires_flag는 기존 게이트 마커만(q_f*_gate 등).
+- pos/cells는 통행 셀로 직접 지정(검증 스크립트가 벽 위 배치를 FAIL 처리한다 —
+  WP-2에서 3건 적발했음).
+- 새 컷신 파일명: data/cutscenes/<이벤트_id>.json, id 필드 일치.
+- 검증: validate + smoke_selfcheck + smoke_field/dialogue PASS(--quit-after 병행).
+
+**엔진 협업 백로그(시나리오 LLM 작업 불가 — 메인 개발 영역)**:
+- F2→F3 계단 requires_flag: 현 구조는 층 기반 guard라 방향별 잠금 불가 —
+  엔진 확장 또는 계단 앞 zone 안내 컷신으로 우회(본 WP에선 미구현 허용).
+- 종별 첫 격파 플래그(Q_F1_START의 DWORM 의미론) — pending_encounter에
+  on_win_flag 전달 확장 필요. 현재는 오프닝 완료 시점으로 근사됨(HANDOFF 기록).
+- Q_F5_BOSS_CURE(모교수 제압·투약) 전용 연출/보스 미창작 — 스코프 협의 필요.
+
 ### 구현 노트 (P8 세션 추가)
 
 - **LLM 워크플로우**: extract_sprites.py(numpy 벡터화 flood-fill, 935프레임 수십 초,
