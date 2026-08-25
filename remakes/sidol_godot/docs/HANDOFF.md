@@ -329,7 +329,7 @@ shake/wait).
 신규 컷신/플래그 전수 커버) + 검증실행.bat 13단계. 커밋 소유권: dialogue.json,
 monsters.json, cutscenes 2종 신설+f4_sacrifice, triggers_f4/f5.
 
-### 다음 세션 연계 (8/25 3차 세션 종료 시점)
+### 다음 세션 연계 (8/25 3차 세션 종료 시점) — ✅ 전 소화됨(4차 세션)
 
 **시나리오 데이터 완충 상태**: WP-1~6 전부 완료·검증·커밋. WP-5까지 포함해
 마스터 §3 전 씬이 데이터로 존재한다. 시나리오 LLM 워크플로우 임무 완료 —
@@ -362,6 +362,40 @@ choice 스텝 표시 지원.
 
 **검증**: 검증실행.bat 10단계(마지막 = smoke_choice). 개별 실행 시 --quit-after
 병행 필수.
+
+### 다음 세션 연계 (8/25 4차 세션 종료 시점)
+
+**4차 세션 결과(전부 커밋됨, origin 대비 8+커밋 — push 보류 중)**:
+
+1. **필드 이동 불가 근본 수정**: GridMover가 트리 밖 노드라 create_tween 실패
+   → 첫 보행 후 영구 잠금(부수로 enabled 미검사·Gate 판정 레이스도 수정).
+   transition_gate은 process_physics_priority -10 선처리.
+2. **엔진 백로그 전량 소화**: F2→F3 계단 잠금(transitions guard 3분할,
+   Q_F2_POSTER 게이트) / Q_F1_START 정밀화(dworm first_win_flag +
+   내부 마커 q_f1_opening_seen) / Q_HP_ALL·Q_QUIZ_ALL 정밀 판정
+   (크레딧룸 멤버 전원 확인·메타퀴즈 오답 0) / Godot features 4.7 승격 /
+   B2 gdformat+pre-commit 도입(전체 포맷 적용).
+3. **WP-7**: Q_F5_BOSS_CURE「30분의 침묵」데이터화 — professor_monster 보스,
+   f5_professor/f5_cure 컷신, triggers_f5 4단 계층, 죽어 있던
+   q_f5_boss_gate 부활(f4_sacrifice가 세팅).
+4. **UI 현대화**: HUD 재작성(HP/EXP 게이지, growth.json 산출 상한, 아이템
+   슬롯 6칸), InventoryPanel 신규(I키), ItemIcons 플레이스홀더.
+5. **오디오 실음원**: tools/dev/make_audio.py(numpy 합성) — SFX 21종 WAV,
+   BGM 6곡 OGG(스펙 duration/bpm 준수). 엔진은 공용 라이브러리에서 임포트.
+6. **공용화**: `D:\Game\_godot_shared` 신설(git) — chipwave.py,
+   check_scripts.gd, headless_check.bat, json_util.gd,
+   audio_manager_template.gd. snow_frost_war/LodeRunner도 채택·저장소화.
+
+**검증 인프라 현황**: 검증실행.bat **13단계**(임포트→validate→smoke 10종→
+check_scripts). SelfCheck 프루브 11종. pre-commit 훅(gdformat --check) 활성.
+
+**남은 작업 (우선순위순)**:
+1. 전투 보상 하드코딩 제거 + 레벨업 반영(battle_scene_controller 고정
+   {"exp":15,"money":100} → monsters.json 범위 사용, growth.json 레벨업)
+2. CRT/DOS 메타 엔딩 연출(마스터 E-2 — 엔진 담당 몫)
+3. 설정 패널에 조작법·접근성(Q9) 통합, 도움말 갤러리
+4. 패키징 export 프리셋 + headless 검증 CI
+5. 에셋: NPC 스프라이트 LLM 사이클(코드 폴백 완비), 아이템 아이콘 실도트
 
 ### 구현 노트 (P8 세션 추가)
 
