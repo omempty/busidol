@@ -210,7 +210,11 @@ func _input(event: InputEvent) -> void:
 		if _mode == 3:
 			_start_quiz()
 	elif event.is_action_pressed(&"cancel"):
-		get_tree().change_scene_to_file("res://scenes/field.tscn")
+		# 엔딩 도달 상태면 CRT 콘솔(E-2)로 마무리, 아니면 필드 복귀.
+		if GameState.has_flag("Q_ENDING"):
+			get_tree().change_scene_to_file("res://scenes/ending_console.tscn")
+		else:
+			get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 
 func _step(dir: int) -> void:

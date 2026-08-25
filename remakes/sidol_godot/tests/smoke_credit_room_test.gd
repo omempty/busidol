@@ -71,6 +71,21 @@ func _ready() -> void:
 	if not passed2.v or quiz2.mistake_count() == 0:
 		failures.append("오답 재도전 경로 이상")
 
+	# 5) CRT 콘솔(E-2) — 리포트 로드·타이핑 리빌·전문 표시
+	GameState.flags["Q_ENDING"] = true
+	var report := JsonUtil.load_dict("res://data/ending_report.json", "SmokeCredit")
+	if report.is_empty() or not report.has("prompt") or not report.has("lines"):
+		failures.append("ending_report.json 불량")
+	else:
+		var console: Control = preload("res://scenes/ending_console.tscn").instantiate()
+		add_child(console)
+		await get_tree().process_frame
+		if not console.is_typing():
+			failures.append("CRT 콘솔 타이핑 시작 실패")
+		console.reveal_all()
+		if not (console._text_label.text as String).contains("30년이나 걸렸네"):
+			failures.append("리포트 전문 미표시")
+
 	if failures.is_empty():
 		print("[smoke_credit] PASS")
 		get_tree().quit(0)
