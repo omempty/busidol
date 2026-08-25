@@ -208,6 +208,25 @@ Steam/Itch 패키징·CI(외부 계정·익스포트 템플릿 필요 — 로컬
 5. 커밋: 자기 경로만 스테이징(data/** 중 자기 파일, self_check.gd 프루브부).
    originals/** 접근 금지, 기존 테스트 삭제 금지.
 
+### WP-2 시나리오 LLM 브리프 (8/25 3차 세션 — WP-6 커밋 9ee427d 이후 유효)
+
+1. 스키마: npcs_f<N>.json = {"schema_version":1, "_comment", "floor":N,
+   "npcs":[{id,name,pos:[x,y],sequence_id,tint:[r,g,b]}]} — pos는 앵커 셀(1셀 점유),
+   통행 불가 시 로더가 인접 보정하되 정확한 셀 지정 권장. 파일이 없는 층(F0/F2~F5)은
+   신규 생성.
+2. 배치 과제: (a) 미배치 시퀀스 4종 착지 — npc_girl_rescue→F2(S2-2 실습실),
+   guard_idle/nothing_man→F0 또는 F2, cafeteria_girl_shop→F0 식당(@c001 화자).
+   (b) 구역 상주 NPC 신설 — F2 개발자 2명·F3 랩실 생도·F4 잔류생·지하 사서
+   (마스터 §2.1 프로필 준수, D1 톤).
+3. @c 번호 규약(신규): F0=@c002~, F2=@c201~. 기존 구역 연번 유지
+   (F1=@c1xx, F3=@c3xx, F4=@c4xx, F5=@c5xx, 엔딩=@c6xx). 신규 텍스트는 전부 새 @c.
+4. 경계: 플래그 세팅(Q_F2_FIGHTER 등)은 WP-3 트리거/컷신에서 처리 — WP-2는
+   배치+시퀀스+@c만. sequences의 step.text는 '@'키(dialogue.json 등록 필수,
+   WP-6 프루브가 FAIL로 걸름) 또는 직접 문자열.
+5. 검증: validate.gd + smoke_selfcheck(NPC 프루브·참조 무결성 프루브) PASS 필수.
+   실행 시 --quit-after 3600 병행.
+6. 커밋: 자기 파일만(npcs_f*.json, dialogue.json/@c, dialogue_sequences.json).
+
 ### 구현 노트 (P8 세션 추가)
 
 - **LLM 워크플로우**: extract_sprites.py(numpy 벡터화 flood-fill, 935프레임 수십 초,
