@@ -15,6 +15,12 @@ var _transitions: Array = []
 var _overlay: ColorRect
 
 
+func _ready() -> void:
+	# 플레이어 보행 판정보다 먼저 문/계단을 검사한다 — 플레이어가 한 걸음
+	# 먼저 나가면 앵커 정렬이 어긋나 문·계단 트리거를 영구 놓친다.
+	process_physics_priority = -10
+
+
 func setup(p_field: Node2D) -> void:
 	field = p_field
 	player = field.get_player()
@@ -85,10 +91,8 @@ func _try_stairs(dir: Vector2i) -> void:
 		var at := Vector2i(int(t["anchor"][0]), int(t["anchor"][1]))
 		if anchor != at or str(t["trigger_dir"]) != "down":
 			continue
-		print("[gate] stair matched id=%s anchor=%s floor=%d" % [t["id"], anchor, GameState.current_floor])
 		var floor_now := GameState.current_floor
 		if floor_now < int(t["guard_min_floor"]) or floor_now > int(t["guard_max_floor"]):
-			print("[gate] guard 차단 (min=%d max=%d)" % [int(t["guard_min_floor"]), int(t["guard_max_floor"])])
 			continue
 		var req: Variant = t.get("requires_flag")
 		if req != null and not GameState.has_flag(str(req)):

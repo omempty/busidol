@@ -44,9 +44,13 @@ func _ready() -> void:
 	if action == &"":
 		failures.append("스폰 주변 전면 차단(테스트 불가)")
 	else:
+		# 짧게 눌렀다 뗀다 — 버퍼 체인 과보행 없이 1보행만 검증.
+		# physics_frame 대기: 프로세스 프레임만으로는 물리 틱 전에 해제될 수 있다.
 		Input.action_press(action)
-		await _settle()
+		await get_tree().physics_frame
+		await get_tree().physics_frame
 		Input.action_release(action)
+		await _settle()
 		var moved := player.mover.grid_pos == start + dir
 		print("[smoke_field] move %s -> %s (moved=%s)" % [dir, player.mover.grid_pos, moved])
 		if not moved:

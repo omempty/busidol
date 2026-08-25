@@ -12,7 +12,8 @@ const REMAKE_TAG := "remake"
 
 
 ## 캐릭터 시트 경로 조회 — {"sheet": String, "meta": String}. 부재 시 빈 문자열.
-static func character_sheet(asset_id: StringName) -> Dictionary:
+## quiet=true면 부재를 오류로 기록하지 않는다(선행 조회 용도).
+static func character_sheet(asset_id: StringName, quiet := false) -> Dictionary:
 	var order: Array[String] = [LEGACY_TAG, REMAKE_TAG]
 	if SettingsManager.art_mode == SettingsManager.ArtMode.REMAKE:
 		order = [REMAKE_TAG, LEGACY_TAG]
@@ -23,8 +24,9 @@ static func character_sheet(asset_id: StringName) -> Dictionary:
 				"sheet": sheet,
 				"meta": "%s%s_%s.json" % [SPRITE_DIR, asset_id, tag],
 			}
-	push_error("SpriteSets: '%s' 시트 없음 — %s/%s 태그 모두 부재" % [
-			asset_id, order[0], order[1]])
+	if not quiet:
+		push_error("SpriteSets: '%s' 시트 없음 — %s/%s 태그 모두 부재" % [
+				asset_id, order[0], order[1]])
 	return {"sheet": "", "meta": ""}
 
 

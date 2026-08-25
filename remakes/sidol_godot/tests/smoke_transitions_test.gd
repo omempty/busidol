@@ -22,11 +22,25 @@ func _ready() -> void:
 	var player: PlayerEntity = field.get_player()
 	var gate: TransitionGate = field.gate
 
-	# --- 상행: 1→5 ---
+	# --- 상행: 1→5 (F2→F3는 Q_F2_POSTER 게이트) ---
 	var expected := 2
 	while expected <= 5:
 		player.teleport(UP_ANCHOR)
 		await get_tree().process_frame
+		if expected == 3 and not GameState.has_flag("Q_F2_POSTER"):
+			# 잠금 확인 — 플래그 없이는 f2에 머물러야 한다.
+			Input.action_press(&"move_down")
+			var locked := await _wait_until(func() -> bool:
+				return GameState.current_floor != 2, 0.8)
+			Input.action_release(&"move_down")
+			if locked:
+				failures.append("F2→F3 잠금 해제(플래그 없이 통과)")
+			else:
+				print("[smoke_tr] F2→F3 locked (no flag) — ok")
+			# 프리셋: 퀘스트 플래그 부여 후 재도전(게임 내 = 포스터 퀘스트 완료).
+			GameState.flags["Q_F2_POSTER"] = true
+			player.teleport(UP_ANCHOR)
+			await get_tree().process_frame
 		Input.action_press(&"move_down")
 		var changed := await _wait_until(func() -> bool:
 			return GameState.current_floor == expected and not gate.active, 3.0)
@@ -72,9 +86,15 @@ func _ready() -> void:
 		player.teleport(door_anchor)
 		await get_tree().process_frame
 		Input.action_press(&"move_down")
-		var arrived := await _wait_until(func() -> bool:
-			return player.mover.grid_pos == door_anchor + Vector2i(0, 3), 3.0)
+		# 슬라이드 완료 프레임에 다음 보행·연쇄 문 발화가 겹칠 수 있으므로
+		# gate 발화를 감지하면 즉시 키를 떼고 완료만 기다린다.
+		var started := await _wait_until(func() -> bool: return gate.active, 3.0)
 		Input.action_release(&"move_down")
+		var arrived := false
+		if started:
+			arrived = await _wait_until(func() -> bool:
+				return not gate.active \
+						and player.mover.grid_pos == door_anchor + Vector2i(0, 3), 3.0)
 		print("[smoke_tr] door @%s -> %s (ok=%s)" % [door_anchor, player.mover.grid_pos, arrived])
 		if not arrived:
 			failures.append("문 통과 실패 @%s" % str(door_anchor))

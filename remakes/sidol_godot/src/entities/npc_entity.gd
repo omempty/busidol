@@ -23,7 +23,10 @@ func setup(p_id: StringName, p_name: String, p_seq: StringName, p_cell: Vector2i
 
 
 func _ready() -> void:
-	_paths = SpriteSets.character_sheet(&"player")
+	# 전용 시트(<npc_id>_original/_remake) 우선 — 부재 시 플레이어 시트 플레이스홀더.
+	_paths = SpriteSets.character_sheet(npc_id, true)
+	if str(_paths["sheet"]).is_empty():
+		_paths = SpriteSets.character_sheet(&"player")
 	var raw: Variant = JSON.parse_string(
 			FileAccess.get_file_as_string(str(_paths["meta"])))
 	if typeof(raw) == TYPE_DICTIONARY:

@@ -12,6 +12,8 @@ extends Node
 ##  6) 트리거 done_flag 스킵 규약    — 8/25 실제 버그(F1 재방문 컷신 재생) 회귀 방지
 ##  7) 인벤토리 불변식               — add/remove/count 경계
 ##  8) 전층 착지 좌표 유효성(warn)    — transitions 오프셋과 맵 통행 정합(f0 격차 추적용)
+##  9) 전환 게이트 데이터 정합        — 동일 앵커 guard 범위 중복(이중 발화)·
+##                                     requires_flag가 퀘스트 id와 불일치 조기 발견
 
 const FLOORS := [1, 2, 3, 0, 4, 5]   # 마스터 시나리오 진행 순서
 
@@ -28,6 +30,7 @@ func run_all() -> PackedStringArray:
 		_check_save_roundtrip(),
 		_check_trigger_done_flag_skip(),
 		_check_floor_landings(),
+		_check_transition_gates(),
 		_check_quest_flags(),
 		_check_sequence_text_refs(),
 	]:
@@ -240,6 +243,57 @@ func _check_floor_landings() -> Array:
 		return lines
 	if lines.is_empty():
 		lines += _ok("전 전환 착지 좌표 통행")
+	return lines
+
+
+## 전환 게이트 데이터 정합 —
+##  a) 동일 앵커+방향+delta 묶음 내 guard 층범위 중복 금지(이중 발화 모호성)
+##  b) requires_flag는 quests_v2.json 의 퀘스트 id여야 한다(오타 조기 발견)
+func _check_transition_gates() -> Array:
+	var lines: Array = []
+	var path := "res://data/maps/transitions.json"
+	if not FileAccess.file_exists(path):
+		return _fail("transitions.json 없음")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		return _fail("transitions.json 파싱 실패")
+	var transitions: Array = raw.get("transitions", [])
+
+	var quest_ids := {}
+	var qraw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://data/quests_v2.json"))
+	if typeof(qraw) == TYPE_DICTIONARY:
+		for q: Dictionary in qraw.get("quests", []):
+			quest_ids[str(q.get("id", ""))] = true
+
+	var groups := {}   # "anchor|dir|delta" -> Array[Dictionary]
+	for t: Dictionary in transitions:
+		var key := "%s|%s|%d" % [str(t.get("anchor")), str(t.get("trigger_dir")),
+				int(t.get("floor_delta", 0))]
+		if not groups.has(key):
+			groups[key] = []
+		groups[key].append(t)
+
+		var req: Variant = t.get("requires_flag")
+		if req != null and not quest_ids.has(str(req)):
+			lines += _fail("전환 %s requires_flag 미정의: %s" % [str(t.get("id")), str(req)])
+
+	for key: String in groups:
+		var segs: Array = groups[key]
+		for i in range(segs.size()):
+			for j in range(i + 1, segs.size()):
+				var a: Dictionary = segs[i]
+				var b: Dictionary = segs[j]
+				var overlap := maxi(int(a.get("guard_min_floor", -99)),
+						int(b.get("guard_min_floor", -99))) \
+						<= mini(int(a.get("guard_max_floor", 99)),
+						int(b.get("guard_max_floor", 99)))
+				if overlap:
+					lines += _fail("전환 guard 범위 중복(%s): %s vs %s"
+							% [key, str(a.get("id")), str(b.get("id"))])
+
+	if lines.is_empty():
+		lines += _ok("전환 게이트 데이터 정합 (guard 중복/플래그 참조)")
 	return lines
 
 

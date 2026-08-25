@@ -34,13 +34,17 @@ func try_step(dir: Vector2i) -> bool:
 	if moving:
 		buffered_dir = dir
 		return false
+	if not enabled:
+		return false
 	if not _edge_passable(grid_pos, dir):
 		step_blocked.emit(dir)
 		return false
 	moving = true
 	grid_pos += dir
 	step_started.emit(dir)
-	var tween := create_tween()
+	# self는 씬 트리 밖 멤버 노드라 create_tween()이 실패한다 —
+	# 트리에 있는 body 기준으로 생성(보간·_on_arrived 체인의 생명선).
+	var tween := body.create_tween()
 	tween.tween_property(body, "position", block_center(grid_pos), STEP_TIME)
 	tween.finished.connect(_on_arrived)
 	return true
