@@ -66,6 +66,11 @@
 | 배터리 회로 퍼즐(10,000V) | BatteryCircuitMinigame + battery_puzzle.json | ✅ |
 | 전투 승리→에필로그→엔딩 흐름 | on_win_flag + epilogue.json | ✅ |
 | Event Editor v0 | addons/event_editor (컷신 스텝 편집) | ✅ |
+| 세이브/로드 3슬롯+오토세이브(Q1) | SaveManager + 타이틀 계속하기·일시정지 메뉴 | ✅ |
+| 설정 저장(볼륨·연출속도·아트모드·글자크기 Q9) | SettingsManager + SettingsPanel | ✅ |
+| 진행 기록(Q3) | QuestLogPanel + data/quests_v2.json | ✅ 골격 |
+| 부팅 인트로(DOS 스타일) | scenes/boot_intro.tscn | ✅ |
+| 디버그 패널+자가검증(F10, 개발빌드) | DebugPanel + SelfCheck(smoke_selfcheck 게이트) | ✅ |
 
 ## Phase 진행
 
@@ -74,8 +79,8 @@
 | 0~5 | 기반·맵·필드·대화·전투 코어·인벤토리 | ✅ |
 | 6 | 전투 연출(안무/히트스톱/보스 회피 하이브리드) | ✅ |
 | 7 | 컷신·이벤트·미니게임·크래프트·엔딩·에디터 v0 | ✅ |
-| 8 | 도트/오디오 AI 생성 배치 | 다음 |
-| 9 | 세이브·설정·시나리오 데이터 완충 | 대기 |
+| 8 | 도트/오디오 AI 생성 배치 | 진행 중(LLM 워크플로우 완비) |
+| 9 | 세이브·설정·시나리오 데이터 완충 | **진행 중(세이브·설정·부팅·도움말·접근성·진행기록 완료)** |
 | 전투 안무(battle_moves JSON 재생) | ChoreographyRunner + BattlePresenter | ✅ |
 | 히트스톱·화면 흔들림 | BattlePresenter | ✅ |
 | 데미지 팝(속성 색상·크기 비례) | BattlePresenter.ELEMENT_COLORS | ✅ |

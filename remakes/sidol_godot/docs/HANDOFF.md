@@ -28,15 +28,24 @@ gen/prompts/ 참조) → 납품을 assets/raw/llm/10_submitted/ 저장 → **재
 (마젠타 키잉·스펙 그리드 컷팅·검증 → 20_processed/) → 유저 리뷰 채택 → 패킹.
 
 **다음 세션 할 일 (순서대로)**:
-1. **process_llm_sheet.py 구현** — 마젠타 키잉(key_magenta 이미 sprite_retouch에
-   있음) + 스펙 그리드(셀 128×128) 컷팅 + 빈 셀 제외 프레임 검출 + 검증.
-   첫 실제 납품 형식을 보고 맞추는 것이 정확하다.
-2. 1차 납품(주인공) 검증 결과 유저 보고 — 1차 납품은 이미 반려됨(마젠타 배경,
-   그리드 5행→7행, 재창작). **교훈: 원작은 24×24 도트였다**(셀 64는 패딩 컨테이너)
-   — 프롬프트에 명시 후 재요청 필요.
-3. 스타일 방향 확정: **표준 규격은 assets/spec/sprites/_standard.md** (셀 128×128,
-   세로형 0.6:1, SD 머리:몸 1:1.2, 프레임 가변 최소2/walk 4 권장, idle 4방향 2프레임).
-   유저가 생성 시트(128×128 셀, 캐릭터 ~110px) 비율 채택 의사 표시함.
+1. ~~**process_llm_sheet.py 구현**~~ ✅ **완료(8/25 3차 세션)** — 마젠타 키잉
+   (sprite_retouch.key_magenta 재사용) + 스펙 그리드 컷팅 + 빈 셀 제외 프레임
+   검출 + 표준 규격 검증(_standard.md 임계값) → `20_processed/<캐릭터>/`에
+   프레임 PNG + processed_sheet.png + report.json 기록.
+   사용: `python tools/convert/process_llm_sheet.py <납품.png> [--spec 스펙.json]`
+   (스펙 미지정 시 assets/spec/sprites/<캐릭터>.json 자동 탐색).
+   합성 시트 3종(정상/프레임누락/그리드불일치)으로 통과·반려 경로 검증 완료.
+   첫 실제 납품을 보고 임계값 미세조정 필요할 수 있음.
+2. **LLM 재요청** — 1차 납품은 반려됨(마젠타 배경, 그리드 5행→7행, 재창작).
+   교훈: 원작은 24×24 도트였다(셀 64는 패딩 컨테이너) + 표준 규격은
+   `_standard.md`(셀 128×128) — 프롬프트에 명시 후 재요청.
+   참조자료: `assets/raw/llm/00_reference/` (8/25 3차 세션에 재생성됨 —
+   62그룹, gitignored 임시区).
+3. 납품 수령 → `10_submitted/<캐릭터>_v<n>.png` 저장 → process_llm_sheet.py
+   실행 → 리포트 유저 보고 → 뷰어 검수 → 채택 시 패킹.
+4. 스타일 방향: **표준 규격 확정 = assets/spec/sprites/_standard.md**
+   (셀 128×128, 세로형 0.6:1, SD 머리:몸 1:1.2, 프레임 가변 최소2/walk 4 권장,
+   idle 4방향 2프레임). 유저가 생성 시트 비율 채택 의사 표시함.
 
 ### 스프라이트/화면 관련 확정 사항 (8/25 2차 세션 추가)
 
@@ -98,6 +107,59 @@ gen/prompts/ 참조) → 납품을 assets/raw/llm/10_submitted/ 저장 → **재
 | **공용 프레임워크** | src/battle, src/cutscene, src/map/trigger_system, src/ui(미니게임·DialogueBox·BattleUI), _shared 도구+schemas+**스프라이트 표준/LLM 워크플로우** |
 | **게임 데이터** | data/**, assets/spec/**, gen/prompts/** |
 | **게임 전용 로직** | 씬 조립, 성장, 보스 하이브리드 |
+
+### Phase 9 착공 (8/25 3차 세션)
+
+**완료 — Q1 세이브/설정 코어 루프 전체**:
+
+- **SaveManager 실구현**: `user://save_auto.json` + `user://save_slot_1..3.json`
+  (사람이 읽는 JSON, version 필드). 스냅샷 = 층/플레이어 좌표/스탯/인벤/플래그/
+  상자 오버라이드. 오토세이브는 전투 승리 측에서 `request_autosave()` → 필드 진입 시
+  `consume_autosave()`(좌표 확정 보장). 층 전환은 게이트에서 도착 좌표로 즉시 기록.
+- **SettingsManager 실구현**: 볼륨 4버스(Master/BGM/SFX/Voice)·연출속도·아트모드 →
+  `user://settings.json`. 변경 UI가 즉시 적용+저장, 기동 시 버스에 자동 반영.
+- **UI 3종 신규**: `src/ui/save_slot_list.gd`(SAVE/LOAD 모드, 타이틀·일시정지 공용),
+  `src/ui/settings_panel.gd`(공용), `src/ui/pause_menu.gd`(필드 Esc — 계속/세이브/
+  로드/설정/타이틀). 트리 pause 중 입력 유지 위해 오디오 매니저 ALWAYS 모드.
+- **타이틀 개편**(scenes/main.gd): 새 게임/계속하기/설정/종료 + 아트모드 ←→ 퀵선택 유지.
+- **상자 오버라이드 완비**: 선언만 있던 GameState.chest_overrides가 실제 기록·적용·
+  직렬화된다(field._apply_chest_overrides — 로드/재구축 공용).
+- **tests/smoke_save.tscn 신규**: 저장→변형→복원 라운드트립 + 메타 + 오토 요청 흐름.
+
+### Phase 9 잔여 완료 + 디버그 도구 (8/25 3차 세션 후반)
+
+- **버그 수정(trigger_system.gd)**: `_consumed()`가 `done_flag`를 검사하지 않아
+  F1 재방문마다 오프닝 컷신이 재발동됨(데이터 파일 주석의 규약과 불일치하는
+  구현 누락 — Phase 7 잠복 버그). done_flag 스킵 구현으로 해소.
+  이 버그가 smoke_dialogue 상시 실패·smoke_transitions 플레키의 근원이었다.
+- **smoke_dialogue 재작성**: 프롤로그 플래그 프리셋(smoke_field 동일 패턴) +
+  물리 프레임 동기 입력 홀드(`_press_until`) + 감시자 타이머. 정상 PASS.
+- **부팅 인트로**(scenes/boot_intro): DOS 가짜 부팅 타이핑 → 타이틀 전환,
+  아무 키 스킵. project.godot main_scene 변경.
+- **조작 도움말**(src/ui/help_panel.gd): 타이틀·일시정지 양쪽에서 접근.
+- **진행 기록 Q3**(data/quests_v2.json + src/ui/quest_log_panel.gd): 마스터
+  시나리오 §3 구역명 준용한 14개 마일스톤 플래그 달성 뷰. 일시정지 메뉴에서.
+- **접근성 Q9**(SettingsManager.TextSize): 본문 글자 크기 3단 — DialogueBox
+  폰트/패널 높이에 스케일 반영, settings.json 영속.
+- **디버그 패널**(src/ui/debug_panel.gd, F10 — 디버그 빌드 한정):
+  층 이동(transitions.json 앵커 역산)·수치 변경·아이템 지급·전투 강제
+  (species+bosses 데이터 구동)·플래그 토글·SelfCheck 실행.
+- **SelfCheck 자가검증**(src/core/self_check.gd + tests/smoke_selfcheck.tscn):
+  통합 지점 회귀 프루브 7종 — 전층 맵 로드/NPC 시퀀스 참조/트리거 참조/
+  적 정의 커버리지/세이브 라운드트립/**done_flag 스킵 규약(8/25 버그 회귀 방지)**/
+  인벤 불변식. 게이트로 승격 — 검증실행.bat에 편성.
+- **검증 결과**: import·validate 0오류, 스모크 8종 + 부팅인트로/타이틀 헤드리스
+  부팅 전부 exit 0.
+
+**P9 잔여**: 시나리오 데이터 완충(퀘스트 상세 목표·대사 보강 — 시나리오 작업) ·
+Steam/Itch 패키징·CI(외부 계정·익스포트 템플릿 필요 — 로컬 검증 불가로 보류).
+
+### 기존 결함 종결 (8/25)
+
+| ID | 내용 | 결론 |
+|---|---|---|
+| — | smoke_dialogue 실패 | ✅ 근원=done_flag 미검사 버그. 규약 구현+테스트 재작성으로 PASS |
+| — | smoke_transitions 최초 1회 실패 | ✅ 동일 근원 추정 — 규약 구현 후 연속 PASS |
 
 ### 구현 노트 (P8 세션 추가)
 
