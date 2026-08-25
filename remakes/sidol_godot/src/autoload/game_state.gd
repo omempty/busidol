@@ -33,6 +33,35 @@ func set_flag(flag_id: String, value: Variant = true) -> void:
 	state_changed.emit()
 
 
+## 성장 반영 — 경험치 누적 후 growth.json 레벨 테이블로 레벨업 판정.
+## 레벨업 시 hp_up/ap_up을 현재치에 가산(최대치 산출식은 HudV0와 동일 기준).
+## 반환: {"level_up": bool, "level": int, "levels_gained": int}
+func grant_exp(amount: int) -> Dictionary:
+	player_stats["exp"] = int(player_stats["exp"]) + amount
+	var result := {"level_up": false, "level": int(player_stats["level"]), "levels_gained": 0}
+	while true:
+		var target := _level_entry(result["level"] + 1)
+		if target.is_empty():
+			break  # 만렙
+		if int(player_stats["exp"]) < int(target.get("exp_accum", 0)):
+			break
+		player_stats["level"] = int(target["level"])
+		player_stats["hp"] = int(player_stats["hp"]) + int(target.get("hp_up", 0))
+		player_stats["ap"] = int(player_stats["ap"]) + int(target.get("ap_up", 0))
+		result["level_up"] = true
+		result["level"] = int(target["level"])
+		result["levels_gained"] = int(result["levels_gained"]) + 1
+	state_changed.emit()
+	return result
+
+
+func _level_entry(level: int) -> Dictionary:
+	for entry: Dictionary in Database.level_table():
+		if int(entry.get("level", -1)) == level:
+			return entry
+	return {}
+
+
 ## 상자 개봉 기록 — 층 전환·세이브/로드를 넘어 유지된다.
 func set_chest_override(cell: Vector2i, attr_value: int) -> void:
 	if not chest_overrides.has(current_floor):

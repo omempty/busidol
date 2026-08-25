@@ -13,6 +13,7 @@ var _paths: Dictionary = {}
 func _ready() -> void:
 	_paths = SpriteSets.character_sheet(&"player")
 	z_index = 15
+	ShadowBlob.attach(self)
 	sprite.sprite_frames = _build_frames()
 	sprite.animation = &"idle_down"
 	sprite.play()

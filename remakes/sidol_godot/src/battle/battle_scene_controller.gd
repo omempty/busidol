@@ -123,7 +123,7 @@ func _on_command(cmd_text: String) -> void:
 			_end_player_defend()
 		"도망":
 			battle_ended.emit(&"flee", {})
-			_exit_battle(&"flee")
+			_exit_battle(&"flee", {})
 
 
 func _on_skill_selected(skill: Dictionary) -> void:
@@ -313,17 +313,36 @@ func _show_result(result: StringName) -> void:
 	_busy = true
 	_ui.show_result(result)
 	await get_tree().create_timer(1.2).timeout
-	battle_ended.emit(result, {"exp": 15, "money": 100})
-	_exit_battle(result)
+	var rewards := _compute_rewards()
+	battle_ended.emit(result, rewards)
+	_exit_battle(result, rewards)
 
 
-func _exit_battle(result: StringName) -> void:
+## 보상 산출 — monsters.json 종별 exp/money 범위에서 난수 합산(하드코딩 금지).
+func _compute_rewards() -> Dictionary:
+	var exp_total := 0
+	var money_total := 0
+	for eid in _enemy_ids:
+		var edef := Database.get_enemy_def(StringName(eid))
+		var exp_range: Array = edef.get("exp", [5, 10])
+		var money_range: Array = edef.get("money", [50, 100])
+		exp_total += randi_range(int(exp_range[0]), int(exp_range[1]))
+		money_total += randi_range(int(money_range[0]), int(money_range[1]))
+	return {"exp": exp_total, "money": money_total}
+
+
+func _exit_battle(result: StringName, rewards: Dictionary) -> void:
 	# 전투 결과를 GameState에 반영
 	GameState.player_stats["hp"] = player_combatant.hp
-	GameState.player_stats["money"] += 50 if result == &"win" else 0
-	if result == &"win" and not _on_win_flag.is_empty():
-		GameState.set_flag(_on_win_flag, true)
 	if result == &"win":
+		GameState.player_stats["money"] = (
+			int(GameState.player_stats["money"]) + int(rewards["money"])
+		)
+		var growth := GameState.grant_exp(int(rewards["exp"]))
+		if bool(growth["level_up"]):
+			print("[battle] level up → %d" % int(growth["level"]))
+		if not _on_win_flag.is_empty():
+			GameState.set_flag(_on_win_flag, true)
 		SaveManager.request_autosave("전투 승리")  # 필드 복귀 후 consume
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
 

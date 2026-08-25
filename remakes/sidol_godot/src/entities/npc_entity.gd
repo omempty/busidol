@@ -32,6 +32,8 @@ func _ready() -> void:
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(str(_paths["meta"])))
 	if typeof(raw) == TYPE_DICTIONARY:
 		_meta = raw
+	z_index = 15
+	ShadowBlob.attach(self)
 	sprite.sprite_frames = _build_frames()
 	if not _meta.is_empty():
 		sprite.scale = Vector2.ONE * float(_meta.get("scale", 1.0))

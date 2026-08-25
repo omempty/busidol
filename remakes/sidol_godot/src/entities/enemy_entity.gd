@@ -22,6 +22,7 @@ func setup(p_id: StringName, p_cell: Vector2i, tint: Color) -> void:
 	sprite.play()
 	modulate = tint
 	z_index = 15
+	ShadowBlob.attach(self)
 	mover.body = self
 	mover.grid_pos = p_cell
 	position = GridMover.block_center(p_cell)

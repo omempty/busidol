@@ -27,6 +27,7 @@ func run_all() -> PackedStringArray:
 		_check_trigger_refs(),
 		_check_enemy_defs(),
 		_check_inventory(),
+		_check_growth(),
 		_check_save_roundtrip(),
 		_check_trigger_done_flag_skip(),
 		_check_floor_landings(),
@@ -153,6 +154,46 @@ func _all_species_ids() -> PackedStringArray:
 			else:
 				out.append(str(s))
 	return out
+
+
+## 성장 판정 — grant_exp가 growth.json 레벨 테이블 기준으로 레벨업·스탯 가산을
+## 정확히 수행하는지(실행 전 상태 저장·복원).
+func _check_growth() -> Array:
+	var saved_exp := int(GameState.player_stats["exp"])
+	var saved_level := int(GameState.player_stats["level"])
+	var saved_hp := int(GameState.player_stats["hp"])
+	var saved_ap := int(GameState.player_stats["ap"])
+
+	# level 2 요구치(exp_accum 40) 직전에서 1포인트 — 정확히 1레벨 상승해야 한다
+	GameState.player_stats["exp"] = 39
+	GameState.player_stats["level"] = 1
+	GameState.player_stats["hp"] = 50
+	GameState.player_stats["ap"] = 30
+	var result := GameState.grant_exp(1)
+	var ok := (
+		bool(result["level_up"])
+		and int(result["level"]) == 2
+		and int(GameState.player_stats["hp"]) == 60
+	)  # hp_up(10) 가산
+	if not ok:
+		return _fail("grant_exp 레벨업 판정 이상: %s" % str(result))
+
+	# 만렙 경계 — 테이블 밖 요구치에서 추가 레벨 없음
+	var max_entry := {}
+	for e: Dictionary in Database.level_table():
+		max_entry = e
+	GameState.player_stats["exp"] = 999999
+	GameState.player_stats["level"] = int(max_entry.get("level", 1))
+	result = GameState.grant_exp(0)
+	if bool(result["level_up"]):
+		return _fail("만렙 초과 레벨업 발생")
+
+	GameState.player_stats["exp"] = saved_exp
+	GameState.player_stats["level"] = saved_level
+	GameState.player_stats["hp"] = saved_hp
+	GameState.player_stats["ap"] = saved_ap
+	GameState.state_changed.emit()
+	return _ok("성장(경험치→레벨업) 판정")
 
 
 func _check_inventory() -> Array:
