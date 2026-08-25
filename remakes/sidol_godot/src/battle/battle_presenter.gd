@@ -45,7 +45,7 @@ func build_sprites(enemy_count: int) -> void:
 		at.atlas = ptex
 		at.region = Rect2(0, 0, cs.x, cs.y)
 		player_sprite.texture = at
-	player_sprite.position = Vector2(80, 140)
+	player_sprite.position = Vector2(120, 220)
 	var rs := maxf(_player_render_scale(), 0.01)
 	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX
 			/ (float(cs.x) * rs))
@@ -56,14 +56,16 @@ func build_sprites(enemy_count: int) -> void:
 		var es := Sprite2D.new()
 		var e_tex_path := "res://assets/originals_ref/bmp_spr/e%d/frame_000.bmp" \
 				% (i % 8 + 1)
-		if ResourceLoader.exists(e_tex_path):
-			es.texture = load(e_tex_path)
-		else:
+		# 스테일 .import로 exists()=true여도 load가 실패할 수 있다 — 결과 기준 폴백
+		var etex: Texture2D = load(e_tex_path) \
+				if ResourceLoader.exists(e_tex_path) else null
+		if etex == null:
 			var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
 			img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6),
 					randf_range(0.2, 0.5)))
-			es.texture = ImageTexture.create_from_image(img)
-		es.position = Vector2(380 + i * 70, 120)
+			etex = ImageTexture.create_from_image(img)
+		es.texture = etex
+		es.position = Vector2(600 + i * 100, 180)
 		es.scale = Vector2(1.5, 1.5)
 		es.set_meta(&"base_pos", es.position)
 		_root.add_child(es)

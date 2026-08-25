@@ -85,12 +85,14 @@ func _setup_combatants(def: Dictionary) -> void:
 			&"volt_arc", &"ember_of_flint"]
 
 	for eid in def.get("enemies", ["mad_eye"]):
-		var edef: Dictionary = Database.get_enemy_def(StringName(str(eid)))
+		# field/cutscene은 species 원본 딕셔너리를 넘길 수 있다 — id만 추출
+		var eid_str := str(eid.get("id", eid)) if eid is Dictionary else str(eid)
+		var edef: Dictionary = Database.get_enemy_def(StringName(eid_str))
 		var hp_r: Array = edef.get("hp_range", [20, 40])
 		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
-		enemies.append(Combatant.new(str(edef.get("display_name", eid)), hp_val,
+		enemies.append(Combatant.new(str(edef.get("display_name", eid_str)), hp_val,
 				int(edef.get("ap", 15)), int(edef.get("dp", 5))))
-		_enemy_ids.append(str(eid))
+		_enemy_ids.append(eid_str)
 
 
 func _on_command(cmd_text: String) -> void:

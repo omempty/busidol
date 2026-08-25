@@ -91,17 +91,22 @@ func _close_skill_panel() -> void:
 
 func _new_menu_box() -> VBoxContainer:
 	var box := VBoxContainer.new()
-	box.position = Vector2(420, 200)
+	box.position = Vector2(800, 380)
 	box.custom_minimum_size = Vector2(120, 0)
 	add_child(box)
 	return box
 
 
 func _build_background() -> void:
+	# 전용 하위 레이어(-1)에 배치 — 이 CanvasLayer(20)에 직접 두면
+	# 배경이 월드 스프라이트(BattlePresenter, layer 0)를 덮어버린다.
+	var bg_layer := CanvasLayer.new()
+	bg_layer.layer = -1
+	add_child(bg_layer)
 	var bg := ColorRect.new()
 	bg.color = Color(0.06, 0.06, 0.12)
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(bg)
+	bg_layer.add_child(bg)
 
 
 func _build_enemy_status() -> void:
@@ -109,14 +114,14 @@ func _build_enemy_status() -> void:
 		var e := _enemies[i]
 		var name_lbl := Label.new()
 		name_lbl.text = e.display_name
-		name_lbl.position = Vector2(180 + i * 80, 30)
+		name_lbl.position = Vector2(560 + i * 100, 60)
 		name_lbl.add_theme_font_size_override("font_size", 10)
 		add_child(name_lbl)
 
 		var bar := ProgressBar.new()
 		bar.max_value = e.max_hp
 		bar.value = e.hp
-		bar.position = Vector2(180 + i * 80, 46)
+		bar.position = Vector2(560 + i * 100, 76)
 		bar.size = Vector2(64, 8)
 		bar.show_percentage = false
 		bar.modulate = ENEMY_BAR_COLOR
@@ -149,13 +154,13 @@ func _build_player_status() -> void:
 func _build_labels() -> void:
 	_turn_label = Label.new()
 	_turn_label.text = "TURN 1"
-	_turn_label.position = Vector2(280, 14)
+	_turn_label.position = Vector2(450, 14)
 	_turn_label.add_theme_font_size_override("font_size", 14)
 	add_child(_turn_label)
 
 	_result_label = Label.new()
 	_result_label.text = ""
-	_result_label.position = Vector2(240, 100)
+	_result_label.position = Vector2(450, 150)
 	_result_label.add_theme_font_size_override("font_size", 28)
 	_result_label.visible = false
 	add_child(_result_label)
