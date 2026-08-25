@@ -3,19 +3,55 @@
   "schema_version": 1,
   "_comment": "팰린 게이트 — 퀴즈맨 3문항 통과 → 시약 지급 → 3약품 craft로 해독제 완성(씬 3-2/3-3).",
   "steps": [
-    { "op": "dialogue", "steps": [
-      { "speaker": "퀴즈맨", "text": "@c316" }
-    ] },
-    { "op": "minigame_quiz", "id": "quiz_man" },
-    { "op": "dialogue", "steps": [
-      { "speaker": "퀴즈맨", "text": "@c329" }
-    ] },
-    { "op": "grant_item", "args": { "item": "reagent_palin", "count": 1 } },
-    { "op": "set_flags", "args": { "Q_F3_PALIN": true } },
-    { "op": "craft", "args": {
-        "requires": { "reagent_drag": 1, "reagent_allin": 1, "reagent_palin": 1 },
-        "grant": { "antibiotic_x": 1 },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "퀴즈맨",
+          "text": "@c316"
+        }
+      ]
+    },
+    {
+      "op": "minigame_quiz",
+      "id": "quiz_man"
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "퀴즈맨",
+          "text": "@c329"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "reagent_palin",
+        "count": 1
+      }
+    },
+    {
+      "op": "set_flags",
+      "args": {
+        "Q_F3_PALIN": true,
+        "Q_QUIZ_ALL": true
+      }
+    },
+    {
+      "op": "craft",
+      "args": {
+        "requires": {
+          "reagent_drag": 1,
+          "reagent_allin": 1,
+          "reagent_palin": 1
+        },
+        "grant": {
+          "antibiotic_x": 1
+        },
         "flag": "Q_F3_CURE_DONE"
-    } }
+      }
+    }
   ]
 }

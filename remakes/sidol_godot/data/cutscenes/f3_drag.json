@@ -36,6 +36,12 @@
         "item": "reagent_drag",
         "count": 1
       }
+    },
+    {
+      "op": "set_flags",
+      "args": {
+        "Q_QUAN_DONE": true
+      }
     }
   ]
 }
