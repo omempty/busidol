@@ -1,11 +1,12 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-25 · Phase 8 진행 중(LLM 스프라이트 워크플로우 구축 완료) · 세션 종료 시점
+> 작성일: 2026-08-25 · Phase 8 진행 중(LLM 스프라이트 워크플로우 + 화면 기반 정비 완료) · 세션 종료 시점
 
 ## 1. 현재 상태 한 줄 요약
 
 Phase 0~7 완료 + Phase 8 인프라 완료(AudioManager·Validator·DOSBox·리터칭 파이프라인·
-**LLM 스프라이트 워크플로우**). 다음은 **첫 LLM 납품 수령 → 재가공 → 채택 판정**부터.
+LLM 스프라이트 워크플로우) + **아트 모드 시스템·뷰포트 960×540·투명화 정비**.
+다음은 **첫 LLM 납품 수령 → 재가공 → 채택 판정**부터.
 
 ## 2. 다음 세션 첫 명령
 
@@ -37,6 +38,25 @@ gen/prompts/ 참조) → 납품을 assets/raw/llm/10_submitted/ 저장 → **재
    세로형 0.6:1, SD 머리:몸 1:1.2, 프레임 가변 최소2/walk 4 권장, idle 4방향 2프레임).
    유저가 생성 시트(128×128 셀, 캐릭터 ~110px) 비율 채택 의사 표시함.
 
+### 스프라이트/화면 관련 확정 사항 (8/25 2차 세션 추가)
+
+- **아트 모드 시스템**: SettingsManager.art_mode(LEGACY/REMAKE) + SpriteSets 리졸버.
+  컨벤션 `assets/sprites/<id>_original.*`(레거시) / `<id>_remake.*`(신규), 부재 세트 자동
+  폴백 — 신규 시트 미착용 상태에서도 게임 동작. 부팅 화면에서 ←/→ 선택(Enter/Z 시작).
+- **레거시 시트 표준**: 원작 24×24 도트를 4배 nearest 베이크(96px) → 표준 셀 128 배치,
+  scale ⅔ 메타로 실효 64px = 타일 2.0배(원작 비율). 캐릭터가 바닥 타일보다
+  작던 역전 해소. 재생성: `tools/dev/make_player_original_sheet.py`.
+- **발 앵커 공식**: `offset.y = TILE_PX/scale − cell_h/2` (SpriteSets.foot_offset).
+  scale≠1 시트에서 발 침하 방지 — 리메이크 시트(scale≠1) 투입 시에도 면역.
+- **원작 SPR 색0 = 투명**: parse_spr(spr_extract.py)가 팔레트 전색을 불투명으로
+  방출해 도트에 검은 배경이 붙던 것 수정(원작 blit 색0 스킵 재현). 불투명 56.2%→33.4%.
+- **뷰포트 960×540**: 타일 30×16.9 가시(원작 26.7×16.7과 체감 동일 — 캐릭터
+  화면높이 11.9% ≈ 원작 12%). 전투 좌표 보정: 메뉴(800,380)·적열(600+i*100,180)·
+  회피 아레나 Rect2(48,48,384,264)·미니게임 패널 중앙.
+- **전투 렌더 픽스**: BattleUI 배경 ColorRect가 layer 20에서 월드 스프라이트를
+  덮던 문제(하위 CanvasLayer -1로 분리) · 적 텍스처 폴백(스테일 .import 대응) ·
+  적 이름에 species 딕셔너리 원문 노출(id만 추출).
+
 ### 스프라이트 관련 확정 사항 (이번 세션)
 
 - **셀 128×128 / 캐릭터 세로형(~0.6:1, 실높이 ~110px) 채택** — 스펙 갱신 완료
@@ -55,9 +75,9 @@ gen/prompts/ 참조) → 납품을 assets/raw/llm/10_submitted/ 저장 → **재
 
 | ID | 내용 |
 |---|---|
-| B1 | 빈 폴더 껍데기 삭제 |
+| B1 | ~~빈 폴더 껍데기 삭제~~ ✅ 해소(8/25 확인 — 이미 부재) |
 | B2 | gdformat/pre-commit 미설정 |
-| B3 | DialogueBox 스킵 visible_characters 음수 방지 |
+| B3 | ~~DialogueBox 스킵 visible_characters 음수 방지~~ ✅ 해소(8/25 재검증 — 현행 코드에서 음수 경로 없음) |
 | — | battle_scene_controller ~305행(상한 초과 소폭) UI 분리는 완료, 추가 분리 여지 |
 
 ## 4. Phase 8 남은 작업
@@ -96,9 +116,11 @@ gen/prompts/ 참조) → 납품을 assets/raw/llm/10_submitted/ 저장 → **재
 
 | ID | 내용 | 우선순위 |
 |---|---|---|
-| B1 | 빈 폴더 `BSD 시돌이의 모험\` 껍데기 삭제 (세션 CWD 잠김) | 낮음 |
+| B1 | ~~빈 폴더 `BSD 시돌이의 모험\` 껍데기 삭제~~ ✅ 해소(8/25 — 이미 부재) | — |
 | B2 | gdformat/pre-commit 설정 파일 미생성 | 낮음 |
-| B3 | DialogueBox 스킵 시 visible_characters 음수 방지 | 낮음 |
+| B3 | ~~DialogueBox 스킵 시 visible_characters 음수 방지~~ ✅ 해소(8/25 재검증) | — |
+| — | 로컬 Godot 4.7 vs 저장소 features=4.3 — 버전 승격 여부 결정 필요(미결정 시 임포트마다 project.godot 재변경) | 중간 |
+| — | `_shared/schemas/{sprite_spec,audio_spec,event_cutscene}.json` 등 5종이 커밋 미포함 상태로 로컬 존재 — 데이터 `$schema` 참조 대상, 업스트림 커밋 누락 의심 | 중간 |
 
 ## 5. 핵심 설계 결정 이력
 
