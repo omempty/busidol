@@ -4,7 +4,7 @@ extends RefCounted
 
 signal changed
 
-var _slots: Array[Dictionary] = []   # [{"item_id": StringName, "count": int}]
+var _slots: Array[Dictionary] = []  # [{"item_id": StringName, "count": int}]
 
 
 func add(item_id: StringName, count: int = 1) -> void:
@@ -74,8 +74,13 @@ func to_data() -> Array:
 func restore(data: Array) -> void:
 	_slots.clear()
 	for entry: Dictionary in data:
-		_slots.append({
-			"item_id": StringName(str(entry["item_id"])),
-			"count": int(entry["count"]),
-		})
+		(
+			_slots
+			. append(
+				{
+					"item_id": StringName(str(entry["item_id"])),
+					"count": int(entry["count"]),
+				}
+			)
+		)
 	changed.emit()

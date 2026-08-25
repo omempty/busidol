@@ -7,7 +7,7 @@ const TRANSITIONS_PATH := "res://data/maps/transitions.json"
 const FADE_TIME := 0.18
 const DOOR_SLIDE_TIME := 0.4
 
-var field: Node2D                    # rebuild_floor(new_anchor) / get_player / get_runtime 제공
+var field: Node2D  # rebuild_floor(new_anchor) / get_player / get_runtime 제공
 var player: PlayerEntity
 var active := false
 
@@ -74,18 +74,21 @@ func _try_door(dir: Vector2i) -> bool:
 	active = true
 	player.mover.enabled = false
 	var tween := create_tween()
-	tween.tween_property(player, "position",
-			GridMover.block_center(anchor + dir * 3), DOOR_SLIDE_TIME)
-	tween.finished.connect(func() -> void:
-		player.mover.grid_pos = anchor + dir * 3
-		player.mover.enabled = true
-		active = false)
+	tween.tween_property(
+		player, "position", GridMover.block_center(anchor + dir * 3), DOOR_SLIDE_TIME
+	)
+	tween.finished.connect(
+		func() -> void:
+			player.mover.grid_pos = anchor + dir * 3
+			player.mover.enabled = true
+			active = false
+	)
 	return true
 
 
 func _try_stairs(dir: Vector2i) -> void:
 	if dir != Vector2i.DOWN:
-		return   # 원작은 아래키 입력으로만 계단 트리거
+		return  # 원작은 아래키 입력으로만 계단 트리거
 	var anchor := player.mover.grid_pos
 	for t: Dictionary in _transitions:
 		var at := Vector2i(int(t["anchor"][0]), int(t["anchor"][1]))
@@ -106,18 +109,24 @@ func _start_floor_change(t: Dictionary) -> void:
 	player.mover.enabled = false
 	var tween := create_tween()
 	tween.tween_property(_overlay, "color:a", 1.0, FADE_TIME)
-	tween.finished.connect(func() -> void:
-		GameState.current_floor += int(t["floor_delta"])
-		EventBus.floor_changed.emit(GameState.current_floor)
-		# 원작 walk_floor: 앵커를 유지한 채 오프셋 적용 (x+=3/-8 등, y-=2)
-		var new_anchor := Vector2i(int(t["anchor"][0]), int(t["anchor"][1])) \
+	tween.finished.connect(
+		func() -> void:
+			GameState.current_floor += int(t["floor_delta"])
+			EventBus.floor_changed.emit(GameState.current_floor)
+			# 원작 walk_floor: 앵커를 유지한 채 오프셋 적용 (x+=3/-8 등, y-=2)
+			var new_anchor := (
+				Vector2i(int(t["anchor"][0]), int(t["anchor"][1]))
 				+ Vector2i(int(t["spawn_offset"][0]), int(t["spawn_offset"][1]))
-		field.rebuild_floor(new_anchor)
-		# 오토세이브(Q1) — 도착 좌표 확정 후 즉시 기록(제자비 재구축이라 consume 경로 불용)
-		GameState.player_cell = new_anchor
-		SaveManager.save_slot(SaveManager.AUTO_SLOT, "층 이동")
-		var fade_back := create_tween()
-		fade_back.tween_property(_overlay, "color:a", 0.0, FADE_TIME)
-		fade_back.finished.connect(func() -> void:
-			player.mover.enabled = true
-			active = false))
+			)
+			field.rebuild_floor(new_anchor)
+			# 오토세이브(Q1) — 도착 좌표 확정 후 즉시 기록(제자비 재구축이라 consume 경로 불용)
+			GameState.player_cell = new_anchor
+			SaveManager.save_slot(SaveManager.AUTO_SLOT, "층 이동")
+			var fade_back := create_tween()
+			fade_back.tween_property(_overlay, "color:a", 0.0, FADE_TIME)
+			fade_back.finished.connect(
+				func() -> void:
+					player.mover.enabled = true
+					active = false
+			)
+	)

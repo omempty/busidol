@@ -9,9 +9,11 @@ func _ready() -> void:
 	var failures: Array[String] = []
 
 	# 감시자 — 무응답 행을 막는다(파스 실패 등으로 _ready가 멎으면 CI가 매달린다)
-	get_tree().create_timer(30.0).timeout.connect(func() -> void:
-		push_error("[smoke_dlg] WATCHDOG timeout")
-		get_tree().quit(1))
+	get_tree().create_timer(30.0).timeout.connect(
+		func() -> void:
+			push_error("[smoke_dlg] WATCHDOG timeout")
+			get_tree().quit(1)
+	)
 
 	# 프롤로그 자동 컷신(skip) — Phase 7 도입 트리거가 입력을 탈취하지 않도록.
 	# (smoke_field와 동일 패턴. 미설정 시 컷신이 대화 검증을 대체해 실패했었다.)
@@ -45,8 +47,7 @@ func _ready() -> void:
 		failures.append("전방 셀 판정 실패")
 
 	# 대화 시작 — 오픈 감지까지 홀드(물리 프레임 동기, 레이스 제거)
-	var opened := await _press_until(
-			func() -> bool: return field.dialogue_box.is_open, 90)
+	var opened := await _press_until(func() -> bool: return field.dialogue_box.is_open, 90)
 	if not opened:
 		failures.append("대화창 미오픈")
 		_finish(failures)
@@ -61,8 +62,7 @@ func _ready() -> void:
 			failures.append("조기 종료 @step %d" % s)
 			break
 		var before: int = field.dialogue_box.index
-		var advanced := await _press_until(
-				_index_moved.bind(field.dialogue_box, before), 90)
+		var advanced := await _press_until(_index_moved.bind(field.dialogue_box, before), 90)
 		if not advanced:
 			failures.append("스텝 진행 실패 @step %d" % s)
 			break

@@ -6,7 +6,12 @@ extends AIBrain
 
 var pattern_kind: int = MovementPattern.Kind.WANDER
 var params: Dictionary = {}
-var _state := {}   # 인스턴스별 임시 상태
+var _state := {}  # 인스턴스별 임시 상태
+var fallback_brain: AIBrain
+
+
+func _init() -> void:
+	fallback_brain = WanderAI.new()
 
 
 func configure(p_kind: int, p_params: Dictionary = {}) -> void:
@@ -58,7 +63,7 @@ func _decide_dash(ctx: Dictionary) -> Vector2i:
 			if _state["tick"] <= 0:
 				_state["phase"] = &"dashing"
 				_state["remaining"] = int(params["dash_cells"])
-			return Vector2i.ZERO   # 정지 = 텔레그래프
+			return Vector2i.ZERO  # 정지 = 텔레그래프
 		&"dashing":
 			var d: Vector2i = _state["dash_dir"]
 			var free := free_dirs(ctx, self_cell)
@@ -99,7 +104,7 @@ func _decide_burrow(ctx: Dictionary) -> Vector2i:
 				if not candidates.is_empty():
 					_state["phase"] = &"hidden"
 					_state["emerge_at"] = candidates[ctx.rng.randi() % candidates.size()]
-					return _state["emerge_at"] - self_cell   # 순간이동
+					return _state["emerge_at"] - self_cell  # 순간이동
 				return Vector2i.ZERO
 			return fallback_brain.decide(ctx)
 		&"hidden":
@@ -117,7 +122,11 @@ func _decide_zigzag(ctx: Dictionary) -> Vector2i:
 		_state["side"] = 1
 	_state["side"] *= -1 if ctx.rng.randf() < 0.4 else 1
 	var to_player := player_cell - self_cell
-	var primary := Vector2i(sign(to_player.x), 0) if absi(to_player.x) > absi(to_player.y) else Vector2i(0, sign(to_player.y))
+	var primary := (
+		Vector2i(sign(to_player.x), 0)
+		if absi(to_player.x) > absi(to_player.y)
+		else Vector2i(0, sign(to_player.y))
+	)
 	var perpendicular := Vector2i(-primary.y * _state["side"], primary.x * _state["side"])
 	var free := free_dirs(ctx, self_cell)
 	if free.has(perpendicular):
@@ -140,11 +149,11 @@ func _decide_teleport(ctx: Dictionary) -> Vector2i:
 		var radius := int(params.get("jump_radius", 4))
 		var player_cell: Vector2i = ctx.player_cell
 		for attempt in range(10):
-			var dx := ctx.rng.randi_range(-radius, radius)
-			var dy := ctx.rng.randi_range(-radius, radius)
+			var dx: int = ctx.rng.randi_range(-radius, radius)
+			var dy: int = ctx.rng.randi_range(-radius, radius)
 			var target := Vector2i(player_cell.x + dx, player_cell.y + dy)
 			if ctx.passable.call(target) and target != self_cell:
-				return target - self_cell   # 순간이동 벡터
+				return target - self_cell  # 순간이동 벡터
 	return Vector2i.ZERO
 
 
@@ -152,9 +161,9 @@ func _decide_teleport(ctx: Dictionary) -> Vector2i:
 func _decide_ambusher(ctx: Dictionary) -> Vector2i:
 	var self_cell: Vector2i = ctx.self_cell
 	var player_cell: Vector2i = ctx.player_cell
-	if self_cell.manhattan_distance_to(player_cell) <= 1:
-		return Vector2i.ZERO   # 공격 트리거 (BattleController에서 처리)
-	return Vector2i.ZERO   # 위장 상태 — 이동하지 않음
+	if absi(self_cell.x - player_cell.x) + absi(self_cell.y - player_cell.y) <= 1:
+		return Vector2i.ZERO  # 공격 트리거 (BattleController에서 처리)
+	return Vector2i.ZERO  # 위장 상태 — 이동하지 않음
 
 
 ## PHASER — 벽 통과, 느린 직진

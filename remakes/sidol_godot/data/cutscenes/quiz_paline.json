@@ -32,13 +32,12 @@
         "count": 1
       }
     },
-    {
-      "op": "set_flags",
-      "args": {
-        "Q_F3_PALIN": true,
-        "Q_QUIZ_ALL": true
-      }
-    },
+  {
+   "op": "set_flags",
+   "args": {
+    "Q_F3_PALIN": true
+   }
+  },
     {
       "op": "craft",
       "args": {

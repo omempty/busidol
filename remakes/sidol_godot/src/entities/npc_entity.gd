@@ -12,7 +12,9 @@ var _paths: Dictionary = {}
 var _meta: Dictionary = {}
 
 
-func setup(p_id: StringName, p_name: String, p_seq: StringName, p_cell: Vector2i, tint: Color) -> void:
+func setup(
+	p_id: StringName, p_name: String, p_seq: StringName, p_cell: Vector2i, tint: Color
+) -> void:
 	npc_id = p_id
 	display_name = p_name
 	sequence_id = p_seq
@@ -27,8 +29,7 @@ func _ready() -> void:
 	_paths = SpriteSets.character_sheet(npc_id, true)
 	if str(_paths["sheet"]).is_empty():
 		_paths = SpriteSets.character_sheet(&"player")
-	var raw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string(str(_paths["meta"])))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(str(_paths["meta"])))
 	if typeof(raw) == TYPE_DICTIONARY:
 		_meta = raw
 	sprite.sprite_frames = _build_frames()

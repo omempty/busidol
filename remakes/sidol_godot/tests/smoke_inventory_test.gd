@@ -4,9 +4,11 @@ extends Node
 
 
 func _ready() -> void:
-	get_tree().create_timer(15.0).timeout.connect(func() -> void:
-		push_error("[smoke_inv] WATCHDOG timeout")
-		get_tree().quit(1))
+	get_tree().create_timer(15.0).timeout.connect(
+		func() -> void:
+			push_error("[smoke_inv] WATCHDOG timeout")
+			get_tree().quit(1)
+	)
 	var failures: Array[String] = []
 	var panel := InventoryPanel.new()
 	add_child(panel)
@@ -28,7 +30,7 @@ func _ready() -> void:
 	if rows < 3:
 		failures.append("목록 행 부족: %d" % rows)
 	panel._index = 1
-	panel._move(1)   # 커서 이동 + 상세 갱신
+	panel._move(1)  # 커서 이동 + 상세 갱신
 	if panel._detail_name.text.is_empty():
 		failures.append("상세 이름 공백")
 	panel.close()

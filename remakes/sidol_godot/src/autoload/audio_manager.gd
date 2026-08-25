@@ -17,7 +17,7 @@ var _current_bgm := &""
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS   # 일시정지 중에도 BGM 유지(PauseMenu)
+	process_mode = Node.PROCESS_MODE_ALWAYS  # 일시정지 중에도 BGM 유지(PauseMenu)
 	_bgm_player = AudioStreamPlayer.new()
 	_bgm_player.bus = &"BGM"
 	_bgm_player.finished.connect(_on_bgm_finished)
@@ -75,14 +75,14 @@ func set_bus_volume(bus_name: StringName, linear: float) -> void:
 
 func _on_bgm_finished() -> void:
 	if not _current_bgm.is_empty():
-		_bgm_player.play()   # 시맨틱 루프 — 임포트 루프 플래그와 무관하게 이어 재생
+		_bgm_player.play()  # 시맨틱 루프 — 임포트 루프 플래그와 무관하게 이어 재생
 
 
 func _free_sfx_player() -> AudioStreamPlayer:
 	for p in _sfx_pool:
 		if not p.playing:
 			return p
-	return _sfx_pool[0]   # 풀 고갈 시 가장 오래된 것 대체
+	return _sfx_pool[0]  # 풀 고갈 시 가장 오래된 것 대체
 
 
 func _load_stream(kind: String, id: StringName) -> AudioStream:

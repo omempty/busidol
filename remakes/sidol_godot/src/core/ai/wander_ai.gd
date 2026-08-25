@@ -3,7 +3,7 @@ extends AIBrain
 ## 배회 — 현재 방향을 유지하다 막히면 랜덤 전환.
 ## 원작 PATTERN 웨이포인트의 자연스러운 대체.
 
-var dir_persistence := 3   # 같은 방향 유지 틱 수
+var dir_persistence := 3  # 같은 방향 유지 틱 수
 
 
 func decide(ctx: Dictionary) -> Vector2i:

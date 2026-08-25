@@ -6,12 +6,12 @@ extends CanvasLayer
 signal closed
 
 const SHOP_ITEMS := [
-	{"id": "ITEM_HERB_TEA",      "name_ko": "생약차",     "price": 50},
-	{"id": "ITEM_MEDICINE",      "name_ko": "의약품",     "price": 100},
-	{"id": "ITEM_ION_DRINK",     "name_ko": "이온음료",   "price": 150},
-	{"id": "ITEM_UHWANGCHEONGSIM","name_ko":"우황청심환", "price": 200},
-	{"id": "ITEM_SAMGYETANG",    "name_ko": "삼계탕",     "price": 400},
-	{"id": "ITEM_HONGSAM",       "name_ko": "홍삼 액초",  "price": 600},
+	{"id": "ITEM_HERB_TEA", "name_ko": "생약차", "price": 50},
+	{"id": "ITEM_MEDICINE", "name_ko": "의약품", "price": 100},
+	{"id": "ITEM_ION_DRINK", "name_ko": "이온음료", "price": 150},
+	{"id": "ITEM_UHWANGCHEONGSIM", "name_ko": "우황청심환", "price": 200},
+	{"id": "ITEM_SAMGYETANG", "name_ko": "삼계탕", "price": 400},
+	{"id": "ITEM_HONGSAM", "name_ko": "홍삼 액초", "price": 600},
 ]
 
 var _money_label: Label

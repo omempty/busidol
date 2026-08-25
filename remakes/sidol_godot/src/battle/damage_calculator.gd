@@ -20,9 +20,13 @@ static func enemy_hit(power: int, rng: RandomNumberGenerator) -> int:
 
 
 ## 스킬 피해 — 속성 상성 배율 적용
-static func skill_hit(skill_power: int, atk_stat: int,
-		element: StringName, target_weaknesses: Array[StringName],
-		rng: RandomNumberGenerator) -> int:
+static func skill_hit(
+	skill_power: int,
+	atk_stat: int,
+	element: StringName,
+	target_weaknesses: Array[StringName],
+	rng: RandomNumberGenerator
+) -> int:
 	var base := (atk_stat + skill_power + rng.randi_range(0, 10)) / 3
 	var mult := 1.0
 	if element in target_weaknesses:

@@ -7,22 +7,30 @@ const PLAYER := preload("res://src/cutscene/cutscene_player.gd")
 
 const FIXTURE := {
 	"id": "smoke_choice",
-	"steps": [
-		{"op": "choice", "args": {"options": [
-			{"text": "@c520", "steps": [
-				{"op": "set_flags", "args": {"__choice_a": true}}]},
-			{"text": "@c531", "steps": [
-				{"op": "set_flags", "args": {"__choice_b": true}}]},
-		]}},
+	"steps":
+	[
+		{
+			"op": "choice",
+			"args":
+			{
+				"options":
+				[
+					{"text": "@c520", "steps": [{"op": "set_flags", "args": {"__choice_a": true}}]},
+					{"text": "@c531", "steps": [{"op": "set_flags", "args": {"__choice_b": true}}]},
+				]
+			}
+		},
 		{"op": "set_flags", "args": {"__converged": true}},
 	],
 }
 
 
 func _ready() -> void:
-	get_tree().create_timer(20.0).timeout.connect(func() -> void:
-		push_error("[smoke_choice] WATCHDOG")
-		get_tree().quit(1))
+	get_tree().create_timer(20.0).timeout.connect(
+		func() -> void:
+			push_error("[smoke_choice] WATCHDOG")
+			get_tree().quit(1)
+	)
 	GameState.flags["__choice_a"] = false
 	GameState.flags["__choice_b"] = false
 	GameState.flags["__converged"] = false

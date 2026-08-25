@@ -6,9 +6,11 @@ const TIMEOUT_S := 20.0
 
 
 func _ready() -> void:
-	get_tree().create_timer(TIMEOUT_S).timeout.connect(func() -> void:
-		push_error("[smoke_selfcheck] WATCHDOG timeout")
-		get_tree().quit(1))
+	get_tree().create_timer(TIMEOUT_S).timeout.connect(
+		func() -> void:
+			push_error("[smoke_selfcheck] WATCHDOG timeout")
+			get_tree().quit(1)
+	)
 	var checker := SelfCheck.new()
 	add_child(checker)
 	var report := checker.run_all()

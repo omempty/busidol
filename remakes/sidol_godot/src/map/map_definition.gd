@@ -3,7 +3,7 @@ extends RefCounted
 ## 불변 맵 데이터 — data/maps/f<N>.json 로딩 (docs/02_design/01_oop_redesign.md §3).
 ## 원본 MAP 바이트포맷과 무손실 호환(map_convert.py 산출물).
 
-const TILE_PX := 32   # G-ART B안 확정(2026-08-24): 원작 12px → 32px 리드로우 규격
+const TILE_PX := 32  # G-ART B안 확정(2026-08-24): 원작 12px → 32px 리드로우 규격
 
 var map_id: String
 var source: String

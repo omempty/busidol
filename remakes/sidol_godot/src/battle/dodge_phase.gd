@@ -7,7 +7,7 @@ extends Node2D
 signal phase_complete(hit_count: int)
 
 const PLAYER_HITBOX := 5.0
-const ARENA := Rect2(48, 48, 384, 264)   ## 960×540 뷰포트 기준 (구 640×360 1.5배)
+const ARENA := Rect2(48, 48, 384, 264)  ## 960×540 뷰포트 기준 (구 640×360 1.5배)
 
 var duration := 4.0
 var elapsed := 0.0
@@ -18,7 +18,7 @@ var phase_config: Dictionary = {}
 var _projectiles: Array[Dictionary] = []
 var _lasers: Array[Dictionary] = []
 var _player_pos := Vector2.ZERO
-var _spawn_timers := {}     # pattern_id -> timer
+var _spawn_timers := {}  # pattern_id -> timer
 var _spiral_angle := 0.0
 var _laser_angle := 0.0
 var _laser_sweep_dir := 1.0
@@ -63,8 +63,12 @@ func _process(delta: float) -> void:
 	var mv := Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
 	var speed := _float_cfg("player_speed", 220.0)
 	_player_pos += mv * speed * delta
-	_player_pos.x = clampf(_player_pos.x, ARENA.position.x + PLAYER_HITBOX, ARENA.end.x - PLAYER_HITBOX)
-	_player_pos.y = clampf(_player_pos.y, ARENA.position.y + PLAYER_HITBOX, ARENA.end.y - PLAYER_HITBOX)
+	_player_pos.x = clampf(
+		_player_pos.x, ARENA.position.x + PLAYER_HITBOX, ARENA.end.x - PLAYER_HITBOX
+	)
+	_player_pos.y = clampf(
+		_player_pos.y, ARENA.position.y + PLAYER_HITBOX, ARENA.end.y - PLAYER_HITBOX
+	)
 
 	# 패턴별 스폰 타이머
 	for pat in phase_config.get("patterns", []):
@@ -85,25 +89,40 @@ func _process(delta: float) -> void:
 func _fire_pattern(pat: Dictionary) -> void:
 	var origin := Vector2(ARENA.position.x + ARENA.size.x / 2, ARENA.position.y + 20)
 	match str(pat.get("type", "radial")):
-		"radial":        _fire_radial(origin, pat)
-		"aimed":         _fire_aimed(origin, pat)
-		"wall":          _fire_wall(pat)
-		"spiral":        _fire_spiral(origin, pat)
-		"laser_sweep":   _fire_laser_sweep(origin, pat)
-		"homing":        _fire_homing(origin, pat)
-		"rain":          _fire_rain(pat)
-		"cross":         _fire_cross(origin, pat)
-		"ring_collapse": _fire_ring_collapse(pat)
-		"random_burst":  _fire_random_burst(pat)
+		"radial":
+			_fire_radial(origin, pat)
+		"aimed":
+			_fire_aimed(origin, pat)
+		"wall":
+			_fire_wall(pat)
+		"spiral":
+			_fire_spiral(origin, pat)
+		"laser_sweep":
+			_fire_laser_sweep(origin, pat)
+		"homing":
+			_fire_homing(origin, pat)
+		"rain":
+			_fire_rain(pat)
+		"cross":
+			_fire_cross(origin, pat)
+		"ring_collapse":
+			_fire_ring_collapse(pat)
+		"random_burst":
+			_fire_random_burst(pat)
 
 
-func _add_proj(pos: Vector2, vel: Vector2, r: float = 4.0,
-		color: Color = Color(1.0, 0.4, 0.3), homing_strength: float = 0.0) -> void:
-	_projectiles.append({"pos": pos, "vel": vel, "r": r, "color": color,
-			"homing": homing_strength})
+func _add_proj(
+	pos: Vector2,
+	vel: Vector2,
+	r: float = 4.0,
+	color: Color = Color(1.0, 0.4, 0.3),
+	homing_strength: float = 0.0
+) -> void:
+	_projectiles.append({"pos": pos, "vel": vel, "r": r, "color": color, "homing": homing_strength})
 
 
 # ---- 패턴 구현 ----
+
 
 func _fire_radial(o: Vector2, pat: Dictionary) -> void:
 	var count := int(pat.get("count", 8))
@@ -111,15 +130,18 @@ func _fire_radial(o: Vector2, pat: Dictionary) -> void:
 	var offset := randf() * TAU
 	for i in count:
 		var ang := TAU * i / count + offset
-		_add_proj(o, Vector2.from_angle(ang) * speed, 4.0,
-				Color(float(pat.get("cr", 1.0)), 0.4, 0.3))
+		_add_proj(
+			o, Vector2.from_angle(ang) * speed, 4.0, Color(float(pat.get("cr", 1.0)), 0.4, 0.3)
+		)
 
 
 func _fire_aimed(o: Vector2, pat: Dictionary) -> void:
 	var speed := float(pat.get("speed", 220))
 	var dir := (_player_pos - o).normalized()
 	for i in int(pat.get("count", 1)):
-		var spread := deg_to_rad(float(pat.get("spread_deg", 0))) * (i - (int(pat.get("count", 1)) - 1) / 2.0)
+		var spread := (
+			deg_to_rad(float(pat.get("spread_deg", 0))) * (i - (int(pat.get("count", 1)) - 1) / 2.0)
+		)
 		_add_proj(o, dir.rotated(spread) * speed, 4.0, Color(1.0, 0.6, 0.2))
 
 
@@ -151,16 +173,22 @@ func _fire_laser_sweep(o: Vector2, pat: Dictionary) -> void:
 		_laser_sweep_dir *= -1
 	var length := ARENA.size.length()
 	var dir := Vector2.from_angle(-PI / 2 + _laser_angle)
-	_lasers.append({"start": o, "dir": dir, "width": float(pat.get("width", 4)),
-			"length": length, "life": float(pat.get("laser_duration", 0.12)),
-			"color": Color(1.0, 0.2, 0.3, 0.8)})
+	_lasers.append(
+		{
+			"start": o,
+			"dir": dir,
+			"width": float(pat.get("width", 4)),
+			"length": length,
+			"life": float(pat.get("laser_duration", 0.12)),
+			"color": Color(1.0, 0.2, 0.3, 0.8)
+		}
+	)
 
 
 func _fire_homing(o: Vector2, pat: Dictionary) -> void:
 	var speed := float(pat.get("speed", 100))
 	var dir := (_player_pos - o).normalized()
-	_add_proj(o, dir * speed, 4.0, Color(1.0, 0.8, 0.0),
-			float(pat.get("homing_strength", 2.0)))
+	_add_proj(o, dir * speed, 4.0, Color(1.0, 0.8, 0.0), float(pat.get("homing_strength", 2.0)))
 
 
 func _fire_rain(pat: Dictionary) -> void:
@@ -168,8 +196,7 @@ func _fire_rain(pat: Dictionary) -> void:
 	var count := int(pat.get("count", 3))
 	for i in count:
 		var rx := randf_range(ARENA.position.x + 8, ARENA.end.x - 8)
-		_add_proj(Vector2(rx, ARENA.position.y), Vector2(0, speed), 3.0,
-				Color(0.4, 0.8, 1.0))
+		_add_proj(Vector2(rx, ARENA.position.y), Vector2(0, speed), 3.0, Color(0.4, 0.8, 1.0))
 
 
 func _fire_cross(o: Vector2, pat: Dictionary) -> void:
@@ -200,11 +227,16 @@ func _fire_random_burst(pat: Dictionary) -> void:
 		var py := randf_range(ARENA.position.y, ARENA.position.y + 40)
 		var ang := randf_range(PI * 0.25, PI * 0.75)
 		var spd := randf_range(float(speed_range[0]), float(speed_range[1]))
-		_add_proj(Vector2(px, py), Vector2.from_angle(ang) * spd, 3.0,
-				Color(randf_range(0.5, 1.0), randf_range(0.3, 0.6), 1.0))
+		_add_proj(
+			Vector2(px, py),
+			Vector2.from_angle(ang) * spd,
+			3.0,
+			Color(randf_range(0.5, 1.0), randf_range(0.3, 0.6), 1.0)
+		)
 
 
 # ---- 업데이트 ----
+
 
 func _update_projectiles(delta: float) -> void:
 	for i in range(_projectiles.size() - 1, -1, -1):
@@ -212,8 +244,9 @@ func _update_projectiles(delta: float) -> void:
 		var h: float = float(p.get("homing", 0))
 		if h > 0:
 			var to_player: Vector2 = (_player_pos - (p["pos"] as Vector2)).normalized()
-			p["vel"] = (p["vel"] as Vector2).lerp(to_player * (p["vel"] as Vector2).length(),
-					h * delta)
+			p["vel"] = (p["vel"] as Vector2).lerp(
+				to_player * (p["vel"] as Vector2).length(), h * delta
+			)
 		p["pos"] = p["pos"] + p["vel"] * delta
 		if not ARENA.grow(16).has_point(p["pos"]):
 			_projectiles.remove_at(i)
@@ -258,10 +291,19 @@ func _draw() -> void:
 	# 남은 시간 바
 	var remain := clampf(1.0 - elapsed / duration, 0.0, 1.0)
 	var bar_w := ARENA.size.x * remain
-	draw_rect(Rect2(ARENA.position.x, ARENA.end.y + 4, bar_w, 3),
-			Color(0.3, 1.0, 0.5) if remain > 0.3 else Color(1.0, 0.3, 0.2))
+	draw_rect(
+		Rect2(ARENA.position.x, ARENA.end.y + 4, bar_w, 3),
+		Color(0.3, 1.0, 0.5) if remain > 0.3 else Color(1.0, 0.3, 0.2)
+	)
 
 	# 히트 카운터
 	var font := ThemeDB.fallback_font
-	draw_string(font, Vector2(ARENA.position.x + 4, ARENA.end.y + 18),
-			"HIT %d" % hit_count, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1, 0.5, 0.3))
+	draw_string(
+		font,
+		Vector2(ARENA.position.x + 4, ARENA.end.y + 18),
+		"HIT %d" % hit_count,
+		HORIZONTAL_ALIGNMENT_LEFT,
+		-1,
+		12,
+		Color(1, 0.5, 0.3)
+	)

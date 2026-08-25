@@ -17,7 +17,7 @@ const HITSTOP_SCALE := 0.05
 ## 노드 배율을 cell×scale로 정규화해 시트 교체(아트 모드·해상도 무관)에도 구도 보존.
 const BATTLE_PLAYER_CELL_PX := 96.0
 
-var target_index := 0   ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
+var target_index := 0  ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
 
 var player_sprite: Sprite2D
 var enemy_sprites: Array[Sprite2D] = []
@@ -47,8 +47,7 @@ func build_sprites(enemy_count: int) -> void:
 		player_sprite.texture = at
 	player_sprite.position = Vector2(120, 220)
 	var rs := maxf(_player_render_scale(), 0.01)
-	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX
-			/ (float(cs.x) * rs))
+	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX / (float(cs.x) * rs))
 	player_sprite.set_meta(&"base_pos", player_sprite.position)
 	_root.add_child(player_sprite)
 
@@ -58,8 +57,7 @@ func build_sprites(enemy_count: int) -> void:
 		# 원본 bmp(originals_ref)는 참조자료로 격하돼 임포트 불가 — 로드 시도 시
 		# 매 전투 ERROR 스팸이 발생하므로 플레이스홀더만 생성한다(8/25 스윕 발견).
 		var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-		img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6),
-				randf_range(0.2, 0.5)))
+		img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6), randf_range(0.2, 0.5)))
 		es.texture = ImageTexture.create_from_image(img)
 		es.position = Vector2(600 + i * 100, 180)
 		es.scale = Vector2(1.5, 1.5)
@@ -86,8 +84,9 @@ func _player_cell_size() -> Vector2i:
 		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
 		if typeof(m) == TYPE_DICTIONARY:
 			var d: Dictionary = m
-			return Vector2i(int(d.get("cell_w", d.get("cell", 64))),
-					int(d.get("cell_h", d.get("cell", 64))))
+			return Vector2i(
+				int(d.get("cell_w", d.get("cell", 64))), int(d.get("cell_h", d.get("cell", 64)))
+			)
 	return Vector2i(64, 64)
 
 
@@ -107,13 +106,17 @@ func play_sprite_kf(kf: Dictionary) -> void:
 	if spr == null or not is_instance_valid(spr):
 		return
 	var pos_arr: Array = kf.get("pos", [0, 0])
-	var off := Vector2(float(pos_arr[0]), float(pos_arr[1])) if pos_arr.size() >= 2 \
-			else Vector2.ZERO
+	var off := (
+		Vector2(float(pos_arr[0]), float(pos_arr[1])) if pos_arr.size() >= 2 else Vector2.ZERO
+	)
 	var dur := maxf(float(kf.get("dur", 0.12)), 0.01)
 	var tw := spr.create_tween()
-	tw.tween_property(spr, "position",
-			(spr.get_meta(&"base_pos") as Vector2) + off, dur)\
-			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	(
+		tw
+		. tween_property(spr, "position", (spr.get_meta(&"base_pos") as Vector2) + off, dur)
+		. set_trans(Tween.TRANS_QUAD)
+		. set_ease(Tween.EASE_OUT)
+	)
 
 
 ## fx 채널 — 히트 스파크 등 원샷 파티클.
@@ -141,8 +144,9 @@ func play_screen_kf(kf: Dictionary) -> void:
 
 
 ## 데미지 팝 — 속성 색상 + 양 비례 크기.
-func show_damage_number(amount: int, on_player: bool,
-		element: StringName = &"physical", enemy_index: int = -1) -> void:
+func show_damage_number(
+	amount: int, on_player: bool, element: StringName = &"physical", enemy_index: int = -1
+) -> void:
 	var lbl := Label.new()
 	lbl.text = str(maxi(amount, 0))
 	var font_size := clampi(16 + absi(amount) / 4, 16, 44)
@@ -150,8 +154,9 @@ func show_damage_number(amount: int, on_player: bool,
 	if on_player:
 		lbl.add_theme_color_override("font_color", PLAYER_HURT_COLOR)
 	else:
-		lbl.add_theme_color_override("font_color",
-				ELEMENT_COLORS.get(element, ELEMENT_COLORS[&"none"]))
+		lbl.add_theme_color_override(
+			"font_color", ELEMENT_COLORS.get(element, ELEMENT_COLORS[&"none"])
+		)
 	lbl.position = _pop_position(on_player, enemy_index, font_size)
 	_root.add_child(lbl)
 	var tw := lbl.create_tween().set_parallel(true)
@@ -185,9 +190,12 @@ func _process(delta: float) -> void:
 		return
 	if _shake_power > 0.01:
 		_shake_power = lerpf(_shake_power, 0.0, minf(delta * 10.0, 1.0))
-		_root.position = _root_base + Vector2(
-				randf_range(-_shake_power, _shake_power),
-				randf_range(-_shake_power, _shake_power))
+		_root.position = (
+			_root_base
+			+ Vector2(
+				randf_range(-_shake_power, _shake_power), randf_range(-_shake_power, _shake_power)
+			)
+		)
 		_was_shaken = true
 	elif _was_shaken:
 		_root.position = _root_base

@@ -4,9 +4,9 @@ extends CanvasLayer
 
 signal finished(seq_id: StringName)
 
-const CPS := 40.0          # 초당 글자 수
+const CPS := 40.0  # 초당 글자 수
 const INPUT_COOLDOWN := 0.05
-const AUTO_DELAY := 1.1    # auto_advance 시 타이핑 완료 후 대기(초)
+const AUTO_DELAY := 1.1  # auto_advance 시 타이핑 완료 후 대기(초)
 
 var seq_id := &""
 var steps: Array = []
@@ -22,6 +22,7 @@ var _auto_wait := 0.0
 
 func is_typing() -> bool:
 	return _body_label.text.length() > int(_revealed)
+
 
 var _panel: PanelContainer
 var _name_label: Label
@@ -80,7 +81,7 @@ func advance() -> void:
 		return
 	var total: int = _body_label.text.length()
 	if _revealed < total:
-		_revealed = float(total)          # 스킵: 즉시 완성
+		_revealed = float(total)  # 스킵: 즉시 완성
 		_body_label.visible_characters = total
 		_cooldown = INPUT_COOLDOWN * 0.5
 		return

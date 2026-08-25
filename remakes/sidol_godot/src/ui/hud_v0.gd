@@ -4,7 +4,7 @@ extends CanvasLayer
 ## 수치 상한은 growth.json 레벨 테이블에서 산출(하드코딩 금지, AGENTS.md).
 ## 품질 기준(docs/03_plan Phase 1): 처음부터 Control 포커스 내비 구조를 전제로 설계.
 
-const BASE_HP := 50   # 원작 We 초기값(game_state 주석 근거)
+const BASE_HP := 50  # 원작 We 초기값(game_state 주석 근거)
 const SLOT_COUNT := 6
 const SLOT_SIZE := 40.0
 
@@ -127,8 +127,7 @@ func _make_slot(slot: Dictionary) -> PanelContainer:
 	icon.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
 	icon.tooltip_text = str(item_def.get("name_ko", slot["item_id"]))
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(ItemIcons.kind_color(
-			StringName(str(item_def.get("kind", "")))), 0.9)
+	sb.bg_color = Color(ItemIcons.kind_color(StringName(str(item_def.get("kind", "")))), 0.9)
 	sb.border_color = Color(1, 1, 1, 0.25)
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(7)
@@ -217,8 +216,7 @@ func refresh() -> void:
 	_hp_bar.value = float(hp) / float(max_hp)
 	# 위험 구간(30% 미만) 게이지 색 전환
 	var fill := StyleBoxFlat.new()
-	fill.bg_color = Color(0.88, 0.32, 0.3) if _hp_bar.value < 0.3 \
-			else Color(0.36, 0.82, 0.45)
+	fill.bg_color = Color(0.88, 0.32, 0.3) if _hp_bar.value < 0.3 else Color(0.36, 0.82, 0.45)
 	fill.set_corner_radius_all(3)
 	_hp_bar.add_theme_stylebox_override("fill", fill)
 

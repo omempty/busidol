@@ -54,9 +54,11 @@ func _build() -> void:
 	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(hint)
 
-	visibility_changed.connect(func() -> void:
-		if visible:
-			_refresh())
+	visibility_changed.connect(
+		func() -> void:
+			if visible:
+				_refresh()
+	)
 
 
 func _load_quests() -> Array:
@@ -74,10 +76,10 @@ func _refresh() -> void:
 	for row in _rows:
 		var done := GameState.has_flag(str(row.get_meta("flag_id")))
 		var mark := "✓" if done else "·"
-		row.text = "%s  %s — %s" % [mark,
-				str(row.get_meta("zone")), str(row.get_meta("name"))]
-		row.add_theme_color_override("font_color",
-				Color(1.0, 0.9, 0.5) if done else Color(0.55, 0.55, 0.62))
+		row.text = "%s  %s — %s" % [mark, str(row.get_meta("zone")), str(row.get_meta("name"))]
+		row.add_theme_color_override(
+			"font_color", Color(1.0, 0.9, 0.5) if done else Color(0.55, 0.55, 0.62)
+		)
 
 
 func _unhandled_input(event: InputEvent) -> void:

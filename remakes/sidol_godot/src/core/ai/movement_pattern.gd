@@ -4,17 +4,17 @@ extends RefCounted
 ## 각 패턴은 "텔레그래프(예고 동작)"을 가진다 → 플레이어 학습 유도.
 
 enum Kind {
-	WANDER,       # 기본 배회 (Vulgar 등)
-	CHASE,        # 직접 추적 (HellCop 등)
-	DASH,         # 정지(텔레그래프 깜빡임) → 3셀 돌진 (Mad Eye)
-	BURROW,       # 지하 잠복 2초 → 플레이어 인접 셀에서 출현 (DWorm)
-	ZIGZAG,       # 좌우 급격 교대 + 직진 버스트 (Ozzy)
-	PATROL,       # 고정 경로 순찰, 공격받으면 추적으로 전환 (Iron-Voc)
-	PULSE,        # 정지 + N초마다 반경 데미지 펄스 (O-Ray)
-	TELEPORT,     # N초마다 반경 내 랜덤 위치로 점프 (Sparker)
-	AMBUSHER,     # 정지 위장 → 플레이어 인접 시 폭발적 3셀 공격 (Rogue Vending)
-	PHASER,       # 벽 통과(충돌 무시), 느린 직진 (Null Pointer)
-	RANGED,       # 거리 유지 + 발사체 (CRT Golem)
+	WANDER,  # 기본 배회 (Vulgar 등)
+	CHASE,  # 직접 추적 (HellCop 등)
+	DASH,  # 정지(텔레그래프 깜빡임) → 3셀 돌진 (Mad Eye)
+	BURROW,  # 지하 잠복 2초 → 플레이어 인접 셀에서 출현 (DWorm)
+	ZIGZAG,  # 좌우 급격 교대 + 직진 버스트 (Ozzy)
+	PATROL,  # 고정 경로 순찰, 공격받으면 추적으로 전환 (Iron-Voc)
+	PULSE,  # 정지 + N초마다 반경 데미지 펄스 (O-Ray)
+	TELEPORT,  # N초마다 반경 내 랜덤 위치로 점프 (Sparker)
+	AMBUSHER,  # 정지 위장 → 플레이어 인접 시 폭발적 3셀 공격 (Rogue Vending)
+	PHASER,  # 벽 통과(충돌 무시), 느린 직진 (Null Pointer)
+	RANGED,  # 거리 유지 + 발사체 (CRT Golem)
 }
 
 
@@ -53,7 +53,7 @@ static func get_defaults(kind: int) -> Dictionary:
 		Kind.AMBUSHER:
 			return {"trigger_range": 1, "burst_cells": 3, "damage": 15}
 		Kind.PHASER:
-			return {"speed_divisor": 3}   # 3틱마다 1셀 (느림)
+			return {"speed_divisor": 3}  # 3틱마다 1셀 (느림)
 		Kind.RANGED:
 			return {"preferred_distance": 4, "projectile_interval": 5}
 		_:

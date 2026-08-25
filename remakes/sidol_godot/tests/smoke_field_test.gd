@@ -32,8 +32,10 @@ func _ready() -> void:
 
 	# --- 1) 통행 가능한 방향으로 1보행 ---
 	var dirs := {
-		Vector2i.UP: &"move_up", Vector2i.DOWN: &"move_down",
-		Vector2i.LEFT: &"move_left", Vector2i.RIGHT: &"move_right",
+		Vector2i.UP: &"move_up",
+		Vector2i.DOWN: &"move_down",
+		Vector2i.LEFT: &"move_left",
+		Vector2i.RIGHT: &"move_right",
 	}
 	var action: StringName = &""
 	var dir := Vector2i.ZERO
@@ -79,8 +81,12 @@ func _find_free_with_wall_east(rt: MapRuntime) -> Vector2i:
 	for y in range(rt.definition.height):
 		for x in range(rt.definition.width - 1):
 			var c := Vector2i(x, y)
-			if rt.is_passable(c) and not rt.is_passable(c + Vector2i.RIGHT) \
-					and rt.is_passable(c + Vector2i.DOWN) and rt.is_passable(c + Vector2i.LEFT):
+			if (
+				rt.is_passable(c)
+				and not rt.is_passable(c + Vector2i.RIGHT)
+				and rt.is_passable(c + Vector2i.DOWN)
+				and rt.is_passable(c + Vector2i.LEFT)
+			):
 				return c
 	return Vector2i(-9, -9)
 

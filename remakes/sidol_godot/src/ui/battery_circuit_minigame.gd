@@ -6,11 +6,11 @@ extends CanvasLayer
 
 signal finished(passed: bool)
 
-const PANEL_POS := Vector2(230, 190)   ## 960×540 중앙 정렬
+const PANEL_POS := Vector2(230, 190)  ## 960×540 중앙 정렬
 const PANEL_SIZE := Vector2(500, 160)
 
 var _cfg: Dictionary = {}
-var _vals: Array[int] = []     # 각 슬롯 전압 (0 = 빈칸)
+var _vals: Array[int] = []  # 각 슬롯 전압 (0 = 빈칸)
 var _cursor := 0
 var _lever := 1
 var _active := false
@@ -106,9 +106,15 @@ func _refresh() -> void:
 		var txt := "[ ]" if _vals[i] == 0 else "[%dV]" % _vals[i]
 		parts.append("> " + txt if i == _cursor else "  " + txt)
 	_slots_lbl.text = " ".join(parts)
-	_info_lbl.text = "직렬 합계 %dV × 과충전 x%d = %dV  /  목표 %dV\n(←→ 슬롯 | ↑↓ 건전지 | SPACE 레버)" % [
-			total_voltage() / _lever if _lever > 0 else 0, _lever,
-			total_voltage(), int(_cfg.get("target_voltage", 0))]
+	_info_lbl.text = (
+		"직렬 합계 %dV × 과충전 x%d = %dV  /  목표 %dV\n(←→ 슬롯 | ↑↓ 건전지 | SPACE 레버)"
+		% [
+			total_voltage() / _lever if _lever > 0 else 0,
+			_lever,
+			total_voltage(),
+			int(_cfg.get("target_voltage", 0))
+		]
+	)
 	if total_voltage() == int(_cfg.get("target_voltage", 0)):
 		_active = false
 		visible = false

@@ -5,47 +5,56 @@
     {
       "name": "마은빈",
       "role": "리더",
-      "quote": "나를 믿어라"
+      "quote": "나를 믿어라",
+      "id": "member_1"
     },
     {
       "name": "윤관식",
       "role": "매니저",
-      "quote": "HP방은 부싯돌 아지트에요"
+      "quote": "HP방은 부싯돌 아지트에요",
+      "id": "member_2"
     },
     {
       "name": "이태하",
       "role": "전투 프로그래머",
-      "quote": "전투모드는 내게 맡겨"
+      "quote": "전투모드는 내게 맡겨",
+      "id": "member_3"
     },
     {
       "name": "이윤우",
       "role": "서포터",
-      "quote": "우리모두 최선을......."
+      "quote": "우리모두 최선을.......",
+      "id": "member_4"
     },
     {
       "name": "김현진",
       "role": "이펙트",
-      "quote": "특수효과는 제가 맡겠습니다."
+      "quote": "특수효과는 제가 맡겠습니다.",
+      "id": "member_5"
     },
     {
       "name": "김완종",
       "role": "그래픽",
-      "quote": "포스트를 빨리 그려야지.."
+      "quote": "포스트를 빨리 그려야지..",
+      "id": "member_6"
     },
     {
       "name": "김영은",
       "role": "레벨 디자인",
-      "quote": "빨리 집에 가야지"
+      "quote": "빨리 집에 가야지",
+      "id": "member_7"
     },
     {
       "name": "한병준",
       "role": "테스터",
-      "quote": "자고 일어나면 다 되어있도다!"
+      "quote": "자고 일어나면 다 되어있도다!",
+      "id": "member_8"
     },
     {
       "name": "서정훈",
       "role": "이벤트",
-      "quote": "테니스의 천재 ,,DDDD"
+      "quote": "테니스의 천재 ,,DDDD",
+      "id": "member_9"
     }
   ],
   "ending_cards": [
@@ -102,5 +111,11 @@
     "",
     "THANK YOU FOR PLAYING.",
     "...30년이나 걸렸네."
-  ]
+  ],
+  "all_seen_flag": "Q_HP_ALL",
+  "meta_quiz": {
+    "minigame": "quiz_man_meta",
+    "perfect_flag": "Q_QUIZ_ALL",
+    "intro": "퀴즈맨의 시험 — 10문항 전부 정답에 도전한다."
+  }
 }

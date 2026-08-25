@@ -70,8 +70,7 @@ func _adjust(dir: int) -> void:
 	match _index:
 		0, 1, 2, 3:
 			var bus: StringName = SettingsManager.BUSES[_index]
-			SettingsManager.set_volume(bus,
-					SettingsManager.get_volume(bus) + dir * VOLUME_STEP)
+			SettingsManager.set_volume(bus, SettingsManager.get_volume(bus) + dir * VOLUME_STEP)
 		4:
 			var values: Array = SettingsManager.EffectSpeed.values()
 			var idx: int = values.find(SettingsManager.effect_speed)

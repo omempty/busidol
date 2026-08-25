@@ -37,7 +37,7 @@ func build(rt: MapRuntime) -> void:
 			_set_ground(_layers[0], ground_meta, gid, cell)
 			if oid > 0:
 				_set_object(_layers[1], object_meta, oid, cell)
-			if def.attr_at(cell) == 2:   # OVERHEAD — 액터 위 Front에도 그려 숨김 효과
+			if def.attr_at(cell) == 2:  # OVERHEAD — 액터 위 Front에도 그려 숨김 효과
 				_set_ground(_layers[2], ground_meta, gid, cell)
 				if oid > 0:
 					_set_object(_layers[2], object_meta, oid, cell)
@@ -54,7 +54,8 @@ func _tile_grid(size: Vector2i) -> Vector2i:
 
 func _load_object_meta() -> Dictionary:
 	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(OBJECT_ATLAS.replace(".png", ".json")))
+		FileAccess.get_file_as_string(OBJECT_ATLAS.replace(".png", ".json"))
+	)
 	if typeof(raw) != TYPE_DICTIONARY:
 		push_error("obj 메타 파싱 실패")
 		return {}

@@ -20,8 +20,7 @@ var _player: Combatant
 var _enemies: Array[Combatant] = []
 
 
-func build(p_player: Combatant, p_enemies: Array[Combatant],
-		skills: Array[Dictionary]) -> void:
+func build(p_player: Combatant, p_enemies: Array[Combatant], skills: Array[Dictionary]) -> void:
 	layer = 20
 	_player = p_player
 	_enemies = p_enemies
@@ -47,11 +46,13 @@ func set_turn_text(text: String) -> void:
 
 func show_result(result: StringName) -> void:
 	hide_menu()
-	_result_label.text = "WIN!" if result == &"win" \
-			else ("FLEE" if result == &"flee" else "LOSE...")
+	_result_label.text = (
+		"WIN!" if result == &"win" else ("FLEE" if result == &"flee" else "LOSE...")
+	)
 	_result_label.visible = true
-	_result_label.add_theme_color_override("font_color",
-			Color(0.3, 1.0, 0.5) if result == &"win" else Color(1, 0.3, 0.2))
+	_result_label.add_theme_color_override(
+		"font_color", Color(0.3, 1.0, 0.5) if result == &"win" else Color(1, 0.3, 0.2)
+	)
 
 
 func show_command_menu() -> void:
@@ -70,9 +71,11 @@ func show_skill_menu() -> void:
 	for skill: Dictionary in _skills:
 		var btn := Button.new()
 		btn.text = str(skill.get("display_key", skill["id"]))
-		btn.pressed.connect(func() -> void:
-			_close_skill_panel()
-			skill_selected.emit(skill))
+		btn.pressed.connect(
+			func() -> void:
+				_close_skill_panel()
+				skill_selected.emit(skill)
+		)
 		_skill_panel.add_child(btn)
 
 

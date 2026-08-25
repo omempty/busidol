@@ -25,8 +25,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
-		if (event as InputEventKey).keycode == KEY_F10 \
-				and OS.is_debug_build():
+		if (event as InputEventKey).keycode == KEY_F10 and OS.is_debug_build():
 			toggle()
 			get_viewport().set_input_as_handled()
 
@@ -44,6 +43,7 @@ func _logline(text: String) -> void:
 
 
 ## ---- UI ----
+
 
 func _build() -> void:
 	var dim := ColorRect.new()
@@ -76,31 +76,21 @@ func _build() -> void:
 	var floors := HFlowContainer.new()
 	grid.add_child(floors)
 	for f: int in [1, 2, 3, 0, 4, 5]:
-		floors.add_child(_btn("F%d" % f,
-				func() -> void: _teleport_floor(f)))
+		floors.add_child(_btn("F%d" % f, func() -> void: _teleport_floor(f)))
 
 	_section(grid, "— 수치 —")
 	var stats := HFlowContainer.new()
 	grid.add_child(stats)
-	stats.add_child(_btn("Lv+1", func() -> void:
-		GameState.player_stats["level"] = int(GameState.player_stats["level"]) + 1
-		_logline("level → %d" % int(GameState.player_stats["level"]))))
-	stats.add_child(_btn("HP/AP 전회", func() -> void:
-		GameState.player_stats["hp"] = 999
-		GameState.player_stats["ap"] = 999
-		_logline("hp/ap → 999")))
-	stats.add_child(_btn("+1000원", func() -> void:
-		GameState.player_stats["money"] = int(GameState.player_stats["money"]) + 1000
-		_logline("money → %d" % int(GameState.player_stats["money"]))))
+	stats.add_child(_btn("Lv+1", _debug_level_up))
+	stats.add_child(_btn("HP/AP 전회", _debug_max_stats))
+	stats.add_child(_btn("+1000원", _debug_add_money))
 
 	_section(grid, "— 아이템 지급(×5) —")
 	var items := HFlowContainer.new()
 	grid.add_child(items)
 	for entry: Dictionary in _load_list(ITEMS_PATH, "items"):
 		var iid := str(entry["id"])
-		items.add_child(_btn(str(entry.get("name_ko", iid)), func() -> void:
-			GameState.inventory.add(StringName(iid), 5)
-			_logline("지급: %s ×5" % iid)))
+		items.add_child(_btn(str(entry.get("name_ko", iid)), func() -> void: _grant_item(iid)))
 
 	_section(grid, "— 전투 강제 —")
 	var battles := HFlowContainer.new()
@@ -145,6 +135,27 @@ func _btn(text: String, action: Callable) -> Button:
 	return b
 
 
+func _debug_level_up() -> void:
+	GameState.player_stats["level"] = int(GameState.player_stats["level"]) + 1
+	_logline("level → %d" % int(GameState.player_stats["level"]))
+
+
+func _debug_max_stats() -> void:
+	GameState.player_stats["hp"] = 999
+	GameState.player_stats["ap"] = 999
+	_logline("hp/ap → 999")
+
+
+func _debug_add_money() -> void:
+	GameState.player_stats["money"] = int(GameState.player_stats["money"]) + 1000
+	_logline("money → %d" % int(GameState.player_stats["money"]))
+
+
+func _grant_item(item_id: String) -> void:
+	GameState.inventory.add(StringName(item_id), 5)
+	_logline("지급: %s ×5" % item_id)
+
+
 func _refresh_flags() -> void:
 	for fid: String in _flag_buttons:
 		var on := GameState.has_flag(fid)
@@ -185,11 +196,11 @@ func run_self_check() -> void:
 	var fh := FileAccess.open(REPORT_PATH, FileAccess.WRITE)
 	if fh != null:
 		fh.store_string("=== SelfCheck %s ===\n%s\n" % [stamp, text])
-	_logline("검증 완료 → user://debug_report.txt (%s)" %
-			report[report.size() - 1])
+	_logline("검증 완료 → user://debug_report.txt (%s)" % report[report.size() - 1])
 
 
 ## ---- 데이터 로더 ----
+
 
 func _load_list(path: String, key: String) -> Array:
 	if not FileAccess.file_exists(path):
@@ -225,8 +236,7 @@ func _monsters_dict() -> Dictionary:
 ## 대상 층으로 착지하는 전환의 도착 좌표(anchor+offset)를 찾는다.
 ## 소스 층은 guard_min/max_floor 범위에서 역산한다(데이터에 명시 필드 없음).
 func _entry_anchor(target_floor: int) -> Vector2i:
-	var raw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string(TRANSITIONS_PATH))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(TRANSITIONS_PATH))
 	if typeof(raw) == TYPE_DICTIONARY:
 		for t: Dictionary in raw.get("transitions", []):
 			var delta := int(t.get("floor_delta", 0))
@@ -236,7 +246,6 @@ func _entry_anchor(target_floor: int) -> Vector2i:
 				if src + delta == target_floor:
 					var anchor: Array = t.get("anchor", [9, 9])
 					var off: Array = t.get("spawn_offset", [0, 0])
-					return Vector2i(int(anchor[0]) + int(off[0]),
-							int(anchor[1]) + int(off[1]))
+					return Vector2i(int(anchor[0]) + int(off[0]), int(anchor[1]) + int(off[1]))
 	push_warning("[debug] f%d 진입 앵커 미발견 — 기본 스폰 사용" % target_floor)
 	return Vector2i(-1, -1)

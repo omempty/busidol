@@ -26,10 +26,17 @@ func level_table() -> Array:
 
 
 func get_enemy_def(id: StringName) -> Dictionary:
-	return _enemies.get(String(id), {
-		"display_name": String(id), "ap": 15, "dp": 5,
-		"hp_range": [20, 40], "exp": [5, 10], "money": [50, 100]
-	})
+	return _enemies.get(
+		String(id),
+		{
+			"display_name": String(id),
+			"ap": 15,
+			"dp": 5,
+			"hp_range": [20, 40],
+			"exp": [5, 10],
+			"money": [50, 100]
+		}
+	)
 
 
 func get_item(id: StringName) -> Dictionary:
@@ -37,8 +44,7 @@ func get_item(id: StringName) -> Dictionary:
 
 
 func load_enemies() -> void:
-	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
 	if typeof(raw) != TYPE_DICTIONARY:
 		push_error("monsters.json 파싱 실패")
 		return
@@ -75,8 +81,7 @@ func _load_bosses(raw: Dictionary) -> void:
 		var bdef: Dictionary = raw["bosses"][bid]
 		_enemies[bid] = {
 			"id": bid,
-			"display_name": str(bdef.get("display_name",
-					bid.replace("_", " ").capitalize())),
+			"display_name": str(bdef.get("display_name", bid.replace("_", " ").capitalize())),
 			"ap": int(bdef.get("ap", 20)),
 			"dp": int(bdef.get("dp", 8)),
 			"hp_range": bdef.get("hp_range", [100, 140]),
@@ -89,8 +94,7 @@ func _load_bosses(raw: Dictionary) -> void:
 
 
 func load_items() -> void:
-	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "items.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "items.json"))
 	if typeof(raw) == TYPE_DICTIONARY:
 		for item in raw.get("items", []):
 			_items[str(item["id"])] = item
@@ -106,15 +110,13 @@ func _ready() -> void:
 
 
 func _load_growth() -> void:
-	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "growth.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "growth.json"))
 	if typeof(raw) == TYPE_DICTIONARY:
 		_growth = raw
 
 
 func load_dialogue() -> void:
-	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "dialogue.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "dialogue.json"))
 	if typeof(raw) == TYPE_DICTIONARY:
 		_dialogue = raw
 	else:
@@ -124,7 +126,8 @@ func load_dialogue() -> void:
 
 func load_sequences() -> void:
 	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "dialogue_sequences.json"))
+		FileAccess.get_file_as_string(DATA_DIR + "dialogue_sequences.json")
+	)
 	if typeof(raw) == TYPE_DICTIONARY:
 		_sequences = raw.get("sequences", {})
 	else:
@@ -158,8 +161,7 @@ func encounter_table(floor_idx: int) -> Dictionary:
 
 
 func load_encounters() -> void:
-	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
 	if typeof(raw) == TYPE_DICTIONARY:
 		_encounters = raw.get("floors", {})
 	else:

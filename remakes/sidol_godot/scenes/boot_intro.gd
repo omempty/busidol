@@ -12,13 +12,13 @@ const LINES: Array[String] = [
 	"",
 	"loading . . .",
 ]
-const CHAR_TIME := 0.03     # 글자 1개 타이핑 간격(초)
-const LINE_TIME := 0.22     # 줄바꿈 후 대기
-const HOLD_AFTER := 1.1     # 전문 출력 후 자동 전환 대기
+const CHAR_TIME := 0.03  # 글자 1개 타이핑 간격(초)
+const LINE_TIME := 0.22  # 줄바꿈 후 대기
+const HOLD_AFTER := 1.1  # 전문 출력 후 자동 전환 대기
 
 var _label: Label
 var _full := ""
-var _budget := 0.0          # 누적 타이핑 예산(초→글자 환산)
+var _budget := 0.0  # 누적 타이핑 예산(초→글자 환산)
 var _line_wait := 0.0
 var _hold := 0.0
 
@@ -63,8 +63,11 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"interact") or event.is_action_pressed(&"cancel") \
-			or event.is_action_pressed(&"ui_accept"):
+	if (
+		event.is_action_pressed(&"interact")
+		or event.is_action_pressed(&"cancel")
+		or event.is_action_pressed(&"ui_accept")
+	):
 		_go_title()
 
 

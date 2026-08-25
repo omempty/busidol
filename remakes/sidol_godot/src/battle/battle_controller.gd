@@ -15,7 +15,7 @@ var turn_count := 0
 var player_combatant: Combatant
 var enemy_combatants: Array[Combatant] = []
 var active_enemy_idx := 0
-var speed_multiplier := 1.0    # ×1/×2/×4 — SettingsManager에서 조절
+var speed_multiplier := 1.0  # ×1/×2/×4 — SettingsManager에서 조절
 var _rng := RandomNumberGenerator.new()
 
 
@@ -78,8 +78,7 @@ func _advance_enemy() -> Dictionary:
 
 
 func _resolve_attack(attacker: Combatant, target: Combatant, cmd: Dictionary) -> void:
-	var dmg := DamageCalculator.player_hit(
-		int(cmd.get("ap", attacker.ap)), EnemyManager.rng)
+	var dmg := DamageCalculator.player_hit(int(cmd.get("ap", attacker.ap)), EnemyManager.rng)
 	target.take_damage(dmg)
 	cmd["damage"] = dmg
 	cmd["damages"] = [{"amount": dmg, "enemy_index": _alive_enemy_index(target)}]
@@ -99,11 +98,14 @@ func _resolve_skill(user: Combatant, target: Combatant, cmd: Dictionary) -> void
 	var results: Array = []
 	for t in targets:
 		if t == user:
-			continue   # 자기 버프 스킬 — 피해 판정 제외(효과는 상태이상으로만)
+			continue  # 자기 버프 스킬 — 피해 판정 제외(효과는 상태이상으로만)
 		var dmg := DamageCalculator.skill_hit(
-			int(skill.get("power", 10)), user.ap,
+			int(skill.get("power", 10)),
+			user.ap,
 			StringName(str(skill.get("element", "physical"))),
-			[], EnemyManager.rng)
+			[],
+			EnemyManager.rng
+		)
 		t.take_damage(dmg)
 		results.append({"amount": dmg, "enemy_index": _alive_enemy_index(t)})
 	cmd["damage"] = 0 if results.is_empty() else int(results[0]["amount"])

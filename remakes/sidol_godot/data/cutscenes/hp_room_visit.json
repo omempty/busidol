@@ -17,8 +17,7 @@
     {
       "op": "set_flags",
       "args": {
-        "Q_F2_HP": true,
-        "Q_HP_ALL": true
+        "Q_F2_HP": true
       }
     },
     {

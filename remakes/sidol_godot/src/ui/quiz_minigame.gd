@@ -6,12 +6,12 @@ extends CanvasLayer
 
 signal finished(passed: bool)
 
-const PANEL_POS := Vector2(230, 180)   ## 960×540 중앙 정렬
+const PANEL_POS := Vector2(230, 180)  ## 960×540 중앙 정렬
 const PANEL_SIZE := Vector2(500, 180)
 
 var _config: Dictionary = {}
-var _qi := 0            # 현재 문항 인덱스
-var _sel := 0           # 현재 선택지 인덱스
+var _qi := 0  # 현재 문항 인덱스
+var _sel := 0  # 현재 선택지 인덱스
 var _mistakes := 0
 var _active := false
 
@@ -70,6 +70,11 @@ func is_active() -> bool:
 	return _active
 
 
+## 완벽 정답 판정용(Q_QUIZ_ALL) — 세션 오답 횟수.
+func mistake_count() -> int:
+	return _mistakes
+
+
 func _load_question() -> void:
 	var qs: Array = _config.get("questions", [])
 	if _qi >= qs.size():
@@ -90,16 +95,17 @@ func _load_question() -> void:
 
 ## "@t3" 같은 대사 키면 dialogue.json에서 조회, 아니면 원문 그대로 사용.
 func _fmt(key_or_text: String) -> String:
-	return Database.text(key_or_text) if key_or_text.begins_with("@") \
-			else key_or_text
+	return Database.text(key_or_text) if key_or_text.begins_with("@") else key_or_text
 
 
 func _refresh_highlight() -> void:
 	for i in _choice_lbls.size():
-		_choice_lbls[i].text = "> " + _choice_lbls[i].text.trim_prefix("> ") \
-				if i == _sel else "  " + _choice_lbls[i].text.trim_prefix("> ")
-		_choice_lbls[i].modulate = Color(1.0, 0.9, 0.3) if i == _sel \
-				else Color(1, 1, 1, 0.75)
+		_choice_lbls[i].text = (
+			"> " + _choice_lbls[i].text.trim_prefix("> ")
+			if i == _sel
+			else "  " + _choice_lbls[i].text.trim_prefix("> ")
+		)
+		_choice_lbls[i].modulate = Color(1.0, 0.9, 0.3) if i == _sel else Color(1, 1, 1, 0.75)
 	_msg_lbl.text = ""
 
 

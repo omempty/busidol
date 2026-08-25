@@ -10,12 +10,12 @@ signal step_blocked(dir: Vector2i)
 const STEP_TIME := 0.16
 
 var grid_pos := Vector2i.ZERO
-var footprint := Vector2i(2, 2)   # 원작: 캐릭터 몸이 2x2 셀 점유
+var footprint := Vector2i(2, 2)  # 원작: 캐릭터 몸이 2x2 셀 점유
 var moving := false
-var enabled := true               # 문 통과/층 전환 등 특수 이동 중 잠금
+var enabled := true  # 문 통과/층 전환 등 특수 이동 중 잠금
 var buffered_dir := Vector2i.ZERO
-var body: Node2D                  # 실제 이동할 노드(스프라이트 부모)
-var is_passable: Callable         # func(cell: Vector2i) -> bool
+var body: Node2D  # 실제 이동할 노드(스프라이트 부모)
+var is_passable: Callable  # func(cell: Vector2i) -> bool
 
 
 ## 2x2 블록의 중심 픽셀 좌표(스프라이트 centered 기준).

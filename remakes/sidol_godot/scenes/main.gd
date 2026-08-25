@@ -152,10 +152,10 @@ func _refresh() -> void:
 		var prefix := "> " if selected else "  "
 		if i == 1 and not has_save:
 			_menu_labels[i].text = "  계속하기 (기록 없음)"
-			_menu_labels[i].add_theme_color_override("font_color",
-					Color(0.45, 0.45, 0.5))
+			_menu_labels[i].add_theme_color_override("font_color", Color(0.45, 0.45, 0.5))
 		else:
 			_menu_labels[i].text = prefix + MENU_ITEMS[i]
-			_menu_labels[i].add_theme_color_override("font_color",
-					Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1))
+			_menu_labels[i].add_theme_color_override(
+				"font_color", Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1)
+			)
 	_mode_label.text = "아트 모드: < %s >" % ART_LABELS[int(SettingsManager.art_mode)]

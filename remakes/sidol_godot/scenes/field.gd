@@ -2,7 +2,7 @@ extends Node2D
 ## 필드 씬 — 맵 빌드 + 플레이어 스폰 + 카메라/HUD 조립 (Phase 1 MVP).
 ## TODO(Phase 2): 층별 아틀라스 일반화(현재 f1 플레이스홀더 전용), 문/계단/오버라이드 복원.
 
-const SPAWN_DEFAULT := Vector2i(9, 9)   # 원작 main() x=9,y=9
+const SPAWN_DEFAULT := Vector2i(9, 9)  # 원작 main() x=9,y=9
 const SEARCH_RADIUS := 8
 
 var runtime: MapRuntime
@@ -90,10 +90,10 @@ func _ready() -> void:
 	cutscene_player.finished.connect(_on_cutscene_finished)
 
 	inventory_panel = InventoryPanel.new()
-	add_child(inventory_panel)   # PauseMenu보다 먼저 — cancel 입력 우선권
+	add_child(inventory_panel)  # PauseMenu보다 먼저 — cancel 입력 우선권
 
 	add_child(PauseMenu.new())
-	add_child(DebugPanel.new())   # F10 — 디버그 빌드 한정(패널 내부 가드)
+	add_child(DebugPanel.new())  # F10 — 디버그 빌드 한정(패널 내부 가드)
 
 	AudioManager.play_bgm(&"bgm_field")
 
@@ -118,7 +118,7 @@ func _physics_process(_delta: float) -> void:
 		inventory_panel.open()
 		return
 	if inventory_panel.visible:
-		return   # 가방 개방 중 — 입력은 패널이, 월드 정지는 paused가 담당
+		return  # 가방 개방 중 — 입력은 패널이, 월드 정지는 paused가 담당
 
 	# 몬스터 틱 (EnemyManager에 위임)
 	if enemy_manager != null:
@@ -139,8 +139,7 @@ func _physics_process(_delta: float) -> void:
 		return
 
 	# interact 트리거 우선 — NPC/상자보다 앞서 판정
-	if triggers != null and interact_edge \
-			and triggers.try_interact(front_cells()):
+	if triggers != null and interact_edge and triggers.try_interact(front_cells()):
 		return
 
 	var npc := _npc_in_front()
@@ -158,8 +157,8 @@ func _physics_process(_delta: float) -> void:
 		_prompt_label.visible = true
 		_prompt_label.text = "[SPACE] 열기"
 		_prompt_label.position = Vector2(
-				chest.x * MapDefinition.TILE_PX - 20,
-				chest.y * MapDefinition.TILE_PX - 30)
+			chest.x * MapDefinition.TILE_PX - 20, chest.y * MapDefinition.TILE_PX - 30
+		)
 		if interact_edge:
 			_open_chest(chest)
 		return
@@ -177,8 +176,8 @@ func _chest_in_front() -> Vector2i:
 
 func _open_chest(cell: Vector2i) -> void:
 	var attr := runtime.definition.attr_at(cell)
-	runtime.set_override_attr(cell, 1)   # 빈 상자 처리
-	GameState.set_chest_override(cell, 1)   # 세이브 유지 대상
+	runtime.set_override_attr(cell, 1)  # 빈 상자 처리
+	GameState.set_chest_override(cell, 1)  # 세이브 유지 대상
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
 	AudioManager.play_sfx(&"sfx_item_get")
 	_show_pickup_popup("아이템 획득!")
@@ -221,6 +220,7 @@ func _apply_chest_overrides() -> void:
 
 ## ---- NPC / 대화 (Phase 3) ----
 
+
 func _spawn_npcs() -> void:
 	var path := "res://data/maps/npcs_f%d.json" % GameState.current_floor
 	if not FileAccess.file_exists(path):
@@ -233,9 +233,13 @@ func _spawn_npcs() -> void:
 		var tint_arr: Array = n.get("tint", [1.0, 1.0, 1.0])
 		var npc := NpcEntity.new()
 		add_child(npc)
-		npc.setup(StringName(str(n["id"])), str(n["name"]),
-				StringName(str(n["sequence_id"])), cell,
-				Color(tint_arr[0], tint_arr[1], tint_arr[2]))
+		npc.setup(
+			StringName(str(n["id"])),
+			str(n["name"]),
+			StringName(str(n["sequence_id"])),
+			cell,
+			Color(tint_arr[0], tint_arr[1], tint_arr[2])
+		)
 		npcs.append(npc)
 
 
@@ -302,6 +306,7 @@ func _on_dialogue_finished(_seq_id: StringName) -> void:
 
 
 ## ---- 컷신 / 트리거 (Phase 7) ----
+
 
 func _play_cutscene(cutscene_id: StringName) -> void:
 	if player == null:

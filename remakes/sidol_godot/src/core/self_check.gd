@@ -15,7 +15,7 @@ extends Node
 ##  9) 전환 게이트 데이터 정합        — 동일 앵커 guard 범위 중복(이중 발화)·
 ##                                     requires_flag가 퀘스트 id와 불일치 조기 발견
 
-const FLOORS := [1, 2, 3, 0, 4, 5]   # 마스터 시나리오 진행 순서
+const FLOORS := [1, 2, 3, 0, 4, 5]  # 마스터 시나리오 진행 순서
 
 
 func run_all() -> PackedStringArray:
@@ -33,6 +33,7 @@ func run_all() -> PackedStringArray:
 		_check_transition_gates(),
 		_check_quest_flags(),
 		_check_sequence_text_refs(),
+		_check_credits_flags(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -77,8 +78,7 @@ func _check_npc_sequences() -> Array:
 			var seq := StringName(str(n.get("sequence_id", "")))
 			if Database.sequence(seq).is_empty():
 				bad += 1
-				lines += _fail("NPC %s 시퀀스 없음: %s"
-						% [str(n.get("id")), seq])
+				lines += _fail("NPC %s 시퀀스 없음: %s" % [str(n.get("id")), seq])
 	if bad == 0:
 		lines += _ok("모든 NPC 시퀀스 참조 유효")
 	return lines
@@ -101,14 +101,12 @@ func _check_trigger_refs() -> Array:
 				var cid := StringName(str(action["cutscene"]))
 				if CutscenePlayer.load_cutscene(cid).is_empty():
 					bad += 1
-					lines += _fail("트리거 %s 컷신 없음: %s"
-							% [str(t.get("id")), cid])
+					lines += _fail("트리거 %s 컷신 없음: %s" % [str(t.get("id")), cid])
 			elif action.has("sequence"):
 				var sid := StringName(str(action["sequence"]))
 				if Database.sequence(sid).is_empty():
 					bad += 1
-					lines += _fail("트리거 %s 시퀀스 없음: %s"
-							% [str(t.get("id")), sid])
+					lines += _fail("트리거 %s 시퀀스 없음: %s" % [str(t.get("id")), sid])
 	if bad == 0:
 		lines += _ok("모든 트리거 참조 유효")
 	return lines
@@ -131,13 +129,13 @@ func _check_enemy_defs() -> Array:
 	# first_win_flag 참조 검증 — quests_v2 미정의 플래그 조기 발견
 	var quest_ids := {}
 	var qraw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string("res://data/quests_v2.json"))
+		FileAccess.get_file_as_string("res://data/quests_v2.json")
+	)
 	if typeof(qraw) == TYPE_DICTIONARY:
 		for q: Dictionary in qraw.get("quests", []):
 			quest_ids[str(q.get("id", ""))] = true
 	for eid_str: String in _all_species_ids():
-		var fwf: String = str(Database.get_enemy_def(
-				StringName(eid_str)).get("first_win_flag", ""))
+		var fwf: String = str(Database.get_enemy_def(StringName(eid_str)).get("first_win_flag", ""))
 		if not fwf.is_empty() and not quest_ids.has(fwf):
 			bad += 1
 			lines += _fail("%s first_win_flag 미정의 퀘스트: %s" % [eid_str, fwf])
@@ -187,11 +185,13 @@ func _check_save_roundtrip() -> Array:
 	if not SaveManager.load_slot(slot):
 		SaveManager.delete_slot(slot)
 		return _fail("세이브 라운드트립 로드 실패")
-	var ok := GameState.has_flag("__selftest_flag") \
-			and int(GameState.player_stats["money"]) == money_before
+	var ok := (
+		GameState.has_flag("__selftest_flag")
+		and int(GameState.player_stats["money"]) == money_before
+	)
 	SaveManager.delete_slot(slot)
 	GameState.flags.erase("__selftest_flag")
-	GameState.player_stats["money"] = money_before   # 라운드트립 전 값 복원
+	GameState.player_stats["money"] = money_before  # 라운드트립 전 값 복원
 	return _ok("세이브 라운드트립") if ok else _fail("세이브 복원 불일치")
 
 
@@ -204,8 +204,7 @@ func _check_trigger_done_flag_skip() -> Array:
 	add_child(ts)
 	ts.load_for_floor(1)
 	var fired := [false]
-	ts.cutscene_requested.connect(func(_cid: StringName) -> void:
-		fired[0] = true)
+	ts.cutscene_requested.connect(func(_cid: StringName) -> void: fired[0] = true)
 	for _i in range(4):
 		ts.tick(Vector2i.ZERO, 0.25)
 	ts.queue_free()
@@ -247,14 +246,12 @@ func _check_floor_landings() -> Array:
 			if checked.has(target):
 				continue
 			checked[target] = true
-			var def := MapDefinition.load_from_json(
-					"res://data/maps/f%d.json" % target)
+			var def := MapDefinition.load_from_json("res://data/maps/f%d.json" % target)
 			if def == null:
 				lines += _fail("f%d 맵 없음(착지 검증 불가)" % target)
 				continue
 			if def.attr_at(land) != 0 and def.attr_at(land) != 2:
-				lines.append("[warn] f%d 착지 %s 불통행 (%s)" %
-						[target, land, str(t.get("id"))])
+				lines.append("[warn] f%d 착지 %s 불통행 (%s)" % [target, land, str(t.get("id"))])
 	if lines.any(func(l: String) -> bool: return l.begins_with("[FAIL]")):
 		return lines
 	if lines.is_empty():
@@ -277,15 +274,18 @@ func _check_transition_gates() -> Array:
 
 	var quest_ids := {}
 	var qraw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string("res://data/quests_v2.json"))
+		FileAccess.get_file_as_string("res://data/quests_v2.json")
+	)
 	if typeof(qraw) == TYPE_DICTIONARY:
 		for q: Dictionary in qraw.get("quests", []):
 			quest_ids[str(q.get("id", ""))] = true
 
-	var groups := {}   # "anchor|dir|delta" -> Array[Dictionary]
+	var groups := {}  # "anchor|dir|delta" -> Array[Dictionary]
 	for t: Dictionary in transitions:
-		var key := "%s|%s|%d" % [str(t.get("anchor")), str(t.get("trigger_dir")),
-				int(t.get("floor_delta", 0))]
+		var key := (
+			"%s|%s|%d"
+			% [str(t.get("anchor")), str(t.get("trigger_dir")), int(t.get("floor_delta", 0))]
+		)
 		if not groups.has(key):
 			groups[key] = []
 		groups[key].append(t)
@@ -300,13 +300,14 @@ func _check_transition_gates() -> Array:
 			for j in range(i + 1, segs.size()):
 				var a: Dictionary = segs[i]
 				var b: Dictionary = segs[j]
-				var overlap := maxi(int(a.get("guard_min_floor", -99)),
-						int(b.get("guard_min_floor", -99))) \
-						<= mini(int(a.get("guard_max_floor", 99)),
-						int(b.get("guard_max_floor", 99)))
+				var overlap := (
+					maxi(int(a.get("guard_min_floor", -99)), int(b.get("guard_min_floor", -99)))
+					<= mini(int(a.get("guard_max_floor", 99)), int(b.get("guard_max_floor", 99)))
+				)
 				if overlap:
-					lines += _fail("전환 guard 범위 중복(%s): %s vs %s"
-							% [key, str(a.get("id")), str(b.get("id"))])
+					lines += _fail(
+						"전환 guard 범위 중복(%s): %s vs %s" % [key, str(a.get("id")), str(b.get("id"))]
+					)
 
 	if lines.is_empty():
 		lines += _ok("전환 게이트 데이터 정합 (guard 중복/플래그 참조)")
@@ -321,14 +322,14 @@ func _check_quest_flags() -> Array:
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if typeof(raw) != TYPE_DICTIONARY:
 		return _fail("quests_v2.json 파싱 실패")
-		
+
 	var quests: Array = raw.get("quests", [])
 	var qmap := {}
 	for q: Variant in quests:
 		if q is Dictionary:
 			var qid := str(q.get("id", ""))
 			qmap[qid] = q
-			
+
 	var bad := 0
 	for qid: String in qmap:
 		var reqs: Variant = qmap[qid].get("requires", [])
@@ -346,15 +347,18 @@ func _check_quest_flags() -> Array:
 		visited[node] = true
 		path_stack[node] = true
 		var rs: Variant = qmap.get(node, {}).get("requires", [])
-		if rs is String: rs = [rs]
+		if rs is String:
+			rs = [rs]
 		for r: Variant in rs:
 			var r_str := str(r)
-			if not qmap.has(r_str): continue
+			if not qmap.has(r_str):
+				continue
 			if path_stack.get(r_str, false):
 				lines += _fail("퀘스트 체인 순환 발생: %s -> ... -> %s" % [node, r_str])
 				return true
 			if not visited.get(r_str, false):
-				if f.call(r_str, f): return true
+				if f.call(r_str, f):
+					return true
 		path_stack[node] = false
 		return false
 
@@ -368,37 +372,86 @@ func _check_quest_flags() -> Array:
 	return lines
 
 
+## 크레딧룸 데이터 정합 — all_seen_flag/meta_quiz.perfect_flag는 퀘스트 id여야 하고
+## 멤버 id는 전원 확인 추적(hp_seen_*)에 필수라 유니크·비어있지 않아야 한다.
+func _check_credits_flags() -> Array:
+	var lines: Array = []
+	var path := "res://data/credits.json"
+	if not FileAccess.file_exists(path):
+		return _fail("credits.json 없음")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		return _fail("credits.json 파싱 실패")
+
+	var quest_ids := {}
+	var qraw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://data/quests_v2.json")
+	)
+	if typeof(qraw) == TYPE_DICTIONARY:
+		for q: Dictionary in qraw.get("quests", []):
+			quest_ids[str(q.get("id", ""))] = true
+
+	var bad := 0
+	for key: String in ["all_seen_flag", "meta_quiz.perfect_flag"]:
+		var flag := str(raw.get(key, ""))
+		if key.contains("."):
+			var meta: Dictionary = (
+				raw.get("meta_quiz", {}) if raw.get("meta_quiz", {}) is Dictionary else {}
+			)
+			flag = str(meta.get("perfect_flag", ""))
+		if not flag.is_empty() and not quest_ids.has(flag):
+			bad += 1
+			lines += _fail("credits.json %s 미정의 퀘스트: %s" % [key, flag])
+
+	var seen_ids := {}
+	for m: Dictionary in raw.get("members", []):
+		var id := str(m.get("id", ""))
+		if id.is_empty():
+			bad += 1
+			lines += _fail("멤버 id 누락: %s" % str(m.get("name", "?")))
+		elif seen_ids.has(id):
+			bad += 1
+			lines += _fail("멤버 id 중복: %s" % id)
+		else:
+			seen_ids[id] = true
+
+	if bad == 0:
+		lines += _ok("크레딧룸 플래그/멤버 id 정합")
+	return lines
+
+
 func _check_sequence_text_refs() -> Array:
 	var lines: Array = []
 	var path_seq := "res://data/dialogue_sequences.json"
 	var path_dial := "res://data/dialogue.json"
-	
+
 	if not FileAccess.file_exists(path_seq):
 		return _fail("dialogue_sequences.json 없음")
 	if not FileAccess.file_exists(path_dial):
 		return _fail("dialogue.json 없음")
-		
+
 	var raw_seq: Variant = JSON.parse_string(FileAccess.get_file_as_string(path_seq))
 	var raw_dial: Variant = JSON.parse_string(FileAccess.get_file_as_string(path_dial))
-	
+
 	if typeof(raw_seq) != TYPE_DICTIONARY:
 		return _fail("dialogue_sequences.json 파싱 실패")
 	if typeof(raw_dial) != TYPE_DICTIONARY:
 		return _fail("dialogue.json 파싱 실패")
-		
+
 	var sequences: Dictionary = raw_seq.get("sequences", {})
 	var bad := 0
 	for seq_id: String in sequences:
 		var seq: Dictionary = sequences[seq_id]
 		var steps: Array = seq.get("steps", [])
 		for step: Variant in steps:
-			if not step is Dictionary: continue
+			if not step is Dictionary:
+				continue
 			var text: String = step.get("text", "")
 			if text.begins_with("@"):
 				if not raw_dial.has(text):
 					lines += _fail("시퀀스 '%s'에서 존재하지 않는 대사 참조: %s" % [seq_id, text])
 					bad += 1
-					
+
 	if bad == 0:
 		lines += _ok("모든 시퀀스 대사 참조 유효")
 	return lines

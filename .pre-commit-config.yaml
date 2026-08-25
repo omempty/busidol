@@ -1,0 +1,10 @@
+# GDScript 포맷 검증 — 스테이징된 .gd를 gdformat 규격으로 검사(위반 시 커밋 차단).
+# 사전 조건: pip install gdtoolkit pre-commit / 활성화: pre-commit install
+repos:
+  - repo: local
+    hooks:
+      - id: gdformat-check
+        name: gdformat --check (GDScript 포맷)
+        entry: gdformat --check
+        language: system
+        files: \.gd$

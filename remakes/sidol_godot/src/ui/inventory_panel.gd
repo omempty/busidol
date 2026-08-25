@@ -11,7 +11,7 @@ var _detail_name: Label
 var _detail_kind: Label
 var _detail_body: RichTextLabel
 var _hint_label: Label
-var _rows: Array[Dictionary] = []   # 파생 목록 캐시 [{item_id, count}]
+var _rows: Array[Dictionary] = []  # 파생 목록 캐시 [{item_id, count}]
 var _index := 0
 
 
@@ -20,9 +20,11 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_build_ui()
-	GameState.inventory.changed.connect(func() -> void:
-		if visible:
-			_rebuild_list())
+	GameState.inventory.changed.connect(
+		func() -> void:
+			if visible:
+				_rebuild_list()
+	)
 
 
 func _build_ui() -> void:

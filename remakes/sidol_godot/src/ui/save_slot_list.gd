@@ -18,10 +18,12 @@ var _index := 0
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_build()
-	visibility_changed.connect(func() -> void:
-		if visible:
-			_index = 0
-			_refresh())
+	visibility_changed.connect(
+		func() -> void:
+			if visible:
+				_index = 0
+				_refresh()
+	)
 
 
 func _build() -> void:
@@ -75,9 +77,16 @@ func _refresh() -> void:
 		if meta.is_empty():
 			text = "%s   (비어 있음)" % ROW_LABELS[i]
 		else:
-			text = "%s   F%d · Lv%d · %d원 · %s" % [ROW_LABELS[i],
-					int(meta["floor"]), int(meta["level"]),
-					int(meta["money"]), str(meta["saved_at"])]
+			text = (
+				"%s   F%d · Lv%d · %d원 · %s"
+				% [
+					ROW_LABELS[i],
+					int(meta["floor"]),
+					int(meta["level"]),
+					int(meta["money"]),
+					str(meta["saved_at"])
+				]
+			)
 		if i == _index:
 			text = "> " + text
 			row_modulate(_rows[i], Color(1.0, 0.95, 0.6))

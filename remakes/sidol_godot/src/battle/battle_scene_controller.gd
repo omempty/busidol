@@ -9,7 +9,7 @@ var controller := BattleController.new()
 var player_combatant: Combatant
 var enemies: Array[Combatant] = []
 var _enemy_ids: Array[String] = []
-var _on_win_flag := ""   # 승리 시 세팅되는 시나리오 플래그 (pending_encounter에서 전달)
+var _on_win_flag := ""  # 승리 시 세팅되는 시나리오 플래그 (pending_encounter에서 전달)
 
 var _ui: BattleUI
 var _busy := false
@@ -18,9 +18,9 @@ var _skills: Array[Dictionary] = []
 # 연출 (로직↔연출 분리: ChoreographyRunner + BattlePresenter)
 var _runner: ChoreographyRunner
 var _presenter: BattlePresenter
-var _dodge: DodgePhase   # 보스전 회피 페이즈 (턴제+회피 하이브리드)
+var _dodge: DodgePhase  # 보스전 회피 페이즈 (턴제+회피 하이브리드)
 var _pending_action := {}
-var _pending_pops: Array[Dictionary] = []   # damages 표현 큐 (apply_damage 프레임마다 1개)
+var _pending_pops: Array[Dictionary] = []  # damages 표현 큐 (apply_damage 프레임마다 1개)
 var _pending_element := &"physical"
 
 
@@ -71,8 +71,7 @@ func _setup_presentation() -> void:
 
 
 func _load_skills() -> void:
-	var raw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string("res://data/skills.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/skills.json"))
 	if typeof(raw) == TYPE_DICTIONARY:
 		for s: Dictionary in raw.get("skills", []):
 			_skills.append(s)
@@ -81,8 +80,9 @@ func _load_skills() -> void:
 func _setup_combatants(def: Dictionary) -> void:
 	var stats: Dictionary = GameState.player_stats
 	player_combatant = Combatant.new("부싯돌", int(stats["hp"]), int(stats["ap"]), 10)
-	player_combatant.skills = [&"combo_punch", &"flame_beaker", &"debug_shield",
-			&"volt_arc", &"ember_of_flint"]
+	player_combatant.skills = [
+		&"combo_punch", &"flame_beaker", &"debug_shield", &"volt_arc", &"ember_of_flint"
+	]
 
 	for eid in def.get("enemies", ["mad_eye"]):
 		# field/cutscene은 species 원본 딕셔너리를 넘길 수 있다 — id만 추출
@@ -90,8 +90,14 @@ func _setup_combatants(def: Dictionary) -> void:
 		var edef: Dictionary = Database.get_enemy_def(StringName(eid_str))
 		var hp_r: Array = edef.get("hp_range", [20, 40])
 		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
-		enemies.append(Combatant.new(str(edef.get("display_name", eid_str)), hp_val,
-				int(edef.get("ap", 15)), int(edef.get("dp", 5))))
+		enemies.append(
+			Combatant.new(
+				str(edef.get("display_name", eid_str)),
+				hp_val,
+				int(edef.get("ap", 15)),
+				int(edef.get("dp", 5))
+			)
+		)
 		_enemy_ids.append(eid_str)
 
 
@@ -100,16 +106,20 @@ func _on_command(cmd_text: String) -> void:
 		return
 	match cmd_text:
 		"공격":
-			_begin_player_action({
-				"type": &"attack",
-				"ap": player_combatant.ap,
-				"target": _first_alive_enemy(),
-			}, &"atk_basic")
+			_begin_player_action(
+				{
+					"type": &"attack",
+					"ap": player_combatant.ap,
+					"target": _first_alive_enemy(),
+				},
+				&"atk_basic"
+			)
 		"기술":
 			_ui.show_skill_menu()
 		"방어":
 			player_combatant.attach_effect(
-					{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50})
+				{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50}
+			)
 			_end_player_defend()
 		"도망":
 			battle_ended.emit(&"flee", {})
@@ -118,11 +128,14 @@ func _on_command(cmd_text: String) -> void:
 
 func _on_skill_selected(skill: Dictionary) -> void:
 	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
-	_begin_player_action({
-		"type": &"skill",
-		"skill": skill,
-		"ap": player_combatant.ap,
-	}, move_id)
+	_begin_player_action(
+		{
+			"type": &"skill",
+			"skill": skill,
+			"ap": player_combatant.ap,
+		},
+		move_id
+	)
 
 
 ## 플레이어 액션 개시 — 커맨드 제출(판정) → 안무 재생(표현) → 종료 시 턴 해결
@@ -177,8 +190,7 @@ func _on_choreo_finished(_move_id: StringName) -> void:
 		var skill: Dictionary = _pending_action["skill"]
 		for effect_kind: String in skill.get("status_effects", []):
 			for t in _skill_targets(skill):
-				t.attach_effect({"kind": StringName(effect_kind), "turns": 3,
-						"magnitude": 10})
+				t.attach_effect({"kind": StringName(effect_kind), "turns": 3, "magnitude": 10})
 	_pending_action = {}
 	_pending_pops.clear()
 	_resolve_turn()
@@ -222,10 +234,9 @@ func _resolve_turn() -> void:
 	# 적 턴 처리
 	if controller.state == BattleController.TurnState.ENEMY_TURN:
 		var idx := _alive_enemy_index()
-		var edef: Dictionary = Database.get_enemy_def(
-				StringName(_enemy_ids[idx]))
+		var edef: Dictionary = Database.get_enemy_def(StringName(_enemy_ids[idx]))
 		if not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
-			await _run_dodge_phase(edef)   # 보스 특수공격 — 회피 페이즈
+			await _run_dodge_phase(edef)  # 보스 특수공격 — 회피 페이즈
 		else:
 			for e in enemies:
 				if not e.is_down():
@@ -238,8 +249,11 @@ func _resolve_turn() -> void:
 		controller.turn_count += 1
 		_tick_effects()
 
-	if controller.state == BattleController.TurnState.FINISHED \
-			or player_combatant.is_down() or _all_enemies_down():
+	if (
+		controller.state == BattleController.TurnState.FINISHED
+		or player_combatant.is_down()
+		or _all_enemies_down()
+	):
 		var result: StringName = &"win" if _all_enemies_down() else &"lose"
 		_show_result(result)
 		return
@@ -310,7 +324,7 @@ func _exit_battle(result: StringName) -> void:
 	if result == &"win" and not _on_win_flag.is_empty():
 		GameState.set_flag(_on_win_flag, true)
 	if result == &"win":
-		SaveManager.request_autosave("전투 승리")   # 필드 복귀 후 consume
+		SaveManager.request_autosave("전투 승리")  # 필드 복귀 후 consume
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 

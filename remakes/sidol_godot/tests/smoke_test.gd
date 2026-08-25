@@ -4,8 +4,14 @@ extends Node
 ## 종료코드 0=PASS / 1=FAIL
 
 const REQUIRED_AUTOLOADS := [
-	"InputBootstrap", "EventBus", "GameState", "Database",
-	"AudioManager", "SceneRouter", "SettingsManager", "SaveManager",
+	"InputBootstrap",
+	"EventBus",
+	"GameState",
+	"Database",
+	"AudioManager",
+	"SceneRouter",
+	"SettingsManager",
+	"SaveManager",
 ]
 
 

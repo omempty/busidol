@@ -6,7 +6,7 @@ extends Node
 ## 데이터 계약: docs/02_design/05_toolchain_editors.md §5.1
 
 signal move_finished(move_id: StringName)
-signal damage_frame   ## logic 채널 apply_damage=true 키프레임 — 컨트롤러가 데미지 판정
+signal damage_frame  ## logic 채널 apply_damage=true 키프레임 — 컨트롤러가 데미지 판정
 
 const MOVES_DIR := "res://data/battle_moves"
 
@@ -14,7 +14,7 @@ var _active := false
 var _elapsed := 0.0
 var _length := 0.0
 var _current_move := {}
-var _fired_indices := {}   # channel_keyframe_key -> true
+var _fired_indices := {}  # channel_keyframe_key -> true
 var _presenter: BattlePresenter
 
 

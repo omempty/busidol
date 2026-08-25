@@ -17,8 +17,7 @@ func _ready() -> void:
 	sprite.animation = &"idle_down"
 	sprite.play()
 	# 렌더 스케일 — 메타 scale (아트 해상도와 게임 내 크기 분리)
-	var meta: Dictionary = JSON.parse_string(
-			FileAccess.get_file_as_string(str(_paths["meta"])))
+	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(str(_paths["meta"])))
 	if typeof(meta) == TYPE_DICTIONARY:
 		sprite.scale = Vector2.ONE * float(meta.get("scale", 1.0))
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(meta))
@@ -67,8 +66,7 @@ func _physics_process(_delta: float) -> void:
 func _on_step_started(dir: Vector2i) -> void:
 	facing = dir_to_name(dir)
 	var want := StringName("walk_" + String(facing))
-	sprite.play(want if sprite.sprite_frames.has_animation(want)
-			else &"walk_down")
+	sprite.play(want if sprite.sprite_frames.has_animation(want) else &"walk_down")
 
 
 func _on_step_finished(_pos: Vector2i) -> void:
@@ -79,8 +77,7 @@ func _on_step_finished(_pos: Vector2i) -> void:
 func _play_idle() -> void:
 	# 방향별 idle 애니 사용(시트가 갖추면), 없으면 idle_down으로 폴백.
 	var want := StringName("idle_" + String(facing))
-	sprite.play(want if sprite.sprite_frames.has_animation(want)
-			else &"idle_down")
+	sprite.play(want if sprite.sprite_frames.has_animation(want) else &"idle_down")
 
 
 func dir_to_name(dir: Vector2i) -> StringName:
@@ -94,8 +91,7 @@ func dir_to_name(dir: Vector2i) -> StringName:
 
 
 func _build_frames() -> SpriteFrames:
-	var meta: Dictionary = JSON.parse_string(
-			FileAccess.get_file_as_string(str(_paths["meta"])))
+	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(str(_paths["meta"])))
 	var tex: Texture2D = load(str(_paths["sheet"]))
 	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환 (비정형 비율 허용)
 	var cw: int = int(meta.get("cell_w", meta.get("cell", 64)))

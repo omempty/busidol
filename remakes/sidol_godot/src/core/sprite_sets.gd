@@ -25,8 +25,7 @@ static func character_sheet(asset_id: StringName, quiet := false) -> Dictionary:
 				"meta": "%s%s_%s.json" % [SPRITE_DIR, asset_id, tag],
 			}
 	if not quiet:
-		push_error("SpriteSets: '%s' 시트 없음 — %s/%s 태그 모두 부재" % [
-				asset_id, order[0], order[1]])
+		push_error("SpriteSets: '%s' 시트 없음 — %s/%s 태그 모두 부재" % [asset_id, order[0], order[1]])
 	return {"sheet": "", "meta": ""}
 
 

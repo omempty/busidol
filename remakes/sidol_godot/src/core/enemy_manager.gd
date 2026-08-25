@@ -7,7 +7,7 @@ static var rng := RandomNumberGenerator.new()
 
 var enemies: Array[EnemyEntity] = []
 var _occupied := {}
-var _brains := {}      # entity -> AIBrain
+var _brains := {}  # entity -> AIBrain
 var _act_accum := {}
 
 

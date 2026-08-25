@@ -4,10 +4,25 @@ extends SceneTree
 ## 규칙 문서: docs/02_design/05_toolchain_editors.md §2. exit 0=통과 / 1=오류.
 
 const DATA := "res://data/"
-const KNOWN_OPS := ["dialogue", "wait", "fade_in", "fade_out", "shake", "sfx",
-		"bgm", "set_flags", "grant_item", "craft", "minigame_quiz",
-		"minigame_battery", "change_scene", "actor_move", "start_battle",
-		"choice", "end"]
+const KNOWN_OPS := [
+	"dialogue",
+	"wait",
+	"fade_in",
+	"fade_out",
+	"shake",
+	"sfx",
+	"bgm",
+	"set_flags",
+	"grant_item",
+	"craft",
+	"minigame_quiz",
+	"minigame_battery",
+	"change_scene",
+	"actor_move",
+	"start_battle",
+	"choice",
+	"end"
+]
 const KNOWN_CHANNELS := ["sprite", "fx", "camera", "screen", "audio", "logic"]
 const KNOWN_TRIGGER_TYPES := ["zone", "interact", "auto"]
 
@@ -15,14 +30,13 @@ var _errors: Array[String] = []
 var _dialogue: Dictionary = {}
 var _sequences: Dictionary = {}
 var _item_ids: Dictionary = {}
-var _audio_ids: Dictionary = {}   # "bgm/xxx", "sfx/xxx", "voice/xxx"
+var _audio_ids: Dictionary = {}  # "bgm/xxx", "sfx/xxx", "voice/xxx"
 
 
 func _initialize() -> void:
 	print("[validate] start")
 	_dialogue = _load_json(DATA + "dialogue.json") as Dictionary
-	_sequences = (_load_json(DATA + "dialogue_sequences.json")
-			as Dictionary).get("sequences", {})
+	_sequences = (_load_json(DATA + "dialogue_sequences.json") as Dictionary).get("sequences", {})
 	var items: Dictionary = _load_json(DATA + "items.json") as Dictionary
 	for it: Dictionary in items.get("items", []):
 		_item_ids[str(it["id"])] = true
@@ -46,6 +60,7 @@ func _initialize() -> void:
 
 
 # ---- battle_moves ----
+
 
 func _validate_battle_moves() -> void:
 	var dir := DirAccess.open(DATA + "battle_moves")
@@ -78,6 +93,7 @@ func _validate_battle_moves() -> void:
 
 # ---- cutscenes ----
 
+
 func _validate_cutscenes() -> void:
 	var dir := DirAccess.open(DATA + "cutscenes")
 	if dir == null:
@@ -104,8 +120,7 @@ func _validate_step(file: String, step: Dictionary) -> void:
 		"dialogue":
 			for dstep: Dictionary in step.get("steps", []):
 				if not _text_exists(str(dstep.get("text", ""))):
-					_err("cutscenes/%s 대사 키 없음: %s" %
-							[file, dstep.get("text")])
+					_err("cutscenes/%s 대사 키 없음: %s" % [file, dstep.get("text")])
 		"sfx":
 			if not _audio_ids.has("sfx/" + str(step.get("id", ""))):
 				_err("cutscenes/%s SFX 스펙 없음: %s" % [file, step.get("id")])
@@ -129,23 +144,22 @@ func _validate_step(file: String, step: Dictionary) -> void:
 				pass  # 적 ID 존재는 Database 로드 규칙상 느슨 허용(보스/floor 병합)
 		"choice":
 			var cargs: Dictionary = step.get("args", {})
-			for opt: Dictionary in (cargs.get("options", []) as Array):
+			for opt: Dictionary in cargs.get("options", []) as Array:
 				if not _text_exists(str(opt.get("text", ""))):
-					_err("cutscenes/%s 선택지 텍스트 없음: %s" %
-							[file, opt.get("text")])
-				for sub: Dictionary in (opt.get("steps", []) as Array):
+					_err("cutscenes/%s 선택지 텍스트 없음: %s" % [file, opt.get("text")])
+				for sub: Dictionary in opt.get("steps", []) as Array:
 					_validate_step(file, sub)
 		"craft":
 			var args: Dictionary = step.get("args", {})
 			for section: String in ["requires", "grant"]:
-				for item_id: String in (args.get(section, {}) as Dictionary):
+				for item_id: String in args.get(section, {}) as Dictionary:
 					if not _item_ids.has(item_id):
-						_err("cutscenes/%s craft 아이템 없음: %s" %
-								[file, item_id])
+						_err("cutscenes/%s craft 아이템 없음: %s" % [file, item_id])
 	# dialogue/wait 등 나머지 op는 런타임 기본값으로 안전
 
 
 # ---- triggers_f*.json ----
+
 
 func _validate_triggers() -> void:
 	var dir := DirAccess.open(DATA + "maps")
@@ -164,17 +178,16 @@ func _validate_triggers() -> void:
 			if action.has("cutscene"):
 				var cs_path := "%scutscenes/%s.json" % [DATA, action["cutscene"]]
 				if not FileAccess.file_exists(cs_path):
-					_err("%s/%s 컷신 없음: %s" % [f, t.get("id"),
-							action["cutscene"]])
+					_err("%s/%s 컷신 없음: %s" % [f, t.get("id"), action["cutscene"]])
 			elif action.has("sequence"):
 				if not _sequences.has(str(action["sequence"])):
-					_err("%s/%s 시퀀스 없음: %s" % [f, t.get("id"),
-							action["sequence"]])
+					_err("%s/%s 시퀀스 없음: %s" % [f, t.get("id"), action["sequence"]])
 			else:
 				_err("%s/%s action에 cutscene/sequence 없음" % [f, t.get("id")])
 
 
 # ---- skills.json choreography_id ----
+
 
 func _validate_skills_choreography() -> void:
 	var skills: Dictionary = _load_json(DATA + "skills.json") as Dictionary
@@ -188,15 +201,16 @@ func _validate_skills_choreography() -> void:
 
 # ---- credits.json text_key ----
 
+
 func _validate_credits() -> void:
 	var cr: Dictionary = _load_json(DATA + "credits.json") as Dictionary
 	for c: Dictionary in cr.get("ending_cards", []):
 		if not _text_exists(str(c.get("text_key", ""))):
-			_err("credits 카드 '%s' 대사 키 없음: %s" %
-					[c.get("id"), c.get("text_key")])
+			_err("credits 카드 '%s' 대사 키 없음: %s" % [c.get("id"), c.get("text_key")])
 
 
 # ---- minigames/*.json ----
+
 
 func _validate_minigames() -> void:
 	var dir := DirAccess.open(DATA + "minigames")
@@ -209,7 +223,7 @@ func _validate_minigames() -> void:
 		if mg.is_empty():
 			continue
 		var qs: Array = mg.get("questions", [])
-		if not qs.is_empty():   # 퀴즈형
+		if not qs.is_empty():  # 퀴즈형
 			for i in qs.size():
 				var q: Dictionary = qs[i]
 				var choices: Array = q.get("choices", [])
@@ -217,12 +231,11 @@ func _validate_minigames() -> void:
 				if not _key_or_text(str(q.get("q", ""))):
 					_err("minigames/%s Q%d 질문 비어있음" % [f, i + 1])
 				if ans < 0 or ans >= choices.size():
-					_err("minigames/%s Q%d answer 범위 이탈(%d/%d)" %
-							[f, i + 1, ans, choices.size()])
+					_err("minigames/%s Q%d answer 범위 이탈(%d/%d)" % [f, i + 1, ans, choices.size()])
 				for ch: Variant in choices:
 					if not _key_or_text(str(ch)):
 						_err("minigames/%s Q%d 선택지 비어있음" % [f, i + 1])
-		elif mg.has("target_voltage"):   # 회로 퍼즐형
+		elif mg.has("target_voltage"):  # 회로 퍼즐형
 			if int(mg.get("target_voltage", 0)) <= 0:
 				_err("minigames/%s target_voltage 무효" % f)
 			if int(mg.get("slots", 0)) <= 0 or int(mg.get("lever_max", 0)) <= 0:
@@ -243,6 +256,7 @@ func _key_or_text(s: String) -> bool:
 
 # ---- 오디오 스펙 (assets/spec/audio/*.json) ----
 
+
 func _load_audio_spec() -> void:
 	for kind: String in ["bgm", "sfx", "voice"]:
 		var path := "res://assets/spec/audio/%s.json" % kind
@@ -258,6 +272,7 @@ func _load_audio_spec() -> void:
 
 # ---- 스프라이트 스펙 구조 검사 (assets/spec/sprites/*.json) ----
 
+
 func _validate_sprite_specs() -> void:
 	var dir := DirAccess.open("res://assets/spec/sprites")
 	if dir == null:
@@ -265,15 +280,14 @@ func _validate_sprite_specs() -> void:
 	for f in dir.get_files():
 		if not f.ends_with(".json"):
 			continue
-		var spec: Dictionary = _load_json("res://assets/spec/sprites/" + f) \
-				as Dictionary
+		var spec: Dictionary = _load_json("res://assets/spec/sprites/" + f) as Dictionary
 		if spec.is_empty():
 			continue
 		var stem := f.trim_suffix(".json")
 		if str(spec.get("asset_id", "")) != stem:
 			_err("sprites/%s asset_id 불일치" % f)
 		if str(spec.get("kind", "")) == "tileset":
-			continue   # 타일셋은 grid/애니 구조가 다름(필수 타일 목록만 존재)
+			continue  # 타일셋은 grid/애니 구조가 다름(필수 타일 목록만 존재)
 		var grid: Dictionary = spec.get("grid", {})
 		var cell: Dictionary = spec.get("cell", {})
 		var cols := int(grid.get("cols", 0))
@@ -294,6 +308,7 @@ func _validate_sprite_specs() -> void:
 
 
 # ---- 공통 ----
+
 
 func _text_exists(key: String) -> bool:
 	if key == "":

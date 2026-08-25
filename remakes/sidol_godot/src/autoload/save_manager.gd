@@ -7,9 +7,9 @@ extends Node
 
 const SLOT_COUNT := 3
 const SAVE_VERSION := 1
-const AUTO_SLOT := 0          # 0=오토세이브, 1..3=수동 슬롯
+const AUTO_SLOT := 0  # 0=오토세이브, 1..3=수동 슬롯
 
-var _autosave_reason := ""    # 비어있지 않으면 다음 필드 진입 시 오토세이브
+var _autosave_reason := ""  # 비어있지 않으면 다음 필드 진입 시 오토세이브
 
 
 func _slot_path(slot: int) -> String:
@@ -96,13 +96,13 @@ func has_any_save() -> bool:
 
 ## ---- 스냅샷 / 복원 ----
 
+
 func _snapshot() -> Dictionary:
 	var chests := {}
 	for floor_key: int in GameState.chest_overrides:
 		var cells := {}
 		for cell: Vector2i in GameState.chest_overrides[floor_key]:
-			cells["%d,%d" % [cell.x, cell.y]] = \
-					int(GameState.chest_overrides[floor_key][cell])
+			cells["%d,%d" % [cell.x, cell.y]] = int(GameState.chest_overrides[floor_key][cell])
 		chests[str(floor_key)] = cells
 	return {
 		"version": SAVE_VERSION,
@@ -122,8 +122,7 @@ func _apply(data: Dictionary) -> void:
 	GameState.player_cell = Vector2i(int(cell_arr[0]), int(cell_arr[1]))
 	var saved_stats: Dictionary = data.get("player_stats", {})
 	for key: String in GameState.player_stats:
-		GameState.player_stats[key] = int(saved_stats.get(key,
-				GameState.player_stats[key]))
+		GameState.player_stats[key] = int(saved_stats.get(key, GameState.player_stats[key]))
 	GameState.inventory.restore(data.get("inventory", []))
 	var flags_v: Variant = data.get("flags", {})
 	GameState.flags = flags_v if typeof(flags_v) == TYPE_DICTIONARY else {}
@@ -133,8 +132,7 @@ func _apply(data: Dictionary) -> void:
 		var cells := {}
 		for cell_str: String in chests[floor_str]:
 			var parts := cell_str.split(",")
-			cells[Vector2i(int(parts[0]), int(parts[1]))] = \
-					int(chests[floor_str][cell_str])
+			cells[Vector2i(int(parts[0]), int(parts[1]))] = int(chests[floor_str][cell_str])
 		GameState.chest_overrides[int(floor_str)] = cells
 	GameState.pending_encounter = {}
 	GameState.state_changed.emit()

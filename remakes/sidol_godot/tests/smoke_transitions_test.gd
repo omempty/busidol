@@ -4,8 +4,8 @@ extends Node
 ## 주의: 층변경 감지 즉시 입력을 해제한다(홀드 시 착지 후 계속 보행하는 것은 정상 동작).
 
 const FIELD_SCENE := preload("res://scenes/field.tscn")
-const UP_ANCHOR := Vector2i(100, 63)     # stairs_center_up   (+3,-2)
-const DOWN_ANCHOR := Vector2i(103, 63)   # stairs_center_down (-3,-2)
+const UP_ANCHOR := Vector2i(100, 63)  # stairs_center_up   (+3,-2)
+const DOWN_ANCHOR := Vector2i(103, 63)  # stairs_center_down (-3,-2)
 
 var failures: Array[String] = []
 
@@ -30,8 +30,9 @@ func _ready() -> void:
 		if expected == 3 and not GameState.has_flag("Q_F2_POSTER"):
 			# 잠금 확인 — 플래그 없이는 f2에 머물러야 한다.
 			Input.action_press(&"move_down")
-			var locked := await _wait_until(func() -> bool:
-				return GameState.current_floor != 2, 0.8)
+			var locked := await _wait_until(
+				func() -> bool: return GameState.current_floor != 2, 0.8
+			)
 			Input.action_release(&"move_down")
 			if locked:
 				failures.append("F2→F3 잠금 해제(플래그 없이 통과)")
@@ -42,8 +43,9 @@ func _ready() -> void:
 			player.teleport(UP_ANCHOR)
 			await get_tree().process_frame
 		Input.action_press(&"move_down")
-		var changed := await _wait_until(func() -> bool:
-			return GameState.current_floor == expected and not gate.active, 3.0)
+		var changed := await _wait_until(
+			func() -> bool: return GameState.current_floor == expected and not gate.active, 3.0
+		)
 		Input.action_release(&"move_down")
 		if not changed:
 			failures.append("상행 실패: f%d→%d 미발생" % [expected - 1, expected])
@@ -61,8 +63,10 @@ func _ready() -> void:
 		player.teleport(DOWN_ANCHOR)
 		await get_tree().process_frame
 		Input.action_press(&"move_down")
-		var changed := await _wait_until(func() -> bool:
-			return GameState.current_floor == descend_target and not gate.active, 3.0)
+		var changed := await _wait_until(
+			func() -> bool: return GameState.current_floor == descend_target and not gate.active,
+			3.0
+		)
 		Input.action_release(&"move_down")
 		if not changed:
 			failures.append("하행 실패: f%d→%d 미발생" % [descend_target + 1, descend_target])
@@ -92,9 +96,11 @@ func _ready() -> void:
 		Input.action_release(&"move_down")
 		var arrived := false
 		if started:
-			arrived = await _wait_until(func() -> bool:
-				return not gate.active \
-						and player.mover.grid_pos == door_anchor + Vector2i(0, 3), 3.0)
+			arrived = await _wait_until(
+				func() -> bool:
+					return not gate.active and player.mover.grid_pos == door_anchor + Vector2i(0, 3),
+				3.0
+			)
 		print("[smoke_tr] door @%s -> %s (ok=%s)" % [door_anchor, player.mover.grid_pos, arrived])
 		if not arrived:
 			failures.append("문 통과 실패 @%s" % str(door_anchor))
@@ -126,9 +132,11 @@ func _wait_until(pred: Callable, timeout: float) -> bool:
 func _find_door_anchor(rt: MapRuntime) -> Vector2i:
 	for y in range(rt.definition.height - 3):
 		for x in range(rt.definition.width - 1):
-			if rt.definition.attr_at(Vector2i(x, y + 2)) == 9 \
-					and rt.definition.attr_at(Vector2i(x + 1, y + 2)) == 9 \
-					and rt.is_passable(Vector2i(x, y)) \
-					and rt.is_passable(Vector2i(x + 1, y)):
+			if (
+				rt.definition.attr_at(Vector2i(x, y + 2)) == 9
+				and rt.definition.attr_at(Vector2i(x + 1, y + 2)) == 9
+				and rt.is_passable(Vector2i(x, y))
+				and rt.is_passable(Vector2i(x + 1, y))
+			):
 				return Vector2i(x, y)
 	return Vector2i(-9, -9)

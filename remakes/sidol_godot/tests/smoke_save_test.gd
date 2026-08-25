@@ -4,7 +4,7 @@ extends Node
 ##   godot --headless --path . res://tests/smoke_save.tscn
 ## 종료코드 0=PASS / 1=FAIL
 
-const SLOT := SaveManager.SLOT_COUNT   # 수동 슬롯 마지막 칸 사용(테스트 전용 파일)
+const SLOT := SaveManager.SLOT_COUNT  # 수동 슬롯 마지막 칸 사용(테스트 전용 파일)
 
 
 func _ready() -> void:
@@ -36,13 +36,11 @@ func _ready() -> void:
 		failures.append("floor=%d != 3" % GameState.current_floor)
 	if not GameState.has_flag("Q_F1_START"):
 		failures.append("플래그 미복원")
-	if int(GameState.player_stats["level"]) != 7 \
-			or int(GameState.player_stats["money"]) != 4321:
+	if int(GameState.player_stats["level"]) != 7 or int(GameState.player_stats["money"]) != 4321:
 		failures.append("스탯 미복원: %s" % str(GameState.player_stats))
 	if GameState.player_cell != Vector2i(12, 8):
 		failures.append("좌표 미복원: %s" % str(GameState.player_cell))
-	if not GameState.inventory.has(&"potion") \
-			or GameState.inventory.count(&"potion") != 3:
+	if not GameState.inventory.has(&"potion") or GameState.inventory.count(&"potion") != 3:
 		failures.append("인벤 미복원")
 	var cells := GameState.chest_overrides_for(3)
 	if cells.get(Vector2i(5, 5), -1) != 1:

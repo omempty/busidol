@@ -7,7 +7,7 @@ extends Node
 signal cutscene_requested(cutscene_id: StringName)
 signal sequence_requested(sequence_id: StringName)
 
-const AUTO_TICK_DELAY := 0.2   # auto 판정을 첫 물리 프레임에 몰아주지 않기 위한 지연
+const AUTO_TICK_DELAY := 0.2  # auto 판정을 첫 물리 프레임에 몰아주지 않기 위한 지연
 
 var _triggers: Array = []
 var _fired: Dictionary = {}

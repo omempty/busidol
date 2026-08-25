@@ -4,10 +4,10 @@ extends Node
 
 signal state_changed
 
-var current_floor: int = 1                # 원작 f — F1에서 시작
-var flags: Dictionary = {}                # 키: quests_v2.json 플래그 ID (Q_F1_START ...)
-var chest_overrides: Dictionary = {}      # {층:int -> {Vector2i -> attr}} — 맵 원본 불변 원칙(§3.3)
-var player_cell := Vector2i(-1, -1)       # 저장용 실시간 좌표 — field가 매 프레임 갱신(-1이면 미설정)
+var current_floor: int = 1  # 원작 f — F1에서 시작
+var flags: Dictionary = {}  # 키: quests_v2.json 플래그 ID (Q_F1_START ...)
+var chest_overrides: Dictionary = {}  # {층:int -> {Vector2i -> attr}} — 맵 원본 불변 원칙(§3.3)
+var player_cell := Vector2i(-1, -1)  # 저장용 실시간 좌표 — field가 매 프레임 갱신(-1이면 미설정)
 
 ## 원작 We 초기값(level=0은 미구현 레벨업 대신 표기상 1, hp50/ap30/money5000).
 var player_stats := {

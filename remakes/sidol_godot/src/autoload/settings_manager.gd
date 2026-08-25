@@ -20,7 +20,7 @@ const TEXT_SCALE := {
 var effect_speed: EffectSpeed = EffectSpeed.NORMAL
 var art_mode: ArtMode = ArtMode.LEGACY
 var text_size: TextSize = TextSize.MEDIUM
-var volumes := {}   # StringName -> float
+var volumes := {}  # StringName -> float
 
 
 func get_text_scale() -> float:
@@ -56,16 +56,14 @@ func load_settings() -> void:
 		return
 	var data: Dictionary = raw
 	for bus in BUSES:
-		volumes[bus] = clampf(float(data.get("vol_" + String(bus), DEFAULT_VOLUME)),
-				0.0, 1.0)
-	var speed_v: Variant = clampi(int(data.get("effect_speed", int(effect_speed))),
-			0, int(EffectSpeed.SKIP))
+		volumes[bus] = clampf(float(data.get("vol_" + String(bus), DEFAULT_VOLUME)), 0.0, 1.0)
+	var speed_v: Variant = clampi(
+		int(data.get("effect_speed", int(effect_speed))), 0, int(EffectSpeed.SKIP)
+	)
 	effect_speed = speed_v
-	var art_v: Variant = clampi(int(data.get("art_mode", int(art_mode))),
-			0, int(ArtMode.REMAKE))
+	var art_v: Variant = clampi(int(data.get("art_mode", int(art_mode))), 0, int(ArtMode.REMAKE))
 	art_mode = art_v
-	var ts_v: Variant = clampi(int(data.get("text_size", int(text_size))),
-			0, int(TextSize.LARGE))
+	var ts_v: Variant = clampi(int(data.get("text_size", int(text_size))), 0, int(TextSize.LARGE))
 	text_size = ts_v
 	_apply_all()
 

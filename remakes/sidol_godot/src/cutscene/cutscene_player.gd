@@ -113,8 +113,7 @@ func _execute(step: Dictionary) -> void:
 				GameState.set_flag(k, args[k])
 		"grant_item":
 			var g: Dictionary = step.get("args", {})
-			GameState.inventory.add(StringName(str(g.get("item", ""))),
-					int(g.get("count", 1)))
+			GameState.inventory.add(StringName(str(g.get("item", ""))), int(g.get("count", 1)))
 		"craft":
 			_execute_craft(step.get("args", {}))
 		"minigame_quiz":
@@ -127,8 +126,9 @@ func _execute(step: Dictionary) -> void:
 		"actor_move":
 			await _actor_move(step)
 		"start_battle":
-			GameState.pending_encounter = {"enemies": step.get("enemies", []),
-					"on_win_flag": str(step.get("on_win_flag", ""))}
+			GameState.pending_encounter = {
+				"enemies": step.get("enemies", []), "on_win_flag": str(step.get("on_win_flag", ""))
+			}
 			_running = false
 			get_tree().change_scene_to_file("res://scenes/battle.tscn")
 		_:
@@ -160,7 +160,8 @@ func _run_choice(args: Dictionary) -> void:
 
 
 ## 선택지 오버레이 — ↑↓ 이동, Enter/Z 확정. 컷신 진행은 picked 이후 재개.
-class ChoiceUI extends Control:
+class ChoiceUI:
+	extends Control
 	signal picked(idx: int)
 
 	var _labels: Array[Label] = []
@@ -179,8 +180,7 @@ class ChoiceUI extends Control:
 		for opt: Dictionary in options:
 			var lbl := Label.new()
 			var raw_text := str(opt.get("text", ""))
-			var shown := Database.text(raw_text) \
-					if raw_text.begins_with("@") else raw_text
+			var shown := Database.text(raw_text) if raw_text.begins_with("@") else raw_text
 			lbl.text = "▶ " + shown
 			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			lbl.add_theme_font_size_override("font_size", 18)
@@ -190,8 +190,9 @@ class ChoiceUI extends Control:
 
 	func _refresh() -> void:
 		for i in range(_labels.size()):
-			_labels[i].add_theme_color_override("font_color",
-					Color(1.0, 0.95, 0.6) if i == _idx else Color(0.8, 0.8, 0.9))
+			_labels[i].add_theme_color_override(
+				"font_color", Color(1.0, 0.95, 0.6) if i == _idx else Color(0.8, 0.8, 0.9)
+			)
 
 	func _move(dir: int) -> void:
 		_idx = wrapi(_idx + dir, 0, _labels.size())
@@ -202,8 +203,7 @@ class ChoiceUI extends Control:
 			_move(-1)
 		elif event.is_action_pressed(&"move_down"):
 			_move(1)
-		elif event.is_action_pressed(&"ui_accept") \
-				or event.is_action_pressed(&"interact"):
+		elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"interact"):
 			picked.emit(_idx)
 			get_viewport().set_input_as_handled()
 
@@ -213,8 +213,7 @@ func _shake(times: int, power: float) -> void:
 		return
 	var base := _field.position
 	for i in maxi(times, 1):
-		_field.position = base + Vector2(randf_range(-power, power),
-				randf_range(-power, power))
+		_field.position = base + Vector2(randf_range(-power, power), randf_range(-power, power))
 		await get_tree().create_timer(SHAKE_STEP).timeout
 	_field.position = base
 
@@ -233,11 +232,11 @@ func _actor_move(step: Dictionary) -> void:
 	if target == null:
 		push_warning("actor_move 대상 없음: %s" % who)
 		return
-	var px := Vector2(float(at_arr[0]) + 0.5, float(at_arr[1]) + 1.0) \
-			* MapDefinition.TILE_PX
+	var px := Vector2(float(at_arr[0]) + 0.5, float(at_arr[1]) + 1.0) * MapDefinition.TILE_PX
 	var tw := create_tween()
-	tw.tween_property(target, "position", px, dur)\
-			.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(target, "position", px, dur).set_trans(Tween.TRANS_QUAD).set_ease(
+		Tween.EASE_IN_OUT
+	)
 	await tw.finished
 
 
@@ -251,6 +250,7 @@ static func load_cutscene(cutscene_id: StringName) -> Dictionary:
 
 
 const MINIGAMES_DIR := "res://data/minigames"
+
 
 ## 퀴즈 미니게임 — 통과(passed=true)할 때까지 재도전. 실패해도 컷신은 계속.
 func _run_quiz(minigame_id: StringName) -> void:
@@ -294,8 +294,7 @@ func _execute_craft(args: Dictionary) -> void:
 	var requires: Dictionary = args.get("requires", {})
 	for item_id: String in requires:
 		if inv.count(StringName(item_id)) < int(requires[item_id]):
-			push_warning("craft 재료 부족: %s — 컷신 중단(%s)" %
-					[item_id, _cutscene_id])
+			push_warning("craft 재료 부족: %s — 컷신 중단(%s)" % [item_id, _cutscene_id])
 			_running = false
 			return
 	for item_id2: String in requires:

@@ -3,7 +3,6 @@ extends RefCounted
 ## 런타임 맵 쿼리 + 오버라이드 계층 — 맵 원본은 불변, 변경만 기록 (02_design/01 §3.3).
 ## 통행 규칙: ATT 0(PASSABLE)·2(OVERHEAD)만 통과. 그 외(벽/NPC ID/상자/방 ID) 차단.
 
-
 var definition: MapDefinition
 var overrides := {}  # Vector2i -> {"attr": int}
 

@@ -6,7 +6,13 @@ extends CanvasLayer
 const FIELD_SCENE := "res://scenes/field.tscn"
 const TITLE_SCENE := "res://scenes/main.tscn"
 const ROOT_ITEMS: Array[String] = [
-	"계속하기", "세이브", "로드", "진행 기록", "도움말", "설정", "타이틀로",
+	"계속하기",
+	"세이브",
+	"로드",
+	"진행 기록",
+	"도움말",
+	"설정",
+	"타이틀로",
 ]
 
 enum Screen { ROOT, SAVE, LOAD, LOG, HELP, SETTINGS }
@@ -163,5 +169,6 @@ func _refresh() -> void:
 		var selected := i == _index
 		var prefix := "> " if selected else "  "
 		_root_labels[i].text = prefix + ROOT_ITEMS[i]
-		_root_labels[i].add_theme_color_override("font_color",
-				Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1))
+		_root_labels[i].add_theme_color_override(
+			"font_color", Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1)
+		)

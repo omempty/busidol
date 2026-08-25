@@ -39,11 +39,20 @@ func _ready() -> void:
 		failures.append("공격 데미지 미적용")
 
 	# --- 2) 스킬(전체 대상 화염) 안무 ---
-	battle._on_skill_selected({
-		"id": "flame_beaker_throw", "display_key": "테스트 화염",
-		"element": "fire", "targeting": "all_enemies", "power": 30,
-		"status_effects": [], "choreography_id": "atk_flame_throw",
-	})
+	(
+		battle
+		. _on_skill_selected(
+			{
+				"id": "flame_beaker_throw",
+				"display_key": "테스트 화염",
+				"element": "fire",
+				"targeting": "all_enemies",
+				"power": 30,
+				"status_effects": [],
+				"choreography_id": "atk_flame_throw",
+			}
+		)
+	)
 	waited = 0.0
 	while (battle._runner.is_playing() or battle._busy) and waited < TIMEOUT:
 		await get_tree().process_frame
@@ -52,8 +61,7 @@ func _ready() -> void:
 		failures.append("스킬 안무 타임아웃")
 
 	# --- 3) battle_moves 데이터 무결성: skills.json의 choreography_id 전부 존재 ---
-	var raw: Variant = JSON.parse_string(
-			FileAccess.get_file_as_string("res://data/skills.json"))
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/skills.json"))
 	if typeof(raw) == TYPE_DICTIONARY:
 		for s: Dictionary in raw.get("skills", []):
 			var cid := StringName(str(s.get("choreography_id", "")))
@@ -62,9 +70,11 @@ func _ready() -> void:
 				failures.append("안무 데이터 없음: %s" % cid)
 			else:
 				var mv: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
-				if typeof(mv) != TYPE_DICTIONARY \
-						or str(mv.get("id", "")) != str(cid) \
-						or not _has_apply_damage(mv):
+				if (
+					typeof(mv) != TYPE_DICTIONARY
+					or str(mv.get("id", "")) != str(cid)
+					or not _has_apply_damage(mv)
+				):
 					failures.append("안무 데이터 불량: %s" % cid)
 
 	# --- 4) 보스 데이터 로드 + 회피 페이즈 실행 ---
@@ -81,8 +91,12 @@ func _ready() -> void:
 		await get_tree().process_frame
 		var hp_before2: int = boss.player_combatant.hp
 		var hits: int = await boss._run_dodge_phase(bdef)
-		print("[smoke_battle] dodge hits=%d player hp %d -> %d" %
-				[hits, hp_before2, boss.player_combatant.hp])
+		print(
+			(
+				"[smoke_battle] dodge hits=%d player hp %d -> %d"
+				% [hits, hp_before2, boss.player_combatant.hp]
+			)
+		)
 		if boss._dodge != null and boss._dodge.visible:
 			failures.append("회피 페이즈 종료 후 미숨김")
 		# 헤드리스(입력 없음) → 0히트가 정상. 피해 0 확인.
@@ -98,7 +112,7 @@ func _has_apply_damage(move: Variant) -> bool:
 		return false
 	var channels: Dictionary = move.get("channels", {})
 	if not channels.has("logic"):
-		return true   # 버프 계열은 logic 생략 허용
+		return true  # 버프 계열은 logic 생략 허용
 	for kf: Dictionary in channels["logic"]:
 		if bool(kf.get("apply_damage", false)):
 			return true
