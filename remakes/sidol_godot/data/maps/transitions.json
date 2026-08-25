@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "_comment": "층 전환 정의 — 원작 walk_floor()/floor_move() 좌표 데이터화(GOODITEM.C L1374). dir=트리거 입력 방향, guard=층 범위 클램프. requires_flag는 Phase 7 마스터 게이트(Q_F2_POSTER 등)에서 채움.",
+  "_comment": "층 전환 정의 — 원작 walk_floor()/floor_move() 좌표 데이터화(GOODITEM.C L1374). dir=트리거 입력 방향, guard=층 범위 클램프. requires_flag는 Phase 7 마스터 게이트(Q_F2_POSTER 등)에서 채움. [8/25] center 계단 guard에서 F0 제외 — 원본 F0.MAP 대조 결과 지하는 동측(east) 계단만 연결(center 앵커/착지가 F0에서 벽). east는 F0↔F1 포함 전 층 유효.",
   "transitions": [
     {
       "id": "stairs_center_up",
@@ -8,7 +8,7 @@
       "trigger_dir": "down",
       "floor_delta": 1,
       "spawn_offset": [3, -2],
-      "guard_min_floor": 0,
+      "guard_min_floor": 1,
       "guard_max_floor": 4,
       "requires_flag": null
     },
@@ -18,7 +18,7 @@
       "trigger_dir": "down",
       "floor_delta": -1,
       "spawn_offset": [-3, -2],
-      "guard_min_floor": 1,
+      "guard_min_floor": 2,
       "guard_max_floor": 5,
       "requires_flag": null
     },
