@@ -26,3 +26,7 @@ remakes/sidol_godot/assets/originals_ref/**/*.import
 
 # ===== 이전 하위 레포 흔적 =====
 remakes/sidol_godot/.git/
+
+# ===== 도구 산출물 =====
+.playwright-mcp/
+viewer_map.png
