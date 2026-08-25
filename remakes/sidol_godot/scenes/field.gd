@@ -89,6 +89,7 @@ func _ready() -> void:
 	cutscene_player.finished.connect(_on_cutscene_finished)
 
 	add_child(PauseMenu.new())
+	add_child(DebugPanel.new())   # F10 — 디버그 빌드 한정(패널 내부 가드)
 
 	AudioManager.play_bgm(&"bgm_field")
 
