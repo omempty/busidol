@@ -1,6 +1,5 @@
 {
   "schema_version": 1,
-  "_comment": "층별 NPC 배치 — pos는 앵커 셀(NPC는 1셀 점유). 통행 불가 셀이면 로더가 인접 보정.",
   "floor": 1,
   "npcs": [
     {

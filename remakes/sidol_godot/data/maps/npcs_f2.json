@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "floor": 2,
+  "npcs": [
+    { "id": "rescue_girl", "name": "여학생", "pos": [10, 10], "sequence_id": "npc_girl_rescue", "tint": [1.0, 0.9, 0.9] },
+    { "id": "nothing_man", "name": "아무 도움 안 되는 사람", "pos": [15, 10], "sequence_id": "nothing_man", "tint": [0.7, 0.7, 0.7] },
+    { "id": "dev1", "name": "HP실 개발자 1", "pos": [20, 15], "sequence_id": "f2_dev1", "tint": [0.9, 1.0, 0.9] },
+    { "id": "dev2", "name": "HP실 개발자 2", "pos": [21, 15], "sequence_id": "f2_dev2", "tint": [0.9, 0.9, 1.0] }
+  ]
+}

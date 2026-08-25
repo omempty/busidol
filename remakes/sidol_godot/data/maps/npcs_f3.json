@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "floor": 3,
+  "npcs": [
+    { "id": "lab_student", "name": "랩실생도", "pos": [12, 12], "sequence_id": "f3_lab_student", "tint": [1.0, 1.0, 0.8] }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "floor": 4,
+  "npcs": [
+    { "id": "afterschool_student", "name": "잔류생", "pos": [14, 14], "sequence_id": "f4_afterschool_student", "tint": [0.8, 0.8, 0.8] }
+  ]
+}

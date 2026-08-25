@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "floor": 0,
+  "npcs": [
+    { "id": "cafeteria_girl", "name": "식당 아가씨", "pos": [10, 10], "sequence_id": "cafeteria_girl_shop", "tint": [1.0, 0.8, 0.8] },
+    { "id": "librarian", "name": "지하 사서", "pos": [15, 15], "sequence_id": "f0_librarian", "tint": [0.8, 0.8, 1.0] },
+    { "id": "guard_idle", "name": "수위 아저씨", "pos": [20, 15], "sequence_id": "guard_idle", "tint": [0.8, 1.0, 0.8] }
+  ]
+}
