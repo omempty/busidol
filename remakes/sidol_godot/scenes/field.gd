@@ -31,6 +31,7 @@ func _edge(action: StringName) -> bool:
 func _ready() -> void:
 	var def := MapDefinition.load_from_json("res://data/maps/f%d.json" % GameState.current_floor)
 	runtime = MapRuntime.new(def)
+	_apply_chest_overrides()
 
 	var renderer := MapRenderer.new()
 	add_child(renderer)
@@ -87,12 +88,18 @@ func _ready() -> void:
 	cutscene_player.setup(self)
 	cutscene_player.finished.connect(_on_cutscene_finished)
 
+	add_child(PauseMenu.new())
+
 	AudioManager.play_bgm(&"bgm_field")
+
+	SaveManager.consume_autosave()
 
 
 func _physics_process(_delta: float) -> void:
 	if player == null:
 		return
+
+	GameState.player_cell = player.mover.grid_pos
 
 	# 컷신 재생 중 — 입력·인카운터 전면 차단
 	if cutscene_player != null and cutscene_player.is_running():
@@ -159,6 +166,7 @@ func _chest_in_front() -> Vector2i:
 func _open_chest(cell: Vector2i) -> void:
 	var attr := runtime.definition.attr_at(cell)
 	runtime.set_override_attr(cell, 1)   # 빈 상자 처리
+	GameState.set_chest_override(cell, 1)   # 세이브 유지 대상
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
 	AudioManager.play_sfx(&"sfx_item_get")
 	_show_pickup_popup("아이템 획득!")
@@ -181,6 +189,7 @@ func _show_pickup_popup(text: String) -> void:
 func rebuild_floor(new_anchor: Vector2i) -> void:
 	var def := MapDefinition.load_from_json("res://data/maps/f%d.json" % GameState.current_floor)
 	runtime = MapRuntime.new(def)
+	_apply_chest_overrides()
 	for child in get_children():
 		if child is MapRenderer:
 			child.queue_free()
@@ -189,6 +198,13 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	renderer.build(runtime)
 	player.attach_map(runtime, new_anchor)
 	minimap.build(def)
+
+
+## 저장된 상자 개봉 상태를 런타임 오버라이드에 재적용 — 세이브/로드·층전환 공용.
+func _apply_chest_overrides() -> void:
+	var cells := GameState.chest_overrides_for(GameState.current_floor)
+	for cell: Vector2i in cells:
+		runtime.set_override_attr(cell, int(cells[cell]))
 
 
 ## ---- NPC / 대화 (Phase 3) ----
@@ -319,7 +335,11 @@ func get_runtime() -> MapRuntime:
 
 
 ## 원본 스폰(9,9)이 막혀 있으면 나선 탐색으로 최근 통행 셀 반환.
+## 세이브 복원 시에는 저장 좌표가 유효하면 최우선 사용.
 func find_spawn(def: MapDefinition) -> Vector2i:
+	if GameState.player_cell.x >= 0 \
+			and runtime.is_passable(GameState.player_cell):
+		return GameState.player_cell
 	if runtime.is_passable(SPAWN_DEFAULT):
 		return SPAWN_DEFAULT
 	for r in range(1, SEARCH_RADIUS):

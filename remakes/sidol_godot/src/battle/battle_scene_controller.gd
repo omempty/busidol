@@ -309,6 +309,8 @@ func _exit_battle(result: StringName) -> void:
 	GameState.player_stats["money"] += 50 if result == &"win" else 0
 	if result == &"win" and not _on_win_flag.is_empty():
 		GameState.set_flag(_on_win_flag, true)
+	if result == &"win":
+		SaveManager.request_autosave("전투 승리")   # 필드 복귀 후 consume
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 

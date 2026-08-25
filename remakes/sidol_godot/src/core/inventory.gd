@@ -60,3 +60,22 @@ func all_slots() -> Array[Dictionary]:
 func clear() -> void:
 	_slots.clear()
 	changed.emit()
+
+
+## 세이브용 직렬화 — SaveManager가 JSON에 그대로 넣는다.
+func to_data() -> Array:
+	var out: Array = []
+	for slot in _slots:
+		out.append({"item_id": str(slot["item_id"]), "count": int(slot["count"])})
+	return out
+
+
+## 세이브 복원 — [{"item_id": String, "count": int}] 형태.
+func restore(data: Array) -> void:
+	_slots.clear()
+	for entry: Dictionary in data:
+		_slots.append({
+			"item_id": StringName(str(entry["item_id"])),
+			"count": int(entry["count"]),
+		})
+	changed.emit()

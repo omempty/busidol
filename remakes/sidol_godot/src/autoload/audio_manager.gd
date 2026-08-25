@@ -17,6 +17,7 @@ var _current_bgm := &""
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS   # 일시정지 중에도 BGM 유지(PauseMenu)
 	_bgm_player = AudioStreamPlayer.new()
 	_bgm_player.bus = &"BGM"
 	_bgm_player.finished.connect(_on_bgm_finished)

@@ -109,6 +109,9 @@ func _start_floor_change(t: Dictionary) -> void:
 		var new_anchor := Vector2i(int(t["anchor"][0]), int(t["anchor"][1])) \
 				+ Vector2i(int(t["spawn_offset"][0]), int(t["spawn_offset"][1]))
 		field.rebuild_floor(new_anchor)
+		# 오토세이브(Q1) — 도착 좌표 확정 후 즉시 기록(제자비 재구축이라 consume 경로 불용)
+		GameState.player_cell = new_anchor
+		SaveManager.save_slot(SaveManager.AUTO_SLOT, "층 이동")
 		var fade_back := create_tween()
 		fade_back.tween_property(_overlay, "color:a", 0.0, FADE_TIME)
 		fade_back.finished.connect(func() -> void:
