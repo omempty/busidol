@@ -3,17 +3,92 @@
   "schema_version": 1,
   "_comment": "에필로그 — 씬 E-1 후일담(@c601~@c605) + E-2 메타 엔딩. 종료 후 크레딧룸으로 전환(스탭롤=엔딩 크레딧).",
   "steps": [
-    { "op": "sfx", "id": "sfx_door_open" },
-    { "op": "dialogue", "steps": [
-      { "speaker": "재영", "text": "@c601" },
-      { "speaker": "부싯돌", "text": "@c602" },
-      { "speaker": "완종", "text": "@c603" },
-      { "speaker": "삼룡", "text": "@c604" },
-      { "speaker": "수위 아저씨", "text": "@c605" }
-    ] },
-    { "op": "set_flags", "args": { "Q_ENDING": true } },
-    { "op": "fade_out", "seconds": 1.0 },
-    { "op": "wait", "seconds": 0.8 },
-    { "op": "change_scene", "path": "res://scenes/credit_room.tscn" }
+    {
+      "op": "sfx",
+      "id": "sfx_door_open"
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c526"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c527"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c528"
+        },
+        {
+          "speaker": "(시스템)",
+          "text": "@c529"
+        },
+        {
+          "speaker": "(시스템)",
+          "text": "@c530"
+        },
+        {
+          "speaker": "재영",
+          "text": "@c601"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c602"
+        },
+        {
+          "speaker": "완종",
+          "text": "@c603"
+        },
+        {
+          "speaker": "삼룡",
+          "text": "@c604"
+        },
+        {
+          "speaker": "수위 아저씨",
+          "text": "@c605"
+        },
+        {
+          "speaker": "(상황)",
+          "text": "@c606"
+        },
+        {
+          "speaker": "재영",
+          "text": "@c607"
+        },
+        {
+          "speaker": "선배",
+          "text": "@c608"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c609"
+        },
+        {
+          "speaker": "모두",
+          "text": "@c610"
+        }
+      ]
+    },
+    {
+      "op": "set_flags",
+      "args": {
+        "Q_ENDING": true
+      }
+    },
+    {
+      "op": "fade_out",
+      "seconds": 1.0
+    },
+    {
+      "op": "wait",
+      "seconds": 0.8
+    },
+    {
+      "op": "change_scene",
+      "path": "res://scenes/credit_room.tscn"
+    }
   ]
 }

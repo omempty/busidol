@@ -3,19 +3,143 @@
   "schema_version": 1,
   "_comment": "최종보스 각성 — 마스터 시나리오 씬 5-2/5-3 (@c507~@c515). 종료 시 start_battle로 SYS_BUILDER 전투 진입.",
   "steps": [
-    { "op": "sfx", "id": "alarm_system" },
-    { "op": "shake", "times": 6, "power": 4 },
-    { "op": "dialogue", "steps": [
-      { "speaker": "(기계음)", "text": "@c507" },
-      { "speaker": "부싯돌", "text": "@c508" },
-      { "speaker": "모교수", "text": "@c509" },
-      { "speaker": "SYS_BUILDER", "text": "@c510" },
-      { "speaker": "SYS_BUILDER", "text": "@c511" },
-      { "speaker": "SYS_BUILDER", "text": "@c512" },
-      { "speaker": "부싯돌", "text": "@c513" },
-      { "speaker": "부싯돌", "text": "@c514" },
-      { "speaker": "SYS_BUILDER", "text": "@c515" }
-    ] },
-    { "op": "start_battle", "enemies": ["sys_builder"], "on_win_flag": "q_f5_ai_battle_won" }
+    {
+      "op": "sfx",
+      "id": "alarm_system"
+    },
+    {
+      "op": "shake",
+      "times": 6,
+      "power": 4
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "(기계음)",
+          "text": "@c507"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c508"
+        },
+        {
+          "speaker": "모교수",
+          "text": "@c509"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c510"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c511"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c512"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c513"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c514"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c515"
+        }
+      ]
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "부싯돌",
+          "text": "@c516"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c517"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c518"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c519"
+        }
+      ]
+    },
+    {
+      "op": "choice",
+      "args": {
+        "options": [
+          {
+            "text": "@c520",
+            "steps": [
+              {
+                "op": "dialogue",
+                "steps": [
+                  {
+                    "speaker": "부싯돌",
+                    "text": "@c520"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "text": "@c531",
+            "steps": [
+              {
+                "op": "dialogue",
+                "steps": [
+                  {
+                    "speaker": "부싯돌",
+                    "text": "@c531"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c521"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c522"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c523"
+        },
+        {
+          "speaker": "SYS_BUILDER",
+          "text": "@c524"
+        },
+        {
+          "speaker": "(상태창)",
+          "text": "@c525"
+        }
+      ]
+    },
+    {
+      "op": "start_battle",
+      "enemies": [
+        "sys_builder"
+      ],
+      "on_win_flag": "q_f5_ai_battle_won"
+    }
   ]
 }
