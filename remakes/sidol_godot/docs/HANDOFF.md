@@ -293,6 +293,40 @@ shake/wait).
 5. 검증: validate + smoke_selfcheck + **tools/viewer.html 정합성 탭 FAIL 0 확인**
    (뷰어실행.bat). 커밋은 자기 파일만(dialogue.json, cutscenes 2종).
 
+### 다음 세션 연계 (8/25 3차 세션 종료 시점)
+
+**시나리오 데이터 완충 상태**: WP-1~6 전부 완료·검증·커밋. WP-5까지 포함해
+마스터 §3 전 씬이 데이터로 존재한다. 시나리오 LLM 워크플로우 임무 완료 —
+추가 위탁 작업 없음(다음은 엔진 백로그와 Phase 9 잔여).
+
+**choice op 스파이크 완료**: CutscenePlayer `choice`(선택 강제·수렴형, ChoiceUI
+내부 클래스) + tests/smoke_choice(입력 시뮬레이션 PASS). 검증실행.bat 10단계.
+뷰어도 choice 스텝 표시 지원.
+
+**남은 엔진 백로그 (우선순위순 — 다음 세션 착수 후보)**:
+
+1. **F2→F3 계단 잠금(순수 데이터 해법 확정·미적용)**: center_up/east_up을
+   guard 단위로 분할 — {guard 1-1, requires 없음}, {guard 2-2,
+   requires_flag=Q_F2_POSTER}, {guard 3-4, 없음}. TransitionGate는 행 단위
+   continue라 다중 행 무충돌. smoke_transitions에 Q_F2_POSTER 프리셋 추가 필요.
+2. **Q_F1_START 의미론 정밀화**: 현재 오프닝 시청=세팅(근사). 정밀화 절차 —
+   monsters.json dworm에 first_win_flag 필드 + field._trigger_encounter가
+   get_enemy_def에서 전달 + f1_opening done_flag를 내부 마커 q_f1_opening_seen으로
+   교체 + smoke_field/dialogue/selfcheck 프리셋 갱신.
+3. **Q_F5_BOSS_CURE**: 모교수 괴물·제압·투약 연출 미창작 — 신규 보스 데이터 필요.
+   스코프 협의 전까지 Q_F5_AI_BATTLE 직행 상태.
+4. Q_HP_ALL "전원 대화" 판정 / Q_QUIZ_ALL 10문항 메타 — 현재 근사 세터 운영
+   (hp_room_visit·quiz_paline). 정밀화는 신규 메커니즘 필요.
+5. Godot features=4.3 → 4.7 승격 검토(로컬 4.7.2 — 에디터 저장 시 재변경 방지).
+6. B2 gdformat/pre-commit(낮음).
+
+**뷰어**: `뷰어실행.bat`(HTTP 모드 권장) 또는 tools/viewer.html 직접 열기
+(파일 모드 — data 폴더 선택). 맵 오버레이·퀘스트 체인·시퀀스·컷신·정합성 대시보드.
+choice 스텝 표시 지원.
+
+**검증**: 검증실행.bat 10단계(마지막 = smoke_choice). 개별 실행 시 --quit-after
+병행 필수.
+
 ### 구현 노트 (P8 세션 추가)
 
 - **LLM 워크플로우**: extract_sprites.py(numpy 벡터화 flood-fill, 935프레임 수십 초,
