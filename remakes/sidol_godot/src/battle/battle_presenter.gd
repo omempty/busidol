@@ -54,17 +54,13 @@ func build_sprites(enemy_count: int) -> void:
 
 	for i in enemy_count:
 		var es := Sprite2D.new()
-		var e_tex_path := "res://assets/originals_ref/bmp_spr/e%d/frame_000.bmp" \
-				% (i % 8 + 1)
-		# 스테일 .import로 exists()=true여도 load가 실패할 수 있다 — 결과 기준 폴백
-		var etex: Texture2D = load(e_tex_path) \
-				if ResourceLoader.exists(e_tex_path) else null
-		if etex == null:
-			var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-			img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6),
-					randf_range(0.2, 0.5)))
-			etex = ImageTexture.create_from_image(img)
-		es.texture = etex
+		# 적 아트는 LLM 리메이크 파이프라인(assets/raw/llm → 30_packed) 확정 후 교체.
+		# 원본 bmp(originals_ref)는 참조자료로 격하돼 임포트 불가 — 로드 시도 시
+		# 매 전투 ERROR 스팸이 발생하므로 플레이스홀더만 생성한다(8/25 스윕 발견).
+		var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+		img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6),
+				randf_range(0.2, 0.5)))
+		es.texture = ImageTexture.create_from_image(img)
 		es.position = Vector2(600 + i * 100, 180)
 		es.scale = Vector2(1.5, 1.5)
 		es.set_meta(&"base_pos", es.position)

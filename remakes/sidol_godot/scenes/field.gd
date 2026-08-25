@@ -336,11 +336,16 @@ func get_runtime() -> MapRuntime:
 
 
 ## 원본 스폰(9,9)이 막혀 있으면 나선 탐색으로 최근 통행 셀 반환.
-## 세이브 복원 시에는 저장 좌표가 유효하면 최우선 사용.
+## 세이브 복원·디버그 텔레포트의 착지 좌표가 최우선 — 막혔으면 그 근방부터 보정.
 func find_spawn(def: MapDefinition) -> Vector2i:
-	if GameState.player_cell.x >= 0 \
-			and runtime.is_passable(GameState.player_cell):
-		return GameState.player_cell
+	var saved := GameState.player_cell
+	if saved.x >= 0 and runtime.is_passable(saved):
+		return saved
+	if saved.x >= 0:
+		var near := _nearest_passable(saved)
+		if runtime.is_passable(near):
+			push_warning("착지 보정: %s -> %s" % [saved, near])
+			return near
 	if runtime.is_passable(SPAWN_DEFAULT):
 		return SPAWN_DEFAULT
 	for r in range(1, SEARCH_RADIUS):

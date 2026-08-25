@@ -11,6 +11,7 @@ extends Node
 ##  5) 세이브 라운드트립             — Q1 회귀(smoke_save의 런타임판)
 ##  6) 트리거 done_flag 스킵 규약    — 8/25 실제 버그(F1 재방문 컷신 재생) 회귀 방지
 ##  7) 인벤토리 불변식               — add/remove/count 경계
+##  8) 전층 착지 좌표 유효성(warn)    — transitions 오프셋과 맵 통행 정합(f0 격차 추적용)
 
 const FLOORS := [1, 2, 3, 0, 4, 5]   # 마스터 시나리오 진행 순서
 
@@ -26,6 +27,7 @@ func run_all() -> PackedStringArray:
 		_check_inventory(),
 		_check_save_roundtrip(),
 		_check_trigger_done_flag_skip(),
+		_check_floor_landings(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -199,3 +201,41 @@ func _monsters_raw() -> Dictionary:
 		return {}
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
 	return raw if typeof(raw) == TYPE_DICTIONARY else {}
+
+
+## 착지 좌표 = transitions(anchor+offset)가 대상 맵에서 통행 가능해야 한다.
+## 위반은 [warn] — 현재 f0가 원작 좌표공유 규약(04_game_systems §1.2)과 어긋난다.
+func _check_floor_landings() -> Array:
+	var lines: Array = []
+	var path := "res://data/maps/transitions.json"
+	if not FileAccess.file_exists(path):
+		return _fail("transitions.json 없음")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		return _fail("transitions.json 파싱 실패")
+	for t: Dictionary in raw.get("transitions", []):
+		var delta := int(t.get("floor_delta", 0))
+		var gmin := int(t.get("guard_min_floor", -99))
+		var gmax := int(t.get("guard_max_floor", 99))
+		var a: Array = t.get("anchor", [0, 0])
+		var o: Array = t.get("spawn_offset", [0, 0])
+		var land := Vector2i(int(a[0]) + int(o[0]), int(a[1]) + int(o[1]))
+		var checked := {}
+		for src in range(gmin, gmax + 1):
+			var target := src + delta
+			if checked.has(target):
+				continue
+			checked[target] = true
+			var def := MapDefinition.load_from_json(
+					"res://data/maps/f%d.json" % target)
+			if def == null:
+				lines += _fail("f%d 맵 없음(착지 검증 불가)" % target)
+				continue
+			if def.attr_at(land) != 0 and def.attr_at(land) != 2:
+				lines.append("[warn] f%d 착지 %s 불통행 (%s)" %
+						[target, land, str(t.get("id"))])
+	if lines.any(func(l: String) -> bool: return l.begins_with("[FAIL]")):
+		return lines
+	if lines.is_empty():
+		lines += _ok("전 전환 착지 좌표 통행")
+	return lines
