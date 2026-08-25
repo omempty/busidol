@@ -413,7 +413,11 @@ function showCut(k){
   $("#cutDetail").innerHTML=`<h3 style="margin-bottom:8px">${esc(k)}</h3>`
     +(c.steps||[]).map((s,i)=>{
       let body="";
-      if(s.op==="dialogue")
+      if(s.op==="choice"&&s.args)
+        body=(s.args.options||[]).map((o,i)=>`<div class="step" style="margin:4px 0">
+          ${chip("b-flag",(i+1)+". "+o.text)} <span class="small">→ ${(o.steps||[]).length}스텝</span></div>`).join("")
+          +`<span class="small">수렴형 선택 — 선택 후 다음 스텝 진행</span>`;
+      else if(s.op==="dialogue")
         body=(s.steps||[]).map(d=>`<div class="step" style="margin:4px 0">
           <span class="sp">${esc(d.speaker||"")}</span><br>${resolveText(d.text)}</div>`).join("");
       else{

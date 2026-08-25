@@ -6,7 +6,8 @@ extends SceneTree
 const DATA := "res://data/"
 const KNOWN_OPS := ["dialogue", "wait", "fade_in", "fade_out", "shake", "sfx",
 		"bgm", "set_flags", "grant_item", "craft", "minigame_quiz",
-		"minigame_battery", "change_scene", "actor_move", "start_battle", "end"]
+		"minigame_battery", "change_scene", "actor_move", "start_battle",
+		"choice", "end"]
 const KNOWN_CHANNELS := ["sprite", "fx", "camera", "screen", "audio", "logic"]
 const KNOWN_TRIGGER_TYPES := ["zone", "interact", "auto"]
 
@@ -126,6 +127,14 @@ func _validate_step(file: String, step: Dictionary) -> void:
 		"start_battle":
 			for eid: String in step.get("enemies", []):
 				pass  # 적 ID 존재는 Database 로드 규칙상 느슨 허용(보스/floor 병합)
+		"choice":
+			var cargs: Dictionary = step.get("args", {})
+			for opt: Dictionary in (cargs.get("options", []) as Array):
+				if not _text_exists(str(opt.get("text", ""))):
+					_err("cutscenes/%s 선택지 텍스트 없음: %s" %
+							[file, opt.get("text")])
+				for sub: Dictionary in (opt.get("steps", []) as Array):
+					_validate_step(file, sub)
 		"craft":
 			var args: Dictionary = step.get("args", {})
 			for section: String in ["requires", "grant"]:

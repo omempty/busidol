@@ -8,6 +8,8 @@ extends CanvasLayer
 ##   sfx/bgm {id}   set_flags {args:{k:v}}   start_battle {enemies:[]}
 ##   grant_item {args:{item, count}}   craft {args:{requires:{}, grant:{}, flag}}
 ##   minigame_quiz {id} — 통과할 때까지 재도전 후 다음 스텝 진행
+##   choice {args:{options:[{text(@t/@c), steps:[op...]}]}} — 선택 강제, 수렴형.
+##     각 옵션의 steps를 서브 열로 실행 후 다음 스텝 진행(WP-5, D4 승인).
 
 signal finished(cutscene_id: StringName)
 
@@ -62,15 +64,26 @@ func is_running() -> bool:
 
 
 func _run() -> void:
-	while _running and _idx < _steps.size():
-		var step: Dictionary = _steps[_idx]
-		_idx += 1
-		await _execute(step)
+	await _run_steps(_steps)
 	if not _running:
 		return
 	_running = false
 	visible = false
 	finished.emit(_cutscene_id)
+
+
+## 스텝 열 실행 — choice op의 서브 열 재귀를 위해 본열과 분리.
+func _run_steps(steps: Array) -> void:
+	var saved_steps := _steps
+	var saved_idx := _idx
+	_steps = steps
+	_idx = 0
+	while _running and _idx < _steps.size():
+		var step: Dictionary = _steps[_idx]
+		_idx += 1
+		await _execute(step)
+	_steps = saved_steps
+	_idx = saved_idx
 
 
 func _execute(step: Dictionary) -> void:
@@ -80,6 +93,8 @@ func _execute(step: Dictionary) -> void:
 			if not steps.is_empty():
 				_box.start(&"", steps)
 				await _box.finished
+		"choice":
+			await _run_choice(step.get("args", {}))
 		"wait":
 			await get_tree().create_timer(maxf(float(step.get("seconds", 1.0)), 0.01)).timeout
 		"fade_in":
@@ -114,8 +129,6 @@ func _execute(step: Dictionary) -> void:
 		"start_battle":
 			GameState.pending_encounter = {"enemies": step.get("enemies", []),
 					"on_win_flag": str(step.get("on_win_flag", ""))}
-			if step.has("on_win_flag"):
-				GameState.pending_encounter["on_win_flag"] = str(step["on_win_flag"])
 			_running = false
 			get_tree().change_scene_to_file("res://scenes/battle.tscn")
 		_:
@@ -127,6 +140,72 @@ func _fade(seconds: float, target_a: float) -> void:
 	var tw := create_tween()
 	tw.tween_property(_overlay, "color:a", target_a, maxf(seconds, 0.01))
 	await tw.finished
+
+
+## choice op — 옵션 선택 강제(취소 없음), 선택한 옵션의 steps를 서브 열로 실행.
+func _run_choice(args: Dictionary) -> void:
+	var options: Array = args.get("options", [])
+	if options.is_empty():
+		push_warning("choice 옵션 없음: %s" % _cutscene_id)
+		return
+	var ui := ChoiceUI.new()
+	add_child(ui)
+	ui.setup(options)
+	var pick: int = await ui.picked
+	ui.queue_free()
+	var chosen: Dictionary = options[pick]
+	var sub: Array = chosen.get("steps", [])
+	if not sub.is_empty():
+		await _run_steps(sub)
+
+
+## 선택지 오버레이 — ↑↓ 이동, Enter/Z 확정. 컷신 진행은 picked 이후 재개.
+class ChoiceUI extends Control:
+	signal picked(idx: int)
+
+	var _labels: Array[Label] = []
+	var _idx := 0
+
+	func setup(options: Array) -> void:
+		set_anchors_preset(Control.PRESET_FULL_RECT)
+		var dim := ColorRect.new()
+		dim.color = Color(0, 0, 0, 0.45)
+		dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(dim)
+		var box := VBoxContainer.new()
+		box.set_anchors_preset(Control.PRESET_CENTER)
+		box.add_theme_constant_override("separation", 10)
+		add_child(box)
+		for opt: Dictionary in options:
+			var lbl := Label.new()
+			var raw_text := str(opt.get("text", ""))
+			var shown := Database.text(raw_text) \
+					if raw_text.begins_with("@") else raw_text
+			lbl.text = "▶ " + shown
+			lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			lbl.add_theme_font_size_override("font_size", 18)
+			box.add_child(lbl)
+			_labels.append(lbl)
+		_refresh()
+
+	func _refresh() -> void:
+		for i in range(_labels.size()):
+			_labels[i].add_theme_color_override("font_color",
+					Color(1.0, 0.95, 0.6) if i == _idx else Color(0.8, 0.8, 0.9))
+
+	func _move(dir: int) -> void:
+		_idx = wrapi(_idx + dir, 0, _labels.size())
+		_refresh()
+
+	func _unhandled_input(event: InputEvent) -> void:
+		if event.is_action_pressed(&"move_up"):
+			_move(-1)
+		elif event.is_action_pressed(&"move_down"):
+			_move(1)
+		elif event.is_action_pressed(&"ui_accept") \
+				or event.is_action_pressed(&"interact"):
+			picked.emit(_idx)
+			get_viewport().set_input_as_handled()
 
 
 func _shake(times: int, power: float) -> void:
