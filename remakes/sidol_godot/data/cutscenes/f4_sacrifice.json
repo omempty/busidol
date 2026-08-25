@@ -1,14 +1,11 @@
 {
   "id": "f4_sacrifice",
+  "schema_version": 1,
+  "_comment": "F4 희생 연출 — 마스터 S4-2. 종료 시 q_f5_boss_gate 세팅(WP-7/D15: 죽은 게이트 부활, 5층 개방 서사).",
   "steps": [
-    {
-      "op": "dialogue",
-      "steps": [
-        {
-          "speaker": "동료들",
-          "text": "@c407"
-        }
-      ]
-    }
+    { "op": "dialogue", "steps": [
+      { "speaker": "동료들", "text": "@c407" }
+    ] },
+    { "op": "set_flags", "args": { "q_f5_boss_gate": true } }
   ]
 }

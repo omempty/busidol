@@ -26,6 +26,12 @@
       {"id":"null_pointer","pattern":"phaser"}] }
   },
   "bosses": {
+    "professor_monster": {
+      "display_name": "모교수 괴물",
+      "ap": 20, "dp": 6, "hp_range": [90, 120],
+      "exp": [60, 90], "money": [300, 480],
+      "_comment": "씬 5-1 — 제압전. dodge_phase 미채택(D14): 회피 페이즈는 최종보스 전용 연출."
+    },
     "sys_builder": {
       "display_name": "SYS 빌더",
       "ap": 30, "dp": 8, "hp_range": [120, 160],

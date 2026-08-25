@@ -1,12 +1,28 @@
 {
   "schema_version": 1,
-  "_comment": "F5 트리거 — ① q_f5_boss_gate에서 SYS_BUILDER 각성→결전, ② 결전 승리 플래그(q_f5_ai_battle_won)에서 에필로그→엔딩 크레딧.",
+  "_comment": "F5 트리거 — WP-7 재구성: ①q_f5_boss_gate→모교수 제압전 ②승리(q_f5_prof_won)→해독제 투약(Q_F5_BOSS_CURE) ③Q_F5_BOSS_CURE→SYS_BUILDER 각성·결전 ④결전 승리(q_f5_ai_battle_won)→에필로그.",
   "triggers": [
+    {
+      "id": "f5_professor_intro",
+      "type": "auto",
+      "once": true,
+      "requires_flag": "q_f5_boss_gate",
+      "done_flag": "q_f5_prof_intro_seen",
+      "action": { "cutscene": "f5_professor" }
+    },
+    {
+      "id": "f5_cure_stage",
+      "type": "auto",
+      "once": true,
+      "requires_flag": "q_f5_prof_won",
+      "done_flag": "Q_F5_BOSS_CURE",
+      "action": { "cutscene": "f5_cure" }
+    },
     {
       "id": "f5_boss_intro",
       "type": "auto",
       "once": true,
-      "requires_flag": "q_f5_boss_gate",
+      "requires_flag": "Q_F5_BOSS_CURE",
       "done_flag": "Q_F5_AI_BATTLE",
       "action": { "cutscene": "boss_sys_builder" }
     },

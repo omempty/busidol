@@ -1,0 +1,20 @@
+{
+  "id": "f5_cure",
+  "schema_version": 1,
+  "_comment": "씬 5-1 후반 — 제압 후 안티 바이오틱-X 투약(@c503~@c506). craft op로 해독제 소모+Q_F5_BOSS_CURE 세팅(D13-A안). 부족 시 플래그 미세팅 — 재진입해 재판정.",
+  "steps": [
+    { "op": "craft",
+      "args": {
+        "requires": { "antibiotic_x": 1 },
+        "grant": {},
+        "flag": "Q_F5_BOSS_CURE"
+      }
+    },
+    { "op": "dialogue", "steps": [
+      { "speaker": "모교수", "text": "@c503" },
+      { "speaker": "모교수", "text": "@c504" },
+      { "speaker": "부싯돌", "text": "@c505" },
+      { "speaker": "모교수", "text": "@c506" }
+    ] }
+  ]
+}

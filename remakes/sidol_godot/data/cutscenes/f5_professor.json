@@ -1,0 +1,14 @@
+{
+  "id": "f5_professor",
+  "schema_version": 1,
+  "_comment": "씬 5-1 전반 — 마스터 §[5층] 씬 5-1 (@c501~@c502). 모교수 괴물 제압전 진입.",
+  "steps": [
+    { "op": "shake", "times": 4, "power": 3 },
+    { "op": "sfx", "id": "sfx_encounter" },
+    { "op": "dialogue", "steps": [
+      { "speaker": "모교수(괴물)", "text": "@c501" },
+      { "speaker": "부싯돌", "text": "@c502" }
+    ] },
+    { "op": "start_battle", "enemies": ["professor_monster"], "on_win_flag": "q_f5_prof_won" }
+  ]
+}

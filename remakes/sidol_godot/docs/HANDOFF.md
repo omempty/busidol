@@ -293,6 +293,42 @@ shake/wait).
 5. 검증: validate + smoke_selfcheck + **tools/viewer.html 정합성 탭 FAIL 0 확인**
    (뷰어실행.bat). 커밋은 자기 파일만(dialogue.json, cutscenes 2종).
 
+### WP-7 시나리오 LLM 브리프 — Q_F5_BOSS_CURE「30분의 침묵」 (8/25 4차 세션)
+
+**권위**: 마스터 §[5층] 씬 5-1 (`@c501`~`@c506`) · **성격**: 원문 이식 + 연출
+데이터화. 자유 창작은 @c 잔여 키 보강 대사에 한함.
+
+**현황 갭(8/25 4차 세션 실측)**:
+1. `dialogue.json`에 `@c501`~`@c506` 부재(`@c507`부터 존재) — 씬 5-1 대사 0%
+2. 모교수 괴물 보스 정의 부재(`bosses`는 `sys_builder`만)
+3. `triggers_f5.json`이 `q_f5_boss_gate` → SYS_BUILDER **직행** — 씬 5-1 공백
+4. **`q_f5_boss_gate` 세터가 리포지토리 어디에도 없음(죽은 게이트)** — F5 보스
+   이벤트 자체가 미발화. F4 희생 컷신이 단 1줄(`@c407`)로 끝나며 게이트를
+   세팅하지 않음
+
+**데이터 계약 (파일별)**:
+
+| 파일 | 변경 |
+|---|---|
+| `data/dialogue.json` | `@c501`~`@c506` 신설 — 마스터 씬 5-1 대본 원문 이식. 마스터 표기 4줄 → 6키 분할은 화자·동작 전환 단위로 자유(D12). `@c505~506`은 모교수 각성 후 개그/메타 보강 대사(톤: 진지60/메타20/개그20) |
+| `data/monsters.json` | `bosses.professor_monster` 신설 — 가이드: display_name "모교수 괴물", ap 20 / dp 6 / hp_range [90,120], exp [60,90] / money [300,480](sys_builder의 60%), dodge_phase 미채택(D14) |
+| `data/cutscenes/f5_professor.json` | 신설 — shake+sfx 도입, dialogue(@c501~@c502), `start_battle{enemies:["professor_monster"], on_win_flag:"q_f5_prof_won"}` |
+| `data/cutscenes/f5_cure.json` | 신설 — fade_in + `craft{requires:{antibiotic_x:1}, grant:{}, flag:"Q_F5_BOSS_CURE"}`(투약=소모, D13-A안) + dialogue(@c503~@c506) |
+| `data/cutscenes/f4_sacrifice.json` | 말미에 `set_flags{args:{q_f5_boss_gate:true}}` 추가 — 죽은 게이트 부활(D15). 희생→해독제 확보→F5 진입 서사와 정합 |
+| `data/maps/triggers_f5.json` | 재구성: ① `f5_professor_intro`(auto, requires q_f5_boss_gate, done q_f5_prof_intro_seen → f5_professor) ② `f5_cure_stage`(auto, requires q_f5_prof_won, done Q_F5_BOSS_CURE → f5_cure) ③ 기존 `f5_boss_intro`의 requires_flag를 `Q_F5_BOSS_CURE`로 교체 |
+
+**결정 사항(D12~D15)**:
+- **D12** @c 배분: 화자/동작 전환 단위 자유 분할 허용, 6키 전부 소진
+- **D13** 해독제 소모: craft op 우회(A안, 코드 변경 없음). antibiotic_x 부족 시
+  플래그 미세팅 = 진행 정지 — f5_cure 도입부에 "해독제가 필요하다" 안내 대사를
+  넣어 재진입 시 판정 재시도하게 하고, 부족 사례는 디버그 패널 지급으로 복구(문서화)
+- **D14** dodge_phase: 미채택 — 회피 페이즈는 최종보스(SYS_BUILDER) 고유 연출로 유지
+- **D15** q_f5_boss_gate 세팅 위치: f4_sacrifice 컷신 종료 시점(F4 희생 = 5층 개방 서사)
+
+**검증**: validate 0오류 + smoke_selfcheck(트리거 참조·플래그 체인 프루브가
+신규 컷신/플래그 전수 커버) + 검증실행.bat 13단계. 커밋 소유권: dialogue.json,
+monsters.json, cutscenes 2종 신설+f4_sacrifice, triggers_f4/f5.
+
 ### 다음 세션 연계 (8/25 3차 세션 종료 시점)
 
 **시나리오 데이터 완충 상태**: WP-1~6 전부 완료·검증·커밋. WP-5까지 포함해
