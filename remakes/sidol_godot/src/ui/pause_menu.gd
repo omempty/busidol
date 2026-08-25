@@ -5,17 +5,20 @@ extends CanvasLayer
 
 const FIELD_SCENE := "res://scenes/field.tscn"
 const TITLE_SCENE := "res://scenes/main.tscn"
-const ROOT_ITEMS: Array[String] = ["계속하기", "세이브", "로드", "설정", "타이틀로"]
+const ROOT_ITEMS: Array[String] = [
+	"계속하기", "세이브", "로드", "진행 기록", "도움말", "설정", "타이틀로",
+]
 
-enum Screen { ROOT, SAVE, LOAD, SETTINGS }
+enum Screen { ROOT, SAVE, LOAD, LOG, HELP, SETTINGS }
 
 var _screen: Screen = Screen.ROOT
 var _index := 0
 var _root_box: VBoxContainer
 var _root_labels: Array[Label] = []
-var _panel: Control
 var _slot_list: SaveSlotList
 var _settings_panel: SettingsPanel
+var _help_panel: HelpPanel
+var _quest_log: QuestLogPanel
 
 
 func _ready() -> void:
@@ -29,6 +32,16 @@ func _ready() -> void:
 	_slot_list.slot_chosen.connect(_on_slot_chosen)
 	_slot_list.canceled.connect(func() -> void: _switch(Screen.ROOT))
 	add_child(_slot_list)
+
+	_quest_log = QuestLogPanel.new()
+	_quest_log.visible = false
+	_quest_log.closed.connect(func() -> void: _switch(Screen.ROOT))
+	add_child(_quest_log)
+
+	_help_panel = HelpPanel.new()
+	_help_panel.visible = false
+	_help_panel.closed.connect(func() -> void: _switch(Screen.ROOT))
+	add_child(_help_panel)
 
 	_settings_panel = SettingsPanel.new()
 	_settings_panel.visible = false
@@ -111,14 +124,21 @@ func _confirm() -> void:
 			_slot_list.mode = SaveSlotList.Mode.LOAD
 			_switch(Screen.LOAD)
 		3:
-			_switch(Screen.SETTINGS)
+			_switch(Screen.LOG)
 		4:
+			_switch(Screen.HELP)
+		5:
+			_switch(Screen.SETTINGS)
+		6:
 			_to_title()
 
 
 func _switch(to: Screen) -> void:
 	_screen = to
-	_slot_list.visible = to == Screen.SAVE or to == Screen.LOAD
+	var save_or_load := to == Screen.SAVE or to == Screen.LOAD
+	_slot_list.visible = save_or_load
+	_quest_log.visible = to == Screen.LOG
+	_help_panel.visible = to == Screen.HELP
 	_settings_panel.visible = to == Screen.SETTINGS
 	_root_box.visible = to == Screen.ROOT
 

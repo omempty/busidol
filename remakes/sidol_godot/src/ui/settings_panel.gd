@@ -7,6 +7,7 @@ signal closed
 
 const SPEED_LABELS := ["보통", "빠름", "스킵"]
 const ART_LABELS := ["레거시 (원작 도트)", "리메이크 (신규)"]
+const TEXT_LABELS := ["작음", "보통", "크게"]
 const VOLUME_STEP := 0.1
 
 var _rows: Array[Label] = []
@@ -25,7 +26,7 @@ func _build() -> void:
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(vbox)
-	for i in range(6):
+	for i in range(7):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 24)
@@ -81,6 +82,11 @@ func _adjust(dir: int) -> void:
 			var idx: int = values.find(SettingsManager.art_mode)
 			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
 			SettingsManager.art_mode = next_v
+		6:
+			var values: Array = SettingsManager.TextSize.values()
+			var idx: int = values.find(SettingsManager.text_size)
+			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
+			SettingsManager.text_size = next_v
 	SettingsManager.save_settings()
 	_refresh()
 
@@ -92,6 +98,7 @@ func _refresh() -> void:
 		_set_row(i, names[i], "%d%%" % roundi(SettingsManager.get_volume(bus) * 100))
 	_set_row(4, "연출 속도", SPEED_LABELS[int(SettingsManager.effect_speed)])
 	_set_row(5, "아트 모드", ART_LABELS[int(SettingsManager.art_mode)])
+	_set_row(6, "본문 글자 크기", TEXT_LABELS[int(SettingsManager.text_size)])
 
 
 func _set_row(i: int, text: String, value_text: String) -> void:

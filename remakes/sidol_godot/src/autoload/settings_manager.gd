@@ -5,14 +5,26 @@ extends Node
 enum EffectSpeed { NORMAL, FAST, SKIP }
 ## 아트 모드 — LEGACY: 원작 도트 세트(_original) / REMAKE: 신규 생성 세트(_remake)
 enum ArtMode { LEGACY, REMAKE }
+## 본문 글자 크기(Q9 접근성) — DialogueBox 등 텍스트 UI 스케일
+enum TextSize { SMALL, MEDIUM, LARGE }
 
 const SETTINGS_PATH := "user://settings.json"
 const BUSES: Array[StringName] = [&"Master", &"BGM", &"SFX", &"Voice"]
 const DEFAULT_VOLUME := 0.8
+const TEXT_SCALE := {
+	TextSize.SMALL: 0.85,
+	TextSize.MEDIUM: 1.0,
+	TextSize.LARGE: 1.25,
+}
 
 var effect_speed: EffectSpeed = EffectSpeed.NORMAL
 var art_mode: ArtMode = ArtMode.LEGACY
+var text_size: TextSize = TextSize.MEDIUM
 var volumes := {}   # StringName -> float
+
+
+func get_text_scale() -> float:
+	return float(TEXT_SCALE.get(text_size, 1.0))
 
 
 func _ready() -> void:
@@ -52,6 +64,9 @@ func load_settings() -> void:
 	var art_v: Variant = clampi(int(data.get("art_mode", int(art_mode))),
 			0, int(ArtMode.REMAKE))
 	art_mode = art_v
+	var ts_v: Variant = clampi(int(data.get("text_size", int(text_size))),
+			0, int(TextSize.LARGE))
+	text_size = ts_v
 	_apply_all()
 
 
@@ -62,6 +77,7 @@ func save_settings() -> void:
 		data["vol_" + String(bus)] = get_volume(bus)
 	data["effect_speed"] = int(effect_speed)
 	data["art_mode"] = int(art_mode)
+	data["text_size"] = int(text_size)
 	var fh := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if fh == null:
 		push_error("settings.json 저장 실패: %s" % FileAccess.get_open_error())

@@ -36,7 +36,6 @@ func _ready() -> void:
 	_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_panel.offset_left = 12
 	_panel.offset_right = -12
-	_panel.offset_top = -118
 	_panel.offset_bottom = -12
 	add_child(_panel)
 
@@ -47,8 +46,18 @@ func _ready() -> void:
 	vbox.add_child(_name_label)
 	_body_label = Label.new()
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_body_label.custom_minimum_size = Vector2(0, 72)
 	vbox.add_child(_body_label)
+
+	_apply_text_scale()
+
+
+## Q9 접근성 — 본문 글자 크기 설정을 이름/본문/패널 높이에 반영.
+func _apply_text_scale() -> void:
+	var s := SettingsManager.get_text_scale()
+	_panel.offset_top = -118 * s
+	_body_label.custom_minimum_size = Vector2(0, 72 * s)
+	_body_label.add_theme_font_size_override("font_size", int(17 * s))
+	_name_label.add_theme_font_size_override("font_size", int(15 * s))
 
 
 func start(p_seq_id: StringName, p_steps: Array) -> void:

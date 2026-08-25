@@ -6,7 +6,7 @@ config_version=5
 [application]
 
 config/name="BSD Sidol Remake"
-run/main_scene="res://scenes/main.tscn"
+run/main_scene="res://scenes/boot_intro.tscn"
 config/features=PackedStringArray("4.3")
 
 [autoload]

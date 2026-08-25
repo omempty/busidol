@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "_comment": "진행 기록(Q3) 마일스톤 — id는 데이터에서 실사용 중인 플래그만 수록. zone 명칭은 마스터 시나리오 §3 구역 제목 준용.",
+  "quests": [
+    { "id": "Q_F1_START", "zone": "F1 기(起) 폭우의 교사", "name": "닫힌 문과 불씨" },
+    { "id": "q_f1_prolog_done", "zone": "F1 기(起) 폭우의 교사", "name": "프롤로그 — 방과 후의 발견" },
+    { "id": "Q_F1_BLAST", "zone": "F1 기(起) 폭우의 교사", "name": "부싯돌 조각" },
+    { "id": "Q_F2_HP", "zone": "F2 승(承-1) 전산과의 요람", "name": "HP실과 개발자들의 낭만" },
+    { "id": "Q_F2_POSTER", "zone": "F2 승(承-1) 전산과의 요람", "name": "포스터 뒤의 흔적" },
+    { "id": "Q_F3_PALIN", "zone": "F3 승(承-2) 화학공학과", "name": "팔린의 의뢰" },
+    { "id": "q_f3_cure_done", "zone": "F3 승(承-2) 화학공학과", "name": "해독제 합성" },
+    { "id": "Q_F0_DISK", "zone": "지하 간(間) 잊혀진 서고", "name": "바이러스 디스켓의 기원" },
+    { "id": "q_f4_battery", "zone": "F4 전(轉) 전자공학과", "name": "10,000V 회로 수리" },
+    { "id": "Q_F4_SACRIFICE", "zone": "F4 전(轉) 전자공학과", "name": "숭고한 희생" },
+    { "id": "Q_F5_BOSS_CURE", "zone": "F5 결(結) 중앙통제실", "name": "30년의 침묵" },
+    { "id": "q_f5_ai_battle_won", "zone": "F5 결(結) 중앙통제실", "name": "각성, 그리고 붕괴" },
+    { "id": "Q_QUIZ_ALL", "zone": "후일담", "name": "부싯돌 퀴즈 올클리어" },
+    { "id": "q_ending_done", "zone": "엔딩", "name": "그리고 다음 부싯돌로" }
+  ]
+}
