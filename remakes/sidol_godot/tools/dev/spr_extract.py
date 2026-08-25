@@ -77,7 +77,12 @@ def parse_spr(data: bytes):
             continue                           # 프레임 스킵하고 다음 레코드 계속
         rgba = bytearray()
         for c in px:
-            rgba += bytes(palette[c]) + b"\xff"
+            if c == 0:
+                # 색0 = 투명 — 원작 엔진 blit의 색0 스킵 재현
+                # (docs/HANDOFF.md "원작 검정=투명 문제" 참조)
+                rgba += b"\x00\x00\x00\x00"
+            else:
+                rgba += bytes(palette[c]) + b"\xff"
         frames.append((w, h, bytes(rgba)))
         idx += 1
     if skipped:
