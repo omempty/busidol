@@ -33,7 +33,7 @@
     {
       "op": "grant_item",
       "args": {
-        "item": "ITEM_CURE_DRAG",
+        "item": "reagent_drag",
         "count": 1
       }
     }

@@ -3,8 +3,26 @@
   "schema_version": 1,
   "_comment": "F2 동아리 HP실 방문 — 크레딧룸(멤버 소개)로 진입. Q_F2_HP.",
   "steps": [
-    { "op": "sfx", "id": "sfx_door_open" },
-    { "op": "set_flags", "args": { "Q_F2_HP": true } },
-    { "op": "change_scene", "path": "res://scenes/credit_room.tscn" }
+    {
+      "op": "sfx",
+      "id": "sfx_door_open"
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_MANHWA_POSTER",
+        "count": 1
+      }
+    },
+    {
+      "op": "set_flags",
+      "args": {
+        "Q_F2_HP": true
+      }
+    },
+    {
+      "op": "change_scene",
+      "path": "res://scenes/credit_room.tscn"
+    }
   ]
 }

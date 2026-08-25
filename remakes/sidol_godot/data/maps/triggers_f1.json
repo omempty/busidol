@@ -50,7 +50,8 @@
       ],
       "action": {
         "cutscene": "f1_blast"
-      }
+      },
+      "once": false
     }
   ]
 }

@@ -112,7 +112,8 @@ func _execute(step: Dictionary) -> void:
 		"actor_move":
 			await _actor_move(step)
 		"start_battle":
-			GameState.pending_encounter = {"enemies": step.get("enemies", [])}
+			GameState.pending_encounter = {"enemies": step.get("enemies", []),
+					"on_win_flag": str(step.get("on_win_flag", ""))}
 			if step.has("on_win_flag"):
 				GameState.pending_encounter["on_win_flag"] = str(step["on_win_flag"])
 			_running = false

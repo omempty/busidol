@@ -21,7 +21,8 @@
       ],
       "action": {
         "cutscene": "f2_poster"
-      }
+      },
+      "once": false
     }
   ]
 }
