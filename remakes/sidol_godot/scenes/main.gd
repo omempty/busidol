@@ -5,15 +5,16 @@ extends Node
 
 const FIELD_SCENE := "res://scenes/field.tscn"
 const ART_LABELS: Array[String] = ["레거시 (원작 도트)", "리메이크 (신규)"]
-const MENU_ITEMS: Array[String] = ["새 게임", "계속하기", "설정", "종료"]
+const MENU_ITEMS: Array[String] = ["새 게임", "계속하기", "설정", "도움말", "종료"]
 
-enum Screen { MENU, CONTINUE, SETTINGS }
+enum Screen { MENU, CONTINUE, SETTINGS, HELP }
 
 var _screen: Screen = Screen.MENU
 var _index := 0
 var _menu_labels: Array[Label] = []
 var _slot_list: SaveSlotList
 var _settings_panel: SettingsPanel
+var _help_panel: HelpPanel
 var _mode_label: Label
 
 
@@ -29,6 +30,10 @@ func _ready() -> void:
 	_settings_panel.visible = false
 	_settings_panel.closed.connect(func() -> void: _switch(Screen.MENU))
 	add_child(_settings_panel)
+	_help_panel = HelpPanel.new()
+	_help_panel.visible = false
+	_help_panel.closed.connect(func() -> void: _switch(Screen.MENU))
+	add_child(_help_panel)
 
 
 func _build_menu() -> void:
@@ -112,6 +117,8 @@ func _confirm() -> void:
 		2:
 			_switch(Screen.SETTINGS)
 		3:
+			_switch(Screen.HELP)
+		4:
 			get_tree().quit()
 
 
@@ -119,6 +126,7 @@ func _switch(to: Screen) -> void:
 	_screen = to
 	_slot_list.visible = to == Screen.CONTINUE
 	_settings_panel.visible = to == Screen.SETTINGS
+	_help_panel.visible = to == Screen.HELP
 
 
 func _on_load_slot(slot: int) -> void:
