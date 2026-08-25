@@ -20,6 +20,7 @@ const TEXT_SCALE := {
 var effect_speed: EffectSpeed = EffectSpeed.NORMAL
 var art_mode: ArtMode = ArtMode.LEGACY
 var text_size: TextSize = TextSize.MEDIUM
+var screen_shake := true  # Q9 접근성 — 화면 흔들림 끄기(멀미 대응)
 var volumes := {}  # StringName -> float
 
 
@@ -65,6 +66,7 @@ func load_settings() -> void:
 	art_mode = art_v
 	var ts_v: Variant = clampi(int(data.get("text_size", int(text_size))), 0, int(TextSize.LARGE))
 	text_size = ts_v
+	screen_shake = bool(data.get("screen_shake", true))
 	_apply_all()
 
 
@@ -76,6 +78,7 @@ func save_settings() -> void:
 	data["effect_speed"] = int(effect_speed)
 	data["art_mode"] = int(art_mode)
 	data["text_size"] = int(text_size)
+	data["screen_shake"] = screen_shake
 	var fh := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if fh == null:
 		push_error("settings.json 저장 실패: %s" % FileAccess.get_open_error())

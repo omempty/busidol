@@ -390,12 +390,18 @@ choice 스텝 표시 지원.
 check_scripts). SelfCheck 프루브 11종. pre-commit 훅(gdformat --check) 활성.
 
 **남은 작업 (우선순위순)**:
-1. 전투 보상 하드코딩 제거 + 레벨업 반영(battle_scene_controller 고정
-   {"exp":15,"money":100} → monsters.json 범위 사용, growth.json 레벨업)
-2. CRT/DOS 메타 엔딩 연출(마스터 E-2 — 엔진 담당 몫)
-3. 설정 패널에 조작법·접근성(Q9) 통합, 도움말 갤러리
-4. 패키징 export 프리셋 + headless 검증 CI
-5. 에셋: NPC 스프라이트 LLM 사이클(코드 폴백 완비), 아이템 아이콘 실도트
+1. ~~전투 보상 하드코딩 제거 + 레벨업 반영~~ ✅ 4차 세션 후반 완료
+   (monsters.json 범위 보상, grant_exp 레벨업, SelfCheck 성장 프루브)
+2. ~~CRT/DOS 메타 엔딩 연출~~ ✅ 완료(ending_console, 크레딧룸 종료 분기)
+3. ~~설정 패널 조작법·접근성 통합~~ ✅ 완료(흔들림 토글+조작법 행,
+   SettingsManager.screen_shake 영속화, shake 2곳 가드)
+4. Windows export preset 조기 검증(data/**.json 포함 확인 — 빌드 함정 예방)
+5. 패키징 export 프리셋(Mac/Linux) + headless 검증 CI
+6. 에셋: NPC 스프라이트 LLM 사이클(코드 폴백 완비), 아이템 아이콘 실도트
+
+**공용 라이브러리**: `D:\Game\_godot_shared`(로컬 git, 원격 미연결 —
+GitHub 저장소 생성 후 `git remote add origin` 필요).
+snow_frost_war/LodeRunner git 저장소화 완료(Lode는 AudioManager 마이그레이션까지).
 
 ### 구현 노트 (P8 세션 추가)
 

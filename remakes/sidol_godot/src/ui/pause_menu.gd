@@ -52,6 +52,7 @@ func _ready() -> void:
 	_settings_panel = SettingsPanel.new()
 	_settings_panel.visible = false
 	_settings_panel.closed.connect(func() -> void: _switch(Screen.ROOT))
+	_settings_panel.controls_requested.connect(func() -> void: _switch(Screen.HELP))
 	add_child(_settings_panel)
 
 

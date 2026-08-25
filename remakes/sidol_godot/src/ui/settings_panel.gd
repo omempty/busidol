@@ -1,14 +1,18 @@
 class_name SettingsPanel
 extends Control
-## 설정 UI — 볼륨 4버스·연출속도·아트모드. 변경 즉시 적용+파일 저장.
-## 타이틀과 일시정지 메뉴가 공용. 키보드: ↑↓ 행 이동, ←→ 값 변경, Esc 닫기.
+## 설정 UI — 볼륨 4버스·연출속도·아트모드·글자크기·흔들림·조작법.
+## 변경 즉시 적용+파일 저장. 타이틀과 일시정지 메뉴가 공용.
+## 키보드: ↑↓ 행 이동, ←→ 값 변경, 확인=조작법 보기, Esc 닫기.
 
 signal closed
+signal controls_requested
 
 const SPEED_LABELS := ["보통", "빠름", "스킵"]
 const ART_LABELS := ["레거시 (원작 도트)", "리메이크 (신규)"]
 const TEXT_LABELS := ["작음", "보통", "크게"]
+const SHAKE_LABELS := ["켬", "끔"]
 const VOLUME_STEP := 0.1
+const ROW_CONTROLS := 8
 
 var _rows: Array[Label] = []
 var _values: Array[Label] = []
@@ -26,7 +30,7 @@ func _build() -> void:
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(vbox)
-	for i in range(7):
+	for i in range(9):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 24)
@@ -56,6 +60,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_adjust(1)
 	elif event.is_action_pressed(&"cancel"):
 		closed.emit()
+	elif event.is_action_pressed(&"interact") or event.is_action_pressed(&"ui_accept"):
+		if _index == ROW_CONTROLS:
+			controls_requested.emit()
 	else:
 		return
 	get_viewport().set_input_as_handled()
@@ -86,6 +93,8 @@ func _adjust(dir: int) -> void:
 			var idx: int = values.find(SettingsManager.text_size)
 			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
 			SettingsManager.text_size = next_v
+		7:
+			SettingsManager.screen_shake = not SettingsManager.screen_shake
 	SettingsManager.save_settings()
 	_refresh()
 
@@ -98,6 +107,8 @@ func _refresh() -> void:
 	_set_row(4, "연출 속도", SPEED_LABELS[int(SettingsManager.effect_speed)])
 	_set_row(5, "아트 모드", ART_LABELS[int(SettingsManager.art_mode)])
 	_set_row(6, "본문 글자 크기", TEXT_LABELS[int(SettingsManager.text_size)])
+	_set_row(7, "화면 흔들림", SHAKE_LABELS[0 if SettingsManager.screen_shake else 1])
+	_set_row(8, "조작법", "(확인 키로 보기)")
 
 
 func _set_row(i: int, text: String, value_text: String) -> void:

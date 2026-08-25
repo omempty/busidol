@@ -135,7 +135,7 @@ func play_camera_kf(_kf: Dictionary) -> void:
 
 ## screen 채널 — shake / flash.
 func play_screen_kf(kf: Dictionary) -> void:
-	if kf.has("shake"):
+	if kf.has("shake") and SettingsManager.screen_shake:
 		_shake_power = maxf(_shake_power, float(kf["shake"]))
 	if kf.has("flash"):
 		var col := Color(str(kf["flash"]))

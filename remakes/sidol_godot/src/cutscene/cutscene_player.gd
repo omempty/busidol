@@ -209,7 +209,7 @@ class ChoiceUI:
 
 
 func _shake(times: int, power: float) -> void:
-	if _field == null:
+	if _field == null or not SettingsManager.screen_shake:
 		return
 	var base := _field.position
 	for i in maxi(times, 1):
