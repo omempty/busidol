@@ -264,6 +264,35 @@ shake/wait).
   on_win_flag 전달 확장 필요. 현재는 오프닝 완료 시점으로 근사됨(HANDOFF 기록).
 - Q_F5_BOSS_CURE(모교수 제압·투약) 전용 연출/보스 미창작 — 스코프 협의 필요.
 
+### WP-5 시나리오 LLM 브리프 (8/25 — 선택지 op 계약 확정본)
+
+역할 분담: 시나리오 LLM = 원문 이식+선택지 데이터 / 메인 개발 = CutscenePlayer
+`choice` op 스파이크(진행 중). **아래 계약을 벗어난 형태로 쓰지 말 것.**
+
+1. **@c 원문 등록(dialogue.json)** — 마스터 §3 원문을 그대로(불변):
+   - `@c516`~`@c525`: 씬 5-3 대립 대본 10줄(순서 보존)
+   - `@c526`~`@c530`: 씬 5-4 피니시 대사 5줄
+   - `@c606`~`@c610`: E-1 후일담 잔여 5줄(수위/완종/삼룡/부싯돌/해피엔딩)
+   - 선택지 옵션 변주 1줄: `@c531`(B안 답변 — "불씨가 남아 있으니까." 톤)
+2. **boss_sys_builder.json 확장** — 현재 [sfx,shake,dialogue,start_battle]에서
+   dialogue와 start_battle 사이에 삽입:
+   - `dialogue` op: @c516~@c519 (포맷 위협 대립 전반)
+   - `choice` op(계약): `{"op":"choice","args":{"options":[
+       {"text":"@c520","steps":[{"op":"dialogue","steps":[
+         {"speaker":"부싯돌","text":"@c520"}]}]},
+       {"text":"@c531","steps":[{"op":"dialogue","steps":[
+         {"speaker":"부싯돌","text":"@c531"}]}]}]}}`
+     — 두 옵션 모두 수렴(단일 엔딩 유지). 플래그 부여 없음(연출용 선택).
+   - `dialogue` op: @c521~@c525 (SYS_BUILDER 반응 + 포맷 개시)
+   - `start_battle` 유지.
+3. **epilogue.json 앞단 확장** — 5-4 피니시(@c526~@c530 dialogue)를 기존
+   @c601 대화 앞에 삽입(승리 직후 퇴장 대사 → E-1 → E-2 흐름).
+   E-1 잔여 @c606~@c610도 dialogue 스텝에 추가.
+4. **E-2 CRT 메타 엔딩 텍스트**: SYSTEM REPORT 블록은 엔진 연출(메인 개발)이
+   렌더링하므로 데이터화 불요 — 수정 금지.
+5. 검증: validate + smoke_selfcheck + **tools/viewer.html 정합성 탭 FAIL 0 확인**
+   (뷰어실행.bat). 커밋은 자기 파일만(dialogue.json, cutscenes 2종).
+
 ### 구현 노트 (P8 세션 추가)
 
 - **LLM 워크플로우**: extract_sprites.py(numpy 벡터화 flood-fill, 935프레임 수십 초,
