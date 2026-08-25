@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "triggers": [
+    {
+      "id": "f0_disk",
+      "type": "zone",
+      "cells": [
+        [
+          2,
+          1
+        ]
+      ],
+      "done_flag": "Q_F0_DISK",
+      "action": {
+        "cutscene": "f0_disk"
+      }
+    }
+  ]
+}

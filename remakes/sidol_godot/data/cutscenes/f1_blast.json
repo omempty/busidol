@@ -1,0 +1,15 @@
+{
+  "id": "f1_blast",
+  "steps": [
+    {
+      "op": "craft",
+      "args": {
+        "requires": {
+          "ITEM_SOPO": 1,
+          "ITEM_GASOLINE": 1
+        },
+        "flag": "Q_F1_BLAST"
+      }
+    }
+  ]
+}

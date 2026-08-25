@@ -1,0 +1,23 @@
+{
+  "id": "f2_poster",
+  "steps": [
+    {
+      "op": "craft",
+      "args": {
+        "requires": {
+          "ITEM_MANHWA_POSTER": 1
+        },
+        "flag": "Q_F2_POSTER"
+      }
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "완종 괴물",
+          "text": "@c211"
+        }
+      ]
+    }
+  ]
+}

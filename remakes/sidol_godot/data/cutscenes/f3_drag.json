@@ -1,0 +1,41 @@
+{
+  "id": "f3_drag",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "부싯돌",
+          "text": "@c317"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c318"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c319"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c320"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c321"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c322"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_CURE_DRAG",
+        "count": 1
+      }
+    }
+  ]
+}

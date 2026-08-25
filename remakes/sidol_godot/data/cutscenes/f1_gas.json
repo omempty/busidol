@@ -1,0 +1,21 @@
+{
+  "id": "f1_gas",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "삼룡 괴물",
+          "text": "@c123"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_GASOLINE",
+        "count": 1
+      }
+    }
+  ]
+}

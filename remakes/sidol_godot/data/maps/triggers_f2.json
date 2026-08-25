@@ -8,7 +8,20 @@
       "once": true,
       "requires_flag": "q_f2_hp_gate",
       "done_flag": "Q_F2_HP",
-      "action": { "cutscene": "hp_room_visit" }
+      "action": {
+        "cutscene": "hp_room_visit"
+      }
+    },
+    {
+      "id": "f2_poster",
+      "type": "interact",
+      "pos": [
+        0,
+        0
+      ],
+      "action": {
+        "cutscene": "f2_poster"
+      }
     }
   ]
 }

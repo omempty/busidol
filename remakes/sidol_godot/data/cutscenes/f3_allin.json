@@ -1,0 +1,41 @@
+{
+  "id": "f3_allin",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "부싯돌",
+          "text": "@c323"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c324"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c325"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c326"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c327"
+        },
+        {
+          "speaker": "부싯돌",
+          "text": "@c328"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_CURE_ALLIN",
+        "count": 1
+      }
+    }
+  ]
+}

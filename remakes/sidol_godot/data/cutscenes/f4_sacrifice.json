@@ -1,0 +1,14 @@
+{
+  "id": "f4_sacrifice",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "동료들",
+          "text": "@c407"
+        }
+      ]
+    }
+  ]
+}

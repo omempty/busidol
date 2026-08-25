@@ -1,0 +1,21 @@
+{
+  "id": "f1_sopo",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "재영 선배",
+          "text": "@c111"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_SOPO",
+        "count": 1
+      }
+    }
+  ]
+}

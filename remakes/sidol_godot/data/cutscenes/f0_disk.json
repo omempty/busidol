@@ -1,0 +1,21 @@
+{
+  "id": "f0_disk",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "부싯돌",
+          "text": "@c009"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_DISKETTE",
+        "count": 1
+      }
+    }
+  ]
+}

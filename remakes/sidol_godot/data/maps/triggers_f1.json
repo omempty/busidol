@@ -7,7 +7,50 @@
       "type": "auto",
       "once": true,
       "done_flag": "Q_F1_START",
-      "action": { "cutscene": "opening" }
+      "action": {
+        "cutscene": "opening"
+      }
+    },
+    {
+      "id": "f1_sopo",
+      "type": "zone",
+      "cells": [
+        [
+          1,
+          0
+        ]
+      ],
+      "done_flag": "Q_F1_SOPO",
+      "requires_flag": "Q_F1_START",
+      "action": {
+        "cutscene": "f1_sopo"
+      }
+    },
+    {
+      "id": "f1_gas",
+      "type": "zone",
+      "cells": [
+        [
+          2,
+          0
+        ]
+      ],
+      "done_flag": "Q_F1_GAS",
+      "requires_flag": "Q_F1_START",
+      "action": {
+        "cutscene": "f1_gas"
+      }
+    },
+    {
+      "id": "f1_blast",
+      "type": "interact",
+      "pos": [
+        3,
+        0
+      ],
+      "action": {
+        "cutscene": "f1_blast"
+      }
     }
   ]
 }

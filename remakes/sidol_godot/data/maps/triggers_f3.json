@@ -8,7 +8,37 @@
       "once": true,
       "requires_flag": "q_f3_quiz_gate",
       "done_flag": "Q_F3_PALIN",
-      "action": { "cutscene": "quiz_paline" }
+      "action": {
+        "cutscene": "quiz_paline"
+      }
+    },
+    {
+      "id": "f3_drag",
+      "type": "zone",
+      "cells": [
+        [
+          0,
+          0
+        ]
+      ],
+      "done_flag": "Q_F3_DRAG",
+      "action": {
+        "cutscene": "f3_drag"
+      }
+    },
+    {
+      "id": "f3_allin",
+      "type": "zone",
+      "cells": [
+        [
+          1,
+          0
+        ]
+      ],
+      "done_flag": "Q_F3_ALLIN",
+      "action": {
+        "cutscene": "f3_allin"
+      }
     }
   ]
 }
