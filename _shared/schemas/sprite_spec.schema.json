@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "dosport/schemas/sprite_spec.schema.json",
+  "title": "AI 생성 스프라이트 시트 계약서 v1 (docs/02_design/07_ai_asset_pipeline.md §4)",
+  "type": "object",
+  "required": ["asset_id", "kind", "cell", "grid", "animations"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "asset_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "kind": { "enum": ["character_sheet", "tileset", "object", "ui_part"] },
+    "cell": {
+      "type": "object",
+      "required": ["w", "h"],
+      "additionalProperties": false,
+      "properties": { "w": { "type": "integer", "minimum": 8 }, "h": { "type": "integer", "minimum": 8 } }
+    },
+    "grid": {
+      "type": "object",
+      "required": ["cols", "rows"],
+      "additionalProperties": false,
+      "properties": { "cols": { "type": "integer", "minimum": 1 }, "rows": { "type": "integer", "minimum": 1 } }
+    },
+    "animations": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["row", "frames"],
+        "properties": {
+          "row": { "type": "integer", "minimum": 0 },
+          "frames": { "type": "integer", "minimum": 1 },
+          "fps": { "type": "number", "exclusiveMinimum": 0 },
+          "loop": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "anchor": { "type": "object" },
+    "palette_ref": { "type": "string" },
+    "constraints": { "type": "array", "items": { "type": "string" } },
+    "style_refs": { "type": "array", "items": { "type": "string" } },
+    "prompt_vars": { "type": "object" },
+    "output_contract": { "type": "object" }
+  },
+  "additionalProperties": true
+}
