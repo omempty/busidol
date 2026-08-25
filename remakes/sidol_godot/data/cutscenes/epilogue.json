@@ -11,7 +11,7 @@
       { "speaker": "삼룡", "text": "@c604" },
       { "speaker": "수위 아저씨", "text": "@c605" }
     ] },
-    { "op": "set_flags", "args": { "q_ending": true } },
+    { "op": "set_flags", "args": { "Q_ENDING": true } },
     { "op": "fade_out", "seconds": 1.0 },
     { "op": "wait", "seconds": 0.8 },
     { "op": "change_scene", "path": "res://scenes/credit_room.tscn" }

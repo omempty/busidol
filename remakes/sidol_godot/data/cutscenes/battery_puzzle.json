@@ -12,6 +12,6 @@
     { "op": "dialogue", "steps": [
       { "speaker": "전자과 조교", "text": "@c404" }
     ] },
-    { "op": "set_flags", "args": { "q_f4_battery": true } }
+    { "op": "set_flags", "args": { "Q_F4_BATTERY": true } }
   ]
 }

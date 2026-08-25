@@ -7,7 +7,7 @@
       "type": "auto",
       "once": true,
       "requires_flag": "q_f4_battery_gate",
-      "done_flag": "q_f4_battery",
+      "done_flag": "Q_F4_BATTERY",
       "action": { "cutscene": "battery_puzzle" }
     }
   ]

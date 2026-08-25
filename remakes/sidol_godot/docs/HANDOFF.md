@@ -180,6 +180,34 @@ Steam/Itch 패키징·CI(외부 계정·익스포트 템플릿 필요 — 로컬
 - 참고: f2/f3에서 알 수 없는 오브젝트 메타 id=173 경고(맵 렌더 폴백 동작,
   표면상 무해 — 원작 OBJ id 테이블 미등록분).
 
+### WP-1 완료 + WP-6 시나리오 LLM 브리프 (8/25 3차 세션)
+
+**WP-1 (퀘스트 플래그 체인 정합화) 완료·커밋됨**:
+- quests_v2.json v2 = 마스터 §4.2 메인 18 + 서브(후일담) 3, 총 21종(id·zone·name·
+  description·reward·requires). SelfCheck `_check_quest_flags()`(선행 누락·순환)
+  상시 가동.
+- **플래그 캐노니컬 정렬**: 컷신 5종(set_flags/craft.flag)+트리거 5곳(done_flag)+
+  스모크 5종이 구 이름(q_f4_battery 등)→quests_v2 신 이름(Q_F4_BATTERY 등)으로
+  일원화. 잔존 구플래그 0건 확인.
+- **스모크 헹 근원 수정**: 몬스터 접촉→change_scene으로 테스트 루트가 트리에서
+  이탈 → get_tree() null 좀비(quit 불가). field/dialogue/transitions 3종에
+  enemy_manager 즉시 해제 패치 + 모든 게이트 실행은 `--quit-after` 병행 권장.
+
+**WP-6 착수 전 필독(시나리오 LLM 브리프)**:
+1. 범위: (a) SelfCheck `_check_sequence_text_refs()` 추가 — sequences의 step.text가
+   '@'로 시작하면 dialogue.json 키 존재 필수(FAIL 티어), run_all 배열 등록.
+   (b) cafeteria_girl_shop의 `@c001` 단참조 수정 — @c001 신설 한 줄(D1 톤 준수)
+   또는 기존 키 재지정. 프루브 통과가 규준.
+2. **미사용 @c13개(@c317~@c328) 삭제 금지** — WP-3 S3-2 재료 피크드 대사 예약분.
+3. **플래그 규칙(WP-1 확정)**: set_flags/craft.flag/done_flag/requires_flag는
+   quests_v2.json 21종 id만 사용. 목록 밖 내부 게이트 마커(q_f2_hp_gate,
+   q_f3_quiz_gate, q_f4_battery_gate, q_f5_boss_gate, q_f5_ai_battle_won)는
+   유지 허용. 새 플래그는 quests_v2에 먼저 추가.
+4. 검증: `--quit-after` 포함 실행 필수(아니면 좀비 프로세스 위험). 예:
+   `%GODOT% --headless --path . --quit-after 3600 res://tests/smoke_selfcheck.tscn`
+5. 커밋: 자기 경로만 스테이징(data/** 중 자기 파일, self_check.gd 프루브부).
+   originals/** 접근 금지, 기존 테스트 삭제 금지.
+
 ### 구현 노트 (P8 세션 추가)
 
 - **LLM 워크플로우**: extract_sprites.py(numpy 벡터화 flood-fill, 935프레임 수십 초,

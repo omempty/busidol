@@ -11,11 +11,11 @@
       { "speaker": "퀴즈맨", "text": "@c329" }
     ] },
     { "op": "grant_item", "args": { "item": "reagent_palin", "count": 1 } },
-    { "op": "set_flags", "args": { "q_f3_palin_done": true } },
+    { "op": "set_flags", "args": { "Q_F3_PALIN": true } },
     { "op": "craft", "args": {
         "requires": { "reagent_drag": 1, "reagent_allin": 1, "reagent_palin": 1 },
         "grant": { "antibiotic_x": 1 },
-        "flag": "q_f3_cure_done"
+        "flag": "Q_F3_CURE_DONE"
     } }
   ]
 }

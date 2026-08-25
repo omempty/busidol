@@ -28,6 +28,7 @@ func run_all() -> PackedStringArray:
 		_check_save_roundtrip(),
 		_check_trigger_done_flag_skip(),
 		_check_floor_landings(),
+		_check_quest_flags(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -177,8 +178,8 @@ func _check_save_roundtrip() -> Array:
 
 func _check_trigger_done_flag_skip() -> Array:
 	# 8/25 버그 회귀 프루브: done_flag 설정 시 auto 트리거가 발동되지 않아야 한다.
-	var had := GameState.has_flag("q_f1_prolog_done")
-	GameState.flags["q_f1_prolog_done"] = true
+	var had := GameState.has_flag("Q_F1_START")
+	GameState.flags["Q_F1_START"] = true
 	var ts := TriggerSystem.new()
 	add_child(ts)
 	ts.load_for_floor(1)
@@ -189,7 +190,7 @@ func _check_trigger_done_flag_skip() -> Array:
 		ts.tick(Vector2i.ZERO, 0.25)
 	ts.queue_free()
 	if not had:
-		GameState.flags.erase("q_f1_prolog_done")
+		GameState.flags.erase("Q_F1_START")
 	if fired[0]:
 		return _fail("done_flag 설정 후에도 auto 트리거 발동(회귀!)")
 	return _ok("트리거 done_flag 스킵 규약")
@@ -239,3 +240,59 @@ func _check_floor_landings() -> Array:
 	if lines.is_empty():
 		lines += _ok("전 전환 착지 좌표 통행")
 	return lines
+
+
+func _check_quest_flags() -> Array:
+	var lines: Array = []
+	var path := "res://data/quests_v2.json"
+	if not FileAccess.file_exists(path):
+		return _fail("quests_v2.json 없음")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		return _fail("quests_v2.json 파싱 실패")
+		
+	var quests: Array = raw.get("quests", [])
+	var qmap := {}
+	for q: Variant in quests:
+		if q is Dictionary:
+			var qid := str(q.get("id", ""))
+			qmap[qid] = q
+			
+	var bad := 0
+	for qid: String in qmap:
+		var reqs: Variant = qmap[qid].get("requires", [])
+		if reqs is String:
+			reqs = [reqs]
+		for r: Variant in reqs:
+			if not qmap.has(str(r)):
+				lines += _fail("퀘스트 %s의 선행 플래그 누락: %s" % [qid, str(r)])
+				bad += 1
+
+	var visited := {}
+	var path_stack := {}
+	var check_cycle: Callable
+	check_cycle = func(node: String, f: Callable) -> bool:
+		visited[node] = true
+		path_stack[node] = true
+		var rs: Variant = qmap.get(node, {}).get("requires", [])
+		if rs is String: rs = [rs]
+		for r: Variant in rs:
+			var r_str := str(r)
+			if not qmap.has(r_str): continue
+			if path_stack.get(r_str, false):
+				lines += _fail("퀘스트 체인 순환 발생: %s -> ... -> %s" % [node, r_str])
+				return true
+			if not visited.get(r_str, false):
+				if f.call(r_str, f): return true
+		path_stack[node] = false
+		return false
+
+	for qid: String in qmap:
+		if not visited.get(qid, false):
+			if check_cycle.call(qid, check_cycle):
+				bad += 1
+
+	if bad == 0:
+		lines += _ok("퀘스트 플래그 체인 정합성 (순환/고아 없음)")
+	return lines
+

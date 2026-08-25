@@ -7,7 +7,7 @@
       "type": "auto",
       "once": true,
       "requires_flag": "q_f5_boss_gate",
-      "done_flag": "q_f5_ai_battle",
+      "done_flag": "Q_F5_AI_BATTLE",
       "action": { "cutscene": "boss_sys_builder" }
     },
     {
@@ -15,7 +15,7 @@
       "type": "auto",
       "once": true,
       "requires_flag": "q_f5_ai_battle_won",
-      "done_flag": "q_ending_done",
+      "done_flag": "Q_ENDING",
       "action": { "cutscene": "epilogue" }
     }
   ]

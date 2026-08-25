@@ -15,10 +15,13 @@ func _ready() -> void:
 
 	# 프롤로그 자동 컷신(skip) — Phase 7 도입 트리거가 입력을 탈취하지 않도록.
 	# (smoke_field와 동일 패턴. 미설정 시 컷신이 대화 검증을 대체해 실패했었다.)
-	GameState.flags["q_f1_prolog_done"] = true
+	GameState.flags["Q_F1_START"] = true
 
 	var field: Node2D = FIELD_SCENE.instantiate()
 	add_child(field)
+	# 접촉→전투 전환 레이스 차단 — 대화 진행 검증 방해 금지
+	if field.enemy_manager != null:
+		field.enemy_manager.queue_free()
 	await get_tree().process_frame
 	await get_tree().process_frame
 

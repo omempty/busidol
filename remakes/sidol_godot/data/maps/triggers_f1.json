@@ -6,7 +6,7 @@
       "id": "f1_opening",
       "type": "auto",
       "once": true,
-      "done_flag": "q_f1_prolog_done",
+      "done_flag": "Q_F1_START",
       "action": { "cutscene": "opening" }
     }
   ]

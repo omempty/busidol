@@ -7,7 +7,7 @@
       "type": "auto",
       "once": true,
       "requires_flag": "q_f2_hp_gate",
-      "done_flag": "q_f2_hp",
+      "done_flag": "Q_F2_HP",
       "action": { "cutscene": "hp_room_visit" }
     }
   ]

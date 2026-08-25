@@ -45,8 +45,8 @@ func _ready() -> void:
 		failures.append("컷신 finished 미발생")
 	if cp.is_running():
 		failures.append("컷신 running 잔존")
-	if not GameState.has_flag("q_f1_prolog_done"):
-		failures.append("set_flags(q_f1_prolog_done) 미적용")
+	if not GameState.has_flag("Q_F1_START"):
+		failures.append("set_flags(Q_F1_START) 미적용")
 
 	# --- 퀴즈 미니게임: 실제 데이터(퀴즈맨 3문항) 정답 순회 → 통과 시그널 ---
 	GameState.flags.clear()
@@ -77,12 +77,12 @@ func _ready() -> void:
 		cp._execute_craft({
 			"requires": { "reagent_drag": 1, "reagent_allin": 1, "reagent_palin": 1 },
 			"grant": { "antibiotic_x": 1 },
-			"flag": "q_f3_cure_done",
+			"flag": "Q_F3_CURE_DONE",
 		})
 		var has_cure: int = GameState.inventory.count(&"antibiotic_x")
 		print("[smoke_cutscene] craft antibiotic_x=%d flag=%s" % [has_cure,
-				GameState.has_flag("q_f3_cure_done")])
-		if has_cure != 1 or not GameState.has_flag("q_f3_cure_done"):
+				GameState.has_flag("Q_F3_CURE_DONE")])
+		if has_cure != 1 or not GameState.has_flag("Q_F3_CURE_DONE"):
 			failures.append("craft 결과 이상")
 
 	# --- 배터리 회로 퍼즐: 해답 주입(400V × 25) → 통과 ---

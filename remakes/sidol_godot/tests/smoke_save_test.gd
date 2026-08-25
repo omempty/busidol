@@ -16,7 +16,7 @@ func _ready() -> void:
 	# 1) 상태 구성 → 저장
 	GameState.reset()
 	GameState.current_floor = 3
-	GameState.set_flag("q_f1_prolog_done", true)
+	GameState.set_flag("Q_F1_START", true)
 	GameState.player_stats["level"] = 7
 	GameState.player_stats["money"] = 4321
 	GameState.player_cell = Vector2i(12, 8)
@@ -26,7 +26,7 @@ func _ready() -> void:
 
 	# 2) 상태 변형 후 복원
 	GameState.reset()
-	if GameState.has_flag("q_f1_prolog_done"):
+	if GameState.has_flag("Q_F1_START"):
 		failures.append("reset 후 플래그 잔존")
 	if not SaveManager.load_slot(SLOT):
 		failures.append("load_slot 실패")
@@ -34,7 +34,7 @@ func _ready() -> void:
 	# 3) 복원 결과 대조
 	if GameState.current_floor != 3:
 		failures.append("floor=%d != 3" % GameState.current_floor)
-	if not GameState.has_flag("q_f1_prolog_done"):
+	if not GameState.has_flag("Q_F1_START"):
 		failures.append("플래그 미복원")
 	if int(GameState.player_stats["level"]) != 7 \
 			or int(GameState.player_stats["money"]) != 4321:
