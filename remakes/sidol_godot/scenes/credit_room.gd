@@ -85,7 +85,12 @@ func _load_data() -> void:
 		push_error("credits.json 파싱 실패")
 		return
 	_members = raw.get("members", [])
-	_cards = raw.get("ending_cards", [])
+	var all_cards: Array = raw.get("ending_cards", [])
+	_cards = []
+	for c: Dictionary in all_cards:
+		var req = str(c.get("requires_flag", ""))
+		if req.is_empty() or GameState.has_flag(req):
+			_cards.append(c)
 	_roll_lines = raw.get("staff_roll", [])
 
 
@@ -150,3 +155,4 @@ func _process(delta: float) -> void:
 	var bottom := _roll_lbl.position.y + _roll_lbl.size.y
 	if bottom < 0.0:
 		_roll_lbl.position.y = _roll_clip.size.y
+
