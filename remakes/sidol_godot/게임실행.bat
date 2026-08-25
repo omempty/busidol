@@ -5,7 +5,7 @@ echo ==========================================
 echo   BSD 시돌이의 모험 — Godot 리메이크
 echo ==========================================
 echo.
-echo   조작: 방향키 이동 | SPACE 확인 | ENTER 메뉴 | ESC 취소
+echo   조작: 방향키 이동 ^| SPACE 확인 ^| ENTER 메뉴 ^| ESC 취소
 echo   M: 미니맵 토글
 echo.
 
