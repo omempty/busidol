@@ -61,6 +61,10 @@ func try_interact(front_cells: Array[Vector2i]) -> bool:
 func _consumed(t: Dictionary) -> bool:
 	if bool(t.get("once", true)) and _fired.has(str(t["id"])):
 		return true
+	# done_flag 규약(triggers_f*.json 주석): 설정된 플래그면 재발동 없음
+	var done := str(t.get("done_flag", ""))
+	if not done.is_empty() and GameState.has_flag(done):
+		return true
 	var req: Variant = t.get("requires_flag")
 	if req != null and not GameState.has_flag(str(req)):
 		return true
