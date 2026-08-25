@@ -45,8 +45,8 @@ func _ready() -> void:
 		failures.append("컷신 finished 미발생")
 	if cp.is_running():
 		failures.append("컷신 running 잔존")
-	if not GameState.has_flag("Q_F1_START"):
-		failures.append("set_flags(Q_F1_START) 미적용")
+	if not GameState.has_flag("q_f1_opening_seen"):
+		failures.append("set_flags(q_f1_opening_seen) 미적용")
 
 	# --- 퀴즈 미니게임: 실제 데이터(퀴즈맨 3문항) 정답 순회 → 통과 시그널 ---
 	GameState.flags.clear()

@@ -15,6 +15,8 @@ func _ready() -> void:
 
 	# 프롤로그 자동 컷신(skip) — Phase 7 도입 트리거가 입력을 탈취하지 않도록.
 	# (smoke_field와 동일 패턴. 미설정 시 컷신이 대화 검증을 대체해 실패했었다.)
+	# 마커=컷신 소비, Q_F1_START=F1 존 트리거 게이트 개방.
+	GameState.flags["q_f1_opening_seen"] = true
 	GameState.flags["Q_F1_START"] = true
 
 	var field: Node2D = FIELD_SCENE.instantiate()

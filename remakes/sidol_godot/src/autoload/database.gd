@@ -63,6 +63,9 @@ func load_enemies() -> void:
 				"exp": [5, 10],
 				"money": [50, 100],
 			}
+			# 시나리오 연계 필드 패스스루 — 처음 격파 시 세팅 플래그
+			if s is Dictionary and s.has("first_win_flag"):
+				_enemies[sid]["first_win_flag"] = str(s["first_win_flag"])
 	_load_bosses(raw)
 
 

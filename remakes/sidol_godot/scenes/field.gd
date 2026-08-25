@@ -14,6 +14,7 @@ var npcs: Array[NpcEntity] = []
 var enemy_manager: EnemyManager
 var triggers: TriggerSystem
 var cutscene_player: CutscenePlayer
+var inventory_panel: InventoryPanel
 var _prompt_label: Label
 var _talking_npc: NpcEntity
 var _trigger_seq_active := false
@@ -88,6 +89,9 @@ func _ready() -> void:
 	cutscene_player.setup(self)
 	cutscene_player.finished.connect(_on_cutscene_finished)
 
+	inventory_panel = InventoryPanel.new()
+	add_child(inventory_panel)   # PauseMenu보다 먼저 — cancel 입력 우선권
+
 	add_child(PauseMenu.new())
 	add_child(DebugPanel.new())   # F10 — 디버그 빌드 한정(패널 내부 가드)
 
@@ -106,6 +110,16 @@ func _physics_process(_delta: float) -> void:
 	if cutscene_player != null and cutscene_player.is_running():
 		return
 
+	var interact_edge := _edge(&"interact")
+	var cancel_edge := _edge(&"cancel")
+	var inv_edge := _edge(&"inventory")
+
+	if inv_edge and not inventory_panel.visible:
+		inventory_panel.open()
+		return
+	if inventory_panel.visible:
+		return   # 가방 개방 중 — 입력은 패널이, 월드 정지는 paused가 담당
+
 	# 몬스터 틱 (EnemyManager에 위임)
 	if enemy_manager != null:
 		enemy_manager.tick(player.mover.grid_pos)
@@ -117,9 +131,6 @@ func _physics_process(_delta: float) -> void:
 	# 이벤트 트리거 판정 (zone/auto)
 	if triggers != null:
 		triggers.tick(player.mover.grid_pos, _delta)
-
-	var interact_edge := _edge(&"interact")
-	var cancel_edge := _edge(&"cancel")
 
 	# 대화 중: 입력을 박스 진행으로 중재 (단일 입력 경로)
 	if dialogue_box.is_open:
@@ -323,7 +334,12 @@ func _play_sequence(sequence_id: StringName) -> void:
 ## 몬스터 접촉 → 전투 씬 전환 (원작 Check_Quang 대응)
 func _trigger_encounter(enemy_id: String) -> void:
 	AudioManager.play_sfx(&"sfx_encounter")
-	GameState.pending_encounter = {"enemies": [enemy_id]}
+	var edef := Database.get_enemy_def(StringName(enemy_id))
+	GameState.pending_encounter = {
+		"enemies": [enemy_id],
+		# first_win_flag(Q_F1_START 등) — 승리 시 BattleSceneController가 세팅
+		"on_win_flag": str(edef.get("first_win_flag", "")),
+	}
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
 
 

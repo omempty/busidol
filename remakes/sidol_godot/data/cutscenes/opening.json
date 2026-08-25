@@ -15,6 +15,6 @@
       { "speaker": "부싯돌", "text": "@c105" },
       { "speaker": "수위 아저씨", "text": "@c106" }
     ] },
-    { "op": "set_flags", "args": { "Q_F1_START": true } }
+    { "op": "set_flags", "args": { "q_f1_opening_seen": true } }
   ]
 }

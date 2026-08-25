@@ -6,7 +6,8 @@
       "id": "f1_opening",
       "type": "auto",
       "once": true,
-      "done_flag": "Q_F1_START",
+      "_comment": "done_flag는 내부 마커 — Q_F1_START(퀘스트 개시)는 첫 전투 승리(dworm first_win_flag)에 세팅된다.",
+      "done_flag": "q_f1_opening_seen",
       "action": {
         "cutscene": "opening"
       }

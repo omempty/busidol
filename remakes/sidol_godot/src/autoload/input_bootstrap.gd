@@ -12,6 +12,7 @@ const ACTIONS := {
 	&"menu": [KEY_ENTER],
 	&"cancel": [KEY_ESCAPE],
 	&"minimap": [KEY_M],
+	&"inventory": [KEY_I],
 }
 
 

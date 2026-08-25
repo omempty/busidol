@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수.",
+  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그.",
   "floors": {
     "f0": { "count": 2, "species": ["sparker"] },
     "f1": { "count": 4, "species": [
-      {"id":"dworm","pattern":"burrow"},
+      {"id":"dworm","pattern":"burrow","first_win_flag":"Q_F1_START"},
       {"id":"vulgar","pattern":"wander"},
       {"id":"mad_eye","pattern":"dash","params":{"pause_ticks":3,"dash_cells":3}},
       {"id":"c_bug","pattern":"zigzag"},

@@ -127,6 +127,21 @@ func _check_enemy_defs() -> Array:
 		if str(def.get("display_name")) == bid:
 			bad += 1
 			lines += _fail("보스 정의 누락: %s" % bid)
+
+	# first_win_flag 참조 검증 — quests_v2 미정의 플래그 조기 발견
+	var quest_ids := {}
+	var qraw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string("res://data/quests_v2.json"))
+	if typeof(qraw) == TYPE_DICTIONARY:
+		for q: Dictionary in qraw.get("quests", []):
+			quest_ids[str(q.get("id", ""))] = true
+	for eid_str: String in _all_species_ids():
+		var fwf: String = str(Database.get_enemy_def(
+				StringName(eid_str)).get("first_win_flag", ""))
+		if not fwf.is_empty() and not quest_ids.has(fwf):
+			bad += 1
+			lines += _fail("%s first_win_flag 미정의 퀘스트: %s" % [eid_str, fwf])
+
 	if bad == 0:
 		lines += _ok("전 종족/보스 정의 유효")
 	return lines
@@ -182,8 +197,9 @@ func _check_save_roundtrip() -> Array:
 
 func _check_trigger_done_flag_skip() -> Array:
 	# 8/25 버그 회귀 프루브: done_flag 설정 시 auto 트리거가 발동되지 않아야 한다.
-	var had := GameState.has_flag("Q_F1_START")
-	GameState.flags["Q_F1_START"] = true
+	# f1_opening은 내부 마커(q_f1_opening_seen)를 done_flag로 쓴다.
+	var had := GameState.has_flag("q_f1_opening_seen")
+	GameState.flags["q_f1_opening_seen"] = true
 	var ts := TriggerSystem.new()
 	add_child(ts)
 	ts.load_for_floor(1)
@@ -194,7 +210,7 @@ func _check_trigger_done_flag_skip() -> Array:
 		ts.tick(Vector2i.ZERO, 0.25)
 	ts.queue_free()
 	if not had:
-		GameState.flags.erase("Q_F1_START")
+		GameState.flags.erase("q_f1_opening_seen")
 	if fired[0]:
 		return _fail("done_flag 설정 후에도 auto 트리거 발동(회귀!)")
 	return _ok("트리거 done_flag 스킵 규약")
