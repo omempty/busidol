@@ -1,8 +1,11 @@
 {
- "schema_version": 1,
- "source": "I.SPR frames 0-7 (\uc6d0\uc791 \ub3c4\ud2b8)",
- "cell": 64,
+ "schema_version": 2,
+ "source": "I.SPR frames 0-7 (\uc6d0\uc791 \ub3c4\ud2b8 24\u00d724, 4\ubc30 nearest \ubca0\uc774\ud06c)",
+ "cell": 128,
+ "cell_w": 128,
+ "cell_h": 128,
  "cols": 2,
+ "scale": 0.6667,
  "animations": {
   "walk_down": {
    "row": 0,
