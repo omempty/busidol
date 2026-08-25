@@ -70,7 +70,7 @@ func _check_npc_sequences() -> Array:
 		if not FileAccess.file_exists(path):
 			lines += _ok("npcs_f%d 없음(스킵)" % f)
 			continue
-		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 		if typeof(raw) != TYPE_DICTIONARY:
 			lines += _fail("npcs_f%d 파싱 실패" % f)
 			continue
@@ -91,7 +91,7 @@ func _check_trigger_refs() -> Array:
 		var path := "res://data/maps/triggers_f%d.json" % f
 		if not FileAccess.file_exists(path):
 			continue
-		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 		if typeof(raw) != TYPE_DICTIONARY:
 			lines += _fail("triggers_f%d 파싱 실패" % f)
 			continue
@@ -128,9 +128,7 @@ func _check_enemy_defs() -> Array:
 
 	# first_win_flag 참조 검증 — quests_v2 미정의 플래그 조기 발견
 	var quest_ids := {}
-	var qraw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string("res://data/quests_v2.json")
-	)
+	var qraw: Variant = JsonUtil.load_value("res://data/quests_v2.json", "SelfCheck")
 	if typeof(qraw) == TYPE_DICTIONARY:
 		for q: Dictionary in qraw.get("quests", []):
 			quest_ids[str(q.get("id", ""))] = true
@@ -219,7 +217,7 @@ func _monsters_raw() -> Dictionary:
 	var path := "res://data/monsters.json"
 	if not FileAccess.file_exists(path):
 		return {}
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 	return raw if typeof(raw) == TYPE_DICTIONARY else {}
 
 
@@ -230,7 +228,7 @@ func _check_floor_landings() -> Array:
 	var path := "res://data/maps/transitions.json"
 	if not FileAccess.file_exists(path):
 		return _fail("transitions.json 없음")
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 	if typeof(raw) != TYPE_DICTIONARY:
 		return _fail("transitions.json 파싱 실패")
 	for t: Dictionary in raw.get("transitions", []):
@@ -267,15 +265,13 @@ func _check_transition_gates() -> Array:
 	var path := "res://data/maps/transitions.json"
 	if not FileAccess.file_exists(path):
 		return _fail("transitions.json 없음")
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 	if typeof(raw) != TYPE_DICTIONARY:
 		return _fail("transitions.json 파싱 실패")
 	var transitions: Array = raw.get("transitions", [])
 
 	var quest_ids := {}
-	var qraw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string("res://data/quests_v2.json")
-	)
+	var qraw: Variant = JsonUtil.load_value("res://data/quests_v2.json", "SelfCheck")
 	if typeof(qraw) == TYPE_DICTIONARY:
 		for q: Dictionary in qraw.get("quests", []):
 			quest_ids[str(q.get("id", ""))] = true
@@ -319,7 +315,7 @@ func _check_quest_flags() -> Array:
 	var path := "res://data/quests_v2.json"
 	if not FileAccess.file_exists(path):
 		return _fail("quests_v2.json 없음")
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 	if typeof(raw) != TYPE_DICTIONARY:
 		return _fail("quests_v2.json 파싱 실패")
 
@@ -379,14 +375,12 @@ func _check_credits_flags() -> Array:
 	var path := "res://data/credits.json"
 	if not FileAccess.file_exists(path):
 		return _fail("credits.json 없음")
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
 	if typeof(raw) != TYPE_DICTIONARY:
 		return _fail("credits.json 파싱 실패")
 
 	var quest_ids := {}
-	var qraw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string("res://data/quests_v2.json")
-	)
+	var qraw: Variant = JsonUtil.load_value("res://data/quests_v2.json", "SelfCheck")
 	if typeof(qraw) == TYPE_DICTIONARY:
 		for q: Dictionary in qraw.get("quests", []):
 			quest_ids[str(q.get("id", ""))] = true
@@ -430,8 +424,8 @@ func _check_sequence_text_refs() -> Array:
 	if not FileAccess.file_exists(path_dial):
 		return _fail("dialogue.json 없음")
 
-	var raw_seq: Variant = JSON.parse_string(FileAccess.get_file_as_string(path_seq))
-	var raw_dial: Variant = JSON.parse_string(FileAccess.get_file_as_string(path_dial))
+	var raw_seq: Variant = JsonUtil.load_value(path_seq, "SelfCheck")
+	var raw_dial: Variant = JsonUtil.load_value(path_dial, "SelfCheck")
 
 	if typeof(raw_seq) != TYPE_DICTIONARY:
 		return _fail("dialogue_sequences.json 파싱 실패")

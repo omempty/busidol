@@ -44,8 +44,8 @@ func get_item(id: StringName) -> Dictionary:
 
 
 func load_enemies() -> void:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
-	if typeof(raw) != TYPE_DICTIONARY:
+	var raw := JsonUtil.load_dict(DATA_DIR + "monsters.json", "Database")
+	if raw.is_empty():
 		push_error("monsters.json 파싱 실패")
 		return
 	# floors 의 species 배열에서 고유 id 수집 + 기본 스탯 부여
@@ -94,10 +94,8 @@ func _load_bosses(raw: Dictionary) -> void:
 
 
 func load_items() -> void:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "items.json"))
-	if typeof(raw) == TYPE_DICTIONARY:
-		for item in raw.get("items", []):
-			_items[str(item["id"])] = item
+	for item: Dictionary in JsonUtil.load_array(DATA_DIR + "items.json", "Database"):
+		_items[str(item["id"])] = item
 
 
 func _ready() -> void:
@@ -110,29 +108,20 @@ func _ready() -> void:
 
 
 func _load_growth() -> void:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "growth.json"))
-	if typeof(raw) == TYPE_DICTIONARY:
-		_growth = raw
+	_growth = JsonUtil.load_dict(DATA_DIR + "growth.json", "Database")
 
 
 func load_dialogue() -> void:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "dialogue.json"))
-	if typeof(raw) == TYPE_DICTIONARY:
-		_dialogue = raw
-	else:
+	_dialogue = JsonUtil.load_dict(DATA_DIR + "dialogue.json", "Database")
+	if _dialogue.is_empty():
 		push_error("dialogue.json 파싱 실패")
-		_dialogue = {}
 
 
 func load_sequences() -> void:
-	var raw: Variant = JSON.parse_string(
-		FileAccess.get_file_as_string(DATA_DIR + "dialogue_sequences.json")
-	)
-	if typeof(raw) == TYPE_DICTIONARY:
-		_sequences = raw.get("sequences", {})
-	else:
+	var raw := JsonUtil.load_dict(DATA_DIR + "dialogue_sequences.json", "Database")
+	_sequences = raw.get("sequences", {})
+	if _sequences.is_empty():
 		push_error("dialogue_sequences.json 파싱 실패")
-		_sequences = {}
 
 
 ## 대사 본문 조회 — 키 형식 "@t17" / "@c101" (마스터 시나리오 §4.1 체계)
@@ -161,8 +150,7 @@ func encounter_table(floor_idx: int) -> Dictionary:
 
 
 func load_encounters() -> void:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA_DIR + "monsters.json"))
-	if typeof(raw) == TYPE_DICTIONARY:
-		_encounters = raw.get("floors", {})
-	else:
+	var raw := JsonUtil.load_dict(DATA_DIR + "monsters.json", "Database")
+	_encounters = raw.get("floors", {})
+	if _encounters.is_empty():
 		push_error("monsters.json 파싱 실패")
