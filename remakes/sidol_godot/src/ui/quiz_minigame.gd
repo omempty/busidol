@@ -6,7 +6,7 @@ extends CanvasLayer
 
 signal finished(passed: bool)
 
-const PANEL_POS := Vector2(70, 60)
+const PANEL_POS := Vector2(230, 180)   ## 960×540 중앙 정렬
 const PANEL_SIZE := Vector2(500, 180)
 
 var _config: Dictionary = {}

@@ -7,7 +7,7 @@ extends Node2D
 signal phase_complete(hit_count: int)
 
 const PLAYER_HITBOX := 5.0
-const ARENA := Rect2(32, 32, 256, 176)
+const ARENA := Rect2(48, 48, 384, 264)   ## 960×540 뷰포트 기준 (구 640×360 1.5배)
 
 var duration := 4.0
 var elapsed := 0.0
