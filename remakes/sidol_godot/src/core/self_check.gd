@@ -29,6 +29,7 @@ func run_all() -> PackedStringArray:
 		_check_trigger_done_flag_skip(),
 		_check_floor_landings(),
 		_check_quest_flags(),
+		_check_sequence_text_refs(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -296,3 +297,38 @@ func _check_quest_flags() -> Array:
 		lines += _ok("퀘스트 플래그 체인 정합성 (순환/고아 없음)")
 	return lines
 
+
+func _check_sequence_text_refs() -> Array:
+	var lines: Array = []
+	var path_seq := "res://data/dialogue_sequences.json"
+	var path_dial := "res://data/dialogue.json"
+	
+	if not FileAccess.file_exists(path_seq):
+		return _fail("dialogue_sequences.json 없음")
+	if not FileAccess.file_exists(path_dial):
+		return _fail("dialogue.json 없음")
+		
+	var raw_seq: Variant = JSON.parse_string(FileAccess.get_file_as_string(path_seq))
+	var raw_dial: Variant = JSON.parse_string(FileAccess.get_file_as_string(path_dial))
+	
+	if typeof(raw_seq) != TYPE_DICTIONARY:
+		return _fail("dialogue_sequences.json 파싱 실패")
+	if typeof(raw_dial) != TYPE_DICTIONARY:
+		return _fail("dialogue.json 파싱 실패")
+		
+	var sequences: Dictionary = raw_seq.get("sequences", {})
+	var bad := 0
+	for seq_id: String in sequences:
+		var seq: Dictionary = sequences[seq_id]
+		var steps: Array = seq.get("steps", [])
+		for step: Variant in steps:
+			if not step is Dictionary: continue
+			var text: String = step.get("text", "")
+			if text.begins_with("@"):
+				if not raw_dial.has(text):
+					lines += _fail("시퀀스 '%s'에서 존재하지 않는 대사 참조: %s" % [seq_id, text])
+					bad += 1
+					
+	if bad == 0:
+		lines += _ok("모든 시퀀스 대사 참조 유효")
+	return lines
