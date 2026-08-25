@@ -8,9 +8,8 @@ var display_name := ""
 var sequence_id := &""
 var cell := Vector2i.ZERO
 var sprite := AnimatedSprite2D.new()
-
-const SHEET_PATH := "res://assets/sprites/player_original.png"
-const META_PATH := "res://assets/sprites/player_original.json"
+var _paths: Dictionary = {}
+var _meta: Dictionary = {}
 
 
 func setup(p_id: StringName, p_name: String, p_seq: StringName, p_cell: Vector2i, tint: Color) -> void:
@@ -24,25 +23,34 @@ func setup(p_id: StringName, p_name: String, p_seq: StringName, p_cell: Vector2i
 
 
 func _ready() -> void:
+	_paths = SpriteSets.character_sheet(&"player")
+	var raw: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(str(_paths["meta"])))
+	if typeof(raw) == TYPE_DICTIONARY:
+		_meta = raw
 	sprite.sprite_frames = _build_frames()
+	if not _meta.is_empty():
+		sprite.scale = Vector2.ONE * float(_meta.get("scale", 1.0))
+		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(_meta))
 	sprite.animation = &"idle"
 	sprite.play()
 	add_child(sprite)
 
 
 func _build_frames() -> SpriteFrames:
-	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(META_PATH))
-	var tex: Texture2D = load(SHEET_PATH)
-	var cell_px: int = int(meta["cell"])
+	var tex: Texture2D = load(str(_paths["sheet"]))
+	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환 (아트 모드별 규격 상이 흡수)
+	var cw: int = int(_meta.get("cell_w", _meta.get("cell", 64)))
+	var ch: int = int(_meta.get("cell_h", _meta.get("cell", 64)))
 	var frames := SpriteFrames.new()
 	frames.remove_animation(&"default")
-	var a: Dictionary = meta["animations"]["idle_down"]
+	var a: Dictionary = _meta["animations"]["idle_down"]
 	frames.add_animation(&"idle")
 	frames.set_animation_speed(&"idle", float(a.get("fps", 2)))
 	frames.set_animation_loop(&"idle", true)
 	for f in int(a["frames"]):
 		var at := AtlasTexture.new()
 		at.atlas = tex
-		at.region = Rect2(f * cell_px, int(a["row"]) * cell_px, cell_px, cell_px)
+		at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
 		frames.add_frame(&"idle", at)
 	return frames

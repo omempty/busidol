@@ -3,25 +3,25 @@ extends Node2D
 ## 그리드 이동 플레이어 — 방향 즉시 프레임 반응·버퍼 체인·idle 브리딩.
 ## 품질 기준: docs/03_plan/01_roadmap.md Phase 1.
 
-const SHEET_PATH := "res://assets/sprites/player_original.png"
-const META_PATH := "res://assets/sprites/player_original.json"
-
 var mover := GridMover.new()
 var sprite := AnimatedSprite2D.new()
 var facing := &"down"
 var _wired := false
+var _paths: Dictionary = {}
 
 
 func _ready() -> void:
+	_paths = SpriteSets.character_sheet(&"player")
 	z_index = 15
 	sprite.sprite_frames = _build_frames()
 	sprite.animation = &"idle_down"
 	sprite.play()
 	# 렌더 스케일 — 메타 scale (아트 해상도와 게임 내 크기 분리)
 	var meta: Dictionary = JSON.parse_string(
-			FileAccess.get_file_as_string(META_PATH))
+			FileAccess.get_file_as_string(str(_paths["meta"])))
 	if typeof(meta) == TYPE_DICTIONARY:
 		sprite.scale = Vector2.ONE * float(meta.get("scale", 1.0))
+		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(meta))
 	add_child(sprite)
 
 
@@ -94,8 +94,9 @@ func dir_to_name(dir: Vector2i) -> StringName:
 
 
 func _build_frames() -> SpriteFrames:
-	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(META_PATH))
-	var tex: Texture2D = load(SHEET_PATH)
+	var meta: Dictionary = JSON.parse_string(
+			FileAccess.get_file_as_string(str(_paths["meta"])))
+	var tex: Texture2D = load(str(_paths["sheet"]))
 	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환 (비정형 비율 허용)
 	var cw: int = int(meta.get("cell_w", meta.get("cell", 64)))
 	var ch: int = int(meta.get("cell_h", meta.get("cell", 64)))
