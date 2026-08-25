@@ -13,6 +13,9 @@ const ELEMENT_COLORS := {
 }
 const PLAYER_HURT_COLOR := Color(1, 0.25, 0.15)
 const HITSTOP_SCALE := 0.05
+## 전투 화면 플레이어 실효 셀(px) — 구형(64셀 × 1.5배)과 동일.
+## 노드 배율을 cell×scale로 정규화해 시트 교체(아트 모드·해상도 무관)에도 구도 보존.
+const BATTLE_PLAYER_CELL_PX := 96.0
 
 var target_index := 0   ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
 
@@ -24,6 +27,7 @@ var _shake_power := 0.0
 var _root_base := Vector2.ZERO
 var _was_shaken := false
 var _hitstop_busy := false
+var _player_paths: Dictionary = {}
 
 
 func setup(root: Node2D) -> void:
@@ -35,14 +39,16 @@ func setup(root: Node2D) -> void:
 func build_sprites(enemy_count: int) -> void:
 	player_sprite = Sprite2D.new()
 	var cs := _player_cell_size()
-	var ptex: Texture2D = load("res://assets/sprites/player_original.png")
+	var ptex: Texture2D = load(str(_resolved_player()["sheet"]))
 	if ptex != null:
 		var at := AtlasTexture.new()
 		at.atlas = ptex
 		at.region = Rect2(0, 0, cs.x, cs.y)
 		player_sprite.texture = at
 	player_sprite.position = Vector2(80, 140)
-	player_sprite.scale = Vector2.ONE * _player_render_scale() * 1.5
+	var rs := maxf(_player_render_scale(), 0.01)
+	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX
+			/ (float(cs.x) * rs))
 	player_sprite.set_meta(&"base_pos", player_sprite.position)
 	_root.add_child(player_sprite)
 
@@ -68,11 +74,18 @@ func on_move_start(_move_data: Dictionary) -> void:
 	_reset_sprites()
 
 
-## 플레이어 시트 셀 크기 — player_original.json 메타 기반(cell_w/cell_h 지원)
+## 활성 아트 모드의 플레이어 시트 경로 — 설정 모드 우선, 부재 시 반대 세트 폴백
+func _resolved_player() -> Dictionary:
+	if _player_paths.is_empty():
+		_player_paths = SpriteSets.character_sheet(&"player")
+	return _player_paths
+
+
+## 플레이어 시트 셀 크기 — 활성 세트 메타 기반(cell_w/cell_h 지원)
 func _player_cell_size() -> Vector2i:
-	var path := "res://assets/sprites/player_original.json"
-	if FileAccess.file_exists(path):
-		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var meta_path := str(_resolved_player()["meta"])
+	if not meta_path.is_empty() and FileAccess.file_exists(meta_path):
+		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
 		if typeof(m) == TYPE_DICTIONARY:
 			var d: Dictionary = m
 			return Vector2i(int(d.get("cell_w", d.get("cell", 64))),
@@ -82,9 +95,9 @@ func _player_cell_size() -> Vector2i:
 
 ## 아트 해상도와 게임 내 크기 분리 — 메타 scale (기본 1)
 func _player_render_scale() -> float:
-	var path := "res://assets/sprites/player_original.json"
-	if FileAccess.file_exists(path):
-		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	var meta_path := str(_resolved_player()["meta"])
+	if not meta_path.is_empty() and FileAccess.file_exists(meta_path):
+		var m: Variant = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
 		if typeof(m) == TYPE_DICTIONARY:
 			return float(m.get("scale", 1.0))
 	return 1.0
