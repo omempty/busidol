@@ -20,6 +20,9 @@ import os
 import re
 import sys
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 from PIL import Image
 
 from sprite_retouch import key_magenta

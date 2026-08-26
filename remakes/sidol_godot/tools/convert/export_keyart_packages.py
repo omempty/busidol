@@ -20,6 +20,13 @@ import sys
 
 from PIL import Image, ImageDraw
 
+from llm_package_common import (
+    copy_original_refs,
+    make_palette_swatch,
+    prepare_workspace,
+    refs_block,
+)
+
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SPEC_DIR = os.path.join(ROOT, "assets", "spec", "keyart")
 OUT_ROOT = os.path.join(ROOT, "assets", "raw", "llm", "keyart")
@@ -38,7 +45,12 @@ PROMPT_TEMPLATE = """# {title}(`{scene_id}`) 키아트 의뢰
 
 ## 입력 (첨부)
 1. `../palette_swatch.png` — 사용 가능한 256색 마스터 팔레트
-2. `tone_anchor.png` — 게임 필드 아트(톤·채도·명암 감각 기준)
+2. `tone_anchor.png` — 게임 도트 아트(채도·명암 감각 기준)
+{orig_refs}
+
+**원작 그림이 화풍의 1차 근거다.** 규칙 문장보다 첨부 그림을 먼저 따른다 —
+선 굵기, 음영 단계 수, 인물 얼굴 처리, 실내 공간의 색 배분을 그대로 계승하고
+해상도와 완성도만 격상한다.
 
 ## 출력 규격
 - **1920×1080 (16:9) PNG 1장**
@@ -61,39 +73,30 @@ PROMPT_TEMPLATE = """# {title}(`{scene_id}`) 키아트 의뢰
 """
 
 
-def make_palette_swatch(out_path: str) -> None:
-    colors = json.load(io.open(PALETTE_JSON, encoding="utf-8"))["colors"]
-    cols, sw = 32, 12
-    rows = (len(colors) + cols - 1) // cols
-    img = Image.new("RGB", (cols * sw, rows * sw), (24, 24, 28))
-    d = ImageDraw.Draw(img)
-    for i, hexc in enumerate(colors):
-        x, y = (i % cols) * sw, (i // cols) * sw
-        d.rectangle([x, y, x + sw - 1, y + sw - 1], fill=hexc)
-    img.save(out_path)
-    print(f"palette_swatch.png ({len(colors)} colors)")
-
-
 def export_one(spec_path: str) -> None:
     spec = json.load(io.open(spec_path, encoding="utf-8"))
     scene_id = spec["scene_id"]
     out_dir = os.path.join(OUT_ROOT, scene_id)
     os.makedirs(out_dir, exist_ok=True)
 
+    listed = copy_original_refs("keyart", out_dir, scene_id)
     prompt = PROMPT_TEMPLATE.format(
         scene_id=scene_id,
         title=spec.get("title", scene_id),
         description=spec.get("description", ""),
+        orig_refs=refs_block(listed, 3),
     )
     with io.open(os.path.join(out_dir, "prompt.md"), "w", encoding="utf-8") as f:
         f.write(prompt)
     if os.path.exists(TONE_ANCHOR):
         shutil.copyfile(TONE_ANCHOR, os.path.join(out_dir, "tone_anchor.png"))
-    print(f"{scene_id}: prompt.md" + (" + tone_anchor.png" if os.path.exists(TONE_ANCHOR) else ""))
+    print(f"{scene_id}: prompt.md + 원작참조 {len(listed)}장"
+          + (" + tone_anchor.png" if os.path.exists(TONE_ANCHOR) else ""))
 
 
 def main() -> None:
     os.makedirs(OUT_ROOT, exist_ok=True)
+    prepare_workspace()
     make_palette_swatch(os.path.join(OUT_ROOT, "palette_swatch.png"))
     targets = sys.argv[1:]
     for spec_path in sorted(glob.glob(os.path.join(SPEC_DIR, "*.json"))):

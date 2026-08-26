@@ -20,8 +20,13 @@ import json
 import os
 import sys
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 import numpy as np
 from PIL import Image
+
+from llm_package_common import scale6to8
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PALETTE_JSON = os.path.join(ROOT, "assets", "palette_master.json")
@@ -99,9 +104,14 @@ def check_border_keyable(im: Image.Image, rep: Report, box: tuple[int, int, int,
 
 
 def palette_colors() -> np.ndarray:
-    """palette_master.json hex 문자열 리스트 → (N,3) RGB 배열."""
+    """palette_master.json hex 문자열 리스트 → (N,3) RGB 배열.
+
+    colors는 6비트 DAC 원값이라 그대로 쓰면 팔레트 전체가 25% 밝기다.
+    그 기준으로 거리를 재면 **정상 밝기 납품이 항상 "팔레트 이탈"로 경고**되고,
+    반대로 어두운 납품이 통과한다. 스왑치와 같은 변환을 쓴다.
+    """
     hexes = json.load(io.open(PALETTE_JSON, encoding="utf-8"))["colors"]
-    return np.array([tuple(int(h[i:i + 2], 16) for i in (1, 3, 5)) for h in hexes])
+    return np.array([scale6to8(h) for h in hexes])
 
 
 def check_palette(im: Image.Image, rep: Report, box: tuple[int, int, int, int]) -> None:

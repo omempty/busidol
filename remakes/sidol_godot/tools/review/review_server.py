@@ -37,7 +37,9 @@ REJECTED = os.path.join(LLM, "10_submitted", "_rejected")
 CATEGORIES = {
     "portraits": {"mode": "portrait", "validator": "submission"},
     "keyart": {"mode": "keyart", "validator": "submission"},
-    "monsters": {"mode": None, "validator": "retouch"},
+    # 몬스터는 신규 창작이라 리터치 검증기(주인공 시트 대조)를 쓰면 무조건 반려된다 —
+    # 종별 그리드 계약만 보는 전용 검증기를 쓴다.
+    "monsters": {"mode": None, "validator": "monster"},
     "sprites": {"mode": None, "validator": "retouch"},
 }
 VERSION_RE = re.compile(r"^(?P<id>.+)_v(?P<n>\d+)\.png$", re.IGNORECASE)
@@ -57,6 +59,9 @@ def run_validator(cat: str, abs_path: str) -> dict:
     if info["validator"] == "submission":
         script = os.path.join(ROOT, "tools", "convert", "validate_submission.py")
         args = [sys.executable, "-X", "utf8", script, info["mode"], abs_path]
+    elif info["validator"] == "monster":
+        script = os.path.join(ROOT, "tools", "convert", "validate_monster_sheet.py")
+        args = [sys.executable, "-X", "utf8", script, abs_path]
     else:
         script = os.path.join(ROOT, "tools", "convert", "validate_retouch_sheet.py")
         args = [sys.executable, "-X", "utf8", script, abs_path]
@@ -68,11 +73,28 @@ def run_validator(cat: str, abs_path: str) -> dict:
         return {"pass": False, "lines": [f"검증기 오류: {exc}"]}
 
 
+def package_dir(cat: str, asset_id: str) -> tuple:
+    """패키지 폴더의 (절대경로, 웹경로).
+
+    sprites 패키지만 assets/gen/prompts/ 아래에 있다 — git 추적 대상이라
+    gitignored인 raw/llm 밖에 두기 때문. 이 분기가 없으면 스프라이트 납품 카드에
+    원본 의뢰문·참조 이미지가 붙지 않고, 반려 시 만들어지는 재요청 md에도
+    원본 지시가 빠진다(계약 위반 상태로 재의뢰하게 된다).
+    """
+    if cat == "sprites":
+        return os.path.join(ROOT, "assets", "gen", "prompts"), "/assets/gen/prompts"
+    return os.path.join(LLM, cat, asset_id), f"/assets/raw/llm/{cat}/{asset_id}"
+
+
 def read_prompt_md(cat: str, asset_id: str) -> str:
-    for cand in (
-        os.path.join(LLM, cat, asset_id, "prompt.md"),
-        os.path.join(LLM, cat, asset_id, f"{asset_id}_prompt.md"),
+    pkg, _ = package_dir(cat, asset_id)
+    for name in (
+        "prompt.md",
+        f"{asset_id}_prompt.md",
+        "player_retouch_prompt.md",
+        "player_gen_prompt.md",
     ):
+        cand = os.path.join(pkg, name)
         if os.path.exists(cand):
             return io.open(cand, encoding="utf-8").read()
     return "(원본 의뢰문 없음)"
@@ -81,13 +103,15 @@ def read_prompt_md(cat: str, asset_id: str) -> str:
 def reference_paths(cat: str, asset_id: str) -> dict:
     """보드 3열 비교용 — 참조/앵커 이미지의 웹 경로."""
     refs = {"reference": None, "anchor": None}
-    base = f"/assets/raw/llm/{cat}/{asset_id}"
+    pkg, base = package_dir(cat, asset_id)
     for name, key in (
         (f"{asset_id}_source.png", "reference"),
+        ("player_sheet_original.png", "reference"),
         ("style_ref.png", "anchor"),
         ("tone_anchor.png", "anchor"),
+        ("player_sheet_annotated.png", "anchor"),
     ):
-        p = os.path.join(LLM, cat, asset_id, name)
+        p = os.path.join(pkg, name)
         if os.path.exists(p) and refs[key] is None:
             refs[key] = f"{base}/{name}"
     return refs
@@ -148,7 +172,7 @@ def do_review(payload: dict) -> dict:
     validation = run_validator(cat, src)
 
     if action == "approve":
-        if CATEGORIES[cat]["validator"] == "retouch":
+        if CATEGORIES[cat]["validator"] in ("retouch", "monster"):
             # 스프라이트 계열은 그리드 컷팅까지 한 번에(process_llm_sheet가 20_processed에 출력)
             script = os.path.join(ROOT, "tools", "convert", "process_llm_sheet.py")
             proc = subprocess.run(
