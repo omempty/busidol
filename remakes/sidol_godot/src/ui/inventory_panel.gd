@@ -168,12 +168,21 @@ func _make_row(i: int) -> Control:
 	icon_sb.bg_color = ItemIcons.kind_color(StringName(str(item_def.get("kind", ""))))
 	icon_sb.set_corner_radius_all(5)
 	icon.add_theme_stylebox_override("panel", icon_sb)
-	var glyph := Label.new()
-	glyph.text = ItemIcons.glyph(item_def)
-	glyph.add_theme_font_size_override("font_size", 14)
-	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon.add_child(glyph)
+	var tex := ItemIcons.texture(item_def)
+	if tex != null:
+		var tex_rect := TextureRect.new()
+		tex_rect.texture = tex
+		tex_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		tex_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.add_child(tex_rect)
+	else:
+		var glyph := Label.new()
+		glyph.text = ItemIcons.glyph(item_def)
+		glyph.add_theme_font_size_override("font_size", 14)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon.add_child(glyph)
 	row.add_child(icon)
 
 	var name_label := Label.new()

@@ -132,12 +132,21 @@ func _make_slot(slot: Dictionary) -> PanelContainer:
 	sb.set_border_width_all(1)
 	sb.set_corner_radius_all(7)
 	icon.add_theme_stylebox_override("panel", sb)
-	var glyph := Label.new()
-	glyph.text = ItemIcons.glyph(item_def)
-	glyph.add_theme_font_size_override("font_size", 18)
-	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	icon.add_child(glyph)
+	var tex := ItemIcons.texture(item_def)
+	if tex != null:
+		var rect := TextureRect.new()
+		rect.texture = tex
+		rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.add_child(rect)
+	else:
+		var glyph := Label.new()
+		glyph.text = ItemIcons.glyph(item_def)
+		glyph.add_theme_font_size_override("font_size", 18)
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		icon.add_child(glyph)
 	var count := Label.new()
 	count.text = "×%d" % int(slot["count"])
 	count.add_theme_font_size_override("font_size", 10)

@@ -12,6 +12,19 @@ const KIND_COLORS := {
 	&"money": Color(1.0, 0.84, 0.35),
 }
 const FALLBACK_COLOR := Color(0.55, 0.55, 0.6)
+const ICON_DIR := "res://assets/icons/"
+
+
+## 실제 아이콘 텍스처 — assets/icons/<id>.png(원작 ITEM.SPR 이관분).
+## 부재 시 null — 호출부는 색상+글리프 폴백을 유지한다.
+static func texture(item_def: Dictionary) -> Texture2D:
+	var id := str(item_def.get("id", ""))
+	if id.is_empty():
+		return null
+	var path := ICON_DIR + id + ".png"
+	if ResourceLoader.exists(path):
+		return load(path)
+	return null
 
 
 static func kind_color(kind: StringName) -> Color:
