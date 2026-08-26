@@ -58,7 +58,9 @@
 - 표준 ZSoft PCX (헤더 `0A 05 01 08`, 320×200, 256색) — EFFECT.PCX 덤프로 확인.
 - 변환: ImageMagick / Python PIL → PNG. Godot 직접 임포트는 불가하므로 사전 변환 필요.
 - 주요 파일: TEST_F.PCX(필드 UI 프레임), STORE.PCX(상점 배경), HP.PCX(크레딧룸),
-  FACE*.PCX(대화 얼굴), READY*.PCX, I-V-*.PCX/M-R-*.PCX/M_E_*.PCX/V-*.PCX(전투 배경/입장 그림으로 추정).
+  FACE*.PCX(대화 얼굴), READY*.PCX, I-V-*.PCX/M-R-*.PCX/M_E_*.PCX/V-*.PCX(**적 등장 일러스트** — 2026-08-26 실물 확인.
+  검은 화면 위 단일 적 그림이며 전투 배경이 아니다. **원작 전투에는 배경이 없었다** —
+  리메이크의 전투 배경은 이식이 아니라 신규 설계다(src/ui/battle_backdrop.gd).
 
 ## 4. 사운드 (.VOC)
 

@@ -24,8 +24,11 @@ docs/
 │                                      일러스트/BGM/SFX — spec JSON↔MD 계약서)
 ├── 03_plan/
 │   ├── 01_roadmap.md                Phase 0~9 로드맵 + 마일스톤
-│   └── 03_content_backlog.md        ★콘텐츠 확장 백로그(맵/아이템/기술)
-│   └── 02_risk_assessment.md        리스크 레지스터
+│   ├── 02_risk_assessment.md        리스크 레지스터
+│   ├── 03_content_backlog.md        ★콘텐츠 확장 백로그(맵/아이템/기술)
+│   ├── 04_scenario_data_buffering.md 시나리오 데이터 완충 계획
+│   ├── 05_polish_roadmap.md         ★마감 로드맵 — "만든 것이 맞물리는가"(실측 기반 18항목)
+│   └── 06_parallel_briefs.md        병렬 작업 브리프(다른 세션/에이전트 위탁 계약)
 └── 04_scenario/                     [시나리오]
     ├── 01_scenario_inventory.md     시나리오 원본 자료 위치·상태
     ├── 02_story_bible.md            현행(1995 원작) 스토리 바이블
@@ -51,6 +54,7 @@ docs/
 
 ## 시작하기 (구현 담당 AI/개발자 공통)
 
+0. [03_plan/05_polish_roadmap.md](03_plan/05_polish_roadmap.md) — **지금 뭐가 비어 있는지** 먼저 본다
 1. [03_plan/01_roadmap.md](03_plan/01_roadmap.md)에서 현재 Phase 확인
 2. 게이트(G-ART/G-FAITH/G-SCOPE) 확정 여부 확인
 3. 해당 시스템의 design 문서 + 관련 analysis 문서 읽기
