@@ -81,24 +81,18 @@ def render_sfx() -> None:
         print(f"[make_audio] {sid}.wav")
 
 
-# ---------------------------------------------------------------- BGM 트랙 테이블
-
-TRACKS = {
-    # id: (bpm, bars, key_root_midi, scale, 진행(키 상대 반음), mood)
-    "bgm_title":     (100, 32, 57, MIN, [0, -4, 3, -2], "title"),
-    "bgm_field":     (124, 32, 60, MAJ, [0, 7, 9, 5], "field"),
-    "bgm_battle":    (150, 24, 52, MIN, [0, -2, -4, 7], "battle"),
-    "bgm_boss":      (160, 42, 57, MIN, [0, 0, 8, 7], "boss"),
-    "bgm_basement":  (80, 24, 50, MIN, [0, -4, 3, -2], "basement"),
-    "bgm_emotional": (75, 40, 53, MAJ, [0, -4, -7, 5], "emotional"),
-}
-
+# ---------------------------------------------------------------- BGM 트랙 렌더
 
 def render_all_bgm() -> None:
-    (OUT / "bgm").mkdir(parents=True, exist_ok=True)
-    for tid, (bpm, bars, root, scale, prog, mood) in TRACKS.items():
-        buf = render_bgm(tid, bpm, bars, root, scale, prog, mood)
-        write_ogg(OUT / "bgm" / f"{tid}.ogg", buf)
+    try:
+        from generate_all_bgm import render_all
+        render_all()
+    except Exception as e:
+        print(f"[make_audio] 고급 BGM 렌더러 실패({e}), 기본 폴백 실행...")
+        (OUT / "bgm").mkdir(parents=True, exist_ok=True)
+        for tid, (bpm, bars, root, scale, prog, mood) in TRACKS.items():
+            buf = render_bgm(tid, bpm, bars, root, scale, prog, mood)
+            write_ogg(OUT / "bgm" / f"{tid}.ogg", buf)
 
 
 if __name__ == "__main__":

@@ -50,6 +50,8 @@ func play_bgm(bgm_id: StringName) -> void:
 	if stream == null:
 		return
 	_current_bgm = bgm_id
+	if stream is AudioStreamOggVorbis:
+		(stream as AudioStreamOggVorbis).loop = true
 	_bgm_player.stream = stream
 	_bgm_player.play()
 
