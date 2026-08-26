@@ -131,7 +131,7 @@ func play_sprite_kf(kf: Dictionary) -> void:
 	var off := (
 		Vector2(float(pos_arr[0]), float(pos_arr[1])) if pos_arr.size() >= 2 else Vector2.ZERO
 	)
-	var dur := maxf(float(kf.get("dur", 0.12)), 0.01)
+	var dur := maxf(float(kf.get("dur", 0.12)), 0.01) / SettingsManager.battle_speed_factor()
 	var tw := spr.create_tween()
 	(
 		tw
@@ -169,35 +169,41 @@ func play_screen_kf(kf: Dictionary) -> void:
 func show_damage_number(
 	amount: int, on_player: bool, element: StringName = &"physical", enemy_index: int = -1
 ) -> void:
-	var lbl := Label.new()
-	lbl.text = str(maxi(amount, 0))
 	var font_size := clampi(16 + absi(amount) / 4, 16, 44)
-	lbl.add_theme_font_size_override("font_size", font_size)
-	if on_player:
-		lbl.add_theme_color_override("font_color", PLAYER_HURT_COLOR)
-	else:
-		lbl.add_theme_color_override(
-			"font_color", ELEMENT_COLORS.get(element, ELEMENT_COLORS[&"none"])
-		)
-	lbl.position = _pop_position(on_player, enemy_index, font_size)
-	_root.add_child(lbl)
-	var tw := lbl.create_tween().set_parallel(true)
-	tw.tween_property(lbl, "position:y", lbl.position.y - 28.0, 0.35)
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.35)
-	tw.chain().tween_callback(lbl.queue_free)
+	var color: Color = PLAYER_HURT_COLOR if on_player else ELEMENT_COLORS.get(
+		element, ELEMENT_COLORS[&"none"]
+	)
+	_float_text(str(maxi(amount, 0)), color, _pop_position(on_player, enemy_index, font_size), font_size)
 
 
 ## 상태 플래그 팝 — WEAK!/BREAK! 등 텍스트 강조(데미지 팝 위).
 func show_flag_pop(text: String, color: Color, enemy_index: int) -> void:
+	_float_text(
+		text, color, _pop_position(false, enemy_index, 20) - Vector2(0, 26), 20
+	)
+
+
+## 플레이어 회복 팝 — 초록 +N.
+func show_player_heal(amount: int) -> void:
+	var pos := (
+		player_sprite.position + Vector2(-14, -52)
+		if player_sprite != null
+		else Vector2(140, 180)
+	)
+	_float_text("+%d" % maxi(amount, 0), Color(0.4, 1.0, 0.5), pos, 20)
+
+
+func _float_text(text: String, color: Color, pos: Vector2, font_size: int) -> void:
 	var lbl := Label.new()
 	lbl.text = text
-	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_font_size_override("font_size", font_size)
 	lbl.add_theme_color_override("font_color", color)
-	lbl.position = _pop_position(false, enemy_index, 20) - Vector2(0, 26)
+	lbl.position = pos
 	_root.add_child(lbl)
+	var dur := 0.35 / SettingsManager.battle_speed_factor()
 	var tw := lbl.create_tween().set_parallel(true)
-	tw.tween_property(lbl, "position:y", lbl.position.y - 24.0, 0.45)
-	tw.tween_property(lbl, "modulate:a", 0.0, 0.45)
+	tw.tween_property(lbl, "position:y", pos.y - 28.0, dur)
+	tw.tween_property(lbl, "modulate:a", 0.0, dur)
 	tw.chain().tween_callback(lbl.queue_free)
 
 
@@ -235,9 +241,10 @@ func play_timing_ring(enemy_index: int, window: float) -> bool:
 func hurt_flash(spr: Sprite2D) -> void:
 	if spr == null or not is_instance_valid(spr):
 		return
+	var f := SettingsManager.battle_speed_factor()
 	var tw := spr.create_tween()
-	tw.tween_property(spr, "modulate", Color(5, 0.3, 0.3), 0.05)
-	tw.tween_property(spr, "modulate", Color.WHITE, 0.1)
+	tw.tween_property(spr, "modulate", Color(5, 0.3, 0.3), 0.05 / f)
+	tw.tween_property(spr, "modulate", Color.WHITE, 0.1 / f)
 
 
 ## 히트스톱 — 임팩트 순간 시간 감속.
@@ -246,7 +253,8 @@ func hitstop(duration: float = 0.06) -> void:
 		return
 	_hitstop_busy = true
 	Engine.time_scale = HITSTOP_SCALE
-	await get_tree().create_timer(duration, true, false, true).timeout
+	var scaled := maxf(duration / SettingsManager.battle_speed_factor(), 0.02)
+	await get_tree().create_timer(scaled, true, false, true).timeout
 	Engine.time_scale = 1.0
 	_hitstop_busy = false
 

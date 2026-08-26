@@ -1,10 +1,8 @@
 class_name DamageCalculator
 extends RefCounted
-## 순수 함수 집합 — 원작 공식 보존 + G-FAITH 스위치 (02_design/01 §5).
-
-## faithful_mode=true면 원작 공식 그대로 (DP 미반영).
-## false면 DP 반영 및 속성 상성 적용.
-static var faithful_mode := false
+## 순수 함수 집합 — 기본 공격은 원작 공식 보존((Ap+rnd10)/4, DP 미반영 —
+## 원작 밸런스 결함 포함 유지). 기술은 속성 상성 반영.
+## DP 반영 옵션은 난이도 프리셋 실착 시 과제(HANDOFF 5차 세션 남은 작업).
 
 
 ## 기본 물리 공격 (원작: (Ap + rnd(10)) / 4)

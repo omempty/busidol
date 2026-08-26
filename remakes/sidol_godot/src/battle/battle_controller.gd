@@ -15,7 +15,6 @@ var turn_count := 0
 var player_combatant: Combatant
 var enemy_combatants: Array[Combatant] = []
 var active_enemy_idx := 0
-var speed_multiplier := 1.0  # ×1/×2/×4 — SettingsManager에서 조절
 var _rng := RandomNumberGenerator.new()
 
 
@@ -75,6 +74,30 @@ func _advance_enemy() -> Dictionary:
 		if state == TurnState.FINISHED:
 			battle_finished.emit(&"lose")
 	return {}
+
+
+## 스킬 상태이상 부여 — targeting별 실제 대상(연출 종료 시점 호출).
+func apply_skill_effects(skill: Dictionary) -> void:
+	for effect_kind: String in skill.get("status_effects", []):
+		for t in skill_targets(skill):
+			t.attach_effect({"kind": StringName(effect_kind), "turns": 3, "magnitude": 10})
+
+
+## 스킬 targeting에 따른 실제 대상 목록
+func skill_targets(skill: Dictionary) -> Array[Combatant]:
+	var out: Array[Combatant] = []
+	match str(skill.get("targeting", "single")):
+		"all_enemies":
+			for e in enemy_combatants:
+				if not e.is_down():
+					out.append(e)
+		"self":
+			out.append(player_combatant)
+		_:
+			var t := _first_alive_enemy()
+			if t != null:
+				out.append(t)
+	return out
 
 
 func _resolve_attack(attacker: Combatant, target: Combatant, cmd: Dictionary) -> void:

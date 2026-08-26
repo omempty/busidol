@@ -15,6 +15,22 @@ var _elapsed := 0.0
 var _done := false
 
 
+## 타이밍 윈도우 판정 — 공격·단일 대상 공격 스킬만 (버프/자기 스킬 제외).
+## cfg: skills.json timing 섹션. 적용 대상 아니면 0.0(링 미표시).
+static func window_for(command: Dictionary, cfg: Dictionary) -> float:
+	var window := float(cfg.get("window", 0.0))
+	if window <= 0.0:
+		return 0.0
+	var ctype := StringName(str(command.get("type", &"attack")))
+	if ctype == &"attack":
+		return window
+	if ctype == &"skill":
+		var skill: Dictionary = command.get("skill", {})
+		if String(skill.get("targeting", "")) == "single":
+			return window
+	return 0.0
+
+
 func _process(delta: float) -> void:
 	if _done:
 		return

@@ -48,7 +48,7 @@ func is_playing() -> bool:
 func _process(delta: float) -> void:
 	if not _active:
 		return
-	_elapsed += delta
+	_elapsed += delta * SettingsManager.battle_speed_factor()  # 연출 배속(NORMAL/FAST/SKIP)
 	var channels: Dictionary = _current_move.get("channels", {})
 	for ch_name: String in channels:
 		var keyframes: Array = channels[ch_name]

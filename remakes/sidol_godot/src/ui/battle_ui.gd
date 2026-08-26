@@ -5,8 +5,9 @@ extends CanvasLayer
 
 signal command_selected(cmd_text: String)
 signal skill_selected(skill: Dictionary)
+signal item_selected(item_def: Dictionary)
 
-const CMD_TEXTS: Array[String] = ["공격", "기술", "방어", "도망"]
+const CMD_TEXTS: Array[String] = ["공격", "기술", "방어", "도구", "도망"]
 const PLAYER_BAR_COLOR := Color(0.3, 1.0, 0.5)
 const ENEMY_BAR_COLOR := Color(1, 0.3, 0.3)
 
@@ -14,6 +15,7 @@ var _hp_bars := {}
 var _break_labels := {}  # 적별 브레이크 게이지 라벨 — 약점 보유 종만 생성
 var _menu_root: VBoxContainer
 var _skill_panel: VBoxContainer
+var _item_panel: VBoxContainer
 var _turn_label: Label
 var _result_label: Label
 var _skills: Array[Dictionary] = []
@@ -98,11 +100,42 @@ func show_skill_menu() -> void:
 		_skill_panel.add_child(btn)
 
 
+func show_item_menu() -> void:
+	hide_menu()
+	_item_panel = _new_menu_box()
+	var usable := 0
+	for slot: Dictionary in GameState.inventory.all_slots():
+		var def: Dictionary = Database.get_item(StringName(str(slot.get("item_id", ""))))
+		if int(def.get("hp_restore", 0)) <= 0:
+			continue  # 전투 중 사용은 회복 계열만
+		usable += 1
+		var btn := Button.new()
+		btn.text = "%s ×%d" % [str(def.get("name_ko", def["id"])), int(slot.get("count", 1))]
+		btn.pressed.connect(
+			func() -> void:
+				_close_item_panel()
+				item_selected.emit(def)
+		)
+		_item_panel.add_child(btn)
+	if usable == 0:
+		var none := Button.new()
+		none.text = "사용 가능한 도구 없음"
+		none.disabled = true
+		_item_panel.add_child(none)
+
+
 func hide_menu() -> void:
 	if _menu_root != null:
 		_menu_root.queue_free()
 		_menu_root = null
 	_close_skill_panel()
+	_close_item_panel()
+
+
+func _close_item_panel() -> void:
+	if _item_panel != null:
+		_item_panel.queue_free()
+		_item_panel = null
 
 
 func _close_skill_panel() -> void:

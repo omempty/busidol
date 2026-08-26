@@ -51,6 +51,7 @@ func _setup_ui() -> void:
 	_ui.build(player_combatant, enemies, _skills)
 	_ui.command_selected.connect(_on_command)
 	_ui.skill_selected.connect(_on_skill_selected)
+	_ui.item_selected.connect(_on_item_selected)
 
 
 ## 연출 계층 구성 — 안무 실행기와 프리젠터를 바인딩
@@ -72,11 +73,9 @@ func _setup_presentation() -> void:
 
 
 func _load_skills() -> void:
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/skills.json"))
-	if typeof(raw) == TYPE_DICTIONARY:
-		for s: Dictionary in raw.get("skills", []):
-			_skills.append(s)
-		_timing_cfg = raw.get("timing", {})
+	var data := BattleSetup.load_skills()
+	_skills.assign(data["skills"])
+	_timing_cfg = data["timing"]
 
 
 func _setup_combatants(def: Dictionary) -> void:
@@ -85,21 +84,9 @@ func _setup_combatants(def: Dictionary) -> void:
 	player_combatant.skills = [
 		&"combo_punch", &"flame_beaker", &"debug_shield", &"volt_arc", &"ember_of_flint"
 	]
-
-	for eid in def.get("enemies", ["mad_eye"]):
-		# field/cutscene은 species 원본 딕셔너리를 넘길 수 있다 — id만 추출
-		var eid_str := str(eid.get("id", eid)) if eid is Dictionary else str(eid)
-		var edef: Dictionary = Database.get_enemy_def(StringName(eid_str))
-		var hp_r: Array = edef.get("hp_range", [20, 40])
-		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
-		var c := Combatant.new(
-			str(edef.get("display_name", eid_str)), hp_val,
-			int(edef.get("ap", 15)), int(edef.get("dp", 5))
-		)
-		for w in edef.get("weaknesses", []):
-			c.weaknesses.append(StringName(str(w)))
-		enemies.append(c)
-		_enemy_ids.append(eid_str)
+	var built := BattleSetup.build_enemies(def)
+	enemies.assign(built["combatants"])
+	_enemy_ids.assign(built["ids"])
 
 
 func _on_command(cmd_text: String) -> void:
@@ -122,9 +109,12 @@ func _on_command(cmd_text: String) -> void:
 				{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50}
 			)
 			_end_player_defend()
+		"도구":
+			_ui.show_item_menu()
 		"도망":
 			battle_ended.emit(&"flee", {})
-			_exit_battle(&"flee", {})
+			BattleRewards.apply(&"flee", {}, player_combatant.hp, _on_win_flag)
+			get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 
 func _on_skill_selected(skill: Dictionary) -> void:
@@ -139,6 +129,19 @@ func _on_skill_selected(skill: Dictionary) -> void:
 	)
 
 
+## 도구 사용 — hp_restore 회복 + 인벤 차감, 후 적 턴(방어 흐름 재사용).
+func _on_item_selected(item_def: Dictionary) -> void:
+	if _busy:
+		return
+	_busy = true
+	_ui.hide_menu()
+	var healed: int = player_combatant.heal(int(item_def.get("hp_restore", 0)))
+	GameState.inventory.remove(StringName(str(item_def["id"])), 1)
+	_presenter.show_player_heal(healed)
+	_ui.refresh_bars()
+	_end_player_defend()
+
+
 ## 플레이어 액션 개시 — 커맨드 제출(판정) → 안무 재생(표현) → 종료 시 턴 해결
 func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
 	if _busy:
@@ -146,7 +149,7 @@ func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
 	_busy = true
 	_ui.hide_menu()
 	# 타이밍 버튼 — sweet zone 입력 시 피해 보너스(skills.json timing 섹션)
-	var window := _timing_window_for(command)
+	var window := TimingRing.window_for(command, _timing_cfg)
 	if window > 0.0:
 		var just: bool = await _presenter.play_timing_ring(_alive_enemy_index(), window)
 		command["timing_mult"] = float(_timing_cfg.get("mult", 1.2)) if just else 1.0
@@ -156,21 +159,6 @@ func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
 	var skill: Dictionary = command.get("skill", {})
 	_pending_element = StringName(str(skill.get("element", "physical")))
 	_play_move(move_id)
-
-
-## 타이밍 윈도우 — 공격·단일 대상 공격 스킬만 (버프/자기 스킬 제외)
-func _timing_window_for(command: Dictionary) -> float:
-	var window := float(_timing_cfg.get("window", 0.0))
-	if window <= 0.0:
-		return 0.0
-	var ctype := StringName(str(command.get("type", &"attack")))
-	if ctype == &"attack":
-		return window
-	if ctype == &"skill":
-		var skill: Dictionary = command.get("skill", {})
-		if String(skill.get("targeting", "")) == "single":
-			return window
-	return 0.0
 
 
 ## 안무 재생 — battle_moves JSON을 러너로 재생(연출은 프리젠터 위임).
@@ -212,30 +200,10 @@ func _on_choreo_damage_frame() -> void:
 
 func _on_choreo_finished(_move_id: StringName) -> void:
 	if _pending_action.get("type", &"") == &"skill":
-		var skill: Dictionary = _pending_action["skill"]
-		for effect_kind: String in skill.get("status_effects", []):
-			for t in _skill_targets(skill):
-				t.attach_effect({"kind": StringName(effect_kind), "turns": 3, "magnitude": 10})
+		controller.apply_skill_effects(_pending_action["skill"])
 	_pending_action = {}
 	_pending_pops.clear()
 	_resolve_turn()
-
-
-## 스킬 targeting에 따른 실제 대상 목록
-func _skill_targets(skill: Dictionary) -> Array[Combatant]:
-	var out: Array[Combatant] = []
-	match str(skill.get("targeting", "single")):
-		"all_enemies":
-			for e in enemies:
-				if not e.is_down():
-					out.append(e)
-		"self":
-			out.append(player_combatant)
-		_:
-			var t := _first_alive_enemy()
-			if t != null:
-				out.append(t)
-	return out
 
 
 func _alive_enemy_index() -> int:
@@ -270,18 +238,11 @@ func _resolve_turn() -> void:
 			actor.broken_turns -= 1
 			_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
 		elif actor != null and not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
-			# 텔레그래프 — 특수공격 예고(읽을 수 있는 패턴), 후 회피 페이즈
-			var dodge_cfg: Dictionary = edef["dodge_phase"]
-			_ui.set_turn_text("!! 이상 신호 감지 !!")
-			_presenter.play_telegraph(str(dodge_cfg.get("telegraph", "flash_red_0.8s")))
-			await get_tree().create_timer(0.8).timeout
-			await _run_dodge_phase(edef)
+			await BattleEnemyPhase.dodge_sequence(
+				_dodge, edef, _presenter, _ui, player_combatant
+			)
 		elif actor != null:
-			var raw := DamageCalculator.enemy_hit(actor.ap, EnemyManager.rng)
-			var actual: int = player_combatant.take_damage(raw)
-			_presenter.show_damage_number(actual, true)
-			_presenter.hurt_flash(_presenter.player_sprite)
-			_presenter.play_screen_kf({"shake": 3})
+			BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
 		controller.turn_count += 1
 		_tick_effects()
 
@@ -300,37 +261,11 @@ func _resolve_turn() -> void:
 	_ui.show_command_menu()
 
 
-## 보스전 회피 페이즈 — 탄막을 실시간으로 피해야 한다(턴제+회피 하이브리드).
-## 피격 횟수 × dodge_damage_per_hit 가 플레이어 피해로 환산된다.
-func _run_dodge_phase(edef: Dictionary) -> int:
-	var cfg: Dictionary = edef["dodge_phase"]
-	_ui.set_turn_text("!! 피하라 !!")
-	_dodge.visible = true
-	_dodge.start(maxf(float(cfg.get("duration", 4.0)), 0.5), cfg)
-	var hits: int = await _dodge.phase_complete
-	_dodge.stop()
-	_dodge.visible = false
-
-	var per_hit := maxi(int(edef.get("dodge_damage_per_hit", 3)), 0)
-	var actual: int = player_combatant.take_damage(hits * per_hit)
-	if actual > 0:
-		_presenter.show_damage_number(actual, true)
-		_presenter.hurt_flash(_presenter.player_sprite)
-		_presenter.play_screen_kf({"shake": 3, "flash": "#ff3333", "a": 0.25})
-	print("[battle] dodge phase done: hits=%d dmg=%d" % [hits, actual])
-	return hits
-
-
 func _end_player_defend() -> void:
 	# 적 턴만 진행
-	for e in enemies:
-		if not e.is_down():
-			var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
-			var actual: int = player_combatant.take_damage(raw)
-			_presenter.show_damage_number(actual, true)
-			_presenter.hurt_flash(_presenter.player_sprite)
-			_presenter.play_screen_kf({"shake": 3})
-			break
+	var attacker := _first_alive_enemy()
+	if attacker != null:
+		BattleEnemyPhase.regular_attack(attacker, player_combatant, _presenter)
 	_tick_effects()
 	_ui.refresh_bars()
 
@@ -349,37 +284,9 @@ func _show_result(result: StringName) -> void:
 	_busy = true
 	_ui.show_result(result)
 	await get_tree().create_timer(1.2).timeout
-	var rewards := _compute_rewards()
+	var rewards := BattleRewards.compute(_enemy_ids)
 	battle_ended.emit(result, rewards)
-	_exit_battle(result, rewards)
-
-
-## 보상 산출 — monsters.json 종별 exp/money 범위에서 난수 합산(하드코딩 금지).
-func _compute_rewards() -> Dictionary:
-	var exp_total := 0
-	var money_total := 0
-	for eid in _enemy_ids:
-		var edef := Database.get_enemy_def(StringName(eid))
-		var exp_range: Array = edef.get("exp", [5, 10])
-		var money_range: Array = edef.get("money", [50, 100])
-		exp_total += randi_range(int(exp_range[0]), int(exp_range[1]))
-		money_total += randi_range(int(money_range[0]), int(money_range[1]))
-	return {"exp": exp_total, "money": money_total}
-
-
-func _exit_battle(result: StringName, rewards: Dictionary) -> void:
-	# 전투 결과를 GameState에 반영
-	GameState.player_stats["hp"] = player_combatant.hp
-	if result == &"win":
-		GameState.player_stats["money"] = (
-			int(GameState.player_stats["money"]) + int(rewards["money"])
-		)
-		var growth := GameState.grant_exp(int(rewards["exp"]))
-		if bool(growth["level_up"]):
-			print("[battle] level up → %d" % int(growth["level"]))
-		if not _on_win_flag.is_empty():
-			GameState.set_flag(_on_win_flag, true)
-		SaveManager.request_autosave("전투 승리")  # 필드 복귀 후 consume
+	BattleRewards.apply(result, rewards, player_combatant.hp, _on_win_flag)
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 

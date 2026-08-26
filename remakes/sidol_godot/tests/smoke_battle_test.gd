@@ -96,7 +96,9 @@ func _ready() -> void:
 		await get_tree().process_frame
 		await get_tree().process_frame
 		var hp_before2: int = boss.player_combatant.hp
-		var hits: int = await boss._run_dodge_phase(bdef)
+		var hits: int = await BattleEnemyPhase.dodge_sequence(
+			boss._dodge, bdef, boss._presenter, boss._ui, boss.player_combatant
+		)
 		print(
 			(
 				"[smoke_battle] dodge hits=%d player hp %d -> %d"
@@ -186,6 +188,28 @@ func _ready() -> void:
 	if timing_dmg <= no_timing_dmg:
 		failures.append("타이밍 보너스 미적용 (just=%d normal=%d)" % [timing_dmg, no_timing_dmg])
 	logic.queue_free()
+
+	# --- 6) 도구 사용 — hp_restore 회복 + 인벤 차감 ---
+	GameState.inventory.add(&"ITEM_MEDICINE", 2)
+	var med: Dictionary = Database.get_item(&"ITEM_MEDICINE")
+	if int(med.get("hp_restore", 0)) <= 0:
+		failures.append("테스트용 소모품 hp_restore 없음")
+	else:
+		battle.player_combatant.hp = 30
+		var inv_before: int = GameState.inventory.count(&"ITEM_MEDICINE")
+		battle._on_item_selected(med)
+		await get_tree().process_frame
+		var healed_hp: int = battle.player_combatant.hp
+		var inv_after: int = GameState.inventory.count(&"ITEM_MEDICINE")
+		print(
+			"[smoke_battle] item use: hp 30 -> %d (restore %d), inv %d -> %d"
+			% [healed_hp, int(med["hp_restore"]), inv_before, inv_after]
+		)
+		if healed_hp <= 30:
+			failures.append("도구 회복 미적용")
+		if inv_after != inv_before - 1:
+			failures.append("도구 인벤 차감 오류")
+		GameState.inventory.remove(&"ITEM_MEDICINE", GameState.inventory.count(&"ITEM_MEDICINE"))
 
 	_finish(failures, battle)
 

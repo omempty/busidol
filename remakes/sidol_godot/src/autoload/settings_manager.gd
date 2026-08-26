@@ -28,6 +28,18 @@ func get_text_scale() -> float:
 	return float(TEXT_SCALE.get(text_size, 1.0))
 
 
+## 전투 연출 배수 — 안무·트윈 지속시간을 나누는 배속.
+## 타이밍 링(입력 창)은 공정성을 위해 배속 제외. 원작 WVISUAL/SPEED 대체.
+func battle_speed_factor() -> float:
+	match effect_speed:
+		EffectSpeed.FAST:
+			return 2.0
+		EffectSpeed.SKIP:
+			return 6.0
+		_:
+			return 1.0
+
+
 func _ready() -> void:
 	for bus in BUSES:
 		volumes[bus] = DEFAULT_VOLUME
