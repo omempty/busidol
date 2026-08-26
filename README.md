@@ -67,8 +67,12 @@
 | 전투 승리→에필로그→엔딩 흐름 | on_win_flag + epilogue.json | ✅ |
 | 약점→브레이크(속성 약점 ×1.5·2회 누적 BREAK) | DamageCalculator + Combatant + monsters.json species | ✅ |
 | 타이밍 버튼(timed hit ×1.2) | TimingRing + skills.json timing | ✅ |
+| 브레이크 게이지 UI + 보스 텔레그래프 | BattleUI 게이지 핍 + play_telegraph | ✅ |
+| 전투 배속(연출속도 설정 연동) | EffectSpeed → 안무 러너·트윈 배수 | ✅ |
+| 전투 중 도구 사용(hp_restore) | BattleUI 아이템 메뉴 + Combatant.heal | ✅ |
 | 적 종별 스프라이트(원작 도트 이관) | SpriteSets + assets/sprites/*_original | ✅ |
 | 아이템 아이콘(원작 ITEM.SPR 이관 24종) | ItemIcons.texture + assets/icons | ✅ |
+| LLM 납품 심사 보드(승인/반려/재요청) | tools/review + 심사실행.bat | ✅ |
 | Event Editor v0 | addons/event_editor (컷신 스텝 편집) | ✅ |
 | 세이브/로드 3슬롯+오토세이브(Q1) | SaveManager + 타이틀 계속하기·일시정지 메뉴 | ✅ |
 | 설정 저장(볼륨·연출속도·아트모드·글자크기 Q9) | SettingsManager + SettingsPanel | ✅ |

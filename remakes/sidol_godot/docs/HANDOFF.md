@@ -1,12 +1,14 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
-> 작성일: 2026-08-25 · Phase 8 진행 중(LLM 스프라이트 워크플로우 + 화면 기반 정비 완료) · 세션 종료 시점
+> 작성일: 2026-08-26 (5차 세션 종료) · Phase 8 진행 중 + Phase 9 전투·UI 고도화 병행
 
 ## 1. 현재 상태 한 줄 요약
 
-Phase 0~7 완료 + Phase 8 인프라 완료(AudioManager·Validator·DOSBox·리터칭 파이프라인·
-LLM 스프라이트 워크플로우) + **아트 모드 시스템·뷰포트 960×540·투명화 정비**.
-다음은 **첫 LLM 납품 수령 → 재가공 → 채택 판정**부터.
+Phase 0~7 완료 + Phase 8 인프라 + **원작 리소스 코드 이관 완료(몬스터 8·NPC 7·아이콘 24)** +
+**LLM 의뢰 패키지 33종 생성 + 심사 보드(승인/반려/재요청) 완비** +
+**전투 재미 확장(약점→브레이크·타이밍 버튼·텔레그래프·배속·도구)** + 아이템 DB 빈 로드 버그 수정.
+다음은 **유저의 첫 이미지 LLM 의뢰(가이드: assets/gen/prompts/LLM_REQUEST_GUIDE.md) →
+심사 보드 루프 → 채택분 패킹**과 엔진 백로그(Windows export preset)부터.
 
 ## 2. 다음 세션 첫 명령
 
@@ -363,7 +365,7 @@ choice 스텝 표시 지원.
 **검증**: 검증실행.bat 10단계(마지막 = smoke_choice). 개별 실행 시 --quit-after
 병행 필수.
 
-### 5차 세션 (8/26) — 스프라이트 이관·LLM 패키지 3종·전투 재미 확장
+### 5차 세션 (8/26) — 스프라이트 이관·LLM 패키지·전투 재미·심사 보드 (종료 시점)
 
 **원작 리소스 이관 (정책 ①원작 있음→리마스터, LLM 불필요)**:
 - **필드 몬스터 8종 + NPC 7종 시트** — 원본 GOODITEM.C `eye[i].mode=8*(i%8+1)` 근거로
@@ -396,14 +398,41 @@ choice 스텝 표시 지원.
 
 **검증**: validate 0오류 · 스모크 10종 전부 PASS · check_scripts broken=0.
 
-**남은 작업 갱신 (우선순위순)**:
-1. 브레이크 게이지 시각화(적 UI) · 보스 텔레그래프(telegraph_visual 데이터→dodge 진입 전 연출) ·
-   전투 배속(EffectSpeed→안무 배수) · 전투 중 아이템 사용(consumable hp_restore 있음)
-2. `faithful_mode` 죽은 스위치 처리 — 난이도 프리셋 흡수(하=DP 반영/상=원작 공식) 또는 제거
-3. **Windows export preset** — export_presets.cfg 부재 실측(8/26). data/**.json 포함 조기 검증 필요
-4. battle_scene_controller 323행(상한 초과) — 회차/적턴 분리 여지. battle_presenter ~320행 동반
-5. 루트 정크(`[godot.exe` 0바이트)·README 구조도 불일치 — 8/26 README 구조도는 수정함
-6. LLM 납품 수령 사이클(유저) — 납품 오면 validate_submission/process_llm_sheet 게이트
+**후반 작업 (동일 세션 계속 — 전부 커밋·푸시됨)**:
+- **브레이크 게이지 시각화** — 적 스탯 UI에 ASCII 핍(`[#-]`, 약점 보유 종만), BREAK 시 적색.
+- **보스 텔레그래프** — dodge_phase.telegraph 코드(screen_static_full_1s 등)를
+  `BattlePresenter.play_telegraph`가 해석(지속시간 접미·flash/shake 토큰),
+  "!! 이상 신호 감지 !!" 배너 후 회피 페이즈.
+- **전투 배속** — `SettingsManager.battle_speed_factor()`(NORMAL 1/FAST 2/SKIP 6) →
+  안무 러너 delta·트윈·히트스톱 적용(타이밍 링은 입력 공정성상 제외).
+- **전투 중 도구 사용** — 커맨드 5종 확장, hp_restore 소모품 메뉴·회복 팝·인벤 차감.
+- **아이템 DB 빈 로드 실버그 수정** — load_array(최상위 배열 전용)로 객체 래핑된
+  items.json을 읽어 **아이템 DB가 항상 공백**이었음(UI 폴백이 은폐). load_dict로 수정.
+  자동 테스트(도구 섹션)가 적발 — 자동화 실효 사례.
+- **battle_scene_controller 분리** — 406→296행. BattleSetup(스킬/적 구성)·
+  BattleEnemyPhase(일반공격/회피 시퀀스)·BattleRewards(보상) 추출, 스킬 효과 부여는
+  BattleController로, 타이밍 판정은 TimingRing.window_for로 이동.
+- **dead code 정리** — faithful_mode·speed_multiplier 제거(난이도 프리셋 자체 미와결
+  실측 — get_difficulty_mult 호출부 0건. DP 반영은 프리셋 실착 시 과제).
+- **LLM 납품 심사 보드** — `심사실행.bat` → tools/review/(stdlib 서버+보드).
+  카드=원본|납품|앵커 3열+검증 배지, 승인=20_processed(스프라이트는 그리드 컷팅 겸용),
+  반려=재요청 패키지 자동 생성(_feedback/<cat>/<file>.md = 원본 의뢰문+유저 사유+
+  검증 결과+v<n+1> 지시, 파일은 _rejected), 전체 승인/반려 배치. 가짜 납품 2건으로
+  전 경로 실사.
+- **LLM_REQUEST_GUIDE.md** — 타 PC 세션용 원페이지 가이드(클론→패키지 재생성→의뢰
+  첨부물 표→납품 규약→심사 루프→패킹 인계). assets/raw는 gitignored라 클론 시
+  패키지 재생성 명령이 첫 단계.
+
+**남은 작업 갱신 (우선순위순 — 5차 세션 종료 시점)**:
+1. **LLM 납품 수령 사이클(유저)** — 패키지 33종 생성 완료, 가이드 문서 있음.
+   납품→심사 보드→채택분 패킹 요청.
+2. **Windows export preset** — export_presets.cfg 부재 실측(8/26). data/**.json 포함
+   조기 검증 필요(빌드 함정 예방).
+3. battle_presenter 354행(상한 초과) — 팝/플래시 계열 추가 분리 여지.
+   scene controller는 296행으로 상한 준수(5차 세션 분리 완료).
+4. 루트 정크(`[godot.exe` 0바이트) 삭제 — README 구조도는 5차 세션에 수정함.
+5. Mac/Linux export 프리셋 + headless 검증 CI(외부 계정 필요 — 보류 유지).
+6. 전투 후보(미구현): 스킬 획득 흐름(grant_skill 실제 플레이 반영), 상태이상 아이콘화.
 
 ### 다음 세션 연계 (8/25 4차 세션 종료 시점)
 
