@@ -1,0 +1,41 @@
+{
+ "schema_version": 2,
+ "source": "I.SPR frames 024-031 (원작 도트 26x26, 4배 nearest 베이크)",
+ "cell": 128,
+ "cell_w": 128,
+ "cell_h": 128,
+ "cols": 2,
+ "scale": 0.6667,
+ "animations": {
+  "walk_down": {
+   "row": 0,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "walk_up": {
+   "row": 1,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "walk_left": {
+   "row": 2,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "walk_right": {
+   "row": 3,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "idle_down": {
+   "row": 4,
+   "frames": 2,
+   "fps": 2,
+   "loop": true
+  }
+ }
+}
