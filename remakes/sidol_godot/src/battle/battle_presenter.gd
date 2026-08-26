@@ -36,7 +36,9 @@ func setup(root: Node2D) -> void:
 
 
 ## 전투 스프라이트 구성 — 플레이어(셀 크기 메타 기반, 비정형 비율 허용) + 적
-func build_sprites(enemy_count: int) -> void:
+## 적은 종별 시트(SpriteSets — <species>_original/_remake)를 사용하며,
+## 시트 미정착 종(보스 등 신규 창작 대상)은 기존 플레이스홀더 사각형 폴백.
+func build_sprites(enemy_ids: Array[String]) -> void:
 	player_sprite = Sprite2D.new()
 	var cs := _player_cell_size()
 	var ptex: Texture2D = load(str(_resolved_player()["sheet"]))
@@ -51,16 +53,31 @@ func build_sprites(enemy_count: int) -> void:
 	player_sprite.set_meta(&"base_pos", player_sprite.position)
 	_root.add_child(player_sprite)
 
-	for i in enemy_count:
+	for i in enemy_ids.size():
 		var es := Sprite2D.new()
-		# 적 아트는 LLM 리메이크 파이프라인(assets/raw/llm → 30_packed) 확정 후 교체.
-		# 원본 bmp(originals_ref)는 참조자료로 격하돼 임포트 불가 — 로드 시도 시
-		# 매 전투 ERROR 스팸이 발생하므로 플레이스홀더만 생성한다(8/25 스윕 발견).
-		var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
-		img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6), randf_range(0.2, 0.5)))
-		es.texture = ImageTexture.create_from_image(img)
+		var node_scale := 1.5  # 폴백(64px 사각형) 기본 배율 — 기존 값 유지
+		var paths := SpriteSets.character_sheet(StringName(enemy_ids[i]), true)
+		if not str(paths["sheet"]).is_empty():
+			var meta: Dictionary = {}
+			var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(str(paths["meta"])))
+			if typeof(raw) == TYPE_DICTIONARY:
+				meta = raw
+			var cell := float(meta.get("cell_w", meta.get("cell", 64)))
+			var meta_scale := maxf(float(meta.get("scale", 1.0)), 0.01)
+			var tex: Texture2D = load(str(paths["sheet"]))
+			if tex != null:
+				var eat := AtlasTexture.new()
+				eat.atlas = tex
+				eat.region = Rect2(0, 0, cell, cell)  # 행 0 = 정면(walk_down) 1프레임
+				es.texture = eat
+				# 실효 크기 정규화 — 셀×스케일 무관하게 화면상 크기 일관
+				node_scale = BATTLE_PLAYER_CELL_PX / (cell * meta_scale)
+		if es.texture == null:
+			var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
+			img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6), randf_range(0.2, 0.5)))
+			es.texture = ImageTexture.create_from_image(img)
 		es.position = Vector2(600 + i * 100, 180)
-		es.scale = Vector2(1.5, 1.5)
+		es.scale = Vector2.ONE * node_scale
 		es.set_meta(&"base_pos", es.position)
 		_root.add_child(es)
 		enemy_sprites.append(es)

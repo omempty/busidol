@@ -57,7 +57,7 @@ func _setup_presentation() -> void:
 	_presenter = BattlePresenter.new()
 	add_child(_presenter)
 	_presenter.setup(self)
-	_presenter.build_sprites(enemies.size())
+	_presenter.build_sprites(_enemy_ids)
 
 	_runner = ChoreographyRunner.new()
 	add_child(_runner)
