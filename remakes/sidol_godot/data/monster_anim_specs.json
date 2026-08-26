@@ -1,110 +1,995 @@
 {
-  "schema_version": 1,
-  "_comment": "몬스터별 그래픽+애니메이션+행동 통합 스펙 — 그래픽 AI가 이 파일 하나로 전량 생성.",
-  "style_target": "쯔바이/나르실리온/악튜러스풍 JRPG + 원작 캠퍼스 호러 그로테스크",
-  "_policy": "①원작 있음→리마스터 ②원작+격상→리터칭 ③신규→컨셉+프롬프트 ④없음→플레이스홀더",
-
-  "species": [
-    {"id":"mad_eye","name_ko":"매드 아이","cell":{"w":64,"h":64},"pattern":"dash",
-     "telegraph_visual":"flash_red_0.8s","source":"original_i_spr",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":6},"walk_up":{"row":1,"frames":4,"fps":6},"walk_left":{"row":2,"frames":4,"fps":6},"walk_right":{"row":3,"frames":4,"fps":6},"idle_down":{"row":4,"frames":2,"fps":2},"attack":{"row":5,"frames":5,"fps":12,"loop":false,"_desc":"눈동자 수축 후 광선 발사"},"hurt":{"row":6,"frames":2,"fps":8,"loop":false,"_desc":"눈 뒤집힘+충혈"},"death":{"row":7,"frames":4,"fps":8,"loop":false,"_desc":"안구 파열→젤리"}},
-     "token":"떠다니는 거대 단안 괴물. 충혈된 안구, 정맥 돌기, 눈꺼풀처럼 열리는 속살"},
-
-    {"id":"dworm","name_ko":"디웜","cell":{"w":64,"h":64},"pattern":"burrow",
-     "telegraph_visual":"dust_particles_2s","source":"original_i_spr",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":5},"walk_up":{"row":1,"frames":4,"fps":5},"walk_left":{"row":2,"frames":4,"fps":5},"walk_right":{"row":3,"frames":4,"fps":5},"idle_down":{"row":4,"frames":2,"fps":2},"burrow":{"row":5,"frames":3,"fps":6,"loop":false,"_desc":"땅에 파고들며 사라짐"},"emerge":{"row":6,"frames":3,"fps":8,"loop":false,"_desc":"지면 파열+입 벌림"},"attack":{"row":7,"frames":4,"fps":10,"loop":false,"_desc":"촉수 3개 동시 분출"},"death":{"row":8,"frames":4,"fps":8,"loop":false,"_desc":"절단된 촉수 경련→점액"}},
-     "token":"기어다니는 거대 촉수 구더기. 축축한 점액 질감, 마디마다 이빨 줄"},
-
-    {"id":"vulgar","name_ko":"불거","cell":{"w":64,"h":64},"pattern":"chase",
-     "telegraph_visual":"","source":"original_i_spr",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":5},"walk_up":{"row":1,"frames":4,"fps":5},"walk_left":{"row":2,"frames":4,"fps":5},"walk_right":{"row":3,"frames":4,"fps":5},"idle_down":{"row":4,"frames":2,"fps":2},"attack":{"row":5,"frames":4,"fps":10,"loop":false,"_desc":"몸통 앞으로 휘두르기"},"hurt":{"row":6,"frames":2,"fps":8,"loop":false},"death":{"row":7,"frames":3,"fps":6,"loop":false,"_desc":"무너져 내림"}},
-     "token":"흐느적거리는 덩치 괴물. 느리고 무거우나 멈추지 않음"},
-
-    {"id":"ozzy","name_ko":"오지","cell":{"w":64,"h":64},"pattern":"zigzag",
-     "telegraph_visual":"","source":"original_i_spr",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":8},"walk_up":{"row":1,"frames":4,"fps":8},"walk_left":{"row":2,"frames":4,"fps":8},"walk_right":{"row":3,"frames":4,"fps":8},"idle_down":{"row":4,"frames":2,"fps":3},"attack":{"row":5,"frames":4,"fps":12,"loop":false,"_desc":"록커 헤드뱅잉+돌진"},"hurt":{"row":6,"frames":2,"fps":10,"loop":false},"death":{"row":7,"frames":3,"fps":8,"loop":false}},
-     "token":"록커 분위기의 인간형 괴물. 급격한 지그재그 움직임"},
-
-    {"id":"iron_voc","name_ko":"아이언 보크","cell":{"w":64,"h":64},"pattern":"patrol",
-     "telegraph_visual":"","source":"original_e_spr",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":4},"walk_up":{"row":1,"frames":4,"fps":4},"walk_left":{"row":2,"frames":4,"fps":4},"walk_right":{"row":3,"frames":4,"fps":4},"idle_down":{"row":4,"frames":2,"fps":2},"attack":{"row":5,"frames":5,"fps":10,"loop":false,"_desc":"금속 팔 스윙"},"hurt":{"row":6,"frames":2,"fps":8,"loop":false,"_desc":"금속 울림+스파크"},"death":{"row":7,"frames":4,"fps":6,"loop":false,"_desc":"부품 분해 붕괴"}},
-     "token":"금속 장갑 인형형 괴물. 전면 방패 — 후방만 노출"},
-
-    {"id":"hellcop","name_ko":"헬캅","cell":{"w":64,"h":64},"pattern":"chase",
-     "telegraph_visual":"","source":"original_e_spr",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":6},"walk_up":{"row":1,"frames":4,"fps":6},"walk_left":{"row":2,"frames":4,"fps":6},"walk_right":{"row":3,"frames":4,"fps":6},"idle_down":{"row":4,"frames":2,"fps":2},"attack":{"row":5,"frames":5,"fps":12,"loop":false,"_desc":"경봉 휘두르기"},"hurt":{"row":6,"frames":2,"fps":8,"loop":false},"death":{"row":7,"frames":4,"fps":8,"loop":false,"_desc":"경찰 모자 떨어지며 무너짐"}},
-     "token":"경찰 형태 기계 괴물. 전기 약점"},
-
-    {"id":"o_ray","name_ko":"오레이","cell":{"w":64,"h":64},"pattern":"pulse",
-     "telegraph_visual":"expanding_ring_0.5s","source":"original_e_spr",
-     "animations":{"idle":{"row":0,"frames":4,"fps":4,"_desc":"원환 회전+빛 발산"},"attack":{"row":1,"frames":6,"fps":10,"loop":false,"_desc":"확장 펄스 링 발산"},"hurt":{"row":2,"frames":2,"fps":8,"loop":false},"death":{"row":3,"frames":4,"fps":6,"loop":false,"_desc":"빛 산화 소멸"}},
-     "token":"빛을 뿜는 원환 괴물. 정지형, 반경 데미지 펄스"},
-
-    {"id":"sparker","name_ko":"스파커","cell":{"w":64,"h":64},"pattern":"teleport",
-     "telegraph_visual":"glitch_flicker_0.3s","source":"original_e_spr",
-     "animations":{"idle":{"row":0,"frames":4,"fps":8,"_desc":"전기 아크 지직거림"},"attack":{"row":1,"frames":5,"fps":12,"loop":false,"_desc":"방전 폭발"},"hurt":{"row":2,"frames":2,"fps":8,"loop":false},"death":{"row":3,"frames":3,"fps":6,"loop":false,"_desc":"단락→연기"}},
-     "token":"전불 괴물. 순간이동하며 전기 잔재 남김"},
-
-    {"id":"c_bug","name_ko":"씨버그","cell":{"w":48,"h":48},"pattern":"zigzag",
-     "telegraph_visual":"ceiling_shadow","source":"placeholder",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":8},"walk_up":{"row":1,"frames":4,"fps":8},"walk_left":{"row":2,"frames":4,"fps":8},"walk_right":{"row":3,"frames":4,"fps":8},"idle_down":{"row":4,"frames":2,"fps":3},"attack":{"row":5,"frames":3,"fps":12,"loop":false,"_desc":"다리 콤보 급타격"},"death":{"row":6,"frames":3,"fps":6,"loop":false,"_desc":"부품 산산조각"}},
-     "token":"코드 버그가 물리적 거미 기계로 실체화. 다리 끝이 인간 손가락으로 변형된 감염 부품. 천장에서 낙하"},
-
-    {"id":"flying_thesis","name_ko":"플라잉 논문","cell":{"w":48,"h":48},"pattern":"wander",
-     "telegraph_visual":"","source":"placeholder",
-     "animations":{"walk":{"row":0,"frames":4,"fps":6,"_desc":"공중 부유, 페이지 표날림"},"attack":{"row":1,"frames":3,"fps":10,"loop":false,"_desc":"종이 날림 공격"},"death":{"row":2,"frames":3,"fps":6,"loop":false,"_desc":"페이지 흩날리며 소멸"}},
-     "token":"논문 뭉치 폴터가이스트. 페이지 사이 코피 얼룩과 손톱 자국. 날아다니며 종이로 베어냄"},
-
-    {"id":"null_pointer","name_ko":"널 포인터","cell":{"w":64,"h":64},"pattern":"phaser",
-     "telegraph_visual":"glitch_flicker_0.3s","source":"placeholder",
-     "animations":{"walk_down":{"row":0,"frames":4,"fps":6},"walk_up":{"row":1,"frames":4,"fps":6},"walk_left":{"row":2,"frames":4,"fps":6},"walk_right":{"row":3,"frames":4,"fps":6},"idle_down":{"row":4,"frames":2,"fps":3,"_desc":"0x00 빈 얼굴 지직거림"},"attack":{"row":5,"frames":4,"fps":12,"loop":false,"_desc":"세그폴트 손아귀"},"hurt":{"row":6,"frames":2,"fps":8,"loop":false,"_desc":"주소 비트 뒤엉킴"},"death":{"row":7,"frames":3,"fps":6,"loop":false,"_desc":"참조 해제→공중 해체"}},
-     "token":"메모리 유령 괴물. 주소 없는 데이터 덩어리 — 위상 전이로 벽을 통과(phaser). 0x00으로 빈 얼굴에 떠도는 가비지 눈동자"},
-
-    {"id":"rogue_vending","name_ko":"로그 벤딩","cell":{"w":64,"h":96},"pattern":"ambusher",
-     "telegraph_visual":"slight_shake_0.4s","source":"placeholder",
-     "animations":{"idle":{"row":0,"frames":2,"fps":2,"_desc":"평범한 자판기 위장"},"awaken":{"row":1,"frames":3,"fps":8,"loop":false,"_desc":"위장 해제, 눈 깜빡임"},"attack":{"row":2,"frames":5,"fps":12,"loop":false,"_desc":"캔 연발 발사"},"death":{"row":3,"frames":4,"fps":6,"loop":false,"_desc":"캔 쏟아지며 무너짐 → 마지막에 정상 작동(개그)"}},
-     "token":"폭주 자판기 미믹. 캔 대신 눈알 발사. 마지막에 정상 작동하는 개그 연출"},
-
-    {"id":"sewer_king","name_ko":"하수구 킹","cell":{"w":128,"h":128},"pattern":"chase",
-     "telegraph_visual":"rumble_shake_1s","source":"placeholder_procedural","is_boss":true,
-     "animations":{"idle":{"row":0,"frames":4,"fps":3},"walk":{"row":1,"frames":6,"fps":4},"attack":{"row":2,"frames":8,"fps":14,"loop":false,"_desc":"촉수 광역 휘두르기"},"hurt":{"row":3,"frames":3,"fps":8,"loop":false},"death":{"row":4,"frames":6,"fps":8,"loop":false,"_desc":"먼지 뭉치 산화, 내부에서 옛 디스켓 쏟아짐"}},
-     "token":"지하 서고 먼지 뭉칫덩어리 골렘. 다관절 촉수+먼지 입자, 그로테스크. 내부에서 옛 컴퓨터 부품 노출"},
-
-    {"id":"hall_mother","name_ko":"홀 머더","cell":{"w":128,"h":128},"pattern":"chase",
-     "telegraph_visual":"ceiling_crack_1s","source":"placeholder_procedural","is_boss":true,
-     "animations":{"idle":{"row":0,"frames":4,"fps":3},"walk":{"row":1,"frames":6,"fps":3},"attack":{"row":2,"frames":8,"fps":14,"loop":false,"_desc":"복부 알주머니 파열→소형 개체 방출"},"hurt":{"row":3,"frames":3,"fps":8,"loop":false},"death":{"row":4,"frames":6,"fps":8,"loop":false,"_desc":"앱주머니 전부 파열→새끼들이 우수수 떨어짐"}},
-     "token":"현관 천장에 붙은 거대 산파괴형 괴물. 복부에 알주머니 수십개, 파열 연출. 그로테스크+생체 밀도"},
-
-    {"id":"crt_overseer","name_ko":"CRT 오버시어","cell":{"w":128,"h":128},"pattern":"ranged",
-     "telegraph_visual":"screen_static_0.6s","source":"placeholder_procedural","is_boss":true,
-     "animations":{"idle":{"row":0,"frames":4,"fps":4,"_desc":"여러 CRT 화면 각기 다른 채널 띄움"},"walk":{"row":1,"frames":6,"fps":3},"attack":{"row":2,"frames":8,"fps":12,"loop":false,"_desc":"모든 화면 동시 빔 발사"},"hurt":{"row":3,"frames":3,"fps":8,"loop":false,"_desc":"일부 화면 꺼짐"},"death":{"row":4,"frames":6,"fps":8,"loop":false,"_desc":"모니터 일제히 폭발→유리 파편"}},
-     "token":"깨진 CRT 모니터 여러 개 융합. 각 화면에서 다른 색 빛 나오는 눈, 케이블 촉수. 시청률 전쟁 중"},
-
-    {"id":"flask_titan","name_ko":"플라스크 타이탄","cell":{"w":128,"h":128},"pattern":"chase",
-     "telegraph_visual":"liquid_bubble_0.8s","source":"placeholder_procedural","is_boss":true,
-     "animations":{"idle":{"row":0,"frames":4,"fps":3,"_desc":"유리 내부 장기 부유, 거품 상승"},"walk":{"row":1,"frames":6,"fps":3,"_desc":"액체 출렁이며 이동"},"attack":{"row":2,"frames":8,"fps":12,"loop":false,"_desc":"산성 액체 분사+증기 폭발"},"hurt":{"row":3,"frames":3,"fps":8,"loop":false,"_desc":"유리 크랙 확산"},"death":{"row":4,"frames":6,"fps":8,"loop":false,"_desc":"유리 파열→내용물 범람→증기"}},
-     "token":"거대 플라스크 융합체. 유리 안 떠다니는 장기와 기포. 화학약품 냄새가 나는 그로테스크"},
-
-    {"id":"volt_wyrm","name_ko":"볼트 와이럼","cell":{"w":128,"h":128},"pattern":"chase",
-     "telegraph_visual":"arc_charging_0.6s","source":"placeholder_procedural","is_boss":true,
-     "animations":{"idle":{"row":0,"frames":4,"fps":6,"_desc":"케이블 몸통에 전류 맥동"},"walk":{"row":1,"frames":6,"fps":5,"_desc":"케이블이 파도치듯 진행"},"attack":{"row":2,"frames":8,"fps":14,"loop":false,"_desc":"전 신절 동시 방전+아크 폭발"},"hurt":{"row":3,"frames":3,"fps":8,"loop":false,"_desc":"단락 스파크"},"death":{"row":4,"frames":6,"fps":8,"loop":false,"_desc":"콘센트에서 뽑힌 듯 사그라듦"}},
-     "token":"콘센트에서 태어난 전기 용. 다관절 케이블 몸통, 아크 방전. 만 볼트의 그로테스크"},
-
-    {"id":"professor_monster","name_ko":"모교수 괴물","cell":{"w":128,"h":128},"pattern":"chase",
-     "telegraph_visual":"lab_coat_rustle_0.5s","source":"placeholder_procedural","is_boss":true,
-     "animations":{"idle":{"row":0,"frames":4,"fps":3,"_desc":"굽은 등, 찢어진 실험복 펄럭임"},"walk":{"row":1,"frames":4,"fps":3,"_desc":"관절 비틀린 거동"},"attack":{"row":2,"frames":5,"fps":12,"loop":false,"_desc":"비틀린 팔 후려치기"},"hurt":{"row":3,"frames":2,"fps":8,"loop":false},"death":{"row":4,"frames":4,"fps":6,"loop":false,"_desc":"무너지며 교수 배지 떨어짐"}},
-     "token":"인간성을 잃은 모교수의 괴물형(씬 5-1 제압전). 찢어진 실험복·휘어진 안경 너머 빛 없는 눈. 그로테스크하나 교수의 흔적(분필·교안)이 남아 있음"},
-
-    {"id":"sys_builder","name_ko":"SYS_BUILDER.EXE","cell":{"w":192,"h":192},"pattern":"phaser",
-     "telegraph_visual":"screen_static_full_1s","source":"placeholder_procedural","is_boss":true,"is_final_boss":true,
-     "animations":{
-       "idle_phase1":{"row":0,"frames":4,"fps":4,"_desc":"녹색 CRT 와이어프레임, 안정 상태"},
-       "idle_phase2":{"row":1,"frames":6,"fps":6,"_desc":"붕괴 시작 — 픽셀 파편 날림"},
-       "idle_phase3":{"row":2,"frames":8,"fps":10,"_desc":"최종 포맷 모드 — 적색 경고"},
-       "attack":{"row":3,"frames":8,"fps":14,"loop":false,"_desc":"Format C: 빔"},
-       "hurt":{"row":4,"frames":3,"fps":10,"loop":false,"_desc":"와이어프레임 찢어짐"},
-       "death":{"row":5,"frames":8,"fps":6,"loop":false,"_desc":"...따뜻하군요 → 셧다운"}
-     },
-     "token":"1995년 부싯돌이 만든 게임 자동 빌드 시스템이 폭주. 녹색 CRT 와이어프레임 디지털 얼굴, 픽셀 붕괴 이펙트. '미완성은 오류다'"}
-  ]
+ "schema_version": 1,
+ "_comment": "몬스터별 그래픽+애니메이션+행동 통합 스펙 — 그래픽 AI가 이 파일 하나로 전량 생성.",
+ "style_target": "쯔바이/나르실리온/악튜러스풍 JRPG + 원작 캠퍼스 호러 그로테스크",
+ "_policy": "①원작 있음→리마스터 ②원작+격상→리터칭 ③신규→컨셉+프롬프트 ④없음→플레이스홀더",
+ "species": [
+  {
+   "id": "mad_eye",
+   "name_ko": "매드 아이",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "dash",
+   "telegraph_visual": "flash_red_0.8s",
+   "source": "original_i_spr",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 2
+    },
+    "attack": {
+     "row": 5,
+     "frames": 5,
+     "fps": 12,
+     "loop": false,
+     "_desc": "눈동자 수축 후 광선 발사"
+    },
+    "hurt": {
+     "row": 6,
+     "frames": 2,
+     "fps": 8,
+     "loop": false,
+     "_desc": "눈 뒤집힘+충혈"
+    },
+    "death": {
+     "row": 7,
+     "frames": 4,
+     "fps": 8,
+     "loop": false,
+     "_desc": "안구 파열→젤리"
+    }
+   },
+   "token": "떠다니는 거대 단안 괴물. 충혈된 안구, 정맥 돌기, 눈꺼풀처럼 열리는 속살",
+   "body_type": "creature"
+  },
+  {
+   "id": "dworm",
+   "name_ko": "디웜",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "burrow",
+   "telegraph_visual": "dust_particles_2s",
+   "source": "original_i_spr",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 2
+    },
+    "burrow": {
+     "row": 5,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "땅에 파고들며 사라짐"
+    },
+    "emerge": {
+     "row": 6,
+     "frames": 3,
+     "fps": 8,
+     "loop": false,
+     "_desc": "지면 파열+입 벌림"
+    },
+    "attack": {
+     "row": 7,
+     "frames": 4,
+     "fps": 10,
+     "loop": false,
+     "_desc": "촉수 3개 동시 분출"
+    },
+    "death": {
+     "row": 8,
+     "frames": 4,
+     "fps": 8,
+     "loop": false,
+     "_desc": "절단된 촉수 경련→점액"
+    }
+   },
+   "token": "기어다니는 거대 촉수 구더기. 축축한 점액 질감, 마디마다 이빨 줄",
+   "body_type": "creature"
+  },
+  {
+   "id": "vulgar",
+   "name_ko": "불거",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "chase",
+   "telegraph_visual": "",
+   "source": "original_i_spr",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 5
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 5
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 2
+    },
+    "attack": {
+     "row": 5,
+     "frames": 4,
+     "fps": 10,
+     "loop": false,
+     "_desc": "몸통 앞으로 휘두르기"
+    },
+    "hurt": {
+     "row": 6,
+     "frames": 2,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 7,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "무너져 내림"
+    }
+   },
+   "token": "흐느적거리는 덩치 괴물. 느리고 무거우나 멈추지 않음",
+   "body_type": "creature"
+  },
+  {
+   "id": "ozzy",
+   "name_ko": "오지",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "zigzag",
+   "telegraph_visual": "",
+   "source": "original_i_spr",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 8
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 8
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 8
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 3
+    },
+    "attack": {
+     "row": 5,
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "_desc": "록커 헤드뱅잉+돌진"
+    },
+    "hurt": {
+     "row": 6,
+     "frames": 2,
+     "fps": 10,
+     "loop": false
+    },
+    "death": {
+     "row": 7,
+     "frames": 3,
+     "fps": 8,
+     "loop": false
+    }
+   },
+   "token": "록커 분위기의 인간형 괴물. 급격한 지그재그 움직임",
+   "body_type": "humanoid"
+  },
+  {
+   "id": "iron_voc",
+   "name_ko": "아이언 보크",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "patrol",
+   "telegraph_visual": "",
+   "source": "original_e_spr",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 4
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 4
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 4
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 4
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 2
+    },
+    "attack": {
+     "row": 5,
+     "frames": 5,
+     "fps": 10,
+     "loop": false,
+     "_desc": "금속 팔 스윙"
+    },
+    "hurt": {
+     "row": 6,
+     "frames": 2,
+     "fps": 8,
+     "loop": false,
+     "_desc": "금속 울림+스파크"
+    },
+    "death": {
+     "row": 7,
+     "frames": 4,
+     "fps": 6,
+     "loop": false,
+     "_desc": "부품 분해 붕괴"
+    }
+   },
+   "token": "금속 장갑 인형형 괴물. 전면 방패 — 후방만 노출",
+   "body_type": "humanoid"
+  },
+  {
+   "id": "hellcop",
+   "name_ko": "헬캅",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "chase",
+   "telegraph_visual": "",
+   "source": "original_e_spr",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 2
+    },
+    "attack": {
+     "row": 5,
+     "frames": 5,
+     "fps": 12,
+     "loop": false,
+     "_desc": "경봉 휘두르기"
+    },
+    "hurt": {
+     "row": 6,
+     "frames": 2,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 7,
+     "frames": 4,
+     "fps": 8,
+     "loop": false,
+     "_desc": "경찰 모자 떨어지며 무너짐"
+    }
+   },
+   "token": "경찰 형태 기계 괴물. 전기 약점",
+   "body_type": "humanoid"
+  },
+  {
+   "id": "o_ray",
+   "name_ko": "오레이",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "pulse",
+   "telegraph_visual": "expanding_ring_0.5s",
+   "source": "original_e_spr",
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 4,
+     "_desc": "원환 회전+빛 발산"
+    },
+    "attack": {
+     "row": 1,
+     "frames": 6,
+     "fps": 10,
+     "loop": false,
+     "_desc": "확장 펄스 링 발산"
+    },
+    "hurt": {
+     "row": 2,
+     "frames": 2,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6,
+     "loop": false,
+     "_desc": "빛 산화 소멸"
+    }
+   },
+   "token": "빛을 뿜는 원환 괴물. 정지형, 반경 데미지 펄스",
+   "body_type": "creature"
+  },
+  {
+   "id": "sparker",
+   "name_ko": "스파커",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "teleport",
+   "telegraph_visual": "glitch_flicker_0.3s",
+   "source": "original_e_spr",
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8,
+     "_desc": "전기 아크 지직거림"
+    },
+    "attack": {
+     "row": 1,
+     "frames": 5,
+     "fps": 12,
+     "loop": false,
+     "_desc": "방전 폭발"
+    },
+    "hurt": {
+     "row": 2,
+     "frames": 2,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 3,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "단락→연기"
+    }
+   },
+   "token": "전불 괴물. 순간이동하며 전기 잔재 남김",
+   "body_type": "humanoid"
+  },
+  {
+   "id": "c_bug",
+   "name_ko": "씨버그",
+   "cell": {
+    "w": 48,
+    "h": 48
+   },
+   "pattern": "zigzag",
+   "telegraph_visual": "ceiling_shadow",
+   "source": "placeholder",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 8
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 8
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 8
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 8
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 3
+    },
+    "attack": {
+     "row": 5,
+     "frames": 3,
+     "fps": 12,
+     "loop": false,
+     "_desc": "다리 콤보 급타격"
+    },
+    "death": {
+     "row": 6,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "부품 산산조각"
+    }
+   },
+   "token": "코드 버그가 물리적 거미 기계로 실체화. 다리 끝이 인간 손가락으로 변형된 감염 부품. 천장에서 낙하",
+   "body_type": "creature"
+  },
+  {
+   "id": "flying_thesis",
+   "name_ko": "플라잉 논문",
+   "cell": {
+    "w": 48,
+    "h": 48
+   },
+   "pattern": "wander",
+   "telegraph_visual": "",
+   "source": "placeholder",
+   "animations": {
+    "walk": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6,
+     "_desc": "공중 부유, 페이지 표날림"
+    },
+    "attack": {
+     "row": 1,
+     "frames": 3,
+     "fps": 10,
+     "loop": false,
+     "_desc": "종이 날림 공격"
+    },
+    "death": {
+     "row": 2,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "페이지 흩날리며 소멸"
+    }
+   },
+   "token": "논문 뭉치 폴터가이스트. 페이지 사이 코피 얼룩과 손톱 자국. 날아다니며 종이로 베어냄",
+   "body_type": "object"
+  },
+  {
+   "id": "null_pointer",
+   "name_ko": "널 포인터",
+   "cell": {
+    "w": 64,
+    "h": 64
+   },
+   "pattern": "phaser",
+   "telegraph_visual": "glitch_flicker_0.3s",
+   "source": "placeholder",
+   "animations": {
+    "walk_down": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
+     "fps": 3,
+     "_desc": "0x00 빈 얼굴 지직거림"
+    },
+    "attack": {
+     "row": 5,
+     "frames": 4,
+     "fps": 12,
+     "loop": false,
+     "_desc": "세그폴트 손아귀"
+    },
+    "hurt": {
+     "row": 6,
+     "frames": 2,
+     "fps": 8,
+     "loop": false,
+     "_desc": "주소 비트 뒤엉킴"
+    },
+    "death": {
+     "row": 7,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "참조 해제→공중 해체"
+    }
+   },
+   "token": "메모리 유령 괴물. 주소 없는 데이터 덩어리 — 위상 전이로 벽을 통과(phaser). 0x00으로 빈 얼굴에 떠도는 가비지 눈동자",
+   "body_type": "creature"
+  },
+  {
+   "id": "rogue_vending",
+   "name_ko": "로그 벤딩",
+   "cell": {
+    "w": 64,
+    "h": 96
+   },
+   "pattern": "ambusher",
+   "telegraph_visual": "slight_shake_0.4s",
+   "source": "placeholder",
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 2,
+     "fps": 2,
+     "_desc": "평범한 자판기 위장"
+    },
+    "awaken": {
+     "row": 1,
+     "frames": 3,
+     "fps": 8,
+     "loop": false,
+     "_desc": "위장 해제, 눈 깜빡임"
+    },
+    "attack": {
+     "row": 2,
+     "frames": 5,
+     "fps": 12,
+     "loop": false,
+     "_desc": "캔 연발 발사"
+    },
+    "death": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6,
+     "loop": false,
+     "_desc": "캔 쏟아지며 무너짐 → 마지막에 정상 작동(개그)"
+    }
+   },
+   "token": "폭주 자판기 미믹. 캔 대신 눈알 발사. 마지막에 정상 작동하는 개그 연출",
+   "body_type": "object"
+  },
+  {
+   "id": "sewer_king",
+   "name_ko": "하수구 킹",
+   "cell": {
+    "w": 128,
+    "h": 128
+   },
+   "pattern": "chase",
+   "telegraph_visual": "rumble_shake_1s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 3
+    },
+    "walk": {
+     "row": 1,
+     "frames": 6,
+     "fps": 4
+    },
+    "attack": {
+     "row": 2,
+     "frames": 8,
+     "fps": 14,
+     "loop": false,
+     "_desc": "촉수 광역 휘두르기"
+    },
+    "hurt": {
+     "row": 3,
+     "frames": 3,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 4,
+     "frames": 6,
+     "fps": 8,
+     "loop": false,
+     "_desc": "먼지 뭉치 산화, 내부에서 옛 디스켓 쏟아짐"
+    }
+   },
+   "token": "지하 서고 먼지 뭉칫덩어리 골렘. 다관절 촉수+먼지 입자, 그로테스크. 내부에서 옛 컴퓨터 부품 노출",
+   "body_type": "creature"
+  },
+  {
+   "id": "hall_mother",
+   "name_ko": "홀 머더",
+   "cell": {
+    "w": 128,
+    "h": 128
+   },
+   "pattern": "chase",
+   "telegraph_visual": "ceiling_crack_1s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 3
+    },
+    "walk": {
+     "row": 1,
+     "frames": 6,
+     "fps": 3
+    },
+    "attack": {
+     "row": 2,
+     "frames": 8,
+     "fps": 14,
+     "loop": false,
+     "_desc": "복부 알주머니 파열→소형 개체 방출"
+    },
+    "hurt": {
+     "row": 3,
+     "frames": 3,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 4,
+     "frames": 6,
+     "fps": 8,
+     "loop": false,
+     "_desc": "앱주머니 전부 파열→새끼들이 우수수 떨어짐"
+    }
+   },
+   "token": "현관 천장에 붙은 거대 산파괴형 괴물. 복부에 알주머니 수십개, 파열 연출. 그로테스크+생체 밀도",
+   "body_type": "creature"
+  },
+  {
+   "id": "crt_overseer",
+   "name_ko": "CRT 오버시어",
+   "cell": {
+    "w": 128,
+    "h": 128
+   },
+   "pattern": "ranged",
+   "telegraph_visual": "screen_static_0.6s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 4,
+     "_desc": "여러 CRT 화면 각기 다른 채널 띄움"
+    },
+    "walk": {
+     "row": 1,
+     "frames": 6,
+     "fps": 3
+    },
+    "attack": {
+     "row": 2,
+     "frames": 8,
+     "fps": 12,
+     "loop": false,
+     "_desc": "모든 화면 동시 빔 발사"
+    },
+    "hurt": {
+     "row": 3,
+     "frames": 3,
+     "fps": 8,
+     "loop": false,
+     "_desc": "일부 화면 꺼짐"
+    },
+    "death": {
+     "row": 4,
+     "frames": 6,
+     "fps": 8,
+     "loop": false,
+     "_desc": "모니터 일제히 폭발→유리 파편"
+    }
+   },
+   "token": "깨진 CRT 모니터 여러 개 융합. 각 화면에서 다른 색 빛 나오는 눈, 케이블 촉수. 시청률 전쟁 중",
+   "body_type": "object"
+  },
+  {
+   "id": "flask_titan",
+   "name_ko": "플라스크 타이탄",
+   "cell": {
+    "w": 128,
+    "h": 128
+   },
+   "pattern": "chase",
+   "telegraph_visual": "liquid_bubble_0.8s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 3,
+     "_desc": "유리 내부 장기 부유, 거품 상승"
+    },
+    "walk": {
+     "row": 1,
+     "frames": 6,
+     "fps": 3,
+     "_desc": "액체 출렁이며 이동"
+    },
+    "attack": {
+     "row": 2,
+     "frames": 8,
+     "fps": 12,
+     "loop": false,
+     "_desc": "산성 액체 분사+증기 폭발"
+    },
+    "hurt": {
+     "row": 3,
+     "frames": 3,
+     "fps": 8,
+     "loop": false,
+     "_desc": "유리 크랙 확산"
+    },
+    "death": {
+     "row": 4,
+     "frames": 6,
+     "fps": 8,
+     "loop": false,
+     "_desc": "유리 파열→내용물 범람→증기"
+    }
+   },
+   "token": "거대 플라스크 융합체. 유리 안 떠다니는 장기와 기포. 화학약품 냄새가 나는 그로테스크",
+   "body_type": "object"
+  },
+  {
+   "id": "volt_wyrm",
+   "name_ko": "볼트 와이럼",
+   "cell": {
+    "w": 128,
+    "h": 128
+   },
+   "pattern": "chase",
+   "telegraph_visual": "arc_charging_0.6s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 6,
+     "_desc": "케이블 몸통에 전류 맥동"
+    },
+    "walk": {
+     "row": 1,
+     "frames": 6,
+     "fps": 5,
+     "_desc": "케이블이 파도치듯 진행"
+    },
+    "attack": {
+     "row": 2,
+     "frames": 8,
+     "fps": 14,
+     "loop": false,
+     "_desc": "전 신절 동시 방전+아크 폭발"
+    },
+    "hurt": {
+     "row": 3,
+     "frames": 3,
+     "fps": 8,
+     "loop": false,
+     "_desc": "단락 스파크"
+    },
+    "death": {
+     "row": 4,
+     "frames": 6,
+     "fps": 8,
+     "loop": false,
+     "_desc": "콘센트에서 뽑힌 듯 사그라듦"
+    }
+   },
+   "token": "콘센트에서 태어난 전기 용. 다관절 케이블 몸통, 아크 방전. 만 볼트의 그로테스크",
+   "body_type": "creature"
+  },
+  {
+   "id": "professor_monster",
+   "name_ko": "모교수 괴물",
+   "cell": {
+    "w": 128,
+    "h": 128
+   },
+   "pattern": "chase",
+   "telegraph_visual": "lab_coat_rustle_0.5s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "animations": {
+    "idle": {
+     "row": 0,
+     "frames": 4,
+     "fps": 3,
+     "_desc": "굽은 등, 찢어진 실험복 펄럭임"
+    },
+    "walk": {
+     "row": 1,
+     "frames": 4,
+     "fps": 3,
+     "_desc": "관절 비틀린 거동"
+    },
+    "attack": {
+     "row": 2,
+     "frames": 5,
+     "fps": 12,
+     "loop": false,
+     "_desc": "비틀린 팔 후려치기"
+    },
+    "hurt": {
+     "row": 3,
+     "frames": 2,
+     "fps": 8,
+     "loop": false
+    },
+    "death": {
+     "row": 4,
+     "frames": 4,
+     "fps": 6,
+     "loop": false,
+     "_desc": "무너지며 교수 배지 떨어짐"
+    }
+   },
+   "token": "인간성을 잃은 모교수의 괴물형(씬 5-1 제압전). 찢어진 실험복·휘어진 안경 너머 빛 없는 눈. 그로테스크하나 교수의 흔적(분필·교안)이 남아 있음",
+   "body_type": "humanoid"
+  },
+  {
+   "id": "sys_builder",
+   "name_ko": "SYS_BUILDER.EXE",
+   "cell": {
+    "w": 192,
+    "h": 192
+   },
+   "pattern": "phaser",
+   "telegraph_visual": "screen_static_full_1s",
+   "source": "placeholder_procedural",
+   "is_boss": true,
+   "is_final_boss": true,
+   "animations": {
+    "idle_phase1": {
+     "row": 0,
+     "frames": 4,
+     "fps": 4,
+     "_desc": "녹색 CRT 와이어프레임, 안정 상태"
+    },
+    "idle_phase2": {
+     "row": 1,
+     "frames": 6,
+     "fps": 6,
+     "_desc": "붕괴 시작 — 픽셀 파편 날림"
+    },
+    "idle_phase3": {
+     "row": 2,
+     "frames": 8,
+     "fps": 10,
+     "_desc": "최종 포맷 모드 — 적색 경고"
+    },
+    "attack": {
+     "row": 3,
+     "frames": 8,
+     "fps": 14,
+     "loop": false,
+     "_desc": "Format C: 빔"
+    },
+    "hurt": {
+     "row": 4,
+     "frames": 3,
+     "fps": 10,
+     "loop": false,
+     "_desc": "와이어프레임 찢어짐"
+    },
+    "death": {
+     "row": 5,
+     "frames": 8,
+     "fps": 6,
+     "loop": false,
+     "_desc": "...따뜻하군요 → 셧다운"
+    }
+   },
+   "token": "1995년 부싯돌이 만든 게임 자동 빌드 시스템이 폭주. 녹색 CRT 와이어프레임 디지털 얼굴, 픽셀 붕괴 이펙트. '미완성은 오류다'",
+   "body_type": "object"
+  }
+ ],
+ "_body_type_note": "body_type: humanoid=인간·인형형(SD 등신 규칙 적용) / creature=생물·괴수형 / object=사물·기계형. 프롬프트의 SD 조항이 이 값으로 분기한다 — 인간형 어휘를 거미·자판기에 붙이면 해가 된다."
 }
