@@ -108,7 +108,10 @@ func _load_bosses(raw: Dictionary) -> void:
 
 
 func load_items() -> void:
-	for item: Dictionary in JsonUtil.load_array(DATA_DIR + "items.json", "Database"):
+	# items.json은 {items: [...]} 객체 래핑 — load_array(최상위 배열 전용)가 아닌
+	# load_dict로 읽는다. 기존 load_array 사용 시 빈 DB로 로드되는 침묵 버그(8/26 자동 테스트 적발).
+	var raw := JsonUtil.load_dict(DATA_DIR + "items.json", "Database")
+	for item: Dictionary in raw.get("items", []):
 		_items[str(item["id"])] = item
 
 
