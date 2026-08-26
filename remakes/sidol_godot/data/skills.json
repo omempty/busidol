@@ -1,6 +1,11 @@
 {
   "schema_version": 1,
   "_comment": "스킬 6종 — 마스터 시나리오 §2.2 성장 트리. 획득은 grant_skill op로만.",
+  "timing": {
+    "_comment": "타이밍 버튼(timed hit) — 공격·단일 대상 스킬에 적용. 링이 sweet zone(후반 40%)일 때 입력하면 피해 ×mult.",
+    "window": 0.45,
+    "mult": 1.2
+  },
   "skills": [
     {
       "id": "flint_strike",

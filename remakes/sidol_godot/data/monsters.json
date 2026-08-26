@@ -1,6 +1,20 @@
 {
   "schema_version": 1,
-  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그.",
+  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그. species 섹션 = 종별 약점(브레이크 시스템): 기계 계열=electric(docs/03_backlog EMP 근거), 종이·유기질=fire, 안구·무기질=physical.",
+  "species": {
+    "sparker": { "weaknesses": ["physical"] },
+    "mad_eye": { "weaknesses": ["fire"] },
+    "vulgar": { "weaknesses": ["fire"] },
+    "dworm": { "weaknesses": ["electric"] },
+    "ozzy": { "weaknesses": ["fire"] },
+    "iron_voc": { "weaknesses": ["electric"] },
+    "hellcop": { "weaknesses": ["electric"] },
+    "o_ray": { "weaknesses": ["physical"] },
+    "c_bug": { "weaknesses": ["electric"] },
+    "flying_thesis": { "weaknesses": ["fire"] },
+    "rogue_vending": { "weaknesses": ["electric"] },
+    "null_pointer": { "weaknesses": ["electric"] }
+  },
   "floors": {
     "f0": { "count": 2, "species": ["sparker"] },
     "f1": { "count": 4, "species": [
@@ -30,12 +44,14 @@
       "display_name": "모교수 괴물",
       "ap": 20, "dp": 6, "hp_range": [90, 120],
       "exp": [60, 90], "money": [300, 480],
+      "weaknesses": ["fire"],
       "_comment": "씬 5-1 — 제압전. dodge_phase 미채택(D14): 회피 페이즈는 최종보스 전용 연출."
     },
     "sys_builder": {
       "display_name": "SYS 빌더",
       "ap": 30, "dp": 8, "hp_range": [120, 160],
       "exp": [100, 150], "money": [500, 800],
+      "weaknesses": ["electric"],
       "dodge_phase": {
         "duration": 4.0,
         "patterns": [

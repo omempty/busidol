@@ -10,6 +10,10 @@ var ap := 30
 var dp := 10
 var active_effects: Array[Dictionary] = []
 var skills: Array[StringName] = []
+var weaknesses: Array[StringName] = []  # 약점 속성 — 약점 히트 시 브레이크 게이지 상승
+var break_gauge := 0  # 약점 히트 누적 — threshold 도달 시 브레이크
+var break_threshold := 2
+var broken_turns := 0  # 브레이크 지속 턴 — 행동 불가 + 받는 피해 ×1.5
 
 
 func _init(p_name: String, p_hp: int, p_ap: int, p_dp: int) -> void:
@@ -26,6 +30,9 @@ func take_damage(raw: int) -> int:
 	for fx in active_effects:
 		if fx["kind"] == &"buff_damage_taken":
 			final_dmg = maxi(1, int(final_dmg * (1.0 - float(fx["magnitude"]) / 100.0)))
+	# 브레이크 — 방어 무시 급 피해 증폭
+	if broken_turns > 0:
+		final_dmg = maxi(1, int(final_dmg * 1.5))
 	final_dmg = mini(final_dmg, hp)
 	hp -= final_dmg
 	return final_dmg
@@ -61,6 +68,22 @@ func has_paralysis() -> bool:
 	for fx in active_effects:
 		if fx["kind"] == &"paralysis":
 			return true
+	return false
+
+
+func is_broken() -> bool:
+	return broken_turns > 0
+
+
+## 약점 히트 1회 처리 — 게이지 상승, 임계 도달 시 브레이크. 반환: 브레이크 발동 여부.
+func register_weak_hit() -> bool:
+	if is_broken():
+		return false
+	break_gauge += 1
+	if break_gauge >= break_threshold:
+		break_gauge = 0
+		broken_turns = 1
+		return true
 	return false
 
 

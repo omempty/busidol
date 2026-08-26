@@ -73,6 +73,19 @@ func load_enemies() -> void:
 			if s is Dictionary and s.has("first_win_flag"):
 				_enemies[sid]["first_win_flag"] = str(s["first_win_flag"])
 	_load_bosses(raw)
+	_apply_weaknesses(raw)
+
+
+## species 섹션 — 종별 약점(브레이크 시스템). 보스는 자기 정의의 weaknesses 우선.
+func _apply_weaknesses(raw: Dictionary) -> void:
+	var table: Dictionary = raw.get("species", {})
+	for sid: String in table:
+		if not _enemies.has(sid):
+			continue
+		_enemies[sid]["weaknesses"] = table[sid].get("weaknesses", [])
+	for bid: String in raw.get("bosses", {}):
+		if _enemies.has(bid):
+			_enemies[bid]["weaknesses"] = raw["bosses"][bid].get("weaknesses", [])
 
 
 ## bosses 섹션 — dodge_phase(회피 페이즈) 설정 포함 보스 정의
@@ -90,6 +103,7 @@ func _load_bosses(raw: Dictionary) -> void:
 			"is_boss": true,
 			"dodge_phase": bdef.get("dodge_phase", {}),
 			"dodge_damage_per_hit": int(bdef.get("dodge_damage_per_hit", 3)),
+			"weaknesses": bdef.get("weaknesses", []),
 		}
 
 

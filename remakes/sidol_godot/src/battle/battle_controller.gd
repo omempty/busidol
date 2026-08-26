@@ -78,10 +78,29 @@ func _advance_enemy() -> Dictionary:
 
 
 func _resolve_attack(attacker: Combatant, target: Combatant, cmd: Dictionary) -> void:
-	var dmg := DamageCalculator.player_hit(int(cmd.get("ap", attacker.ap)), EnemyManager.rng)
-	target.take_damage(dmg)
-	cmd["damage"] = dmg
-	cmd["damages"] = [{"amount": dmg, "enemy_index": _alive_enemy_index(target)}]
+	var base := DamageCalculator.player_hit(int(cmd.get("ap", attacker.ap)), EnemyManager.rng)
+	var entry := _apply_player_damage(target, base, &"physical", cmd)
+	cmd["damage"] = int(entry["amount"])
+	cmd["damages"] = [entry]
+
+
+## 플레이어 피해 일원화 — 약점 ×1.5 · 타이밍 보너스 · 브레이크 게이지.
+## skill_hit의 weaknesses 인자는 여기서 일원 처리하므로 빈 배열 전달.
+func _apply_player_damage(
+	target: Combatant, base: int, element: StringName, cmd: Dictionary
+) -> Dictionary:
+	var weak: bool = element in target.weaknesses
+	var dmg := maxi(base, 1)
+	if weak:
+		dmg = int(dmg * 1.5)
+	var timing_mult := float(cmd.get("timing_mult", 1.0))
+	if timing_mult > 1.0:
+		dmg = int(dmg * timing_mult)
+	dmg = target.take_damage(dmg)
+	var broke := false
+	if weak:
+		broke = target.register_weak_hit()
+	return {"amount": dmg, "enemy_index": _alive_enemy_index(target), "weak": weak, "break": broke}
 
 
 func _resolve_skill(user: Combatant, target: Combatant, cmd: Dictionary) -> void:
@@ -99,15 +118,16 @@ func _resolve_skill(user: Combatant, target: Combatant, cmd: Dictionary) -> void
 	for t in targets:
 		if t == user:
 			continue  # 자기 버프 스킬 — 피해 판정 제외(효과는 상태이상으로만)
-		var dmg := DamageCalculator.skill_hit(
+		var base := DamageCalculator.skill_hit(
 			int(skill.get("power", 10)),
 			user.ap,
 			StringName(str(skill.get("element", "physical"))),
 			[],
 			EnemyManager.rng
 		)
-		t.take_damage(dmg)
-		results.append({"amount": dmg, "enemy_index": _alive_enemy_index(t)})
+		results.append(
+			_apply_player_damage(t, base, StringName(str(skill.get("element", "physical"))), cmd)
+		)
 	cmd["damage"] = 0 if results.is_empty() else int(results[0]["amount"])
 	cmd["damages"] = results
 
