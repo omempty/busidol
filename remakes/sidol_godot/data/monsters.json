@@ -53,6 +53,7 @@
       "exp": [100, 150], "money": [500, 800],
       "weaknesses": ["electric"],
       "dodge_phase": {
+        "telegraph": "screen_static_full_1s",
         "duration": 4.0,
         "patterns": [
           {"pattern_id":"bp1","type":"radial","count":10,"speed":140,"interval":0.9,"initial_delay":0.6},

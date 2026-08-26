@@ -38,6 +38,10 @@ func _ready() -> void:
 	if hp_after >= hp_before:
 		failures.append("공격 데미지 미적용")
 
+	# --- 1-1) 브레이크 게이지 UI — 약점 보유 적에게 게이지 라벨 생성 ---
+	if battle._ui._break_labels.is_empty():
+		failures.append("브레이크 게이지 라벨 미생성(약점 보유 적 존재)")
+
 	# --- 2) 스킬(전체 대상 화염) 안무 ---
 	(
 		battle
@@ -83,6 +87,8 @@ func _ready() -> void:
 		failures.append("보스 정의 미로드: sys_builder")
 	elif (bdef.get("dodge_phase", {}) as Dictionary).is_empty():
 		failures.append("보스 dodge_phase 설정 없음")
+	elif not (bdef["dodge_phase"] as Dictionary).has("telegraph"):
+		failures.append("보스 텔레그래프 미정의")
 	else:
 		GameState.pending_encounter = {"enemies": ["sys_builder"]}
 		var boss: BattleSceneController = BATTLE_SCENE.instantiate()

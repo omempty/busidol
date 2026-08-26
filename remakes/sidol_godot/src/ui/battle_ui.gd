@@ -11,6 +11,7 @@ const PLAYER_BAR_COLOR := Color(0.3, 1.0, 0.5)
 const ENEMY_BAR_COLOR := Color(1, 0.3, 0.3)
 
 var _hp_bars := {}
+var _break_labels := {}  # 적별 브레이크 게이지 라벨 — 약점 보유 종만 생성
 var _menu_root: VBoxContainer
 var _skill_panel: VBoxContainer
 var _turn_label: Label
@@ -33,11 +34,29 @@ func build(p_player: Combatant, p_enemies: Array[Combatant], skills: Array[Dicti
 
 func refresh_bars() -> void:
 	for i in _enemies.size():
-		var key := _enemies[i]
-		if _hp_bars.has(key):
-			_hp_bars[key].value = maxi(0, _enemies[i].hp)
+		var e := _enemies[i]
+		if _hp_bars.has(e):
+			_hp_bars[e].value = maxi(0, e.hp)
+		if _break_labels.has(e):
+			var lbl: Label = _break_labels[e]
+			lbl.text = _break_text(e)
+			lbl.add_theme_color_override(
+				"font_color", Color(1, 0.45, 0.2) if e.is_broken() else Color(1, 0.92, 0.35)
+			)
 	if _hp_bars.has(&"player"):
 		_hp_bars[&"player"].value = maxi(0, _player.hp)
+
+
+## 브레이크 게이지 표기 — DOS 감성 ASCII. 약점 없는 종은 항상 빈 문자열.
+func _break_text(e: Combatant) -> String:
+	if e.weaknesses.is_empty():
+		return ""
+	if e.is_broken():
+		return "BREAK!"
+	var pips := "["
+	for p in e.break_threshold:
+		pips += "#" if p < e.break_gauge else "-"
+	return pips + "]"
 
 
 func set_turn_text(text: String) -> void:
@@ -130,6 +149,16 @@ func _build_enemy_status() -> void:
 		bar.modulate = ENEMY_BAR_COLOR
 		add_child(bar)
 		_hp_bars[e] = bar
+
+		# 브레이크 게이지 — 약점 보유 종만 (refresh_bars에서 갱신)
+		if not e.weaknesses.is_empty():
+			var bl := Label.new()
+			bl.position = Vector2(560 + i * 100, 86)
+			bl.add_theme_font_size_override("font_size", 9)
+			bl.add_theme_color_override("font_color", Color(1, 0.92, 0.35))
+			bl.text = _break_text(e)
+			add_child(bl)
+			_break_labels[e] = bl
 
 
 func _build_player_status() -> void:

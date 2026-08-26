@@ -270,7 +270,12 @@ func _resolve_turn() -> void:
 			actor.broken_turns -= 1
 			_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
 		elif actor != null and not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
-			await _run_dodge_phase(edef)  # 보스 특수공격 — 회피 페이즈
+			# 텔레그래프 — 특수공격 예고(읽을 수 있는 패턴), 후 회피 페이즈
+			var dodge_cfg: Dictionary = edef["dodge_phase"]
+			_ui.set_turn_text("!! 이상 신호 감지 !!")
+			_presenter.play_telegraph(str(dodge_cfg.get("telegraph", "flash_red_0.8s")))
+			await get_tree().create_timer(0.8).timeout
+			await _run_dodge_phase(edef)
 		elif actor != null:
 			var raw := DamageCalculator.enemy_hit(actor.ap, EnemyManager.rng)
 			var actual: int = player_combatant.take_damage(raw)

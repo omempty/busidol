@@ -201,6 +201,23 @@ func show_flag_pop(text: String, color: Color, enemy_index: int) -> void:
 	tw.chain().tween_callback(lbl.queue_free)
 
 
+## 보스 특수공격 텔레그래그 — telegraph 코드 해석 연출(비블로킹).
+## 지원 토큰: *flash*/*static*/*flicker* → 적색 플래시, *shake*/*rumble* → 흔들림,
+## 접미 "0.8s" → 지속 시간. 미지정 코드는 기본 플래시.
+func play_telegraph(code: String) -> void:
+	var lower := code.to_lower()
+	var dur := 0.8
+	for p: String in lower.split("_"):
+		if p.ends_with("s") and p.substr(0, p.length() - 1).is_valid_float():
+			dur = maxf(float(p.substr(0, p.length() - 1)), 0.3)
+	if lower.contains("shake") or lower.contains("rumble"):
+		_shake_power = maxf(_shake_power, 7.0)
+	var flashes := maxi(int(dur / 0.25), 1)
+	for i in flashes:
+		var col := Color(0.85, 0.15, 0.15, 0.22 if i % 2 == 0 else 0.10)
+		get_tree().create_timer(0.25 * i).timeout.connect(_do_flash.bind(col))
+
+
 ## 타이밍 버튼 링 — 대상 위 수축 링, 입력 판정까지 블로킹(await).
 func play_timing_ring(enemy_index: int, window: float) -> bool:
 	if enemy_sprites.is_empty():
