@@ -363,6 +363,48 @@ choice 스텝 표시 지원.
 **검증**: 검증실행.bat 10단계(마지막 = smoke_choice). 개별 실행 시 --quit-after
 병행 필수.
 
+### 5차 세션 (8/26) — 스프라이트 이관·LLM 패키지 3종·전투 재미 확장
+
+**원작 리소스 이관 (정책 ①원작 있음→리마스터, LLM 불필요)**:
+- **필드 몬스터 8종 + NPC 7종 시트** — 원본 GOODITEM.C `eye[i].mode=8*(i%8+1)` 근거로
+  I.SPR 블록 1~8=몬스터 8종, EVENTER 블록 0~4=NPC 5인(여학생/유령 블록 2명 공유·tint 변별).
+  `tools/convert/migrate_original_sheets.py` — 24px 도트 4배 nearest 베이크 → 표준 셀 128
+  (player_original 동일 레시피). EnemyEntity가 SpriteSets 경유로 종별 시트 사용(폴백 유지),
+  전투 프리젠터도 적을 종별 시트로 렌더(랜덤색 사각형 폐지, 미정착 종만 폴백).
+- **아이템 아이콘 24종** — items.json `legacy_ref`(ATT 150+ 영구 매핑) = ITEM.SPR 35프레임 1:1,
+  현행 존속 24종만 이관(`migrate_item_icons.py` → assets/icons/). ItemIcons.texture() 창구 신설,
+  HUD 6슬롯·인벤토리가 실아이콘 우선(부재 시 색상+글리프 폴백).
+
+**LLM 의뢰 패키지 생성기 3종 + 납품 검증기** (유저가 이미지 LLM에 투입할 준비 완료):
+- 포트레이트 16종(`export_portrait_packages.py` — 컷신 전경/크롭 초상 자동 분기,
+  원본 첨부+신원 유지 재창작 계약), 키아트 6종(`export_keyart_packages.py`),
+  신규 몬스터 11종(`export_monster_packages.py` — placeholder계약 종, 그리드 계약 자동 산출).
+  → assets/raw/llm/{portraits,keyart,monsters}/
+- `validate_submission.py` — 포트레이트(768×256 3셀)/키아트(1920×1080) 자동 판정 게이트.
+  합성 픽스처 7종 양방향 검증 + 부정 테스트로 게이트 실효 확인.
+- 스펙 보강: monster_anim_specs.json에 null_pointer(사용 중 스펙 부재)·professor_monster 신설.
+
+**전투 재미 확장 (현대 RPG 트렌드 반영)**:
+- **약점→브레이크** — monsters.json species 섹션(14종 약점: 기계=electric·백로그 EMP 근거,
+  종이/유기질=fire). 약점 히트 ×1.5+WEAK! 팝 → 2회 누적 BREAK(행동불가 1턴+받는 피해 ×1.5).
+  기존 skill_hit weaknesses `[]` 하드코딩(README ✅와 불일치하던 미연결) 해소.
+- **타이밍 버튼** — TimingRing(수축 링, sweet zone 후반 40% 입력) ×1.2, skills.json timing
+  섹션 구동(공격·단일 스킬만).
+- **전투 idle** — 플레이어·적 스프라이트 2프레임 순환(정지 1프레임 해소).
+- **자동 검증** — smoke_battle 섹션 5: 약점 판정/배율·브레이크 발동/증폭·타이밍 보너스를
+  시드 고정 결정론 검증. 부정 테스트(배율 제거 시 FAIL)로 게이트 실효 확인.
+
+**검증**: validate 0오류 · 스모크 10종 전부 PASS · check_scripts broken=0.
+
+**남은 작업 갱신 (우선순위순)**:
+1. 브레이크 게이지 시각화(적 UI) · 보스 텔레그래프(telegraph_visual 데이터→dodge 진입 전 연출) ·
+   전투 배속(EffectSpeed→안무 배수) · 전투 중 아이템 사용(consumable hp_restore 있음)
+2. `faithful_mode` 죽은 스위치 처리 — 난이도 프리셋 흡수(하=DP 반영/상=원작 공식) 또는 제거
+3. **Windows export preset** — export_presets.cfg 부재 실측(8/26). data/**.json 포함 조기 검증 필요
+4. battle_scene_controller 323행(상한 초과) — 회차/적턴 분리 여지. battle_presenter ~320행 동반
+5. 루트 정크(`[godot.exe` 0바이트)·README 구조도 불일치 — 8/26 README 구조도는 수정함
+6. LLM 납품 수령 사이클(유저) — 납품 오면 validate_submission/process_llm_sheet 게이트
+
 ### 다음 세션 연계 (8/25 4차 세션 종료 시점)
 
 **4차 세션 결과(전부 커밋됨, origin 대비 8+커밋 — push 보류 중)**:

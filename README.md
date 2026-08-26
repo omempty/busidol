@@ -14,7 +14,7 @@
 │   └── 1995_sidol_bsd_dos\    BSD 시돌이의 모험
 ├── remakes\
 │   └── sidol_godot\           ★진행 중 — Godot 4.x 리메이크
-├── 게임실행.bat / 검증실행.bat / 에디터실행.bat
+│       (게임실행.bat / 검증실행.bat / 에디터실행.bat / 뷰어실행.bat)
 └── README.md
 ```
 
@@ -65,6 +65,10 @@
 | craft/grant_item op(해독제 합성) | CutscenePlayer + quiz_paline.json | ✅ |
 | 배터리 회로 퍼즐(10,000V) | BatteryCircuitMinigame + battery_puzzle.json | ✅ |
 | 전투 승리→에필로그→엔딩 흐름 | on_win_flag + epilogue.json | ✅ |
+| 약점→브레이크(속성 약점 ×1.5·2회 누적 BREAK) | DamageCalculator + Combatant + monsters.json species | ✅ |
+| 타이밍 버튼(timed hit ×1.2) | TimingRing + skills.json timing | ✅ |
+| 적 종별 스프라이트(원작 도트 이관) | SpriteSets + assets/sprites/*_original | ✅ |
+| 아이템 아이콘(원작 ITEM.SPR 이관 24종) | ItemIcons.texture + assets/icons | ✅ |
 | Event Editor v0 | addons/event_editor (컷신 스텝 편집) | ✅ |
 | 세이브/로드 3슬롯+오토세이브(Q1) | SaveManager + 타이틀 계속하기·일시정지 메뉴 | ✅ |
 | 설정 저장(볼륨·연출속도·아트모드·글자크기 Q9) | SettingsManager + SettingsPanel | ✅ |

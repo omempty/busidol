@@ -51,14 +51,16 @@ SkillDef/choreography 구조(02_design/01 §5.1) 덕에 **신규 기술 = JSON �
 | 후보 스킬 | 속성 | 효과 | 콘셉트 근거 | 분류 |
 |---|---|---|---|---|
 | 불씨 뿌리기 | fire | 전체 DoT(burn) — 화염 비커 상위 호환 | 부싯돌 정체성 | [데이터만] |
-| EMP 스파크 | electric | 기계형 적(Iron-Voc/HellCop) 대상 피해 ×1.5 | 전자과 테마 | [소코드](weakness) |
+| EMP 스파크 | electric | 기계형 적(Iron-Voc/HellCop) 대상 피해 ×1.5 | 전자과 테마 | ~~[소코드](weakness)~~ ✅ **구현됨(8/26)** — monsters.json species 약점 테이블로 데이터화, 기계 계열 전반+보스 확대 |
 | 연쇄 인화 | fire | burn 상태 적에게 전파 | DoT 심화 | [소코드] |
 | 재부팅 | none | 자신 상태이상 해제 | 공대 밈("일단 재부팅해봐") — R3 톤코드 부합 | [데이터만] |
 | 우황청심환 가호 | none | HP 즉시 회복(소모품 대체 논쟁) — **G-FAITH 결정 항목** | 밸런스 | [데이터만] |
 
-### 3.2 속성 상성 시스템 (신규 제안 — 승인 항목 아님, 게이트에서 결정)
+### 3.2 속성 상성 시스템 — ✅ **구현됨 (8/26, 약점→브레이크 시스템)**
 
-`EnemyDef.weaknesses: Array[element]` 필드 추가 → DamageCalculator 배율 적용.
+`monsters.json species 섹션`에 종별 weaknesses 데이터화 → DamageCalculator/battle_controller
+배율 적용 + 브레이크 게이지(약점 2회 누적 → BREAK: 행동불가 1턴 + 받는 피해 ×1.5).
+자동 검증: smoke_battle 섹션 5(약점 배율·브레이크·타이밍 결정론). 아래 원문은 설계 기록 보존.
 04_uiux §1.4의 "약점 속성 색상 구분" UI와 짝. **[시스템]** — Phase 5 게이트에서 채택 시.
 
 ## 4. 편입 확정 이력
