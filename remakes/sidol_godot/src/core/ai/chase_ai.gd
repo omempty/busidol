@@ -1,4 +1,4 @@
-﻿class_name ChaseAI
+class_name ChaseAI
 extends AIBrain
 ## 플레이어 추적 — BFS 경로 탐색 + 어그로 반경 + 리시(탈출 거리).
 
@@ -14,6 +14,10 @@ var fallback_brain: AIBrain
 
 func _init() -> void:
 	fallback_brain = WanderAI.new()
+
+
+func is_alerted() -> bool:
+	return _chasing
 
 
 func decide(ctx: Dictionary) -> Vector2i:
@@ -43,10 +47,16 @@ func decide(ctx: Dictionary) -> Vector2i:
 	var free := free_dirs(ctx, self_cell)
 	if free.is_empty():
 		return Vector2i.ZERO
-	free.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-		var da: int = absi((self_cell + a).x - player_cell.x) + absi((self_cell + a).y - player_cell.y)
-		var db: int = absi((self_cell + b).x - player_cell.x) + absi((self_cell + b).y - player_cell.y)
-		return da < db)
+	free.sort_custom(
+		func(a: Vector2i, b: Vector2i) -> bool:
+			var da: int = (
+				absi((self_cell + a).x - player_cell.x) + absi((self_cell + a).y - player_cell.y)
+			)
+			var db: int = (
+				absi((self_cell + b).x - player_cell.x) + absi((self_cell + b).y - player_cell.y)
+			)
+			return da < db
+	)
 	return free[0]
 
 

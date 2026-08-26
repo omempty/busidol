@@ -8,11 +8,14 @@ signal skill_selected(skill: Dictionary)
 signal item_selected(item_def: Dictionary)
 
 const CMD_TEXTS: Array[String] = ["공격", "기술", "방어", "도구", "도망"]
+const MENU_MARGIN := 16.0
+const MENU_WIDTH := 132.0
 const PLAYER_BAR_COLOR := Color(0.3, 1.0, 0.5)
 const ENEMY_BAR_COLOR := Color(1, 0.3, 0.3)
 
 var _hp_bars := {}
 var _break_labels := {}  # 적별 브레이크 게이지 라벨 — 약점 보유 종만 생성
+var _status_rows := {}  # 전투원별 상태이상 칩 줄(플레이어는 &"player" 키)
 var _menu_root: VBoxContainer
 var _skill_panel: VBoxContainer
 var _item_panel: VBoxContainer
@@ -47,6 +50,16 @@ func refresh_bars() -> void:
 			)
 	if _hp_bars.has(&"player"):
 		_hp_bars[&"player"].value = maxi(0, _player.hp)
+	_refresh_status()
+
+
+## 상태이상 칩 갱신 — HP바와 같은 시점에 돈다(부착·해제·턴 감소가 여기서 보인다).
+func _refresh_status() -> void:
+	for e in _enemies:
+		if _status_rows.has(e):
+			StatusChips.refresh(_status_rows[e], e.active_effects)
+	if _status_rows.has(&"player"):
+		StatusChips.refresh(_status_rows[&"player"], _player.active_effects)
 
 
 ## 브레이크 게이지 표기 — DOS 감성 ASCII. 약점 없는 종은 항상 빈 문자열.
@@ -106,8 +119,8 @@ func show_item_menu() -> void:
 	var usable := 0
 	for slot: Dictionary in GameState.inventory.all_slots():
 		var def: Dictionary = Database.get_item(StringName(str(slot.get("item_id", ""))))
-		if int(def.get("hp_restore", 0)) <= 0:
-			continue  # 전투 중 사용은 회복 계열만
+		if not ItemEffects.is_usable(def, true):
+			continue  # 회복·해제·버프 — 판정은 ItemEffects 단일 창구
 		usable += 1
 		var btn := Button.new()
 		btn.text = "%s ×%d" % [str(def.get("name_ko", def["id"])), int(slot.get("count", 1))]
@@ -126,7 +139,7 @@ func show_item_menu() -> void:
 
 func hide_menu() -> void:
 	if _menu_root != null:
-		_menu_root.queue_free()
+		_free_menu(_menu_root)
 		_menu_root = null
 	_close_skill_panel()
 	_close_item_panel()
@@ -134,34 +147,53 @@ func hide_menu() -> void:
 
 func _close_item_panel() -> void:
 	if _item_panel != null:
-		_item_panel.queue_free()
+		_free_menu(_item_panel)
 		_item_panel = null
 
 
 func _close_skill_panel() -> void:
 	if _skill_panel != null:
-		_skill_panel.queue_free()
+		_free_menu(_skill_panel)
 		_skill_panel = null
 
 
+## 커맨드·기술·도구 세 메뉴가 공유하는 박스.
+## 절대 좌표로 두면 항목 수가 늘 때마다 화면 밖으로 밀린다 —
+## 커맨드 5종일 때 "도망"이 잘렸고, 도구 메뉴는 회복 아이템 최대 9종이라 더 심했다.
+## 우하단에 앵커를 박고 **위로** 자라게 해서 항목 수와 무관하게 하단이 고정된다.
 func _new_menu_box() -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	panel.offset_right = -MENU_MARGIN
+	panel.offset_bottom = -MENU_MARGIN
+	panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.custom_minimum_size = Vector2(MENU_WIDTH, 0)
+	panel.add_theme_stylebox_override("panel", HudTheme.panel(8, 6))
+	add_child(panel)
+
 	var box := VBoxContainer.new()
-	box.position = Vector2(800, 380)
-	box.custom_minimum_size = Vector2(120, 0)
-	add_child(box)
+	box.add_theme_constant_override("separation", 2)
+	panel.add_child(box)
 	return box
 
 
+## 메뉴 박스는 패널로 감싸여 있다 — VBox만 지우면 빈 패널이 남는다.
+func _free_menu(box: Node) -> void:
+	if box == null or not is_instance_valid(box):
+		return
+	var top: Node = box
+	while top.get_parent() != null and top.get_parent() != self:
+		top = top.get_parent()
+	top.queue_free()
+
+
 func _build_background() -> void:
-	# 전용 하위 레이어(-1)에 배치 — 이 CanvasLayer(20)에 직접 두면
-	# 배경이 월드 스프라이트(BattlePresenter, layer 0)를 덮어버린다.
-	var bg_layer := CanvasLayer.new()
-	bg_layer.layer = -1
-	add_child(bg_layer)
-	var bg := ColorRect.new()
-	bg.color = Color(0.06, 0.06, 0.12)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg_layer.add_child(bg)
+	# 단색 근검정이던 자리 — 벽/지평선/바닥을 가진 배경으로 교체(층별 색조).
+	# 하위 CanvasLayer(-1)라 월드 스프라이트(BattlePresenter, layer 0)를 덮지 않는다.
+	var backdrop := BattleBackdrop.new()
+	add_child(backdrop)
+	backdrop.build(GameState.current_floor)
 
 
 func _build_enemy_status() -> void:
@@ -193,6 +225,11 @@ func _build_enemy_status() -> void:
 			add_child(bl)
 			_break_labels[e] = bl
 
+		var srow := StatusChips.make_row()
+		srow.position = Vector2(560 + i * 100, 98)
+		add_child(srow)
+		_status_rows[e] = srow
+
 
 func _build_player_status() -> void:
 	var pname := Label.new()
@@ -214,6 +251,11 @@ func _build_player_status() -> void:
 	pap.text = "AP %d" % _player.ap
 	pap.position = Vector2(16, 48)
 	add_child(pap)
+
+	var srow := StatusChips.make_row()
+	srow.position = Vector2(16, 68)
+	add_child(srow)
+	_status_rows[&"player"] = srow
 
 
 func _build_labels() -> void:

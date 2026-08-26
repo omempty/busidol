@@ -19,7 +19,7 @@ static func character_sheet(asset_id: StringName, quiet := false) -> Dictionary:
 		order = [REMAKE_TAG, LEGACY_TAG]
 	for tag in order:
 		var sheet := "%s%s_%s.png" % [SPRITE_DIR, asset_id, tag]
-		if ResourceLoader.exists(sheet):
+		if ResourceLoader.exists(sheet) or FileAccess.file_exists(sheet):
 			return {
 				"sheet": sheet,
 				"meta": "%s%s_%s.json" % [SPRITE_DIR, asset_id, tag],
@@ -27,6 +27,24 @@ static func character_sheet(asset_id: StringName, quiet := false) -> Dictionary:
 	if not quiet:
 		push_error("SpriteSets: '%s' 시트 없음 — %s/%s 태그 모두 부재" % [asset_id, order[0], order[1]])
 	return {"sheet": "", "meta": ""}
+
+
+## 방향 포즈 애니 이름 해석. walking=true면 walk 우선, false면 idle 우선.
+## 원작 시트는 idle이 정면 하나뿐이라, 정지 폴백을 idle_down으로 두면 옆/뒤를 보다
+## 멈출 때마다 정면 프레임이 튄다 — 같은 방향 walk 첫 프레임을 정지 포즈로 쓰는 것이 정답.
+## 반환값이 "idle_"로 시작하면 진짜 정지 애니, 아니면 walk 프레임을 세워 쓰라는 뜻.
+static func pose_anim(frames: SpriteFrames, facing: StringName, walking: bool) -> StringName:
+	if frames == null:
+		return &""
+	var f := String(facing)
+	var order: Array[StringName] = [StringName("idle_" + f), StringName("walk_" + f)]
+	if walking:
+		order.reverse()
+	order.append_array([&"walk_down", &"idle_down"] if walking else [&"idle_down", &"walk_down"])
+	for a in order:
+		if frames.has_animation(a):
+			return a
+	return &""
 
 
 ## 발바닥 앵커 보정 offset.y — 중앙 앵커 스프라이트가 scale≠1일 때도

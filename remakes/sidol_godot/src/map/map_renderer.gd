@@ -10,6 +10,10 @@ const Z_FRONT := 20
 const GROUND_ATLAS := "res://assets/sprites/tiles_original_32.png"
 const OBJECT_ATLAS := "res://assets/sprites/obj_original_32.png"
 
+## TileSet 소스 ID — 레이어 하나가 지면/오브젝트 두 아틀라스를 동시에 참조한다.
+const SRC_GROUND := 0
+const SRC_OBJECT := 1
+
 var runtime: MapRuntime
 var _warned_missing := false
 var _layers: Array[TileMapLayer] = []
@@ -22,9 +26,10 @@ func build(rt: MapRuntime) -> void:
 	var object_meta := _load_object_meta()
 
 	_layers.clear()
+	var shared_tileset := _build_tileset()
 	for i in 3:
 		var z: int = [Z_GROUND, Z_OBJECT, Z_FRONT][i]
-		var layer := _make_layer(GROUND_ATLAS, z)
+		var layer := _make_layer(shared_tileset, z)
 		layer.name = ["Ground", "Object", "Front"][i]
 		_layers.append(layer)
 		add_child(layer)
@@ -62,9 +67,18 @@ func _load_object_meta() -> Dictionary:
 	return raw
 
 
-func _make_layer(atlas_path: String, z_index_value: int) -> TileMapLayer:
+## 지면·오브젝트 두 아틀라스를 한 TileSet에 담는다(소스 0/1).
+## 과거 결함: 오브젝트 레이어가 지면 아틀라스만 실었는데 set_cell은 소스 1을 지목 —
+## 존재하지 않는 소스라 173종 오브젝트가 전부 미렌더(ATT 벽만 남아 "투명벽")였다.
+func _build_tileset() -> TileSet:
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(MapDefinition.TILE_PX, MapDefinition.TILE_PX)
+	ts.add_source(_atlas_source(GROUND_ATLAS), SRC_GROUND)
+	ts.add_source(_atlas_source(OBJECT_ATLAS), SRC_OBJECT)
+	return ts
+
+
+func _atlas_source(atlas_path: String) -> TileSetAtlasSource:
 	var tex: Texture2D = load(atlas_path)
 	var src := TileSetAtlasSource.new()
 	src.texture = tex
@@ -73,9 +87,12 @@ func _make_layer(atlas_path: String, z_index_value: int) -> TileMapLayer:
 	for cy in grid.y:
 		for cx in grid.x:
 			src.create_tile(Vector2i(cx, cy))
-	ts.add_source(src, 0)
+	return src
+
+
+func _make_layer(shared_tileset: TileSet, z_index_value: int) -> TileMapLayer:
 	var layer := TileMapLayer.new()
-	layer.tile_set = ts
+	layer.tile_set = shared_tileset
 	layer.z_index = z_index_value
 	return layer
 
@@ -86,7 +103,7 @@ func _set_ground(layer: TileMapLayer, grid: Vector2i, id: int, cell: Vector2i) -
 			push_warning("타일 ID 범위 밖: %d" % id)
 			_warned_missing = true
 		return
-	layer.set_cell(cell, 0, Vector2i(id % grid.x, id / grid.x))
+	layer.set_cell(cell, SRC_GROUND, Vector2i(id % grid.x, id / grid.x))
 
 
 func _set_object(layer: TileMapLayer, meta: Dictionary, id: int, cell: Vector2i) -> void:
@@ -98,4 +115,4 @@ func _set_object(layer: TileMapLayer, meta: Dictionary, id: int, cell: Vector2i)
 		return
 	var col: int = int(entry["col"])
 	var row: int = int(entry["row"])
-	layer.set_cell(cell, 1, Vector2i(col, row))
+	layer.set_cell(cell, SRC_OBJECT, Vector2i(col, row))

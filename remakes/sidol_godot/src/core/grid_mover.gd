@@ -18,6 +18,28 @@ var body: Node2D  # 실제 이동할 노드(스프라이트 부모)
 var is_passable: Callable  # func(cell: Vector2i) -> bool
 
 
+## 방향 벡터 ↔ 이름 — 스프라이트 애니 접미사와 동일 어휘(액터 공용).
+static func dir_name(dir: Vector2i) -> StringName:
+	if dir.x < 0:
+		return &"left"
+	if dir.x > 0:
+		return &"right"
+	if dir.y < 0:
+		return &"up"
+	return &"down"
+
+
+static func name_dir(dir_name_value: StringName) -> Vector2i:
+	match dir_name_value:
+		&"left":
+			return Vector2i.LEFT
+		&"right":
+			return Vector2i.RIGHT
+		&"up":
+			return Vector2i.UP
+	return Vector2i.DOWN
+
+
 ## 2x2 블록의 중심 픽셀 좌표(스프라이트 centered 기준).
 static func block_center(cell: Vector2i) -> Vector2:
 	return Vector2(cell.x + 1, cell.y + 1) * float(MapDefinition.TILE_PX)
@@ -67,8 +89,11 @@ func _on_arrived() -> void:
 		try_step(d)
 
 
-## 진행 방향 선행 열/행의 셀들이 전부 통행 가능한지 — 원작 2셀 폭 판정 재현.
-func _edge_passable(origin: Vector2i, dir: Vector2i) -> bool:
+## 진행 방향 선행 열/행의 셀들 — 원작 2셀 폭 판정 재현.
+## 통행 판정과 상호작용 대상 판정이 **같은 셀**을 봐야 한다:
+## 상자·NPC는 통행을 막으므로, 막힌 그 셀이 곧 조사 대상 셀이다.
+func edge_cells(origin: Vector2i, dir: Vector2i) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
 	var start := origin + dir
 	var span := maxi(footprint.x, footprint.y)
 	for i in span:
@@ -79,6 +104,12 @@ func _edge_passable(origin: Vector2i, dir: Vector2i) -> bool:
 		else:
 			cell.y += (footprint.y - 1) if dir.y > 0 else 0
 			cell.x += i
+		out.append(cell)
+	return out
+
+
+func _edge_passable(origin: Vector2i, dir: Vector2i) -> bool:
+	for cell in edge_cells(origin, dir):
 		if not is_passable.call(cell):
 			return false
 	return true

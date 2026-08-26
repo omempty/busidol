@@ -36,6 +36,43 @@ func setup(p_field: Node2D) -> void:
 	overlay_layer.add_child(_overlay)
 
 
+## 이 셀이 계단 앵커인가 — 빠른 이동(Q5)을 여는 자리.
+## 층 이동 가드(guard/requires_flag)와 무관하다: 이미 가 본 층으로 돌아가는 것이지
+## 새 층을 여는 게 아니다.
+func is_travel_anchor(cell: Vector2i) -> bool:
+	for t: Dictionary in _transitions:
+		if cell == Vector2i(int(t["anchor"][0]), int(t["anchor"][1])):
+			return true
+	return false
+
+
+## 빠른 이동 실행 — 지금 서 있는 계단 앵커 그대로 목적 층에 내린다.
+## 계단 좌표는 전 층이 공유하므로(원본 MAP 설계) 같은 자리로 착지하면 된다.
+## 막혀 있으면 rebuild_floor의 착지 보정이 인접 유효 셀로 옮긴다.
+func fast_travel(floor_no: int, anchor: Vector2i) -> void:
+	if active or floor_no == GameState.current_floor:
+		return
+	active = true
+	player.mover.enabled = false
+	var tween := create_tween()
+	tween.tween_property(_overlay, "color:a", 1.0, FADE_TIME)
+	tween.finished.connect(
+		func() -> void:
+			GameState.current_floor = floor_no
+			EventBus.floor_changed.emit(floor_no)
+			field.rebuild_floor(anchor)
+			GameState.player_cell = player.mover.grid_pos
+			SaveManager.save_slot(SaveManager.AUTO_SLOT, "빠른 이동")
+			var fade_back := create_tween()
+			fade_back.tween_property(_overlay, "color:a", 0.0, FADE_TIME)
+			fade_back.finished.connect(
+				func() -> void:
+					player.mover.enabled = true
+					active = false
+			)
+	)
+
+
 func _load_transitions() -> Array:
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(TRANSITIONS_PATH))
 	if typeof(raw) != TYPE_DICTIONARY:

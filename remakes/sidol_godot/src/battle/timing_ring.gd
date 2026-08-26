@@ -36,8 +36,9 @@ func _process(delta: float) -> void:
 		return
 	_elapsed += delta
 	queue_redraw()
-	if Input.is_action_just_pressed(&"ui_accept") or Input.is_mouse_button_pressed(
-		MOUSE_BUTTON_LEFT
+	if (
+		Input.is_action_just_pressed(&"ui_accept")
+		or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	):
 		_finish(_elapsed / window >= SWEET_FROM)
 	elif _elapsed >= window:

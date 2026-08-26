@@ -7,6 +7,7 @@ extends AIBrain
 var pattern_kind: int = MovementPattern.Kind.WANDER
 var params: Dictionary = {}
 var _state := {}  # 인스턴스별 임시 상태
+var _last_dist := 9999  # 마지막 decide 시점의 플레이어 거리 — 경고 표식 판정용
 var fallback_brain: AIBrain
 
 
@@ -24,7 +25,33 @@ func configure(p_kind: int, p_params: Dictionary = {}) -> void:
 		params[key] = p_params[key]
 
 
+## 플레이어를 향해 오는 패턴들 — 이 종들은 가까워지면 경고를 띄운다.
+## WANDER/PATROL/PULSE는 플레이어를 쫓지 않으므로 제외(거짓 경고 방지).
+const HOMING_KINDS := [
+	MovementPattern.Kind.CHASE,
+	MovementPattern.Kind.DASH,
+	MovementPattern.Kind.BURROW,
+	MovementPattern.Kind.ZIGZAG,
+	MovementPattern.Kind.TELEPORT,
+	MovementPattern.Kind.AMBUSHER,
+	MovementPattern.Kind.PHASER,
+]
+## 경고가 뜨는 거리(맨해튼). 접촉 판정(2칸 안팎)보다 넉넉해야 피할 시간이 생긴다.
+const ALERT_RADIUS := 8
+
+
+## 돌진 예비·잠복 같은 "곧 덤빈다" 단계이거나, 추적형이 사정거리에 들어오면 경고.
+func is_alerted() -> bool:
+	var phase: StringName = _state.get("phase", &"")
+	if phase in [&"telegraph", &"dashing", &"hidden"]:
+		return true
+	if HOMING_KINDS.has(pattern_kind):
+		return _last_dist <= int(params.get("alert_radius", ALERT_RADIUS))
+	return fallback_brain != null and fallback_brain.is_alerted()
+
+
 func decide(ctx: Dictionary) -> Vector2i:
+	_last_dist = _distance(ctx.self_cell, ctx.player_cell)
 	match pattern_kind:
 		MovementPattern.Kind.DASH:
 			return _decide_dash(ctx)
@@ -91,20 +118,24 @@ func _decide_burrow(ctx: Dictionary) -> Vector2i:
 	if not _state.has("phase"):
 		_state["phase"] = &"surface"
 
+	# 맵 반대편에서도 잠복이 돌면 플레이어가 본 적 없는 몬스터가 코앞에 튀어나온다 —
+	# 어그로 반경 안에서만 잠복 사이클을 돌린다.
+	if _distance(self_cell, player_cell) > int(params.get("engage_radius", 12)):
+		_state["phase"] = &"surface"
+		_state["tick"] = 0
+		return fallback_brain.decide(ctx)
+
 	match _state["phase"]:
 		&"surface":
 			_state["tick"] = (_state.get("tick", 0) as int) + 1
 			if _state["tick"] >= int(params.get("hidden_ticks", 8)):
-				# 플레이어 인접 셀로 점프
-				var candidates: Array[Vector2i] = []
-				for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-					var target := player_cell + d
-					if ctx.passable.call(target) and not ctx.occupied.has(target):
-						candidates.append(target)
-				if not candidates.is_empty():
+				# 플레이어 주변 emerge_radius 링에서 출현 — 바로 옆에 뜨면
+				# 회피 불가 전투가 된다. 한 박자 볼 거리를 남긴다.
+				var target := _pick_emerge(ctx, player_cell, int(params.get("emerge_radius", 3)))
+				if target.x >= 0:
 					_state["phase"] = &"hidden"
-					_state["emerge_at"] = candidates[ctx.rng.randi() % candidates.size()]
-					return _state["emerge_at"] - self_cell  # 순간이동
+					_state["emerge_at"] = target
+					return target - self_cell  # 순간이동
 				return Vector2i.ZERO
 			return fallback_brain.decide(ctx)
 		&"hidden":
@@ -148,10 +179,15 @@ func _decide_teleport(ctx: Dictionary) -> Vector2i:
 		_state["tick"] = int(params.get("interval_ticks", 5))
 		var radius := int(params.get("jump_radius", 4))
 		var player_cell: Vector2i = ctx.player_cell
+		if _distance(self_cell, player_cell) > int(params.get("engage_radius", 12)):
+			return fallback_brain.decide(ctx)
 		for attempt in range(10):
 			var dx: int = ctx.rng.randi_range(-radius, radius)
 			var dy: int = ctx.rng.randi_range(-radius, radius)
 			var target := Vector2i(player_cell.x + dx, player_cell.y + dy)
+			# 플레이어 몸에 맞닿는 자리는 제외 — 착지 즉시 전투는 회피 수단이 없다.
+			if Placement.bodies_touch(player_cell, target):
+				continue
 			if ctx.passable.call(target) and target != self_cell:
 				return target - self_cell  # 순간이동 벡터
 	return Vector2i.ZERO
@@ -177,6 +213,23 @@ func _decide_phaser(ctx: Dictionary) -> Vector2i:
 	else:
 		d = Vector2i(0, signi(to_p.y))
 	return d
+
+
+## 플레이어 주변 radius 링에서 설 수 있는 자리 하나. 없으면 (-1,-1).
+func _pick_emerge(ctx: Dictionary, player_cell: Vector2i, radius: int) -> Vector2i:
+	var candidates: Array[Vector2i] = []
+	for c: Vector2i in Placement.ring(player_cell, maxi(radius, Placement.BODY.x + 1)):
+		if Placement.bodies_touch(player_cell, c):
+			continue
+		if ctx.passable.call(c):
+			candidates.append(c)
+	if candidates.is_empty():
+		return Vector2i(-1, -1)
+	return candidates[ctx.rng.randi() % candidates.size()]
+
+
+static func _distance(a: Vector2i, b: Vector2i) -> int:
+	return absi(a.x - b.x) + absi(a.y - b.y)
 
 
 func _dir_toward(from: Vector2i, to: Vector2i) -> Vector2i:

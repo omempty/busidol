@@ -74,7 +74,47 @@ func _ready() -> void:
 		if not blocked_ok:
 			failures.append("벽 통과 발생: %s" % str(player.mover.grid_pos))
 
+	# --- 3) 나를 막은 그 셀을 조사할 수 있는가 — 네 방향 전부 ---
+	# 구판은 좌/하 전방 오프셋만 한 칸 멀어(x−2 · y+3) 왼쪽·아래 상자와 NPC가
+	# 영영 조사 불가였다. front_cells가 이동 차단 셀과 같은 곳을 보는지 고정한다.
+	for d: Vector2i in dirs:
+		var spot := _find_blocked_from(player, rt, d)
+		if spot == Vector2i(-9, -9):
+			push_warning("[smoke_field] 차단 지점 미발견 %s — 생략" % d)
+			continue
+		player.teleport(spot)
+		player.face(player.dir_to_name(d))
+		await get_tree().process_frame
+		var front: Array[Vector2i] = field.front_cells()
+		var missing: Array[Vector2i] = []
+		for e in player.mover.edge_cells(spot, d):
+			if not rt.is_passable(e) and not front.has(e):
+				missing.append(e)
+		print("[smoke_field] 전방 조사 %s @%s front=%s 누락=%s" % [d, spot, front, missing])
+		if not missing.is_empty():
+			failures.append("차단 셀이 전방 목록에 없음 %s: %s" % [d, missing])
+
 	_finish(failures)
+
+
+## 몸(2×2)이 온전히 들어가면서 진행 방향만 막힌 셀 — 전방 조사 검증 지점.
+func _find_blocked_from(player: PlayerEntity, rt: MapRuntime, d: Vector2i) -> Vector2i:
+	for y in range(1, rt.definition.height - 3):
+		for x in range(1, rt.definition.width - 3):
+			var c := Vector2i(x, y)
+			if not _body_fits(rt, c):
+				continue
+			for e in player.mover.edge_cells(c, d):
+				if not rt.is_passable(e):
+					return c
+	return Vector2i(-9, -9)
+
+
+func _body_fits(rt: MapRuntime, c: Vector2i) -> bool:
+	for o in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1)]:
+		if not rt.is_passable(c + o):
+			return false
+	return true
 
 
 func _find_free_with_wall_east(rt: MapRuntime) -> Vector2i:

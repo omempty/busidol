@@ -5,7 +5,7 @@
   "steps": [
     { "op": "craft",
       "args": {
-        "requires": { "antibiotic_x": 1 },
+        "requires": { "ITEM_ANTIBIOTIC_X": 1 },
         "grant": {},
         "flag": "Q_F5_BOSS_CURE"
       }

@@ -33,7 +33,7 @@
     {
       "op": "grant_item",
       "args": {
-        "item": "reagent_allin",
+        "item": "ITEM_CURE_ALLIN",
         "count": 1
       }
     }

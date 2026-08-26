@@ -1,439 +1,497 @@
 {
-  "schema_version": 1,
-  "_comment": "통합 아이템 DB — 원작 ITEM_STRUCT(37종) + 마스터 시나리오 신규 + 전통약물·마법대체 보강",
-  "legacy_ref": {
-    "_comment": "원작 ITEM_STRUCT 인덱스(150+) ↔ 신규 id 매핑. 영구 유지.",
-    "150": "ITEM_WEAPON_AM_SIDOL",
-    "151": "ITEM_WEAPON_SU_SIDOL",
-    "152": "ITEM_WEAPON_DANDO",
-    "153": "ITEM_WEAPON_KAL",
-    "154": "ITEM_WEAPON_ELECTRIC_SHOCK",
-    "155": "ITEM_WEAPON_ELECTRIC_SHOCK_P",
-    "156": "ITEM_WEAPON_SAMJICHANG_1",
-    "157": "ITEM_WEAPON_SAMJICHANG_2",
-    "158": "ITEM_WEAPON_SAMJICHANG_3",
-    "159": "ITEM_WEAPON_GLOVER_1",
-    "160": "ITEM_WEAPON_GLOVER_2",
-    "161": "ITEM_WEAPON_GLOVER_3",
-    "162": "ITEM_WEAPON_PYUNCHANG_1",
-    "163": "ITEM_WEAPON_PYUNCHANG_2",
-    "164": "ITEM_WEAPON_PYUNCHANG_3",
-    "165": "ITEM_WEAPON_CHAechak_1",
-    "166": "ITEM_WEAPON_CHAECHAK_2",
-    "167": "ITEM_WEAPON_GASGUN_OLD",
-    "168": "ITEM_WEAPON_GASGUN_NEW",
-    "169": "ITEM_BATTERY",
-    "170": "ITEM_BATTERY_PACK",
-    "171": "ITEM_UHWANG",
-    "172": "ITEM_MEDICINE",
-    "173": "ITEM_CONDITION",
-    "174": "ITEM_BOOK",
-    "175": "ITEM_FLASK_TRI_1",
-    "176": "ITEM_FLASK_TRI_2",
-    "177": "ITEM_FLASK_ROUND_1",
-    "178": "ITEM_FLASK_ROUND_2",
-    "179": "ITEM_DISKETTE",
-    "180": "ITEM_KEY",
-    "181": "ITEM_SOPO",
-    "182": "ITEM_MONEY_100",
-    "183": "ITEM_MONEY_500",
-    "184": "ITEM_MONEY_1000"
+ "schema_version": 1,
+ "_comment": "통합 아이템 DB — 원작 ITEM_STRUCT(37종) + 마스터 시나리오 신규 + 전통약물·마법대체 보강",
+ "legacy_ref": {
+  "_comment": "원작 ITEM_STRUCT 인덱스(150+) ↔ 신규 id 매핑. 영구 유지. 상자 개봉(field._open_chest)이 이 표로 실제 아이템을 지급한다 — 2026-08-27 이전에는 표가 있어도 게임이 쓰지 않았고, 11개 대상 id가 개명 후 따라가지 않아 깨져 있었다(validate.gd가 상시 검사한다).",
+  "150": "ITEM_WEAPON_AM_SIDOL",
+  "151": "ITEM_WEAPON_SU_SIDOL",
+  "152": "ITEM_WEAPON_DANDO",
+  "153": "ITEM_WEAPON_KAL",
+  "154": "ITEM_WEAPON_SHOCK_1",
+  "155": "ITEM_WEAPON_SHOCK_2",
+  "156": "ITEM_WEAPON_TRIDENT_1",
+  "157": "ITEM_WEAPON_TRIDENT_2",
+  "158": "ITEM_WEAPON_TRIDENT_3",
+  "159": "ITEM_WEAPON_GLOVER_1",
+  "160": "ITEM_WEAPON_GLOVER_2",
+  "161": "ITEM_WEAPON_GLOVER_3",
+  "162": "ITEM_WEAPON_STAR_1",
+  "163": "ITEM_WEAPON_STAR_2",
+  "164": "ITEM_WEAPON_STAR_3",
+  "165": "ITEM_WEAPON_WHIP_1",
+  "166": "ITEM_WEAPON_WHIP_2",
+  "167": "ITEM_WEAPON_GASGUN_OLD",
+  "168": "ITEM_WEAPON_GASGUN_NEW",
+  "169": "ITEM_BATTERY",
+  "170": "ITEM_BATTERY_PACK",
+  "171": "ITEM_UHWANGCHEONGSIM",
+  "172": "ITEM_MEDICINE",
+  "173": "ITEM_CONDITION",
+  "174": "ITEM_BOOK",
+  "175": "ITEM_FLASK_TRI_1",
+  "176": "ITEM_FLASK_TRI_2",
+  "177": "ITEM_FLASK_ROUND_1",
+  "178": "ITEM_FLASK_ROUND_2",
+  "179": "ITEM_DISKETTE",
+  "180": "ITEM_KEY",
+  "181": "ITEM_SOPO",
+  "182": "ITEM_MONEY_100",
+  "183": "ITEM_MONEY_500",
+  "184": "ITEM_MONEY_1000"
+ },
+ "items": [
+  {
+   "id": "ITEM_WEAPON_AM_SIDOL",
+   "name_ko": "암 부싯돌",
+   "kind": "weapon",
+   "ap": 10,
+   "element": "physical"
   },
-  "items": [
-    {
-      "id": "ITEM_WEAPON_AM_SIDOL",
-      "name_ko": "암 부싯돌",
-      "kind": "weapon",
-      "ap": 10,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_SU_SIDOL",
-      "name_ko": "수 부싯돌",
-      "kind": "weapon",
-      "ap": 15,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_DANDO",
-      "name_ko": "단도",
-      "kind": "weapon",
-      "ap": 30,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_KAL",
-      "name_ko": "칼",
-      "kind": "weapon",
-      "ap": 35,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_SHOCK_1",
-      "name_ko": "전기충격기",
-      "kind": "weapon",
-      "ap": 50,
-      "element": "electric"
-    },
-    {
-      "id": "ITEM_WEAPON_SHOCK_2",
-      "name_ko": "전기충격기 프로",
-      "kind": "weapon",
-      "ap": 80,
-      "element": "electric"
-    },
-    {
-      "id": "ITEM_WEAPON_TRIDENT_1",
-      "name_ko": "삼지창 1",
-      "kind": "weapon",
-      "ap": 30,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_TRIDENT_2",
-      "name_ko": "삼지창 2",
-      "kind": "weapon",
-      "ap": 100,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_TRIDENT_3",
-      "name_ko": "삼지창 3",
-      "kind": "weapon",
-      "ap": 300,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_GLOVER_1",
-      "name_ko": "파워원 글로버",
-      "kind": "weapon",
-      "ap": 40,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_GLOVER_2",
-      "name_ko": "파워투 글로버",
-      "kind": "weapon",
-      "ap": 200,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_GLOVER_3",
-      "name_ko": "파워쓰리 글로버",
-      "kind": "weapon",
-      "ap": 400,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_STAR_1",
-      "name_ko": "표창 원",
-      "kind": "weapon",
-      "ap": 250,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_STAR_2",
-      "name_ko": "표창 투",
-      "kind": "weapon",
-      "ap": 350,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_STAR_3",
-      "name_ko": "표창 쓰리",
-      "kind": "weapon",
-      "ap": 800,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_WHIP_1",
-      "name_ko": "채찍 원",
-      "kind": "weapon",
-      "ap": 35,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_WHIP_2",
-      "name_ko": "채찍 투",
-      "kind": "weapon",
-      "ap": 40,
-      "element": "physical"
-    },
-    {
-      "id": "ITEM_WEAPON_GASGUN_OLD",
-      "name_ko": "구형 가스총",
-      "kind": "weapon",
-      "ap": 270,
-      "element": "none"
-    },
-    {
-      "id": "ITEM_WEAPON_GASGUN_NEW",
-      "name_ko": "신형 가스총",
-      "kind": "weapon",
-      "ap": 500,
-      "element": "none"
-    },
-    {
-      "id": "ITEM_BATTERY",
-      "name_ko": "건전지",
-      "kind": "material",
-      "_hint": "약품 조합 재료(V)"
-    },
-    {
-      "id": "ITEM_BATTERY_PACK",
-      "name_ko": "밧데리 팩",
-      "kind": "material",
-      "_hint": "고용량 배터리"
-    },
-    {
-      "id": "ITEM_UHWANGCHEONGSIM",
-      "name_ko": "우황청심환",
-      "kind": "consumable",
-      "hp_restore": 100
-    },
-    {
-      "id": "ITEM_MEDICINE",
-      "name_ko": "의약품",
-      "kind": "consumable",
-      "hp_restore": 20
-    },
-    {
-      "id": "ITEM_CONDITION",
-      "name_ko": "컨디션",
-      "kind": "consumable",
-      "hp_restore": 50
-    },
-    {
-      "id": "ITEM_HERB_TEA",
-      "name_ko": "생약차",
-      "kind": "consumable",
-      "hp_restore": 15,
-      "_hint": "전통약물 신규"
-    },
-    {
-      "id": "ITEM_HONEY_WATER",
-      "name_ko": "꿀물",
-      "kind": "consumable",
-      "hp_restore": 25,
-      "_hint": "전통약물"
-    },
-    {
-      "id": "ITEM_SAMGYETANG",
-      "name_ko": "삼계탕",
-      "kind": "consumable",
-      "hp_restore": 80,
-      "_hint": "전통약물 고급"
-    },
-    {
-      "id": "ITEM_HONGSAM",
-      "name_ko": "홍삼 액초",
-      "kind": "consumable",
-      "hp_restore": 120,
-      "ap_buff_turns": 3,
-      "_hint": "전통약물 최고급"
-    },
-    {
-      "id": "ITEM_YONGYONG_JU",
-      "name_ko": "녹용주",
-      "kind": "consumable",
-      "hp_restore": 60,
-      "ap_buff": 10,
-      "_hint": "전통약물"
-    },
-    {
-      "id": "ITEM_ION_DRINK",
-      "name_ko": "이온음료",
-      "kind": "consumable",
-      "hp_restore": 30,
-      "_hint": "1995년 필수 소모품"
-    },
-    {
-      "id": "ITEM_PAIN_PATCH",
-      "name_ko": "진통 파스",
-      "kind": "magic_substitute",
-      "cures": [
-        "paralysis"
-      ],
-      "_hint": "마법대체: 마비 해제"
-    },
-    {
-      "id": "ITEM_FEVER_MED",
-      "name_ko": "해열제",
-      "kind": "magic_substitute",
-      "cures": [
-        "burn"
-      ],
-      "_hint": "마법대체: 화상 해제"
-    },
-    {
-      "id": "ITEM_CALM_PILL",
-      "name_ko": "신경 안정제",
-      "kind": "magic_substitute",
-      "buff": "calm_3turns",
-      "_hint": "마법대체: 디버프 저항"
-    },
-    {
-      "id": "ITEM_FOCUS_DRINK",
-      "name_ko": "집중 음료",
-      "kind": "magic_substitute",
-      "buff": "focus_ap_up",
-      "_hint": "마법대체: AP 일시 상승"
-    },
-    {
-      "id": "ITEM_MINERAL_WATER",
-      "name_ko": "미네랄 워터",
-      "kind": "magic_substitute",
-      "buff": "defense_dp_up",
-      "_hint": "마법대체: DP 일시 상승"
-    },
-    {
-      "id": "ITEM_SOPO",
-      "name_ko": "소포(폭탄)",
-      "kind": "quest",
-      "legacy_ref": "SOPO",
-      "_hint": "PROLOG.CAP 교무과 폭탄"
-    },
-    {
-      "id": "ITEM_KEY",
-      "name_ko": "열쇠",
-      "kind": "quest",
-      "_hint": "잠긴 문 개방"
-    },
-    {
-      "id": "ITEM_BOOK",
-      "name_ko": "책(바이러스 프로그래밍)",
-      "kind": "quest",
-      "_hint": "엔딩 바이러스 제작 재료"
-    },
-    {
-      "id": "ITEM_DISKETTE",
-      "name_ko": "디스크 3.5인치",
-      "kind": "quest",
-      "_hint": "엔딩 바이러스 디스크"
-    },
-    {
-      "id": "ITEM_FLASK_TRI_1",
-      "name_ko": "삼각 플라스크 1",
-      "kind": "quest",
-      "_hint": "약품 용기"
-    },
-    {
-      "id": "ITEM_FLASK_TRI_2",
-      "name_ko": "삼각 플라스크 2",
-      "kind": "quest",
-      "_hint": "〃"
-    },
-    {
-      "id": "ITEM_FLASK_ROUND_1",
-      "name_ko": "둥근 플라스크 1",
-      "kind": "quest",
-      "_hint": "〃"
-    },
-    {
-      "id": "ITEM_FLASK_ROUND_2",
-      "name_ko": "둥근 플라스크 2",
-      "kind": "quest",
-      "_hint": "〃"
-    },
-    {
-      "id": "ITEM_CURE_DRAG",
-      "name_ko": "시약 드래그",
-      "kind": "quest",
-      "_hint": "식초+요소+건전지100V"
-    },
-    {
-      "id": "ITEM_CURE_ALLIN",
-      "name_ko": "시약 앨린",
-      "kind": "quest",
-      "_hint": "진공관+건전지200V"
-    },
-    {
-      "id": "ITEM_CURE_PALIN",
-      "name_ko": "시약 팰린",
-      "kind": "quest",
-      "_hint": "알콜+건전지10000V"
-    },
-    {
-      "id": "ITEM_ANTIBIOTIC_X",
-      "name_ko": "안티 바이오틱-X",
-      "kind": "quest",
-      "_hint": "해독제 완성품"
-    },
-    {
-      "id": "ITEM_MANHWA_POSTER",
-      "name_ko": "만화 포스터",
-      "kind": "quest",
-      "_hint": "완종 괴물 약점"
-    },
-    {
-      "id": "ITEM_LIGHTER",
-      "name_ko": "라이터",
-      "kind": "quest",
-      "_hint": "폭탄 점화"
-    },
-    {
-      "id": "ITEM_GASOLINE",
-      "name_ko": "휘발유",
-      "kind": "quest",
-      "_hint": "도화선 대용"
-    },
-    {
-      "id": "ITEM_DIPLOMA",
-      "name_ko": "졸업 확인서",
-      "kind": "quest",
-      "_hint": "대학원생 이벤트"
-    },
-    {
-      "id": "ITEM_APPROVAL",
-      "name_ko": "연구비 품의서",
-      "kind": "quest",
-      "_hint": "권교수 심부름"
-    },
-    {
-      "id": "ITEM_MONEY_100",
-      "name_ko": "100온",
-      "kind": "money",
-      "money_value": 100
-    },
-    {
-      "id": "ITEM_MONEY_500",
-      "name_ko": "500온",
-      "kind": "money",
-      "money_value": 500
-    },
-    {
-      "id": "ITEM_MONEY_1000",
-      "name_ko": "1000온",
-      "kind": "money",
-      "money_value": 1000
-    },
-    {
-      "id": "reagent_drag",
-      "name": "시약 [드래그]",
-      "kind": "quest",
-      "price": 0,
-      "desc": "해독제 재료 1. 권영칠 교수 심부름 보상."
-    },
-    {
-      "id": "reagent_allin",
-      "name": "시약 [앨린]",
-      "kind": "quest",
-      "price": 0,
-      "desc": "해독제 재료 2. 졸업 승인서와 교환."
-    },
-    {
-      "id": "reagent_palin",
-      "name": "시약 [팰린]",
-      "kind": "quest",
-      "price": 0,
-      "desc": "해독제 재료 3. 퀴즈맨 수호."
-    },
-    {
-      "id": "antibiotic_x",
-      "name": "안티 바이오틱-X",
-      "kind": "quest",
-      "price": 0,
-      "desc": "모교수 괴물화 해독제. 드래그+앨린+팰린 합성."
-    }
-  ]
+  {
+   "id": "ITEM_WEAPON_SU_SIDOL",
+   "name_ko": "수 부싯돌",
+   "kind": "weapon",
+   "ap": 15,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_DANDO",
+   "name_ko": "단도",
+   "kind": "weapon",
+   "ap": 30,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_KAL",
+   "name_ko": "칼",
+   "kind": "weapon",
+   "ap": 35,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_SHOCK_1",
+   "name_ko": "전기충격기",
+   "kind": "weapon",
+   "ap": 50,
+   "element": "electric"
+  },
+  {
+   "id": "ITEM_WEAPON_SHOCK_2",
+   "name_ko": "전기충격기 프로",
+   "kind": "weapon",
+   "ap": 80,
+   "element": "electric"
+  },
+  {
+   "id": "ITEM_WEAPON_TRIDENT_1",
+   "name_ko": "삼지창 1",
+   "kind": "weapon",
+   "ap": 30,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_TRIDENT_2",
+   "name_ko": "삼지창 2",
+   "kind": "weapon",
+   "ap": 100,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_TRIDENT_3",
+   "name_ko": "삼지창 3",
+   "kind": "weapon",
+   "ap": 300,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_GLOVER_1",
+   "name_ko": "파워원 글로버",
+   "kind": "weapon",
+   "ap": 40,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_GLOVER_2",
+   "name_ko": "파워투 글로버",
+   "kind": "weapon",
+   "ap": 200,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_GLOVER_3",
+   "name_ko": "파워쓰리 글로버",
+   "kind": "weapon",
+   "ap": 400,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_STAR_1",
+   "name_ko": "표창 원",
+   "kind": "weapon",
+   "ap": 250,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_STAR_2",
+   "name_ko": "표창 투",
+   "kind": "weapon",
+   "ap": 350,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_STAR_3",
+   "name_ko": "표창 쓰리",
+   "kind": "weapon",
+   "ap": 800,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_WHIP_1",
+   "name_ko": "채찍 원",
+   "kind": "weapon",
+   "ap": 35,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_WHIP_2",
+   "name_ko": "채찍 투",
+   "kind": "weapon",
+   "ap": 40,
+   "element": "physical"
+  },
+  {
+   "id": "ITEM_WEAPON_GASGUN_OLD",
+   "name_ko": "구형 가스총",
+   "kind": "weapon",
+   "ap": 270,
+   "element": "none"
+  },
+  {
+   "id": "ITEM_WEAPON_GASGUN_NEW",
+   "name_ko": "신형 가스총",
+   "kind": "weapon",
+   "ap": 500,
+   "element": "none"
+  },
+  {
+   "id": "ITEM_BATTERY",
+   "name_ko": "건전지",
+   "kind": "material",
+   "_hint": "약품 조합 재료(V)"
+  },
+  {
+   "id": "ITEM_BATTERY_PACK",
+   "name_ko": "밧데리 팩",
+   "kind": "material",
+   "_hint": "고용량 배터리"
+  },
+  {
+   "id": "ITEM_UHWANGCHEONGSIM",
+   "name_ko": "우황청심환",
+   "kind": "consumable",
+   "hp_restore": 100,
+   "price": 200
+  },
+  {
+   "id": "ITEM_MEDICINE",
+   "name_ko": "의약품",
+   "kind": "consumable",
+   "hp_restore": 20,
+   "price": 100
+  },
+  {
+   "id": "ITEM_CONDITION",
+   "name_ko": "컨디션",
+   "kind": "consumable",
+   "hp_restore": 50
+  },
+  {
+   "id": "ITEM_HERB_TEA",
+   "name_ko": "생약차",
+   "kind": "consumable",
+   "hp_restore": 15,
+   "_hint": "전통약물 신규",
+   "price": 50
+  },
+  {
+   "id": "ITEM_HONEY_WATER",
+   "name_ko": "꿀물",
+   "kind": "consumable",
+   "hp_restore": 25,
+   "_hint": "전통약물",
+   "price": 80
+  },
+  {
+   "id": "ITEM_SAMGYETANG",
+   "name_ko": "삼계탕",
+   "kind": "consumable",
+   "hp_restore": 80,
+   "_hint": "전통약물 고급",
+   "price": 400
+  },
+  {
+   "id": "ITEM_HONGSAM",
+   "name_ko": "홍삼 액초",
+   "kind": "consumable",
+   "hp_restore": 120,
+   "ap_buff_turns": 3,
+   "_hint": "전통약물 최고급",
+   "price": 600
+  },
+  {
+   "id": "ITEM_YONGYONG_JU",
+   "name_ko": "녹용주",
+   "kind": "consumable",
+   "hp_restore": 60,
+   "ap_buff": 10,
+   "_hint": "전통약물",
+   "price": 300
+  },
+  {
+   "id": "ITEM_ION_DRINK",
+   "name_ko": "이온음료",
+   "kind": "consumable",
+   "hp_restore": 30,
+   "_hint": "1995년 필수 소모품",
+   "price": 150
+  },
+  {
+   "id": "ITEM_PAIN_PATCH",
+   "name_ko": "진통 파스",
+   "kind": "magic_substitute",
+   "cures": [
+    "paralysis"
+   ],
+   "_hint": "마법대체: 마비 해제",
+   "price": 120
+  },
+  {
+   "id": "ITEM_FEVER_MED",
+   "name_ko": "해열제",
+   "kind": "magic_substitute",
+   "cures": [
+    "burn"
+   ],
+   "_hint": "마법대체: 화상 해제",
+   "price": 120
+  },
+  {
+   "id": "ITEM_CALM_PILL",
+   "name_ko": "신경 안정제",
+   "kind": "magic_substitute",
+   "_hint": "마법대체: 디버프 저항",
+   "applies": "status_resist",
+   "price": 250
+  },
+  {
+   "id": "ITEM_FOCUS_DRINK",
+   "name_ko": "집중 음료",
+   "kind": "magic_substitute",
+   "_hint": "마법대체: AP 일시 상승",
+   "ap_buff": 30,
+   "ap_buff_turns": 3,
+   "price": 250
+  },
+  {
+   "id": "ITEM_MINERAL_WATER",
+   "name_ko": "미네랄 워터",
+   "kind": "magic_substitute",
+   "_hint": "마법대체: DP 일시 상승",
+   "applies": "shield_25",
+   "price": 220
+  },
+  {
+   "id": "ITEM_SOPO",
+   "name_ko": "소포(폭탄)",
+   "kind": "quest",
+   "legacy_ref": "SOPO",
+   "_hint": "PROLOG.CAP 교무과 폭탄"
+  },
+  {
+   "id": "ITEM_KEY",
+   "name_ko": "열쇠",
+   "kind": "quest",
+   "_hint": "잠긴 문 개방"
+  },
+  {
+   "id": "ITEM_BOOK",
+   "name_ko": "책(바이러스 프로그래밍)",
+   "kind": "quest",
+   "_hint": "엔딩 바이러스 제작 재료"
+  },
+  {
+   "id": "ITEM_DISKETTE",
+   "name_ko": "디스크 3.5인치",
+   "kind": "quest",
+   "_hint": "엔딩 바이러스 디스크"
+  },
+  {
+   "id": "ITEM_FLASK_TRI_1",
+   "name_ko": "삼각 플라스크 1",
+   "kind": "quest",
+   "_hint": "약품 용기"
+  },
+  {
+   "id": "ITEM_FLASK_TRI_2",
+   "name_ko": "삼각 플라스크 2",
+   "kind": "quest",
+   "_hint": "〃"
+  },
+  {
+   "id": "ITEM_FLASK_ROUND_1",
+   "name_ko": "둥근 플라스크 1",
+   "kind": "quest",
+   "_hint": "〃"
+  },
+  {
+   "id": "ITEM_FLASK_ROUND_2",
+   "name_ko": "둥근 플라스크 2",
+   "kind": "quest",
+   "_hint": "〃"
+  },
+  {
+   "id": "ITEM_CURE_DRAG",
+   "name_ko": "시약 드래그",
+   "kind": "quest",
+   "_hint": "식초+요소+건전지100V"
+  },
+  {
+   "id": "ITEM_CURE_ALLIN",
+   "name_ko": "시약 앨린",
+   "kind": "quest",
+   "_hint": "진공관+건전지200V"
+  },
+  {
+   "id": "ITEM_CURE_PALIN",
+   "name_ko": "시약 팰린",
+   "kind": "quest",
+   "_hint": "알콜+건전지10000V"
+  },
+  {
+   "id": "ITEM_ANTIBIOTIC_X",
+   "name_ko": "안티 바이오틱-X",
+   "kind": "quest",
+   "_hint": "해독제 완성품"
+  },
+  {
+   "id": "ITEM_MANHWA_POSTER",
+   "name_ko": "만화 포스터",
+   "kind": "quest",
+   "_hint": "완종 괴물 약점"
+  },
+  {
+   "id": "ITEM_LIGHTER",
+   "name_ko": "라이터",
+   "kind": "quest",
+   "_hint": "폭탄 점화"
+  },
+  {
+   "id": "ITEM_GASOLINE",
+   "name_ko": "휘발유",
+   "kind": "quest",
+   "_hint": "도화선 대용"
+  },
+  {
+   "id": "ITEM_DIPLOMA",
+   "name_ko": "졸업 확인서",
+   "kind": "quest",
+   "_hint": "대학원생 이벤트"
+  },
+  {
+   "id": "ITEM_APPROVAL",
+   "name_ko": "연구비 품의서",
+   "kind": "quest",
+   "_hint": "권교수 심부름"
+  },
+  {
+   "id": "ITEM_MONEY_100",
+   "name_ko": "100온",
+   "kind": "money",
+   "money_value": 100
+  },
+  {
+   "id": "ITEM_MONEY_500",
+   "name_ko": "500온",
+   "kind": "money",
+   "money_value": 500
+  },
+  {
+   "id": "ITEM_MONEY_1000",
+   "name_ko": "1000온",
+   "kind": "money",
+   "money_value": 1000
+  },
+  {
+   "id": "ITEM_ARMOR_GOWN",
+   "name_ko": "실습 가운",
+   "kind": "armor",
+   "dp": 8,
+   "price": 120,
+   "_hint": "학과 실습용 흰 가운. 없는 것보단 낫다"
+  },
+  {
+   "id": "ITEM_ARMOR_APRON",
+   "name_ko": "화학과 앞치마",
+   "kind": "armor",
+   "dp": 16,
+   "price": 300,
+   "_hint": "약품 튐 방지용 두꺼운 앞치마"
+  },
+  {
+   "id": "ITEM_ARMOR_JACKET",
+   "name_ko": "과잠",
+   "kind": "armor",
+   "dp": 24,
+   "price": 600,
+   "_hint": "학과 점퍼. 소속감이 방어력이 되는 순간"
+  },
+  {
+   "id": "ITEM_ARMOR_VEST",
+   "name_ko": "안전 조끼",
+   "kind": "armor",
+   "dp": 36,
+   "price": 1100,
+   "_hint": "공사장 반사 조끼. 눈에 띄지만 튼튼하다"
+  },
+  {
+   "id": "ITEM_ARMOR_LAB_COAT",
+   "name_ko": "방염 실험복",
+   "kind": "armor",
+   "dp": 48,
+   "price": 1800,
+   "_hint": "화공과 지급품. 불꽃을 튕겨 낸다"
+  },
+  {
+   "id": "ITEM_ARMOR_ESD",
+   "name_ko": "정전기 방지복",
+   "kind": "armor",
+   "dp": 60,
+   "price": 2600,
+   "_hint": "전산실 출입용. 전기 계열에 강하다"
+  },
+  {
+   "id": "ITEM_ARMOR_WELDING",
+   "name_ko": "용접 앞치마",
+   "kind": "armor",
+   "dp": 72,
+   "price": 3600,
+   "_hint": "전자과 실습동에서 가져온 가죽 앞치마"
+  },
+  {
+   "id": "ITEM_ARMOR_HAZMAT",
+   "name_ko": "화학 보호복",
+   "kind": "armor",
+   "dp": 88,
+   "price": 5000,
+   "_hint": "전신 밀폐형. 답답하지만 확실하다"
+  },
+  {
+   "id": "ITEM_ARMOR_EXO",
+   "name_ko": "실험용 외골격",
+   "kind": "armor",
+   "dp": 110,
+   "price": 7500,
+   "_hint": "미완성 시제품. 부싯돌 동아리의 마지막 유산"
+  }
+ ]
 }

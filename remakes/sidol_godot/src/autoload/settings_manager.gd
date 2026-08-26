@@ -7,6 +7,13 @@ enum EffectSpeed { NORMAL, FAST, SKIP }
 enum ArtMode { LEGACY, REMAKE }
 ## 본문 글자 크기(Q9 접근성) — DialogueBox 등 텍스트 UI 스케일
 enum TextSize { SMALL, MEDIUM, LARGE }
+## 필드 몬스터 밀도(Q6) — 접촉이 곧 강제 전투라 밀도가 곧 난이도이자 피로도다.
+## NONE은 탐험/시나리오만 보고 싶을 때(원작에는 없던 현대 편의).
+enum EncounterDensity { NONE, LOW, NORMAL, HIGH }
+## 화면 모드(Q10) — 원작은 DOS 전체화면 고정이었다.
+enum ScreenMode { WINDOWED, FULLSCREEN }
+## 난이도(G-FAITH) — growth.json difficulty_presets의 키와 1:1.
+enum Difficulty { EASY, NORMAL, HARD }
 
 const SETTINGS_PATH := "user://settings.json"
 const BUSES: Array[StringName] = [&"Master", &"BGM", &"SFX", &"Voice"]
@@ -16,16 +23,48 @@ const TEXT_SCALE := {
 	TextSize.MEDIUM: 1.0,
 	TextSize.LARGE: 1.25,
 }
+## 밀도 → 층별 스폰 수 배율. monsters.json의 count에 곱한다.
+## 난이도 enum → growth.json difficulty_presets 키.
+const DIFFICULTY_KEYS := ["easy", "normal", "hard"]
+const ENCOUNTER_SCALE := {
+	EncounterDensity.NONE: 0.0,
+	EncounterDensity.LOW: 0.5,
+	EncounterDensity.NORMAL: 1.0,
+	EncounterDensity.HIGH: 1.5,
+}
 
 var effect_speed: EffectSpeed = EffectSpeed.NORMAL
 var art_mode: ArtMode = ArtMode.LEGACY
 var text_size: TextSize = TextSize.MEDIUM
 var screen_shake := true  # Q9 접근성 — 화면 흔들림 끄기(멀미 대응)
+var encounter_density: EncounterDensity = EncounterDensity.NORMAL
+var screen_mode: ScreenMode = ScreenMode.WINDOWED
+var vsync := true
+var difficulty: Difficulty = Difficulty.NORMAL
 var volumes := {}  # StringName -> float
 
 
 func get_text_scale() -> float:
 	return float(TEXT_SCALE.get(text_size, 1.0))
+
+
+## 층 스폰 수 = monsters.json count × 이 배율(최소 0). NONE이면 몬스터가 나오지 않는다.
+## 난이도 배율 조회 — growth.json이 값의 출처(하드코딩 금지).
+## key 예: exp_mult · enemy_hp_mult · enemy_ap_mult · item_price_mult · status_duration_mult
+func difficulty_mult(key: String) -> float:
+	Database.difficulty = difficulty_key()
+	return Database.get_difficulty_mult(key)
+
+
+func difficulty_key() -> String:
+	return DIFFICULTY_KEYS[int(difficulty)]
+
+
+func encounter_count(base_count: int) -> int:
+	var scaled := float(base_count) * float(ENCOUNTER_SCALE.get(encounter_density, 1.0))
+	if scaled <= 0.0:
+		return 0
+	return maxi(1, int(round(scaled)))
 
 
 ## 전투 연출 배수 — 안무·트윈 지속시간을 나누는 배속.
@@ -79,6 +118,19 @@ func load_settings() -> void:
 	var ts_v: Variant = clampi(int(data.get("text_size", int(text_size))), 0, int(TextSize.LARGE))
 	text_size = ts_v
 	screen_shake = bool(data.get("screen_shake", true))
+	var ed_v: Variant = clampi(
+		int(data.get("encounter_density", int(encounter_density))), 0, int(EncounterDensity.HIGH)
+	)
+	encounter_density = ed_v
+	var sm_v: Variant = clampi(
+		int(data.get("screen_mode", int(screen_mode))), 0, int(ScreenMode.FULLSCREEN)
+	)
+	screen_mode = sm_v
+	vsync = bool(data.get("vsync", true))
+	var df_v: Variant = clampi(
+		int(data.get("difficulty", int(difficulty))), 0, int(Difficulty.HARD)
+	)
+	difficulty = df_v
 	_apply_all()
 
 
@@ -91,6 +143,10 @@ func save_settings() -> void:
 	data["art_mode"] = int(art_mode)
 	data["text_size"] = int(text_size)
 	data["screen_shake"] = screen_shake
+	data["encounter_density"] = int(encounter_density)
+	data["screen_mode"] = int(screen_mode)
+	data["vsync"] = vsync
+	data["difficulty"] = int(difficulty)
 	var fh := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if fh == null:
 		push_error("settings.json 저장 실패: %s" % FileAccess.get_open_error())
@@ -106,3 +162,21 @@ func _apply_bus(bus: StringName) -> void:
 func _apply_all() -> void:
 	for bus in BUSES:
 		_apply_bus(bus)
+	apply_display()
+	Database.difficulty = difficulty_key()
+
+
+## 창모드·수직동기 적용(Q10). 헤드리스에서는 창이 없으므로 건너뛴다.
+func apply_display() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(
+		(
+			DisplayServer.WINDOW_MODE_FULLSCREEN
+			if screen_mode == ScreenMode.FULLSCREEN
+			else DisplayServer.WINDOW_MODE_WINDOWED
+		)
+	)
+	DisplayServer.window_set_vsync_mode(
+		DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED
+	)

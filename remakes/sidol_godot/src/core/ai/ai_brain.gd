@@ -13,6 +13,12 @@ func decide(_ctx: Dictionary) -> Vector2i:
 	return Vector2i.ZERO
 
 
+## 이 브레인이 지금 플레이어를 노리고 있는가 — 필드에 경고 표식을 띄우는 근거.
+## 접촉이 곧 강제 전투인 구조에서 "쫓기는 중"을 안 보여 주면 회피 자체가 불가능하다(Q6).
+func is_alerted() -> bool:
+	return false
+
+
 ## 헬퍼: 4방향 중 통행 가능하고 점유되지 않은 방향 목록
 static func free_dirs(ctx: Dictionary, cell: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []

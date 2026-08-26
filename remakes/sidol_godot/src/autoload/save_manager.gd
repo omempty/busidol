@@ -113,11 +113,22 @@ func _snapshot() -> Dictionary:
 		"inventory": GameState.inventory.to_data(),
 		"flags": GameState.flags.duplicate(),
 		"chest_overrides": chests,
+		"visited_floors": GameState.visited_list(),
+		"equipped": GameState.equipped.duplicate(),
+		"owned_skills": GameState.owned_skill_ids(),
 	}
 
 
 func _apply(data: Dictionary) -> void:
 	GameState.current_floor = int(data.get("floor", 1))
+	GameState.equipped = (data.get("equipped", {}) as Dictionary).duplicate()
+	GameState.owned_skills = {}
+	for sid: Variant in data.get("owned_skills", []):
+		GameState.owned_skills[str(sid)] = true
+	GameState.init_skills()  # 구 세이브(스킬 미기록) 호환 — 비어 있으면 기본값
+	GameState.visited_floors = {}
+	for f: Variant in data.get("visited_floors", []):
+		GameState.visited_floors[int(f)] = true
 	var cell_arr: Array = data.get("player_cell", [-1, -1])
 	GameState.player_cell = Vector2i(int(cell_arr[0]), int(cell_arr[1]))
 	var saved_stats: Dictionary = data.get("player_stats", {})

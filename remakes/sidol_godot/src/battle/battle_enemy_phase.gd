@@ -8,7 +8,7 @@ extends RefCounted
 static func regular_attack(
 	attacker: Combatant, player: Combatant, presenter: BattlePresenter
 ) -> void:
-	var raw := DamageCalculator.enemy_hit(attacker.ap, EnemyManager.rng)
+	var raw := DamageCalculator.enemy_hit(attacker.attack_stat(), EnemyManager.rng)
 	var actual: int = player.take_damage(raw)
 	presenter.show_damage_number(actual, true)
 	presenter.hurt_flash(presenter.player_sprite)

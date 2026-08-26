@@ -32,6 +32,9 @@ var _was_shaken := false
 var _hitstop_busy := false
 var _player_paths: Dictionary = {}
 
+## 전투 바닥은 어두워 필드 기본 세기(0.35)로는 그림자가 묻힌다.
+const BATTLE_SHADOW_ALPHA := 0.62
+
 
 func setup(root: Node2D) -> void:
 	_root = root
@@ -56,6 +59,7 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX / (float(cs.x) * rs))
 	player_sprite.set_meta(&"base_pos", player_sprite.position)
 	_root.add_child(player_sprite)
+	_attach_ground_shadow(player_sprite)
 
 	for i in enemy_ids.size():
 		var es := Sprite2D.new()
@@ -85,6 +89,7 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 		es.scale = Vector2.ONE * node_scale
 		es.set_meta(&"base_pos", es.position)
 		_root.add_child(es)
+		_attach_ground_shadow(es)
 		enemy_sprites.append(es)
 
 
@@ -110,6 +115,23 @@ func _player_cell_size() -> Vector2i:
 				int(d.get("cell_w", d.get("cell", 64))), int(d.get("cell_h", d.get("cell", 64)))
 			)
 	return Vector2i(64, 64)
+
+
+## 발밑 접지 그림자. 배경에 바닥이 생기면서(BattleBackdrop) 액터가 허공에 뜬 것이
+## 눈에 띄게 됐다 — 접지 근거를 준다.
+## 스프라이트의 **자식이 아니라 형제**로 붙인다: 자식이면 스프라이트 scale(시트마다 다름)에
+## 같이 늘어나 그림자가 제각각이 된다. 위치는 셀 하단(= 발끝)에 맞춘다.
+func _attach_ground_shadow(spr: Sprite2D) -> void:
+	if spr.texture == null:
+		return
+	var half_h := spr.texture.get_size().y * spr.scale.y * 0.5
+	var blob := Sprite2D.new()
+	blob.texture = ShadowBlob.shadow_texture(BATTLE_SHADOW_ALPHA)
+	blob.scale = Vector2(2.4, 1.5)
+	blob.position = spr.position + Vector2(0, half_h - 4.0)
+	blob.z_index = spr.z_index - 1
+	_root.add_child(blob)
+	_root.move_child(blob, maxi(spr.get_index(), 0))
 
 
 ## 아트 해상도와 게임 내 크기 분리 — 메타 scale (기본 1)
@@ -170,27 +192,36 @@ func show_damage_number(
 	amount: int, on_player: bool, element: StringName = &"physical", enemy_index: int = -1
 ) -> void:
 	var font_size := clampi(16 + absi(amount) / 4, 16, 44)
-	var color: Color = PLAYER_HURT_COLOR if on_player else ELEMENT_COLORS.get(
-		element, ELEMENT_COLORS[&"none"]
+	var color: Color = (
+		PLAYER_HURT_COLOR if on_player else ELEMENT_COLORS.get(element, ELEMENT_COLORS[&"none"])
 	)
-	_float_text(str(maxi(amount, 0)), color, _pop_position(on_player, enemy_index, font_size), font_size)
+	_float_text(
+		str(maxi(amount, 0)), color, _pop_position(on_player, enemy_index, font_size), font_size
+	)
 
 
 ## 상태 플래그 팝 — WEAK!/BREAK! 등 텍스트 강조(데미지 팝 위).
 func show_flag_pop(text: String, color: Color, enemy_index: int) -> void:
-	_float_text(
-		text, color, _pop_position(false, enemy_index, 20) - Vector2(0, 26), 20
-	)
+	_float_text(text, color, _pop_position(false, enemy_index, 20) - Vector2(0, 26), 20)
 
 
 ## 플레이어 회복 팝 — 초록 +N.
 func show_player_heal(amount: int) -> void:
 	var pos := (
-		player_sprite.position + Vector2(-14, -52)
-		if player_sprite != null
-		else Vector2(140, 180)
+		player_sprite.position + Vector2(-14, -52) if player_sprite != null else Vector2(140, 180)
 	)
 	_float_text("+%d" % maxi(amount, 0), Color(0.4, 1.0, 0.5), pos, 20)
+
+
+## 도구 효과 문구 — 회복 팝보다 위에, 작게. 무엇이 일어났는지 글로 남긴다
+## (상태이상 해제·공격 버프는 숫자 팝만으로는 안 보인다).
+func show_player_note(text: String) -> void:
+	if text.is_empty():
+		return
+	var pos := (
+		player_sprite.position + Vector2(-30, -76) if player_sprite != null else Vector2(120, 150)
+	)
+	_float_text(text, Color(0.98, 0.86, 0.45), pos, 13)
 
 
 func _float_text(text: String, color: Color, pos: Vector2, font_size: int) -> void:

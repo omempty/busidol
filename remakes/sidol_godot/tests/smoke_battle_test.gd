@@ -123,8 +123,12 @@ func _ready() -> void:
 	logic.start(hero, [weakling, tank] as Array[Combatant])
 
 	var fire_skill := {
-		"id": "test_fire", "element": "fire", "targeting": "single", "power": 30,
-		"status_effects": [], "choreography_id": "atk_flame_throw",
+		"id": "test_fire",
+		"element": "fire",
+		"targeting": "single",
+		"power": 30,
+		"status_effects": [],
+		"choreography_id": "atk_flame_throw",
 	}
 
 	# 5-1) 약점 배율 — 동일 시드·동일 조건, fire 약점 몬스터가 더 아프다(결정론)
@@ -142,8 +146,10 @@ func _ready() -> void:
 	var plain_flag: bool = bool((cmd_plain["damages"] as Array)[0]["weak"])
 
 	print(
-		"[smoke_battle] weakness check: fire->weak %d (flag=%s) vs plain %d (flag=%s)"
-		% [weak_dmg, weak_flag, plain_dmg, plain_flag]
+		(
+			"[smoke_battle] weakness check: fire->weak %d (flag=%s) vs plain %d (flag=%s)"
+			% [weak_dmg, weak_flag, plain_dmg, plain_flag]
+		)
 	)
 	if not weak_flag or plain_flag:
 		failures.append("약점 플래그 판정 오류")
@@ -162,8 +168,10 @@ func _ready() -> void:
 	probe.broken_turns = 1
 	var amp_hit: int = probe.take_damage(100)
 	print(
-		"[smoke_battle] break check: break_flag=%s broken mult %d -> %d"
-		% [break_flag, base_hit, amp_hit]
+		(
+			"[smoke_battle] break check: break_flag=%s broken mult %d -> %d"
+			% [break_flag, base_hit, amp_hit]
+		)
 	)
 	if amp_hit <= base_hit:
 		failures.append("브레이크 피해 증폭 미적용 (%d -> %d)" % [base_hit, amp_hit])
@@ -171,7 +179,9 @@ func _ready() -> void:
 	# 5-3) 타이밍 보너스 — timing_mult 1.2
 	EnemyManager.rng.seed = 20260826
 	var cmd_timing := {
-		"type": &"skill", "skill": fire_skill.duplicate(true), "target": tank,
+		"type": &"skill",
+		"skill": fire_skill.duplicate(true),
+		"target": tank,
 		"timing_mult": 1.2,
 	}
 	logic.state = BattleController.TurnState.PLAYER_COMMAND
@@ -182,9 +192,7 @@ func _ready() -> void:
 	logic.submit_player_command(cmd_no_timing)
 	var timing_dmg: int = int((cmd_timing["damages"] as Array)[0]["amount"])
 	var no_timing_dmg: int = int((cmd_no_timing["damages"] as Array)[0]["amount"])
-	print(
-		"[smoke_battle] timing check: just=%d vs normal=%d" % [timing_dmg, no_timing_dmg]
-	)
+	print("[smoke_battle] timing check: just=%d vs normal=%d" % [timing_dmg, no_timing_dmg])
 	if timing_dmg <= no_timing_dmg:
 		failures.append("타이밍 보너스 미적용 (just=%d normal=%d)" % [timing_dmg, no_timing_dmg])
 	logic.queue_free()
@@ -202,8 +210,10 @@ func _ready() -> void:
 		var healed_hp: int = battle.player_combatant.hp
 		var inv_after: int = GameState.inventory.count(&"ITEM_MEDICINE")
 		print(
-			"[smoke_battle] item use: hp 30 -> %d (restore %d), inv %d -> %d"
-			% [healed_hp, int(med["hp_restore"]), inv_before, inv_after]
+			(
+				"[smoke_battle] item use: hp 30 -> %d (restore %d), inv %d -> %d"
+				% [healed_hp, int(med["hp_restore"]), inv_before, inv_after]
+			)
 		)
 		if healed_hp <= 30:
 			failures.append("도구 회복 미적용")

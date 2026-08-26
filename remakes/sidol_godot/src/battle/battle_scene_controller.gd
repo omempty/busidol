@@ -80,10 +80,13 @@ func _load_skills() -> void:
 
 func _setup_combatants(def: Dictionary) -> void:
 	var stats: Dictionary = GameState.player_stats
-	player_combatant = Combatant.new("부싯돌", int(stats["hp"]), int(stats["ap"]), 10)
-	player_combatant.skills = [
-		&"combo_punch", &"flame_beaker", &"debug_shield", &"volt_arc", &"ember_of_flint"
-	]
+	# 공격력은 장착 무기를 더한 값 — GameState가 단일 출처.
+	player_combatant = Combatant.new(
+		"부싯돌", int(stats["hp"]), GameState.attack_power(), GameState.defense_power()
+	)
+	# 보유 스킬은 GameState가 단일 출처 — 구판은 여기 5종이 하드코딩돼 있었고
+	# 아무도 읽지 않았으며 이름도 틀렸다(flame_beaker ≠ flame_beaker_throw).
+	player_combatant.skills.assign(GameState.owned_skill_ids())
 	var built := BattleSetup.build_enemies(def)
 	enemies.assign(built["combatants"])
 	_enemy_ids.assign(built["ids"])
@@ -97,7 +100,7 @@ func _on_command(cmd_text: String) -> void:
 			_begin_player_action(
 				{
 					"type": &"attack",
-					"ap": player_combatant.ap,
+					"ap": player_combatant.attack_stat(),
 					"target": _first_alive_enemy(),
 				},
 				&"atk_basic"
@@ -123,21 +126,26 @@ func _on_skill_selected(skill: Dictionary) -> void:
 		{
 			"type": &"skill",
 			"skill": skill,
-			"ap": player_combatant.ap,
+			"ap": player_combatant.attack_stat(),
 		},
 		move_id
 	)
 
 
-## 도구 사용 — hp_restore 회복 + 인벤 차감, 후 적 턴(방어 흐름 재사용).
+## 도구 사용 — 회복·상태이상 해제·공격 버프. 판정과 적용은 ItemEffects가 단일 창구.
+## 구판은 hp_restore만 처리해 진통 파스·해열제·녹용주 같은 항목이 메뉴에도 안 떴다.
 func _on_item_selected(item_def: Dictionary) -> void:
 	if _busy:
 		return
 	_busy = true
 	_ui.hide_menu()
-	var healed: int = player_combatant.heal(int(item_def.get("hp_restore", 0)))
+	var results := ItemEffects.use_in_battle(item_def, player_combatant)
 	GameState.inventory.remove(StringName(str(item_def["id"])), 1)
-	_presenter.show_player_heal(healed)
+	var healed := int(item_def.get("hp_restore", 0))
+	if healed > 0:
+		_presenter.show_player_heal(mini(healed, player_combatant.max_hp))
+	if not results.is_empty():
+		_presenter.show_player_note(" · ".join(results))
 	_ui.refresh_bars()
 	_end_player_defend()
 
@@ -238,9 +246,7 @@ func _resolve_turn() -> void:
 			actor.broken_turns -= 1
 			_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
 		elif actor != null and not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
-			await BattleEnemyPhase.dodge_sequence(
-				_dodge, edef, _presenter, _ui, player_combatant
-			)
+			await BattleEnemyPhase.dodge_sequence(_dodge, edef, _presenter, _ui, player_combatant)
 		elif actor != null:
 			BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
 		controller.turn_count += 1
@@ -283,11 +289,24 @@ func _tick_effects() -> void:
 func _show_result(result: StringName) -> void:
 	_busy = true
 	_ui.show_result(result)
-	await get_tree().create_timer(1.2).timeout
+	await get_tree().create_timer(0.9).timeout
 	var rewards := BattleRewards.compute(_enemy_ids)
 	battle_ended.emit(result, rewards)
-	BattleRewards.apply(result, rewards, player_combatant.hp, _on_win_flag)
+	# apply가 성장 결과를 돌려준다 — 요약 패널에 레벨업을 실으려면 먼저 반영해야 한다.
+	var growth := BattleRewards.apply(result, rewards, player_combatant.hp, _on_win_flag)
+	if result == &"win":
+		await _show_reward_summary(rewards, growth)
+	else:
+		await get_tree().create_timer(0.9).timeout
 	get_tree().change_scene_to_file("res://scenes/field.tscn")
+
+
+## 보상 요약(Q7) — 입력으로 넘기거나 자동으로 닫힌다.
+func _show_reward_summary(rewards: Dictionary, growth: Dictionary) -> void:
+	var panel := BattleResultPanel.new()
+	add_child(panel)
+	panel.show_summary(rewards, growth)
+	await panel.dismissed
 
 
 func _all_enemies_down() -> bool:

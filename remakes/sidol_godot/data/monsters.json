@@ -1,67 +1,414 @@
 {
-  "schema_version": 1,
-  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그. species 섹션 = 종별 약점(브레이크 시스템): 기계 계열=electric(docs/03_backlog EMP 근거), 종이·유기질=fire, 안구·무기질=physical.",
-  "species": {
-    "sparker": { "weaknesses": ["physical"] },
-    "mad_eye": { "weaknesses": ["fire"] },
-    "vulgar": { "weaknesses": ["fire"] },
-    "dworm": { "weaknesses": ["electric"] },
-    "ozzy": { "weaknesses": ["fire"] },
-    "iron_voc": { "weaknesses": ["electric"] },
-    "hellcop": { "weaknesses": ["electric"] },
-    "o_ray": { "weaknesses": ["physical"] },
-    "c_bug": { "weaknesses": ["electric"] },
-    "flying_thesis": { "weaknesses": ["fire"] },
-    "rogue_vending": { "weaknesses": ["electric"] },
-    "null_pointer": { "weaknesses": ["electric"] }
+ "schema_version": 1,
+ "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그. species 섹션 = 종별 약점(브레이크 시스템): 기계 계열=electric(docs/03_backlog EMP 근거), 종이·유기질=fire, 안구·무기질=physical.",
+ "_floor_stats_note": "floor_stats = 층별 필드 몬스터 기본 스탯. 원작 init_enemy() 난수 테이블(docs/01_analysis/04_game_systems.md §2.1) 이관 — '11+rnd10'을 [11,21]로 편 것. 2026-08-27 이전에는 Database가 전 종에 ap15/hp[20,40]을 하드코딩해 **층별 난이도가 아예 없었다**(F5 몬스터가 F0과 같은 강도). 종별 개성은 weaknesses·pattern이, 강도는 층이 담당한다. stat_mult(선택, 기본 1.0)로 종별 미세조정 가능.",
+ "floor_stats": {
+  "f0": {
+   "hp_range": [
+    11,
+    21
+   ],
+   "ap_range": [
+    11,
+    21
+   ],
+   "dp_range": [
+    11,
+    21
+   ],
+   "exp": [
+    2,
+    5
+   ],
+   "money": [
+    100,
+    200
+   ]
   },
-  "floors": {
-    "f0": { "count": 2, "species": ["sparker"] },
-    "f1": { "count": 4, "species": [
-      {"id":"dworm","pattern":"burrow","first_win_flag":"Q_F1_START"},
-      {"id":"vulgar","pattern":"wander"},
-      {"id":"mad_eye","pattern":"dash","params":{"pause_ticks":3,"dash_cells":3}},
-      {"id":"c_bug","pattern":"zigzag"},
-      {"id":"rogue_vending","pattern":"ambusher"}] },
-    "f2": { "count": 5, "species": [
-      {"id":"mad_eye","pattern":"dash"},
-      {"id":"vulgar","pattern":"chase"},
-      {"id":"ozzy","pattern":"zigzag"},
-      {"id":"c_bug","pattern":"teleport","params":{"interval_ticks":4,"jump_radius":3}},
-      {"id":"flying_thesis","pattern":"wander"}] },
-    "f3": { "count": 4, "species": ["ozzy", "iron_voc", "flying_thesis"] },
-    "f4": { "count": 5, "species": [
-      {"id":"hellcop","pattern":"chase","params":{"aggro_radius":7}},
-      {"id":"o_ray","pattern":"pulse","params":{"interval_ticks":5,"radius":2}},
-      {"id":"sparker","pattern":"teleport"},
-      {"id":"null_pointer","pattern":"phaser"}] },
-    "f5": { "count": 5, "species": [
-      {"id":"hellcop","pattern":"chase"},
-      {"id":"null_pointer","pattern":"phaser"}] }
+  "f1": {
+   "hp_range": [
+    20,
+    65
+   ],
+   "ap_range": [
+    20,
+    60
+   ],
+   "dp_range": [
+    20,
+    60
+   ],
+   "exp": [
+    5,
+    10
+   ],
+   "money": [
+    200,
+    500
+   ]
   },
-  "bosses": {
-    "professor_monster": {
-      "display_name": "모교수 괴물",
-      "ap": 20, "dp": 6, "hp_range": [90, 120],
-      "exp": [60, 90], "money": [300, 480],
-      "weaknesses": ["fire"],
-      "_comment": "씬 5-1 — 제압전. dodge_phase 미채택(D14): 회피 페이즈는 최종보스 전용 연출."
-    },
-    "sys_builder": {
-      "display_name": "SYS 빌더",
-      "ap": 30, "dp": 8, "hp_range": [120, 160],
-      "exp": [100, 150], "money": [500, 800],
-      "weaknesses": ["electric"],
-      "dodge_phase": {
-        "telegraph": "screen_static_full_1s",
-        "duration": 4.0,
-        "patterns": [
-          {"pattern_id":"bp1","type":"radial","count":10,"speed":140,"interval":0.9,"initial_delay":0.6},
-          {"pattern_id":"bp2","type":"aimed","speed":200,"interval":1.3,"initial_delay":1.0},
-          {"pattern_id":"bp3","type":"rain","count":2,"speed":160,"interval":0.8,"initial_delay":1.8}
-        ]
-      },
-      "dodge_damage_per_hit": 4
-    }
+  "f2": {
+   "hp_range": [
+    125,
+    190
+   ],
+   "ap_range": [
+    90,
+    135
+   ],
+   "dp_range": [
+    90,
+    135
+   ],
+   "exp": [
+    10,
+    20
+   ],
+   "money": [
+    200,
+    600
+   ]
+  },
+  "f3": {
+   "hp_range": [
+    270,
+    440
+   ],
+   "ap_range": [
+    165,
+    195
+   ],
+   "dp_range": [
+    165,
+    195
+   ],
+   "exp": [
+    15,
+    30
+   ],
+   "money": [
+    200,
+    700
+   ]
+  },
+  "f4": {
+   "hp_range": [
+    650,
+    805
+   ],
+   "ap_range": [
+    240,
+    285
+   ],
+   "dp_range": [
+    240,
+    285
+   ],
+   "exp": [
+    20,
+    40
+   ],
+   "money": [
+    200,
+    800
+   ]
+  },
+  "f5": {
+   "hp_range": [
+    650,
+    805
+   ],
+   "ap_range": [
+    240,
+    285
+   ],
+   "dp_range": [
+    240,
+    285
+   ],
+   "exp": [
+    20,
+    40
+   ],
+   "money": [
+    200,
+    800
+   ]
   }
+ },
+ "species": {
+  "sparker": {
+   "weaknesses": [
+    "physical"
+   ],
+   "display_name": "스파커"
+  },
+  "mad_eye": {
+   "weaknesses": [
+    "fire"
+   ],
+   "display_name": "매드 아이"
+  },
+  "vulgar": {
+   "weaknesses": [
+    "fire"
+   ],
+   "display_name": "불거"
+  },
+  "dworm": {
+   "weaknesses": [
+    "electric"
+   ],
+   "display_name": "디웜"
+  },
+  "ozzy": {
+   "weaknesses": [
+    "fire"
+   ],
+   "display_name": "오지"
+  },
+  "iron_voc": {
+   "weaknesses": [
+    "electric"
+   ],
+   "display_name": "아이언 보크"
+  },
+  "hellcop": {
+   "weaknesses": [
+    "electric"
+   ],
+   "display_name": "헬캅"
+  },
+  "o_ray": {
+   "weaknesses": [
+    "physical"
+   ],
+   "display_name": "오레이"
+  },
+  "c_bug": {
+   "weaknesses": [
+    "electric"
+   ],
+   "display_name": "씨버그"
+  },
+  "flying_thesis": {
+   "weaknesses": [
+    "fire"
+   ],
+   "display_name": "플라잉 논문"
+  },
+  "rogue_vending": {
+   "weaknesses": [
+    "electric"
+   ],
+   "display_name": "로그 벤딩"
+  },
+  "null_pointer": {
+   "weaknesses": [
+    "electric"
+   ],
+   "display_name": "널 포인터"
+  }
+ },
+ "floors": {
+  "f0": {
+   "count": 2,
+   "species": [
+    {
+     "id": "sparker",
+     "pattern": "teleport"
+    }
+   ]
+  },
+  "f1": {
+   "count": 4,
+   "species": [
+    {
+     "id": "dworm",
+     "pattern": "burrow",
+     "first_win_flag": "Q_F1_START"
+    },
+    {
+     "id": "vulgar",
+     "pattern": "wander"
+    },
+    {
+     "id": "mad_eye",
+     "pattern": "dash",
+     "params": {
+      "pause_ticks": 3,
+      "dash_cells": 3
+     }
+    },
+    {
+     "id": "c_bug",
+     "pattern": "zigzag"
+    },
+    {
+     "id": "rogue_vending",
+     "pattern": "ambusher"
+    }
+   ]
+  },
+  "f2": {
+   "count": 5,
+   "species": [
+    {
+     "id": "mad_eye",
+     "pattern": "dash"
+    },
+    {
+     "id": "vulgar",
+     "pattern": "chase"
+    },
+    {
+     "id": "ozzy",
+     "pattern": "zigzag"
+    },
+    {
+     "id": "c_bug",
+     "pattern": "teleport",
+     "params": {
+      "interval_ticks": 4,
+      "jump_radius": 3
+     }
+    },
+    {
+     "id": "flying_thesis",
+     "pattern": "wander"
+    }
+   ]
+  },
+  "f3": {
+   "count": 4,
+   "species": [
+    {
+     "id": "ozzy",
+     "pattern": "zigzag"
+    },
+    {
+     "id": "iron_voc",
+     "pattern": "patrol"
+    },
+    {
+     "id": "flying_thesis",
+     "pattern": "wander"
+    }
+   ]
+  },
+  "f4": {
+   "count": 5,
+   "species": [
+    {
+     "id": "hellcop",
+     "pattern": "chase",
+     "params": {
+      "aggro_radius": 7
+     }
+    },
+    {
+     "id": "o_ray",
+     "pattern": "pulse",
+     "params": {
+      "interval_ticks": 5,
+      "radius": 2
+     }
+    },
+    {
+     "id": "sparker",
+     "pattern": "teleport"
+    },
+    {
+     "id": "null_pointer",
+     "pattern": "phaser"
+    }
+   ]
+  },
+  "f5": {
+   "count": 5,
+   "species": [
+    {
+     "id": "hellcop",
+     "pattern": "chase"
+    },
+    {
+     "id": "null_pointer",
+     "pattern": "phaser"
+    }
+   ]
+  }
+ },
+ "bosses": {
+  "professor_monster": {
+   "display_name": "모교수 괴물",
+   "ap": 20,
+   "dp": 6,
+   "hp_range": [
+    90,
+    120
+   ],
+   "exp": [
+    60,
+    90
+   ],
+   "money": [
+    300,
+    480
+   ],
+   "weaknesses": [
+    "fire"
+   ],
+   "_comment": "씬 5-1 — 제압전. dodge_phase 미채택(D14): 회피 페이즈는 최종보스 전용 연출."
+  },
+  "sys_builder": {
+   "display_name": "SYS 빌더",
+   "ap": 30,
+   "dp": 8,
+   "hp_range": [
+    120,
+    160
+   ],
+   "exp": [
+    100,
+    150
+   ],
+   "money": [
+    500,
+    800
+   ],
+   "weaknesses": [
+    "electric"
+   ],
+   "dodge_phase": {
+    "telegraph": "screen_static_full_1s",
+    "duration": 4.0,
+    "patterns": [
+     {
+      "pattern_id": "bp1",
+      "type": "radial",
+      "count": 10,
+      "speed": 140,
+      "interval": 0.9,
+      "initial_delay": 0.6
+     },
+     {
+      "pattern_id": "bp2",
+      "type": "aimed",
+      "speed": 200,
+      "interval": 1.3,
+      "initial_delay": 1.0
+     },
+     {
+      "pattern_id": "bp3",
+      "type": "rain",
+      "count": 2,
+      "speed": 160,
+      "interval": 0.8,
+      "initial_delay": 1.8
+     }
+    ]
+   },
+   "dodge_damage_per_hit": 4
+  }
+ }
 }

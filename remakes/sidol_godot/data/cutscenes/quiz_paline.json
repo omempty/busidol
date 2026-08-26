@@ -28,7 +28,7 @@
     {
       "op": "grant_item",
       "args": {
-        "item": "reagent_palin",
+        "item": "ITEM_CURE_PALIN",
         "count": 1
       }
     },
@@ -42,12 +42,12 @@
       "op": "craft",
       "args": {
         "requires": {
-          "reagent_drag": 1,
-          "reagent_allin": 1,
-          "reagent_palin": 1
+          "ITEM_CURE_DRAG": 1,
+          "ITEM_CURE_ALLIN": 1,
+          "ITEM_CURE_PALIN": 1
         },
         "grant": {
-          "antibiotic_x": 1
+          "ITEM_ANTIBIOTIC_X": 1
         },
         "flag": "Q_F3_CURE_DONE"
       }

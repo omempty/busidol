@@ -113,7 +113,18 @@ func _execute(step: Dictionary) -> void:
 				GameState.set_flag(k, args[k])
 		"grant_item":
 			var g: Dictionary = step.get("args", {})
-			GameState.inventory.add(StringName(str(g.get("item", ""))), int(g.get("count", 1)))
+			var gid := StringName(str(g.get("item", "")))
+			var gcount := int(g.get("count", 1))
+			# money 계열은 소지품이 아니라 골드로 — 원작 DON 처리.
+			if ItemEffects.on_acquire(gid, gcount):
+				GameState.inventory.add(gid, gcount)
+		"grant_skill":
+			# 성장 트리(마스터 §2.2)의 습득 지점. skills.json에 starting이 없으면
+			# 전 스킬이 이미 열려 있어 이 op은 무해하게 통과한다.
+			var sk: Dictionary = step.get("args", {})
+			var skid := StringName(str(sk.get("skill", "")))
+			if GameState.grant_skill(skid):
+				print("[cutscene] 스킬 습득: %s" % skid)
 		"craft":
 			_execute_craft(step.get("args", {}))
 		"minigame_quiz":

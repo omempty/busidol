@@ -77,10 +77,31 @@ func _advance_enemy() -> Dictionary:
 
 
 ## 스킬 상태이상 부여 — targeting별 실제 대상(연출 종료 시점 호출).
+##
+## skills.json의 status_effects는 **효과 id**(burn 등)이지 Combatant의 kind가 아니다.
+## 구판은 그 문자열을 kind로 그대로 넘겨, Combatant가 아는 dot/buff_damage_taken과
+## 매칭되지 않아 **burn과 디버그 실드가 아무 효과도 내지 않았다**(paralysis만 우연히 일치).
+## turns/magnitude도 3/10 하드코딩이라 실드의 50% 경감이 10%로 깎여 있었다.
 func apply_skill_effects(skill: Dictionary) -> void:
-	for effect_kind: String in skill.get("status_effects", []):
+	var defs: Dictionary = BattleSetup.status_effect_defs()
+	var duration_mult := SettingsManager.difficulty_mult("status_duration_mult")
+	for effect_id: String in skill.get("status_effects", []):
+		var def: Dictionary = defs.get(effect_id, {})
+		if def.is_empty():
+			push_warning("정의 없는 상태이상 id: %s (skills.json status_effect_defs)" % effect_id)
+			continue
+		var turns := maxi(1, int(round(int(def.get("turns", 3)) * duration_mult)))
 		for t in skill_targets(skill):
-			t.attach_effect({"kind": StringName(effect_kind), "turns": 3, "magnitude": 10})
+			(
+				t
+				. attach_effect(
+					{
+						"kind": StringName(str(def.get("kind", ""))),
+						"turns": turns,
+						"magnitude": int(def.get("magnitude", 0)),
+					}
+				)
+			)
 
 
 ## 스킬 targeting에 따른 실제 대상 목록
@@ -102,7 +123,9 @@ func skill_targets(skill: Dictionary) -> Array[Combatant]:
 
 func _resolve_attack(attacker: Combatant, target: Combatant, cmd: Dictionary) -> void:
 	var base := DamageCalculator.player_hit(int(cmd.get("ap", attacker.ap)), EnemyManager.rng)
-	var entry := _apply_player_damage(target, base, &"physical", cmd)
+	# 기본 공격 속성 = 장착 무기의 element. 구판은 물리 고정이라 무기의 element 필드가
+	# 사문화돼 있었다 — 전기충격기를 들어도 기계 계열 약점을 못 찔렀다.
+	var entry := _apply_player_damage(target, base, GameState.attack_element(), cmd)
 	cmd["damage"] = int(entry["amount"])
 	cmd["damages"] = [entry]
 
@@ -143,7 +166,7 @@ func _resolve_skill(user: Combatant, target: Combatant, cmd: Dictionary) -> void
 			continue  # 자기 버프 스킬 — 피해 판정 제외(효과는 상태이상으로만)
 		var base := DamageCalculator.skill_hit(
 			int(skill.get("power", 10)),
-			user.ap,
+			user.attack_stat(),
 			StringName(str(skill.get("element", "physical"))),
 			[],
 			EnemyManager.rng

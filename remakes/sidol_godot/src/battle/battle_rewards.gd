@@ -9,10 +9,19 @@ static func compute(enemy_ids: Array[String]) -> Dictionary:
 	var money_total := 0
 	for eid in enemy_ids:
 		var edef := Database.get_enemy_def(StringName(eid))
+		# 필드 종의 보상도 층이 정한다(BattleSetup의 스탯 부여와 같은 규약).
+		if bool(edef.get("from_floor_stats", false)):
+			var fs := Database.floor_stats(GameState.current_floor)
+			if not fs.is_empty():
+				edef = edef.duplicate()
+				edef["exp"] = fs.get("exp", [5, 10])
+				edef["money"] = fs.get("money", [50, 100])
 		var exp_range: Array = edef.get("exp", [5, 10])
 		var money_range: Array = edef.get("money", [50, 100])
 		exp_total += randi_range(int(exp_range[0]), int(exp_range[1]))
 		money_total += randi_range(int(money_range[0]), int(money_range[1]))
+	# 난이도 exp 배율 — 쉬움은 빨리 크고, 도전은 더 싸운다.
+	exp_total = maxi(1, int(round(exp_total * SettingsManager.difficulty_mult("exp_mult"))))
 	return {"exp": exp_total, "money": money_total}
 
 

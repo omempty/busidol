@@ -1,6 +1,6 @@
 class_name SettingsPanel
 extends Control
-## 설정 UI — 볼륨 4버스·연출속도·아트모드·글자크기·흔들림·조작법.
+## 설정 UI — 볼륨 4버스·연출속도·아트모드·글자크기·흔들림·몬스터 밀도·난이도·화면·조작법.
 ## 변경 즉시 적용+파일 저장. 타이틀과 일시정지 메뉴가 공용.
 ## 키보드: ↑↓ 행 이동, ←→ 값 변경, 확인=조작법 보기, Esc 닫기.
 
@@ -11,8 +11,17 @@ const SPEED_LABELS := ["보통", "빠름", "스킵"]
 const ART_LABELS := ["레거시 (원작 도트)", "리메이크 (신규)"]
 const TEXT_LABELS := ["작음", "보통", "크게"]
 const SHAKE_LABELS := ["켬", "끔"]
+## Q6 — 접촉이 곧 강제 전투라 밀도가 곧 피로도. 없음은 탐험/시나리오 전용 모드.
+const DENSITY_LABELS := ["없음", "적게", "보통", "많게"]
+const DIFFICULTY_LABELS := ["쉬움", "보통", "도전"]
+const SCREEN_LABELS := ["창 모드", "전체 화면"]
+const VSYNC_LABELS := ["켬", "끔"]
 const VOLUME_STEP := 0.1
-const ROW_CONTROLS := 8
+const ROW_DENSITY := 8
+const ROW_DIFFICULTY := 9
+const ROW_SCREEN := 10
+const ROW_VSYNC := 11
+const ROW_CONTROLS := 12
 
 var _rows: Array[Label] = []
 var _values: Array[Label] = []
@@ -30,7 +39,7 @@ func _build() -> void:
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(vbox)
-	for i in range(9):
+	for i in range(13):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 24)
@@ -95,6 +104,23 @@ func _adjust(dir: int) -> void:
 			SettingsManager.text_size = next_v
 		7:
 			SettingsManager.screen_shake = not SettingsManager.screen_shake
+		ROW_DENSITY:
+			var values: Array = SettingsManager.EncounterDensity.values()
+			var idx: int = values.find(SettingsManager.encounter_density)
+			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
+			SettingsManager.encounter_density = next_v
+		ROW_DIFFICULTY:
+			var values: Array = SettingsManager.Difficulty.values()
+			var idx: int = values.find(SettingsManager.difficulty)
+			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
+			SettingsManager.difficulty = next_v
+		ROW_SCREEN:
+			var values: Array = SettingsManager.ScreenMode.values()
+			var idx: int = values.find(SettingsManager.screen_mode)
+			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
+			SettingsManager.screen_mode = next_v
+		ROW_VSYNC:
+			SettingsManager.vsync = not SettingsManager.vsync
 	SettingsManager.save_settings()
 	_refresh()
 
@@ -108,7 +134,11 @@ func _refresh() -> void:
 	_set_row(5, "아트 모드", ART_LABELS[int(SettingsManager.art_mode)])
 	_set_row(6, "본문 글자 크기", TEXT_LABELS[int(SettingsManager.text_size)])
 	_set_row(7, "화면 흔들림", SHAKE_LABELS[0 if SettingsManager.screen_shake else 1])
-	_set_row(8, "조작법", "(확인 키로 보기)")
+	_set_row(ROW_DENSITY, "몬스터 밀도", DENSITY_LABELS[int(SettingsManager.encounter_density)])
+	_set_row(ROW_DIFFICULTY, "난이도", DIFFICULTY_LABELS[int(SettingsManager.difficulty)])
+	_set_row(ROW_SCREEN, "화면 모드", SCREEN_LABELS[int(SettingsManager.screen_mode)])
+	_set_row(ROW_VSYNC, "수직 동기", VSYNC_LABELS[0 if SettingsManager.vsync else 1])
+	_set_row(ROW_CONTROLS, "조작법", "(확인 키로 보기)")
 
 
 func _set_row(i: int, text: String, value_text: String) -> void:

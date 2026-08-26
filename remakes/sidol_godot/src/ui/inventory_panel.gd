@@ -35,6 +35,10 @@ func _build_ui() -> void:
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
+	# PRESET_CENTER는 앵커만 중앙으로 옮긴다 — 오프셋이 0이라 좌상단이 화면 중앙에 놓이고
+	# 패널이 우하단으로 자란다(600×380이면 1080×650, 즉 화면 밖). 양방향 성장으로 실제 중앙 정렬.
+	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	panel.custom_minimum_size = Vector2(600, 380)
 	panel.add_theme_stylebox_override("panel", _panel_style())
 	add_child(panel)
@@ -122,6 +126,29 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed(&"move_down"):
 		_move(1)
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed(&"interact"):
+		_use_selected()
+		get_viewport().set_input_as_handled()
+
+
+## 선택 항목에 SPACE — 무기면 장착/해제, 회복 아이템이면 사용.
+## 구판은 인벤토리가 표시 전용이라 무기 19종과 회복 아이템이 여기서 아무것도 못 했다.
+func _use_selected() -> void:
+	if _rows.is_empty():
+		return
+	var slot: Dictionary = _rows[clampi(_index, 0, _rows.size() - 1)]
+	var item_id := StringName(str(slot["item_id"]))
+	if GameState.equip(item_id):
+		_rebuild_list()
+		_refresh_detail()
+		return
+	var def := Database.get_item(item_id)
+	var note := ItemEffects.use_on_field(def)
+	if note.is_empty():
+		return  # 필드에서 못 쓰는 것(전투 전용·만HP)은 조용히 무시
+	GameState.inventory.remove(item_id, 1)
+	_rebuild_list()
+	_refresh_detail()
 
 
 func _move(delta: int) -> void:
@@ -186,7 +213,14 @@ func _make_row(i: int) -> Control:
 	row.add_child(icon)
 
 	var name_label := Label.new()
-	name_label.text = str(item_def.get("name_ko", str(slot["item_id"])))
+	var slot_name := str(item_def.get("kind", ""))
+	var equipped_here := str(GameState.equipped.get(slot_name, "")) == str(slot["item_id"])
+	# 목록에서도 장착분을 구분한다 — 상세를 열지 않아도 무엇을 들고 있는지 보이게.
+	name_label.text = (
+		("◆ " if equipped_here else "") + str(item_def.get("name_ko", str(slot["item_id"])))
+	)
+	if equipped_here:
+		name_label.add_theme_color_override("font_color", Color(0.50, 0.85, 0.56))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name_label)
 
@@ -229,4 +263,4 @@ func _refresh_detail() -> void:
 	if item_def.has("hp_restore"):
 		_detail_body.append_text("HP %d 회복\n" % int(item_def["hp_restore"]))
 	if item_def.has("price"):
-		_detail_body.append_text("\n가격 %d G" % int(item_def["price"]))
+		_detail_body.append_text("\n가격 %s" % HudTheme.money(int(item_def["price"])))

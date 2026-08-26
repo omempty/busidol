@@ -3,6 +3,10 @@ extends CanvasLayer
 ## 대화창 — 타이핑 효과 + 입력 진행(스킵). 원작 Talk_Window의 현대판 (04_uiux §1.2).
 
 signal finished(seq_id: StringName)
+## 시퀀스 스텝이 대사가 아니라 op일 때 — 필드가 받아 처리한다(예: shop).
+## 구판은 op 스텝을 대사로 취급해 speaker/text가 빈 줄로 렌더됐고,
+## `cafeteria_girl_shop`의 shop op이 아무 일도 하지 않았다.
+signal op_requested(op_name: String, args: Dictionary)
 
 const CPS := 40.0  # 초당 글자 수
 const INPUT_COOLDOWN := 0.05
@@ -101,6 +105,11 @@ func close() -> void:
 
 func _load_step() -> void:
 	var step: Dictionary = steps[index]
+	var op := str(step.get("op", ""))
+	if not op.is_empty():
+		close()
+		op_requested.emit(op, step.get("args", {}))
+		return
 	_name_label.text = str(step.get("speaker", ""))
 	_body_label.text = Database.text(str(step["text"]))
 	_revealed = 0.0

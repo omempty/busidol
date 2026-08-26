@@ -12,6 +12,7 @@ config/features=PackedStringArray("4.7")
 [autoload]
 
 InputBootstrap="*res://src/autoload/input_bootstrap.gd"
+UiTheme="*res://src/autoload/ui_theme.gd"
 EventBus="*res://src/autoload/event_bus.gd"
 GameState="*res://src/autoload/game_state.gd"
 Database="*res://src/autoload/database.gd"

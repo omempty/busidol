@@ -9,6 +9,8 @@ var hp := 50
 var ap := 30
 var dp := 10
 var active_effects: Array[Dictionary] = []
+## 방어력 나눗수 — dp 8이면 -2, dp 110이면 -27. 층별 적 1타(3~44)에 대응해 정한 값.
+const DP_DIVISOR := 4
 var skills: Array[StringName] = []
 var weaknesses: Array[StringName] = []  # 약점 속성 — 약점 히트 시 브레이크 게이지 상승
 var break_gauge := 0  # 약점 히트 누적 — threshold 도달 시 브레이크
@@ -30,6 +32,9 @@ func take_damage(raw: int) -> int:
 	for fx in active_effects:
 		if fx["kind"] == &"buff_damage_taken":
 			final_dmg = maxi(1, int(final_dmg * (1.0 - float(fx["magnitude"]) / 100.0)))
+	# 방어력 경감 — dp/DP_DIVISOR 만큼 깎는다(최소 1은 들어간다).
+	# 버프 경감(%) 다음, 브레이크 증폭 앞에 온다: 브레이크는 "방어 무시"가 취지다.
+	final_dmg = maxi(1, final_dmg - int(dp / DP_DIVISOR))
 	# 브레이크 — 방어 무시 급 피해 증폭
 	if broken_turns > 0:
 		final_dmg = maxi(1, int(final_dmg * 1.5))
@@ -44,8 +49,29 @@ func heal(amount: int) -> int:
 	return healed
 
 
+## 공격 버프(buff_attack) 합산 — 도구로 올린 공격력이 실제 피해에 반영되게.
+func attack_stat() -> int:
+	var total := ap
+	for fx in active_effects:
+		if fx["kind"] == &"buff_attack":
+			total += int(fx["magnitude"])
+	return total
+
+
+## 상태 저항(buff_status_resist)이 걸려 있으면 새 상태이상은 붙지 않는다.
+## 저항·버프 자체는 통과시킨다 — 아군 효과까지 막으면 저항이 스스로를 못 건다.
 func attach_effect(effect: Dictionary) -> void:
+	var kind: StringName = effect.get("kind", &"")
+	if kind in [&"dot", &"paralysis"] and has_status_resist():
+		return
 	active_effects.append(effect)
+
+
+func has_status_resist() -> bool:
+	for fx in active_effects:
+		if fx["kind"] == &"buff_status_resist":
+			return true
+	return false
 
 
 func tick_effects() -> Array[int]:

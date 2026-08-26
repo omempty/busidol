@@ -14,6 +14,7 @@ const KNOWN_OPS := [
 	"bgm",
 	"set_flags",
 	"grant_item",
+	"grant_skill",
 	"craft",
 	"minigame_quiz",
 	"minigame_battery",
@@ -21,6 +22,7 @@ const KNOWN_OPS := [
 	"actor_move",
 	"start_battle",
 	"choice",
+	"shop",
 	"end"
 ]
 const KNOWN_CHANNELS := ["sprite", "fx", "camera", "screen", "audio", "logic"]
@@ -48,6 +50,10 @@ func _initialize() -> void:
 	_validate_credits()
 	_validate_minigames()
 	_validate_sprite_specs()
+	_validate_status_effects()
+	_validate_legacy_ref()
+	_validate_item_reachability()
+	_validate_skill_grants()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -308,6 +314,106 @@ func _validate_sprite_specs() -> void:
 
 
 # ---- 공통 ----
+
+
+## grant_skill이 실재하는 스킬 id를 가리키는가 + starting 목록도 유효한가.
+func _validate_skill_grants() -> void:
+	var raw: Dictionary = _load_json(DATA + "skills.json") as Dictionary
+	var ids: Dictionary = {}
+	for sk: Dictionary in raw.get("skills", []):
+		ids[str(sk.get("id", ""))] = true
+	for sid: Variant in raw.get("starting", []):
+		if not ids.has(str(sid)):
+			_err("skills.json starting의 '%s'가 skills[]에 없음" % str(sid))
+	for f in DirAccess.get_files_at(DATA + "cutscenes"):
+		var text := FileAccess.get_file_as_string(DATA + "cutscenes/" + f)
+		if not text.contains("grant_skill"):
+			continue
+		var parsed: Variant = JSON.parse_string(text)
+		if typeof(parsed) != TYPE_DICTIONARY:
+			continue
+		_scan_grant_skill((parsed as Dictionary).get("steps", []), f, ids)
+
+
+func _scan_grant_skill(steps: Array, file: String, ids: Dictionary) -> void:
+	for st: Dictionary in steps:
+		if str(st.get("op", "")) == "grant_skill":
+			var sid := str((st.get("args", {}) as Dictionary).get("skill", ""))
+			if not ids.has(sid):
+				_err("%s grant_skill '%s' — skills.json에 없는 스킬" % [file, sid])
+		if st.has("steps"):
+			_scan_grant_skill(st["steps"], file, ids)
+
+
+## 아이템에 획득 경로가 있는가 — 상자(legacy_ref)·상점·컷신 셋 중 하나.
+## 만들어 놓고 줄 방법이 없으면 데이터가 조용히 사문화된다(2026-08-27 실측 14종).
+## 경고 티어: 서사 진행상 아직 배치 전인 것이 정상일 수 있어 FAIL이 아니다.
+func _validate_item_reachability() -> void:
+	var raw: Dictionary = _load_json(DATA + "items.json") as Dictionary
+	var reachable: Dictionary = {}
+	for key: String in raw.get("legacy_ref", {}):
+		if key.is_valid_int():
+			reachable[str((raw["legacy_ref"] as Dictionary)[key])] = true
+	var shops: Dictionary = _load_json(DATA + "shops.json") as Dictionary
+	for shop: Dictionary in (shops.get("shops", {}) as Dictionary).values():
+		for iid: String in shop.get("stock", []):
+			reachable[iid] = true
+	var cutscene_text := ""
+	for f in DirAccess.get_files_at(DATA + "cutscenes"):
+		cutscene_text += FileAccess.get_file_as_string(DATA + "cutscenes/" + f)
+
+	var orphans: Array[String] = []
+	for it: Dictionary in raw.get("items", []):
+		var iid := str(it["id"])
+		if reachable.has(iid) or cutscene_text.contains(iid):
+			continue
+		orphans.append("%s(%s)" % [iid, str(it.get("name_ko", ""))])
+	if not orphans.is_empty():
+		print("[validate] 경고 — 획득 경로 없는 아이템 %d종: %s" % [orphans.size(), ", ".join(orphans)])
+
+
+## 상자 ATT ↔ 아이템 매핑이 실재하는 id를 가리키는가.
+## 2026-08-27 실측: 35개 중 11개가 개명 뒤 따라가지 않아 깨져 있었다(상자를 열어도 빈손).
+func _validate_legacy_ref() -> void:
+	var raw: Dictionary = _load_json(DATA + "items.json") as Dictionary
+	var ids: Dictionary = {}
+	for it: Dictionary in raw.get("items", []):
+		ids[str(it["id"])] = true
+	for key: String in raw.get("legacy_ref", {}):
+		if not key.is_valid_int():
+			continue
+		var target := str((raw["legacy_ref"] as Dictionary)[key])
+		if not ids.has(target):
+			_err("legacy_ref[%s] -> '%s' — items.json에 없는 id(상자가 빈손이 된다)" % [key, target])
+
+
+## 스킬의 status_effects id가 정의돼 있고, 그 kind를 Combatant가 실제로 아는지.
+## 2026-08-26 실측 결함: 'burn'·'buff_damage_taken_50'을 kind로 그대로 넘겨
+## 매칭이 안 돼 두 효과가 조용히 무효였다. 이름만 맞으면 통과하던 구멍이라 명시 검사한다.
+func _validate_status_effects() -> void:
+	const KNOWN_KINDS := [
+		"dot", "buff_damage_taken", "paralysis", "buff_attack", "buff_status_resist"
+	]
+	var raw: Dictionary = _load_json(DATA + "skills.json") as Dictionary
+	var defs: Dictionary = raw.get("status_effect_defs", {})
+	for eid: String in defs:
+		var kind := str((defs[eid] as Dictionary).get("kind", ""))
+		if not KNOWN_KINDS.has(kind):
+			_err(
+				(
+					"status_effect_defs['%s'].kind='%s' — Combatant가 모르는 종류(%s 중 하나여야)"
+					% [eid, kind, ", ".join(KNOWN_KINDS)]
+				)
+			)
+	for sk: Dictionary in raw.get("skills", []):
+		for eid: String in sk.get("status_effects", []):
+			if not defs.has(eid):
+				_err(
+					(
+						"skills['%s'].status_effects의 '%s'가 status_effect_defs에 없음"
+						% [str(sk.get("id", "?")), eid]
+					)
+				)
 
 
 func _text_exists(key: String) -> bool:

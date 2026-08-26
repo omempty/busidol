@@ -4,7 +4,19 @@ extends Node
 
 signal state_changed
 
+const BASE_HP := 50  # 원작 We 초기값
+const BASE_DP := 10  # 맨몸 방어력 — 구판 Combatant 생성 시 하드코딩돼 있던 값
 var current_floor: int = 1  # 원작 f — F1에서 시작
+## 한 번이라도 발을 들인 층 — 빠른 이동(Q5)의 해금 조건. 세이브 대상.
+var visited_floors: Dictionary = {}
+## 장착 중인 장비 — 슬롯명 → 아이템 id. weapon·armor 두 칸.
+## 구판은 장착 개념이 아예 없어 items.json의 무기 19종(ap 10~800, element 보유)이
+## 획득만 되고 전투에 아무 영향도 주지 않았다.
+var equipped: Dictionary = {}
+## 습득한 스킬 — id → true. 세이브 대상.
+## skills.json의 `starting` 배열이 시작 보유분을 정한다. 그 키가 없으면 **전부 개방**이라
+## 기존 동작(6종 즉시 사용)이 그대로 유지된다 — 성장 트리는 데이터만 채우면 켜진다.
+var owned_skills: Dictionary = {}
 var flags: Dictionary = {}  # 키: quests_v2.json 플래그 ID (Q_F1_START ...)
 var chest_overrides: Dictionary = {}  # {층:int -> {Vector2i -> attr}} — 맵 원본 불변 원칙(§3.3)
 var player_cell := Vector2i(-1, -1)  # 저장용 실시간 좌표 — field가 매 프레임 갱신(-1이면 미설정)
@@ -36,6 +48,16 @@ func set_flag(flag_id: String, value: Variant = true) -> void:
 ## 성장 반영 — 경험치 누적 후 growth.json 레벨 테이블로 레벨업 판정.
 ## 레벨업 시 hp_up/ap_up을 현재치에 가산(최대치 산출식은 HudV0와 동일 기준).
 ## 반환: {"level_up": bool, "level": int, "levels_gained": int}
+## 현재 레벨 최대 HP — 초기값 + 레벨 테이블 hp_up 누적(growth.json).
+## HudV0가 갖고 있던 산식을 올린 것 — 아이템 회복도 같은 상한을 봐야 한다.
+func max_hp() -> int:
+	var total := BASE_HP
+	for entry: Dictionary in Database.level_table():
+		if int(entry.get("level", 0)) <= int(player_stats.get("level", 1)):
+			total += int(entry.get("hp_up", 0))
+	return maxi(total, 1)
+
+
 func grant_exp(amount: int) -> Dictionary:
 	player_stats["exp"] = int(player_stats["exp"]) + amount
 	var result := {"level_up": false, "level": int(player_stats["level"]), "levels_gained": 0}
@@ -70,6 +92,95 @@ func set_chest_override(cell: Vector2i, attr_value: int) -> void:
 
 
 ## 해당 층의 상자 오버라이드 반환(읽기 전용 용도 복제 없음 — 호출자가 순회만).
+## 층 진입 시 기록 — 빠른 이동 목적지 목록의 근거.
+## kind가 곧 슬롯 이름 — weapon/armor. 같은 것을 다시 고르면 해제.
+## 반환: 실제로 장착 상태가 바뀌었는가.
+const EQUIP_SLOTS := ["weapon", "armor"]
+
+
+func equip(item_id: StringName) -> bool:
+	var slot := str(Database.get_item(item_id).get("kind", ""))
+	if not EQUIP_SLOTS.has(slot):
+		return false
+	if str(equipped.get(slot, "")) == String(item_id):
+		equipped.erase(slot)
+	else:
+		equipped[slot] = String(item_id)
+	state_changed.emit()
+	return true
+
+
+## 시작 보유 스킬로 초기화 — 새 게임·리셋 시. 이미 보유분이 있으면 건드리지 않는다.
+func init_skills(force: bool = false) -> void:
+	if not force and not owned_skills.is_empty():
+		return
+	owned_skills = {}
+	for sid: String in Database.starting_skill_ids():
+		owned_skills[sid] = true
+
+
+## 스킬 습득 — 컷신 grant_skill op이 부른다. 반환: 새로 얻었는가.
+func grant_skill(skill_id: StringName) -> bool:
+	var sid := String(skill_id)
+	if sid.is_empty() or owned_skills.has(sid):
+		return false
+	owned_skills[sid] = true
+	state_changed.emit()
+	return true
+
+
+func has_skill(skill_id: StringName) -> bool:
+	return owned_skills.has(String(skill_id))
+
+
+func owned_skill_ids() -> Array[String]:
+	var out: Array[String] = []
+	for k: String in owned_skills:
+		out.append(k)
+	return out
+
+
+func equipped_in(slot: String) -> Dictionary:
+	var eid := str(equipped.get(slot, ""))
+	return Database.get_item(StringName(eid)) if not eid.is_empty() else {}
+
+
+func equipped_weapon() -> Dictionary:
+	return equipped_in("weapon")
+
+
+## 방어력 = 기본 DP + 장착 방어구 dp. 원작은 DP를 저장만 하고 쓰지 않았다(밸런스 결함) —
+## 리메이크는 **플레이어 쪽에만** 반영해 방어구에 의미를 준다(백로그 §2 D-FAITH).
+## 적 DP까지 켜면 실측으로 맞춘 층별 곡선이 통째로 흔들리므로 데이터로만 남긴다.
+func defense_power() -> int:
+	return BASE_DP + int(equipped_in("armor").get("dp", 0))
+
+
+## 전투 공격력 = 기본 AP + 장착 무기 ap.
+func attack_power() -> int:
+	return int(player_stats.get("ap", 0)) + int(equipped_weapon().get("ap", 0))
+
+
+## 기본 공격의 속성 — 무기가 정한다. 무기가 없거나 none이면 물리.
+## 전기충격기를 들면 기계 계열(electric 약점)에 ×1.5가 붙어 브레이크로 이어진다.
+func attack_element() -> StringName:
+	var el := str(equipped_weapon().get("element", "physical"))
+	return StringName("physical" if el.is_empty() or el == "none" else el)
+
+
+func mark_visited(floor_index: int) -> void:
+	visited_floors[floor_index] = true
+
+
+## 방문한 층 번호 오름차순.
+func visited_list() -> Array[int]:
+	var out: Array[int] = []
+	for k: int in visited_floors:
+		out.append(k)
+	out.sort()
+	return out
+
+
 func chest_overrides_for(floor_index: int) -> Dictionary:
 	return chest_overrides.get(floor_index, {})
 
@@ -77,6 +188,9 @@ func chest_overrides_for(floor_index: int) -> Dictionary:
 ## 새 게임 시작 시 초기화 — SaveManager.load_slot과 대칭.
 func reset() -> void:
 	current_floor = 1
+	visited_floors = {}
+	equipped = {}
+	init_skills()
 	flags = {}
 	chest_overrides = {}
 	player_cell = Vector2i(-1, -1)

@@ -9,9 +9,13 @@ var _sequences: Dictionary = {}
 var _encounters: Dictionary = {}
 var _enemies: Dictionary = {}
 var _items: Dictionary = {}
+var _legacy_ref: Dictionary = {}  # 원작 상자 ATT(문자열) → 아이템 id
+var _floor_stats: Dictionary = {}  # 층 키(f0..) → 필드 몬스터 스탯 범위
 var _growth: Dictionary = {}
 
 ## 난이도 — "easy"/"normal"/"hard" (SettingsManager에서 변경)
+## 현재 난이도 프리셋 키 — SettingsManager가 설정 변경 시 갱신한다.
+## (구판은 이 값이 "normal"에 고정돼 있었고 get_difficulty_mult 호출부도 0건이었다.)
 static var difficulty := "normal"
 
 
@@ -39,6 +43,32 @@ func get_enemy_def(id: StringName) -> Dictionary:
 	)
 
 
+## 원작 상자 ATT(150~184) → 신규 아이템 id. items.json legacy_ref가 출처.
+## 표에 없으면 빈 StringName.
+## 층별 필드 몬스터 스탯 — monsters.json floor_stats. 없으면 빈 Dictionary.
+## 시작 보유 스킬 id — skills.json의 `starting`. 없으면 **전 스킬**(현행 동작 보존).
+func starting_skill_ids() -> Array[String]:
+	var raw := JsonUtil.load_dict(DATA_DIR + "skills.json", "Database")
+	var out: Array[String] = []
+	var starting: Array = raw.get("starting", [])
+	if not starting.is_empty():
+		for sid: Variant in starting:
+			out.append(str(sid))
+		return out
+	for sk: Dictionary in raw.get("skills", []):
+		out.append(str(sk.get("id", "")))
+	return out
+
+
+func floor_stats(floor_idx: int) -> Dictionary:
+	return _floor_stats.get("f%d" % floor_idx, {})
+
+
+func legacy_item(attr: int) -> StringName:
+	var mapped := str(_legacy_ref.get(str(attr), ""))
+	return StringName(mapped)
+
+
 func get_item(id: StringName) -> Dictionary:
 	return _items.get(String(id), {})
 
@@ -50,7 +80,8 @@ func load_enemies() -> void:
 		return
 	# floors 의 species 배열에서 고유 id 수집 + 기본 스탯 부여
 	var seen := {}
-	for floor_data: Dictionary in raw.get("floors", {}).values():
+	for floor_key: String in raw.get("floors", {}):
+		var floor_data: Dictionary = raw["floors"][floor_key]
 		for s: Variant in floor_data.get("species", []):
 			var sid: String = ""
 			if s is Dictionary:
@@ -60,6 +91,28 @@ func load_enemies() -> void:
 			if sid.is_empty() or seen.has(sid):
 				continue
 			seen[sid] = true
+			# 필드 종은 **정체성만** 여기서 갖는다(이름·약점·플래그).
+			# 강도는 전투가 벌어지는 **층**이 정한다 — 같은 종이 f1과 f2에 다 나오므로
+			# 종 정의에 스탯을 굳히면 층별 난이도가 무너진다. BattleSetup이 floor_stats를 입힌다.
+			_enemies[sid] = {
+				"id": sid,
+				"display_name": sid.replace("_", " ").capitalize(),
+				"from_floor_stats": true,
+			}
+			# 시나리오 연계 필드 패스스루 — 처음 격파 시 세팅 플래그
+			if s is Dictionary and s.has("first_win_flag"):
+				_enemies[sid]["first_win_flag"] = str(s["first_win_flag"])
+	_floor_stats = raw.get("floor_stats", {})
+	_load_bosses(raw)
+	_apply_species_meta(raw)
+
+
+## species 섹션 — 종별 약점(브레이크 시스템) 및 display_name. 보스는 자기 정의 우선.
+func _apply_species_meta(raw: Dictionary) -> void:
+	var table: Dictionary = raw.get("species", {})
+	for sid: String in table:
+		var entry: Dictionary = table[sid]
+		if not _enemies.has(sid):
 			_enemies[sid] = {
 				"id": sid,
 				"display_name": sid.replace("_", " ").capitalize(),
@@ -69,20 +122,9 @@ func load_enemies() -> void:
 				"exp": [5, 10],
 				"money": [50, 100],
 			}
-			# 시나리오 연계 필드 패스스루 — 처음 격파 시 세팅 플래그
-			if s is Dictionary and s.has("first_win_flag"):
-				_enemies[sid]["first_win_flag"] = str(s["first_win_flag"])
-	_load_bosses(raw)
-	_apply_weaknesses(raw)
-
-
-## species 섹션 — 종별 약점(브레이크 시스템). 보스는 자기 정의의 weaknesses 우선.
-func _apply_weaknesses(raw: Dictionary) -> void:
-	var table: Dictionary = raw.get("species", {})
-	for sid: String in table:
-		if not _enemies.has(sid):
-			continue
-		_enemies[sid]["weaknesses"] = table[sid].get("weaknesses", [])
+		_enemies[sid]["weaknesses"] = entry.get("weaknesses", [])
+		if entry.has("display_name"):
+			_enemies[sid]["display_name"] = str(entry["display_name"])
 	for bid: String in raw.get("bosses", {}):
 		if _enemies.has(bid):
 			_enemies[bid]["weaknesses"] = raw["bosses"][bid].get("weaknesses", [])
@@ -113,6 +155,7 @@ func load_items() -> void:
 	var raw := JsonUtil.load_dict(DATA_DIR + "items.json", "Database")
 	for item: Dictionary in raw.get("items", []):
 		_items[str(item["id"])] = item
+	_legacy_ref = raw.get("legacy_ref", {})
 
 
 func _ready() -> void:
@@ -164,6 +207,31 @@ func sequence(id: StringName) -> Array:
 func encounter_table(floor_idx: int) -> Dictionary:
 	var key := "f%d" % floor_idx
 	return _encounters.get(key, {"count": 0, "species": []})
+
+
+## 층 인카운터 종 목록을 한 모양으로 펴서 돌려준다.
+## monsters.json의 species 원소는 문자열(f0)과 객체(f1~)가 섞여 있다 —
+## 그대로 str()로 찍으면 종 id가 `{ "id": "dworm", ... }` 통문자열이 돼
+## 시트 조회·적 정의 조회가 전부 폴백으로 떨어진다.
+func encounter_species(floor_idx: int) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry: Variant in encounter_table(floor_idx).get("species", []):
+		if typeof(entry) == TYPE_DICTIONARY:
+			var d: Dictionary = entry
+			(
+				out
+				. append(
+					{
+						"id": str(d.get("id", "")),
+						"pattern": str(d.get("pattern", "wander")),
+						"params": d.get("params", {}),
+						"first_win_flag": str(d.get("first_win_flag", "")),
+					}
+				)
+			)
+		else:
+			out.append({"id": str(entry), "pattern": "wander", "params": {}, "first_win_flag": ""})
+	return out
 
 
 func load_encounters() -> void:
