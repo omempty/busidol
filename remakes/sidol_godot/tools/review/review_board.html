@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>BSD 시돌이의 모험 — LLM 납품 심사</title>
+<style>
+:root{--bg:#14131a;--panel:#1e1c26;--line:#332f42;--fg:#e8e4f0;--dim:#9a94ac;
+--acc:#7c6cff;--ok:#57c98a;--warn:#e8b64c;--bad:#ef6a6a;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 "Segoe UI","Malgun Gothic",sans-serif;height:100vh;display:flex;flex-direction:column}
+header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:17px;color:#cfc7ff;font-weight:600}
+.meta{color:var(--dim);font-size:12px}
+nav{display:flex;gap:6px;margin-left:auto}
+nav button{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+nav button.on{color:#fff;background:var(--acc);border-color:var(--acc)}
+nav button.act{color:#ffd24a;border-color:#4a3413}
+main{flex:1;overflow:auto;padding:14px 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card h3{font-size:14px;color:#cfc7ff;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11px}
+.b-ok{background:#12301f;color:#8fe0b0}.b-bad{background:#3a1515;color:#ff9d9d}
+.imgs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
+.imgs figure{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#0f0e15}
+.imgs figcaption{font-size:10px;color:var(--dim);padding:2px 5px}
+.imgs img{width:100%;height:150px;object-fit:contain;display:block;background:
+repeating-conic-gradient(#1b1926 0 25%,#211e2e 0 50%) 0 0/16px 16px}
+.imgs a{display:block}
+.vlines{font-size:11px;color:var(--dim);background:#0f0e15;border:1px solid var(--line);
+border-radius:5px;padding:5px 8px;margin-bottom:8px;white-space:pre-wrap;max-height:88px;overflow:auto}
+details{margin-bottom:8px}
+details summary{font-size:12px;color:var(--dim);cursor:pointer}
+details pre{font-size:11px;color:var(--dim);background:#0f0e15;border:1px solid var(--line);
+border-radius:5px;padding:8px;white-space:pre-wrap;max-height:180px;overflow:auto;margin-top:5px}
+textarea{width:100%;min-height:64px;background:#0f0e15;border:1px solid var(--line);color:var(--fg);
+border-radius:6px;padding:7px;font:12px/1.5 inherit;resize:vertical}
+.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+button.b{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;border:1px solid var(--line);
+background:#0f0e15;color:var(--fg)}
+button.b.ok{border-color:var(--ok);color:var(--ok)}
+button.b.bad{border-color:var(--bad);color:var(--bad)}
+button.b:disabled{opacity:.4;cursor:default}
+.empty{color:var(--dim);text-align:center;padding:60px 0}
+.mdout{background:#0f0e15;border:1px solid var(--acc);border-radius:6px;padding:8px;
+font-size:11px;white-space:pre-wrap;max-height:200px;overflow:auto;margin-top:8px;color:#cfc7ff}
+#toast{position:fixed;bottom:18px;right:18px;background:#12301f;border:1px solid var(--ok);
+color:#8fe0b0;padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-index:50}
+</style>
+</head>
+<body>
+<header>
+  <h1>LLM 납품 심사</h1><span class="meta">10_submitted → 20_processed / _rejected + 재요청 패키지</span>
+  <nav id="cats"></nav>
+  <nav>
+    <button class="act" id="batch-ok">전체 승인</button>
+    <button class="act" id="batch-bad">전체 반려</button>
+    <button onclick="load()">새로고침</button>
+  </nav>
+</header>
+<main><div id="cards" class="grid"></div><div id="empty" class="empty" style="display:none">납품 대기 없음</div></main>
+<div id="toast"></div>
+<script>
+let CUR = 'portraits';
+let PENDING = [];
+
+const $ = s => document.querySelector(s);
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none', 2600); }
+
+async function api(path, body){
+  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'},
+                      body: JSON.stringify(body)} : {};
+  const r = await fetch(path, opt);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error);
+  return j;
+}
+
+async function initCats(){
+  const {categories} = await api('/api/categories');
+  const nav = $('#cats'); nav.innerHTML='';
+  const labels = {portraits:'포트레이트', keyart:'키아트', monsters:'몬스터', sprites:'스프라이트'};
+  for (const [cat, n] of Object.entries(categories)){
+    const b = document.createElement('button');
+    b.textContent = `${labels[cat]||cat} (${n})`;
+    b.dataset.cat = cat;
+    if (cat === CUR) b.classList.add('on');
+    b.onclick = () => { CUR = cat; nav.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+                        b.classList.add('on'); load(); };
+    nav.prepend(b);
+  }
+}
+
+async function load(){
+  await initCats();
+  const {items} = await api('/api/list?cat=' + CUR);
+  PENDING = items.map(i => i.file);
+  const grid = $('#cards'); grid.innerHTML='';
+  $('#empty').style.display = items.length ? 'none' : 'block';
+  for (const it of items) grid.appendChild(card(it));
+}
+
+function card(it){
+  const el = document.createElement('div'); el.className='card';
+  const v = it.validation;
+  const badge = v.pass ? '<span class="badge b-ok">검증 PASS</span>'
+                       : '<span class="badge b-bad">검증 FAIL</span>';
+  el.innerHTML = `
+    <h3>${it.asset_id} <span class="meta">${it.file}</span> ${badge}</h3>
+    <div class="imgs">
+      <figure><a href="${it.refs.reference||''}" target="_blank">${img(it.refs.reference)}</a>
+        <figcaption>원본 참조</figcaption></figure>
+      <figure><a href="${it.web}" target="_blank">${img(it.web)}</a>
+        <figcaption>납품 (클릭 원본)</figcaption></figure>
+      <figure>${img(it.refs.anchor)}<figcaption>스타일 앵커</figcaption></figure>
+    </div>
+    <div class="vlines">${(v.lines||[]).join('\n') || '검증 출력 없음'}</div>
+    <details><summary>원본 의뢰문</summary><pre>${esc(it.prompt_md)}</pre></details>
+    <div class="fb" style="display:none">
+      <textarea placeholder="반려 사유 / 수정 지시를 적으면 재요청 프롬프트에 자동 포함됩니다"></textarea>
+    </div>
+    <div class="mdout" style="display:none"></div>
+    <div class="row">
+      <button class="b ok" data-a="approve">승인</button>
+      <button class="b bad" data-a="reject">반려</button>
+      <button class="b" data-a="reject-confirm" style="display:none">반려 확정</button>
+      <button class="b" data-a="cancel" style="display:none">취소</button>
+    </div>`;
+  const fb = el.querySelector('.fb'), mdout = el.querySelector('.mdout');
+  const btns = Object.fromEntries([...el.querySelectorAll('button')].map(b=>[b.dataset.a,b]));
+  btns.approve.onclick = () => act(it.file, 'approve', '');
+  btns.reject.onclick = () => { fb.style.display='block';
+    btns.reject.style.display=btns.approve.style.display='none';
+    btns['reject-confirm'].style.display=btns.cancel.style.display='inline-block'; };
+  btns.cancel.onclick = () => { fb.style.display='none';
+    btns.reject.style.display=btns.approve.style.display='inline-block';
+    btns['reject-confirm'].style.display=btns.cancel.style.display='none'; };
+  btns['reject-confirm'].onclick = async () => {
+    const r = await api('/api/review', {cat:CUR, file:it.file, action:'reject',
+                                        feedback: fb.querySelector('textarea').value});
+    mdout.textContent = r.revise_md || ''; mdout.style.display='block';
+    btns['reject-confirm'].disabled = btns.cancel.disabled = true;
+    toast('반려 + 재요청 패키지 생성: _feedback/' + CUR + '/' + it.file + '.md');
+    setTimeout(load, 1800);
+  };
+  return el;
+}
+
+function img(src){ return src ? `<img src="${src}?t=${Date.now()}" loading="lazy">`
+                              : `<img alt="" style="visibility:hidden">`; }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+async function act(file, action, feedback){
+  try{
+    const r = await api('/api/review', {cat:CUR, file, action, feedback});
+    toast(action==='approve' ? `승인: ${r.detail}` : `반려: ${r.detail}`);
+    load();
+  }catch(e){ toast('오류: ' + e.message); }
+}
+
+$('#batch-ok').onclick = async () => {
+  if (!PENDING.length) return toast('대기 없음');
+  await api('/api/batch', {cat:CUR, action:'approve'}); toast(`전체 승인 ${PENDING.length}건`); load();
+};
+$('#batch-bad').onclick = async () => {
+  if (!PENDING.length) return toast('대기 없음');
+  const fb = prompt('전체 반려 사유(재요청 프롬프트에 포함):');
+  if (fb === null) return;
+  await api('/api/batch', {cat:CUR, action:'reject', feedback:fb});
+  toast(`전체 반려 ${PENDING.length}건 + 재요청 패키지 생성`); load();
+};
+
+load();
+</script>
+</body>
+</html>

@@ -19,6 +19,12 @@
            - 스프라이트: 10_submitted/<캐릭터>_v<n>.png
            - 포트레이트/키아트: 10_submitted/{portraits|keyart}/<id>_v<n>.png
 
+[3.5] 심사 심사실행.bat → 심사 보드(tools/review/) — 카드당 원본|납품|앵커 3열 비교,
+           자동 검증 배지. 승인=20_processed 이동(스프라이트는 process_llm_sheet 겸용),
+           반려=사유 입력 시 재요청 패키지(_feedback/<cat>/<file>.md = 원본 의뢰문 +
+           반려 사항 + 검증 결과, v<n+1> 재납품 지시) 자동 생성 + _rejected 이동.
+           전체 승인/전체 반려 배치 지원.
+
 [4] 재가공 tools/convert/process_llm_sheet.py 10_submitted/<파일>       (스프라이트)
            tools/convert/validate_submission.py portrait|keyart <파일>  (포트레이트·키아트)
            마젠타 키잉 -> 스펙 그리드 컷팅 -> 프레임 검출 -> 검증
