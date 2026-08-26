@@ -23,15 +23,15 @@ func _ready() -> void:
 		return
 	var hp_before: int = battle.enemies[0].hp
 
-	# --- 1) 공격 안무 재생 + 데미지 적용 ---
+	# --- 1) 공격 안무 재생 + 데미지 적용 (타이밍 링 헤드리스 타임아웃 포함) ---
 	battle._on_command("공격")
 	var waited := 0.0
-	while battle._runner.is_playing() and waited < TIMEOUT:
+	while battle._busy and waited < TIMEOUT:
 		await get_tree().process_frame
 		waited += get_process_delta_time()
-	print("[smoke_battle] move played=%.3fs busy=%s" % [waited, battle._busy])
+	print("[smoke_battle] action resolved=%.3fs" % waited)
 	if waited >= TIMEOUT:
-		failures.append("안무 재생 타임아웃")
+		failures.append("공격 액션 타임아웃(타이밍 링/안무)")
 
 	var hp_after: int = maxi(0, battle.enemies[0].hp)
 	print("[smoke_battle] enemy hp %d -> %d" % [hp_before, hp_after])
@@ -103,6 +103,83 @@ func _ready() -> void:
 		if hits == 0 and boss.player_combatant.hp != hp_before2:
 			failures.append("무피격인데 피해 발생")
 		boss.queue_free()
+
+	# --- 5) 약점·브레이크·타이밍 로직 (BattleController 직접 구동 — 시드 고정 결정론) ---
+	EnemyManager.rng.seed = 20260826
+	var logic := BattleController.new()
+	add_child(logic)
+	var hero := Combatant.new("부싯돌", 200, 30, 10)
+	var weakling := Combatant.new("약점 몬스터", 500, 15, 5)
+	weakling.weaknesses.assign([&"fire"] as Array[StringName])
+	var tank := Combatant.new("비약점 몬스터", 500, 15, 5)
+	logic.start(hero, [weakling, tank] as Array[Combatant])
+
+	var fire_skill := {
+		"id": "test_fire", "element": "fire", "targeting": "single", "power": 30,
+		"status_effects": [], "choreography_id": "atk_flame_throw",
+	}
+
+	# 5-1) 약점 배율 — 동일 시드·동일 조건, fire 약점 몬스터가 더 아프다(결정론)
+	var cmd_weak := {"type": &"skill", "skill": fire_skill.duplicate(true), "target": weakling}
+	logic.state = BattleController.TurnState.PLAYER_COMMAND
+	logic.submit_player_command(cmd_weak)
+	var weak_dmg: int = int((cmd_weak["damages"] as Array)[0]["amount"])
+	var weak_flag: bool = bool((cmd_weak["damages"] as Array)[0]["weak"])
+
+	EnemyManager.rng.seed = 20260826  # 동일 시드 — base가 같아 배율만 비교한다
+	var cmd_plain := {"type": &"skill", "skill": fire_skill.duplicate(true), "target": tank}
+	logic.state = BattleController.TurnState.PLAYER_COMMAND
+	logic.submit_player_command(cmd_plain)
+	var plain_dmg: int = int((cmd_plain["damages"] as Array)[0]["amount"])
+	var plain_flag: bool = bool((cmd_plain["damages"] as Array)[0]["weak"])
+
+	print(
+		"[smoke_battle] weakness check: fire->weak %d (flag=%s) vs plain %d (flag=%s)"
+		% [weak_dmg, weak_flag, plain_dmg, plain_flag]
+	)
+	if not weak_flag or plain_flag:
+		failures.append("약점 플래그 판정 오류")
+	if weak_dmg <= plain_dmg:
+		failures.append("약점 배율 미적용 (weak=%d plain=%d)" % [weak_dmg, plain_dmg])
+
+	# 5-2) 브레이크 — 약점 히트 2회 누적 시 브레이크 + 받는 피해 ×1.5 (결정론 프로브)
+	var cmd_break := {"type": &"skill", "skill": fire_skill.duplicate(true), "target": weakling}
+	logic.state = BattleController.TurnState.PLAYER_COMMAND
+	logic.submit_player_command(cmd_break)
+	var break_flag: bool = bool((cmd_break["damages"] as Array)[0]["break"])
+	if not break_flag or not weakling.is_broken():
+		failures.append("브레이크 미발동 (gauge=%d)" % weakling.break_gauge)
+	var probe := Combatant.new("프로브", 500, 15, 5)
+	var base_hit: int = probe.take_damage(100)
+	probe.broken_turns = 1
+	var amp_hit: int = probe.take_damage(100)
+	print(
+		"[smoke_battle] break check: break_flag=%s broken mult %d -> %d"
+		% [break_flag, base_hit, amp_hit]
+	)
+	if amp_hit <= base_hit:
+		failures.append("브레이크 피해 증폭 미적용 (%d -> %d)" % [base_hit, amp_hit])
+
+	# 5-3) 타이밍 보너스 — timing_mult 1.2
+	EnemyManager.rng.seed = 20260826
+	var cmd_timing := {
+		"type": &"skill", "skill": fire_skill.duplicate(true), "target": tank,
+		"timing_mult": 1.2,
+	}
+	logic.state = BattleController.TurnState.PLAYER_COMMAND
+	logic.submit_player_command(cmd_timing)
+	EnemyManager.rng.seed = 20260826
+	var cmd_no_timing := {"type": &"skill", "skill": fire_skill.duplicate(true), "target": tank}
+	logic.state = BattleController.TurnState.PLAYER_COMMAND
+	logic.submit_player_command(cmd_no_timing)
+	var timing_dmg: int = int((cmd_timing["damages"] as Array)[0]["amount"])
+	var no_timing_dmg: int = int((cmd_no_timing["damages"] as Array)[0]["amount"])
+	print(
+		"[smoke_battle] timing check: just=%d vs normal=%d" % [timing_dmg, no_timing_dmg]
+	)
+	if timing_dmg <= no_timing_dmg:
+		failures.append("타이밍 보너스 미적용 (just=%d normal=%d)" % [timing_dmg, no_timing_dmg])
+	logic.queue_free()
 
 	_finish(failures, battle)
 

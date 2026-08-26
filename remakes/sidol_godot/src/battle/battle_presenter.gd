@@ -13,9 +13,12 @@ const ELEMENT_COLORS := {
 }
 const PLAYER_HURT_COLOR := Color(1, 0.25, 0.15)
 const HITSTOP_SCALE := 0.05
+const IDLE_FPS := 2.0  ## 전투 중 idle 프레임 순환 속도
 ## 전투 화면 플레이어 실효 셀(px) — 구형(64셀 × 1.5배)과 동일.
 ## 노드 배율을 cell×scale로 정규화해 시트 교체(아트 모드·해상도 무관)에도 구도 보존.
 const BATTLE_PLAYER_CELL_PX := 96.0
+
+var _idle_clock := 0.0
 
 var target_index := 0  ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
 
@@ -47,6 +50,7 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 		at.atlas = ptex
 		at.region = Rect2(0, 0, cs.x, cs.y)
 		player_sprite.texture = at
+		player_sprite.set_meta(&"anim_cell", cs)  # idle 프레임 순환용(행0 정면 2프레임)
 	player_sprite.position = Vector2(120, 220)
 	var rs := maxf(_player_render_scale(), 0.01)
 	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX / (float(cs.x) * rs))
@@ -70,6 +74,7 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 				eat.atlas = tex
 				eat.region = Rect2(0, 0, cell, cell)  # 행 0 = 정면(walk_down) 1프레임
 				es.texture = eat
+				es.set_meta(&"anim_cell", Vector2i(int(cell), int(cell)))
 				# 실효 크기 정규화 — 셀×스케일 무관하게 화면상 크기 일관
 				node_scale = BATTLE_PLAYER_CELL_PX / (cell * meta_scale)
 		if es.texture == null:
@@ -182,6 +187,33 @@ func show_damage_number(
 	tw.chain().tween_callback(lbl.queue_free)
 
 
+## 상태 플래그 팝 — WEAK!/BREAK! 등 텍스트 강조(데미지 팝 위).
+func show_flag_pop(text: String, color: Color, enemy_index: int) -> void:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.position = _pop_position(false, enemy_index, 20) - Vector2(0, 26)
+	_root.add_child(lbl)
+	var tw := lbl.create_tween().set_parallel(true)
+	tw.tween_property(lbl, "position:y", lbl.position.y - 24.0, 0.45)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.45)
+	tw.chain().tween_callback(lbl.queue_free)
+
+
+## 타이밍 버튼 링 — 대상 위 수축 링, 입력 판정까지 블로킹(await).
+func play_timing_ring(enemy_index: int, window: float) -> bool:
+	if enemy_sprites.is_empty():
+		return false
+	var anchor := enemy_sprites[clampi(enemy_index, 0, enemy_sprites.size() - 1)]
+	var ring := TimingRing.new()
+	ring.window = window
+	ring.position = anchor.position
+	_root.add_child(ring)
+	var success: bool = await ring.resolved
+	return success
+
+
 ## 피격 플래시 — 타겟이 빨갛게 깜빡임.
 func hurt_flash(spr: Sprite2D) -> void:
 	if spr == null or not is_instance_valid(spr):
@@ -217,6 +249,21 @@ func _process(delta: float) -> void:
 	elif _was_shaken:
 		_root.position = _root_base
 		_was_shaken = false
+	# idle 프레임 순환 — 정지 1프레임 해소(행0 정면 2프레임 토글)
+	_idle_clock += delta
+	_apply_anim_frame(int(_idle_clock * IDLE_FPS) % 2)
+
+
+## 애니 메타 보유 스프라이트의 정면 프레임 순환
+func _apply_anim_frame(frame: int) -> void:
+	for spr: Sprite2D in ([player_sprite] as Array[Sprite2D]) + enemy_sprites:
+		if spr == null or not is_instance_valid(spr) or not spr.has_meta(&"anim_cell"):
+			continue
+		var at := spr.texture as AtlasTexture
+		if at == null:
+			continue
+		var cell: Vector2i = spr.get_meta(&"anim_cell")
+		at.region.position.x = frame * float(cell.x)
 
 
 func _actor_sprite(actor_id: String) -> Sprite2D:

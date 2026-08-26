@@ -22,6 +22,7 @@ var _dodge: DodgePhase  # 보스전 회피 페이즈 (턴제+회피 하이브리
 var _pending_action := {}
 var _pending_pops: Array[Dictionary] = []  # damages 표현 큐 (apply_damage 프레임마다 1개)
 var _pending_element := &"physical"
+var _timing_cfg := {}  # skills.json timing 섹션 — 타임윈도우·보너스 배율
 
 
 func _ready() -> void:
@@ -75,6 +76,7 @@ func _load_skills() -> void:
 	if typeof(raw) == TYPE_DICTIONARY:
 		for s: Dictionary in raw.get("skills", []):
 			_skills.append(s)
+		_timing_cfg = raw.get("timing", {})
 
 
 func _setup_combatants(def: Dictionary) -> void:
@@ -90,14 +92,13 @@ func _setup_combatants(def: Dictionary) -> void:
 		var edef: Dictionary = Database.get_enemy_def(StringName(eid_str))
 		var hp_r: Array = edef.get("hp_range", [20, 40])
 		var hp_val: int = randi_range(int(hp_r[0]), int(hp_r[1]))
-		enemies.append(
-			Combatant.new(
-				str(edef.get("display_name", eid_str)),
-				hp_val,
-				int(edef.get("ap", 15)),
-				int(edef.get("dp", 5))
-			)
+		var c := Combatant.new(
+			str(edef.get("display_name", eid_str)), hp_val,
+			int(edef.get("ap", 15)), int(edef.get("dp", 5))
 		)
+		for w in edef.get("weaknesses", []):
+			c.weaknesses.append(StringName(str(w)))
+		enemies.append(c)
 		_enemy_ids.append(eid_str)
 
 
@@ -144,12 +145,32 @@ func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
 		return
 	_busy = true
 	_ui.hide_menu()
+	# 타이밍 버튼 — sweet zone 입력 시 피해 보너스(skills.json timing 섹션)
+	var window := _timing_window_for(command)
+	if window > 0.0:
+		var just: bool = await _presenter.play_timing_ring(_alive_enemy_index(), window)
+		command["timing_mult"] = float(_timing_cfg.get("mult", 1.2)) if just else 1.0
 	controller.submit_player_command(command)
 	_pending_action = command
 	_pending_pops.assign(command.get("damages", []))
 	var skill: Dictionary = command.get("skill", {})
 	_pending_element = StringName(str(skill.get("element", "physical")))
 	_play_move(move_id)
+
+
+## 타이밍 윈도우 — 공격·단일 대상 공격 스킬만 (버프/자기 스킬 제외)
+func _timing_window_for(command: Dictionary) -> float:
+	var window := float(_timing_cfg.get("window", 0.0))
+	if window <= 0.0:
+		return 0.0
+	var ctype := StringName(str(command.get("type", &"attack")))
+	if ctype == &"attack":
+		return window
+	if ctype == &"skill":
+		var skill: Dictionary = command.get("skill", {})
+		if String(skill.get("targeting", "")) == "single":
+			return window
+	return 0.0
 
 
 ## 안무 재생 — battle_moves JSON을 러너로 재생(연출은 프리젠터 위임).
@@ -180,6 +201,10 @@ func _on_choreo_damage_frame() -> void:
 	var pop: Dictionary = _pending_pops.pop_front()
 	var idx := int(pop.get("enemy_index", 0))
 	_presenter.show_damage_number(int(pop["amount"]), false, _pending_element, idx)
+	if bool(pop.get("weak", false)):
+		_presenter.show_flag_pop("WEAK!", Color(1.0, 0.92, 0.35), idx)
+	if bool(pop.get("break", false)):
+		_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
 	if idx < _presenter.enemy_sprites.size():
 		_presenter.hurt_flash(_presenter.enemy_sprites[idx])
 	_presenter.hitstop()
@@ -235,17 +260,23 @@ func _resolve_turn() -> void:
 	if controller.state == BattleController.TurnState.ENEMY_TURN:
 		var idx := _alive_enemy_index()
 		var edef: Dictionary = Database.get_enemy_def(StringName(_enemy_ids[idx]))
-		if not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
+		var actor: Combatant = null
+		for e in enemies:
+			if not e.is_down():
+				actor = e
+				break
+		if actor != null and actor.is_broken():
+			# 브레이크 지속 — 행동 불가, 턴 소비로 해제
+			actor.broken_turns -= 1
+			_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
+		elif actor != null and not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
 			await _run_dodge_phase(edef)  # 보스 특수공격 — 회피 페이즈
-		else:
-			for e in enemies:
-				if not e.is_down():
-					var raw := DamageCalculator.enemy_hit(e.ap, EnemyManager.rng)
-					var actual: int = player_combatant.take_damage(raw)
-					_presenter.show_damage_number(actual, true)
-					_presenter.hurt_flash(_presenter.player_sprite)
-					_presenter.play_screen_kf({"shake": 3})
-					break
+		elif actor != null:
+			var raw := DamageCalculator.enemy_hit(actor.ap, EnemyManager.rng)
+			var actual: int = player_combatant.take_damage(raw)
+			_presenter.show_damage_number(actual, true)
+			_presenter.hurt_flash(_presenter.player_sprite)
+			_presenter.play_screen_kf({"shake": 3})
 		controller.turn_count += 1
 		_tick_effects()
 
