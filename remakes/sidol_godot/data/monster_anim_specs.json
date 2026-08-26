@@ -55,6 +55,11 @@
      "animations":{"walk":{"row":0,"frames":4,"fps":6,"_desc":"공중 부유, 페이지 표날림"},"attack":{"row":1,"frames":3,"fps":10,"loop":false,"_desc":"종이 날림 공격"},"death":{"row":2,"frames":3,"fps":6,"loop":false,"_desc":"페이지 흩날리며 소멸"}},
      "token":"논문 뭉치 폴터가이스트. 페이지 사이 코피 얼룩과 손톱 자국. 날아다니며 종이로 베어냄"},
 
+    {"id":"null_pointer","name_ko":"널 포인터","cell":{"w":64,"h":64},"pattern":"phaser",
+     "telegraph_visual":"glitch_flicker_0.3s","source":"placeholder",
+     "animations":{"walk_down":{"row":0,"frames":4,"fps":6},"walk_up":{"row":1,"frames":4,"fps":6},"walk_left":{"row":2,"frames":4,"fps":6},"walk_right":{"row":3,"frames":4,"fps":6},"idle_down":{"row":4,"frames":2,"fps":3,"_desc":"0x00 빈 얼굴 지직거림"},"attack":{"row":5,"frames":4,"fps":12,"loop":false,"_desc":"세그폴트 손아귀"},"hurt":{"row":6,"frames":2,"fps":8,"loop":false,"_desc":"주소 비트 뒤엉킴"},"death":{"row":7,"frames":3,"fps":6,"loop":false,"_desc":"참조 해제→공중 해체"}},
+     "token":"메모리 유령 괴물. 주소 없는 데이터 덩어리 — 위상 전이로 벽을 통과(phaser). 0x00으로 빈 얼굴에 떠도는 가비지 눈동자"},
+
     {"id":"rogue_vending","name_ko":"로그 벤딩","cell":{"w":64,"h":96},"pattern":"ambusher",
      "telegraph_visual":"slight_shake_0.4s","source":"placeholder",
      "animations":{"idle":{"row":0,"frames":2,"fps":2,"_desc":"평범한 자판기 위장"},"awaken":{"row":1,"frames":3,"fps":8,"loop":false,"_desc":"위장 해제, 눈 깜빡임"},"attack":{"row":2,"frames":5,"fps":12,"loop":false,"_desc":"캔 연발 발사"},"death":{"row":3,"frames":4,"fps":6,"loop":false,"_desc":"캔 쏟아지며 무너짐 → 마지막에 정상 작동(개그)"}},
@@ -84,6 +89,11 @@
      "telegraph_visual":"arc_charging_0.6s","source":"placeholder_procedural","is_boss":true,
      "animations":{"idle":{"row":0,"frames":4,"fps":6,"_desc":"케이블 몸통에 전류 맥동"},"walk":{"row":1,"frames":6,"fps":5,"_desc":"케이블이 파도치듯 진행"},"attack":{"row":2,"frames":8,"fps":14,"loop":false,"_desc":"전 신절 동시 방전+아크 폭발"},"hurt":{"row":3,"frames":3,"fps":8,"loop":false,"_desc":"단락 스파크"},"death":{"row":4,"frames":6,"fps":8,"loop":false,"_desc":"콘센트에서 뽑힌 듯 사그라듦"}},
      "token":"콘센트에서 태어난 전기 용. 다관절 케이블 몸통, 아크 방전. 만 볼트의 그로테스크"},
+
+    {"id":"professor_monster","name_ko":"모교수 괴물","cell":{"w":128,"h":128},"pattern":"chase",
+     "telegraph_visual":"lab_coat_rustle_0.5s","source":"placeholder_procedural","is_boss":true,
+     "animations":{"idle":{"row":0,"frames":4,"fps":3,"_desc":"굽은 등, 찢어진 실험복 펄럭임"},"walk":{"row":1,"frames":4,"fps":3,"_desc":"관절 비틀린 거동"},"attack":{"row":2,"frames":5,"fps":12,"loop":false,"_desc":"비틀린 팔 후려치기"},"hurt":{"row":3,"frames":2,"fps":8,"loop":false},"death":{"row":4,"frames":4,"fps":6,"loop":false,"_desc":"무너지며 교수 배지 떨어짐"}},
+     "token":"인간성을 잃은 모교수의 괴물형(씬 5-1 제압전). 찢어진 실험복·휘어진 안경 너머 빛 없는 눈. 그로테스크하나 교수의 흔적(분필·교안)이 남아 있음"},
 
     {"id":"sys_builder","name_ko":"SYS_BUILDER.EXE","cell":{"w":192,"h":192},"pattern":"phaser",
      "telegraph_visual":"screen_static_full_1s","source":"placeholder_procedural","is_boss":true,"is_final_boss":true,
