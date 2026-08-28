@@ -12,6 +12,7 @@ var _items: Dictionary = {}
 var _legacy_ref: Dictionary = {}  # 원작 상자 ATT(문자열) → 아이템 id
 var _floor_stats: Dictionary = {}  # 층 키(f0..) → 필드 몬스터 스탯 범위
 var _growth: Dictionary = {}
+var _battle_rules: Dictionary = {}
 
 ## 난이도 — "easy"/"normal"/"hard" (SettingsManager에서 변경)
 ## 현재 난이도 프리셋 키 — SettingsManager가 설정 변경 시 갱신한다.
@@ -23,6 +24,11 @@ func get_difficulty_mult(key: String) -> float:
 	var presets: Dictionary = _growth.get("difficulty_presets", {})
 	var preset: Dictionary = presets.get(difficulty, {})
 	return float(preset.get(key, 1.0))
+
+
+## 전투 규칙 수치(data/battle_rules.json) — 도망 판정 등. 없으면 빈 딕셔너리(FleeRule 기본값).
+func flee_rules() -> Dictionary:
+	return _battle_rules.get("flee", {})
 
 
 func level_table() -> Array:
@@ -181,6 +187,7 @@ func _ready() -> void:
 	load_enemies()
 	load_items()
 	_load_growth()
+	_battle_rules = JsonUtil.load_dict(DATA_DIR + "battle_rules.json", "Database")
 
 
 func _load_growth() -> void:

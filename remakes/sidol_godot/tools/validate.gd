@@ -56,6 +56,7 @@ func _initialize() -> void:
 	_validate_skill_grants()
 	_validate_l10n()
 	_validate_story_bonus()
+	_validate_battle_rules()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -535,3 +536,29 @@ func _validate_story_bonus() -> void:
 	if max_accum > 0:
 		var share := 100.0 * float(total) / float(max_accum)
 		print("[validate] 스토리 보너스 %d EXP — 만렙 요구치 %d의 %.0f%%" % [total, max_accum, share])
+
+
+## 전투 규칙 수치가 제 범위에 있는가 — 도망이 항상 성공(1.0)하거나 영영 실패(0.0)하면
+## 규칙이 있으나 마나다. 0~1 확률 필드와 상·하한 순서를 본다.
+func _validate_battle_rules() -> void:
+	var rules: Dictionary = (_load_json(DATA + "battle_rules.json") as Dictionary).get("flee", {})
+	if rules.is_empty():
+		_err("battle_rules.json에 flee 규칙이 없음")
+		return
+	for key: String in [
+		"base_chance",
+		"per_failure_bonus",
+		"low_hp_bonus",
+		"low_hp_at",
+		"floor_penalty",
+		"min_chance",
+		"max_chance"
+	]:
+		if not rules.has(key):
+			_err("battle_rules.json flee.%s 누락" % key)
+			continue
+		var v := float(rules[key])
+		if v < 0.0 or v > 1.0:
+			_err("battle_rules.json flee.%s가 0~1 밖: %s" % [key, v])
+	if float(rules.get("min_chance", 0.0)) >= float(rules.get("max_chance", 1.0)):
+		_err("battle_rules.json flee.min_chance가 max_chance 이상")

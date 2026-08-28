@@ -14,6 +14,7 @@ var _on_win_flag := ""  # 승리 시 세팅되는 시나리오 플래그 (pendin
 var _ui: BattleUI
 var _busy := false
 var _skills: Array[Dictionary] = []
+var _flee_failures := 0  # 이 전투에서 도망에 실패한 횟수 — 시도마다 확률이 오른다
 
 # 연출 (로직↔연출 분리: ChoreographyRunner + BattlePresenter)
 var _runner: ChoreographyRunner
@@ -49,6 +50,8 @@ func _setup_ui() -> void:
 	_ui = BattleUI.new()
 	add_child(_ui)
 	_ui.build(player_combatant, enemies, _skills)
+	# 보스전 도망 금지는 규칙(battle_rules.json)이 정한다 — 메뉴에서 미리 흐리게.
+	_ui.set_command_enabled(&"flee", FleeRule.allowed(Database.flee_rules(), _is_boss_fight()))
 	_ui.command_selected.connect(_on_command)
 	_ui.skill_selected.connect(_on_skill_selected)
 	_ui.item_selected.connect(_on_item_selected)
@@ -117,9 +120,31 @@ func _on_command(cmd_id: StringName) -> void:
 		&"item":
 			_ui.show_item_menu()
 		&"flee":
-			battle_ended.emit(&"flee", {})
-			BattleRewards.apply(&"flee", {}, player_combatant.hp, _on_win_flag)
-			get_tree().change_scene_to_file("res://scenes/field.tscn")
+			_try_flee()
+
+
+## 도망 — 원작은 100% 성공이었으나 현대 편의로 확률제(FleeRule · data/battle_rules.json).
+## 실패하면 턴을 잃고 적의 공격을 받되, 다음 시도의 확률이 오른다(같은 전투에 갇히지 않게).
+func _try_flee() -> void:
+	var rules := Database.flee_rules()
+	if not FleeRule.allowed(rules, _is_boss_fight()):
+		_presenter.show_player_note(tr("UI_BATTLE_FLEE_BLOCKED"))
+		_ui.show_command_menu()
+		return
+
+	var hp_ratio := float(player_combatant.hp) / float(maxi(player_combatant.max_hp, 1))
+	var p := FleeRule.chance(rules, _flee_failures, hp_ratio, GameState.current_floor)
+	if EnemyManager.rng.randf() >= p:
+		_flee_failures += 1
+		_presenter.show_player_note(tr("UI_BATTLE_FLEE_FAIL"))
+		print("[battle] 도망 실패 (확률 %.0f%%, 누적 실패 %d)" % [p * 100.0, _flee_failures])
+		_end_player_defend()  # 턴 소비 — 적이 한 번 때린다
+		return
+
+	print("[battle] 도망 성공 (확률 %.0f%%)" % (p * 100.0))
+	battle_ended.emit(&"flee", {})
+	BattleRewards.apply(&"flee", {}, player_combatant.hp, _on_win_flag)
+	get_tree().change_scene_to_file("res://scenes/field.tscn")
 
 
 func _on_skill_selected(skill: Dictionary) -> void:

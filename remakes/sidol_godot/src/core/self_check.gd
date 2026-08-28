@@ -35,6 +35,7 @@ func run_all() -> PackedStringArray:
 		_check_quest_flags(),
 		_check_sequence_text_refs(),
 		_check_credits_flags(),
+		_check_flee_rule(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -515,3 +516,27 @@ func _check_sequence_text_refs() -> Array:
 	if bad == 0:
 		lines += _ok("모든 시퀀스 대사 참조 유효")
 	return lines
+
+
+## 도망 규칙 — 현대 편의 결정(2026-08-28)의 규약이 지켜지는가.
+## 원작은 100% 성공이었고, 확률제로 바꾸면서 "실패할수록 쉬워진다"를 약속했다.
+## 그 단조성이 깨지면 같은 전투에 갇히는 최악의 경험이 돌아온다.
+func _check_flee_rule() -> Array:
+	var rules := Database.flee_rules()
+	if rules.is_empty():
+		return _fail("battle_rules.json flee 규칙 없음")
+	var p0 := FleeRule.chance(rules, 0, 1.0, 1)
+	var p1 := FleeRule.chance(rules, 1, 1.0, 1)
+	var p2 := FleeRule.chance(rules, 2, 1.0, 1)
+	if not (p1 > p0 and p2 > p1):
+		return _fail("도망 확률이 실패 누적에 따라 오르지 않음: %.2f→%.2f→%.2f" % [p0, p1, p2])
+	if FleeRule.chance(rules, 0, 0.1, 1) <= p0:
+		return _fail("빈사 보너스 미적용")
+	if FleeRule.chance(rules, 0, 1.0, 5) >= p0:
+		return _fail("층 깊이 페널티 미적용")
+	var high := FleeRule.chance(rules, 99, 0.1, 0)
+	if high > float(rules.get("max_chance", 0.95)) + 0.001:
+		return _fail("도망 확률 상한 초과: %.2f" % high)
+	if FleeRule.allowed(rules, true) and not bool(rules.get("boss_allowed", false)):
+		return _fail("보스전 도망이 규칙과 달리 허용됨")
+	return _ok("도망 확률 규약(기본 %.0f%% · 실패 누적↑ · 보스 금지)" % (p0 * 100.0))

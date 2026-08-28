@@ -44,6 +44,7 @@ var _menu_cursors: Array[Label] = []
 var _menu_entries: Array[Dictionary] = []
 var _menu_index := 0
 var _menu_kind := &""
+var _disabled_commands: Dictionary = {}  # 커맨드 id → true면 흐리게 + 선택 불가
 var _skills: Array[Dictionary] = []
 var _player: Combatant
 var _enemies: Array[Combatant] = []
@@ -123,10 +124,21 @@ func show_result(result: StringName) -> void:
 	_result_panel.visible = true
 
 
+## 쓸 수 없는 커맨드를 미리 알린다 — 눌러 보고 나서 안 되는 것보다 낫다(보스전 도망 등).
+func set_command_enabled(cmd_id: StringName, enabled: bool) -> void:
+	if enabled:
+		_disabled_commands.erase(cmd_id)
+	else:
+		_disabled_commands[cmd_id] = true
+
+
 func show_command_menu() -> void:
 	var entries: Array[Dictionary] = []
 	for cmd: Dictionary in COMMANDS:
-		entries.append({"text": tr(str(cmd["key"])), "id": cmd["id"]})
+		var entry := {"text": tr(str(cmd["key"])), "id": cmd["id"]}
+		if _disabled_commands.has(cmd["id"]):
+			entry["disabled"] = true
+		entries.append(entry)
 	_open_menu(&"command", entries)
 
 

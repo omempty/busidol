@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "_comment": "전투 규칙 수치. 원작은 도망이 100% 성공이었고(WARMODE.C MeMove case 4: return(0)) 레벨업도 미구현이었다. 현대 편의 결정(2026-08-28)으로 도망을 확률제로 바꾼다 — 위기 관리가 성립하되 재시도가 막히지 않도록 실패할수록 확률이 오른다.",
+  "flee": {
+    "_comment": "성공 확률 = base + 연속 실패 보너스 + 빈사 보너스 - 층 깊이 페널티, [min,max]로 자름.",
+    "base_chance": 0.5,
+    "per_failure_bonus": 0.25,
+    "low_hp_bonus": 0.2,
+    "low_hp_at": 0.3,
+    "floor_penalty": 0.03,
+    "min_chance": 0.15,
+    "max_chance": 0.95,
+    "boss_allowed": false,
+    "_boss_note": "보스전 도망 금지 — 원작에도 보스 개념이 없었으므로 리메이크 설계 결정이다. 시나리오상 되돌아갈 곳이 없는 싸움이다."
+  }
+}
