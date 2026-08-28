@@ -58,9 +58,14 @@ func max_hp() -> int:
 	return maxi(total, 1)
 
 
+## 경험치 지급 + 레벨업 처리. 스탯 딕셔너리에 키가 없어도 죽지 않는다 —
+## 구판은 `player_stats["exp"]`를 직접 읽어, exp 키가 없는 상태(구 세이브·테스트 설정)에서
+## **전투 승리 순간 보상 경로가 통째로 터졌다**(2026-08-28, 턴 버그를 고치자 드러났다).
 func grant_exp(amount: int) -> Dictionary:
-	player_stats["exp"] = int(player_stats["exp"]) + amount
-	var result := {"level_up": false, "level": int(player_stats["level"]), "levels_gained": 0}
+	player_stats["exp"] = int(player_stats.get("exp", 0)) + amount
+	var result := {
+		"level_up": false, "level": int(player_stats.get("level", 1)), "levels_gained": 0
+	}
 	while true:
 		var target := _level_entry(result["level"] + 1)
 		if target.is_empty():
@@ -68,8 +73,8 @@ func grant_exp(amount: int) -> Dictionary:
 		if int(player_stats["exp"]) < int(target.get("exp_accum", 0)):
 			break
 		player_stats["level"] = int(target["level"])
-		player_stats["hp"] = int(player_stats["hp"]) + int(target.get("hp_up", 0))
-		player_stats["ap"] = int(player_stats["ap"]) + int(target.get("ap_up", 0))
+		player_stats["hp"] = int(player_stats.get("hp", 0)) + int(target.get("hp_up", 0))
+		player_stats["ap"] = int(player_stats.get("ap", 0)) + int(target.get("ap_up", 0))
 		result["level_up"] = true
 		result["level"] = int(target["level"])
 		result["levels_gained"] = int(result["levels_gained"]) + 1

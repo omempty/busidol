@@ -16,6 +16,11 @@ var weaknesses: Array[StringName] = []  # 약점 속성 — 약점 히트 시 �
 var break_gauge := 0  # 약점 히트 누적 — threshold 도달 시 브레이크
 var break_threshold := 2
 var broken_turns := 0  # 브레이크 지속 턴 — 행동 불가 + 받는 피해 ×1.5
+## DP 경감을 받는가 — 방어구는 리메이크 추가분이라 **플레이어에게만** 적용된다.
+## 원작 공식은 양쪽 다 DP 미반영이다(WARMODE.C: DeadEnemy/EnemyAttack).
+## 공용 take_damage가 적에게도 dp/4를 깎던 탓에 f3 적(dp 165~195)이 플레이어 공격을
+## 거의 전부 상쇄해 1~2 피해만 들어갔다(2026-08-28 실측).
+var dp_reduces_damage := true
 
 
 func _init(p_name: String, p_hp: int, p_ap: int, p_dp: int) -> void:
@@ -34,7 +39,8 @@ func take_damage(raw: int) -> int:
 			final_dmg = maxi(1, int(final_dmg * (1.0 - float(fx["magnitude"]) / 100.0)))
 	# 방어력 경감 — dp/DP_DIVISOR 만큼 깎는다(최소 1은 들어간다).
 	# 버프 경감(%) 다음, 브레이크 증폭 앞에 온다: 브레이크는 "방어 무시"가 취지다.
-	final_dmg = maxi(1, final_dmg - int(dp / DP_DIVISOR))
+	if dp_reduces_damage:
+		final_dmg = maxi(1, final_dmg - int(dp / DP_DIVISOR))
 	# 브레이크 — 방어 무시 급 피해 증폭
 	if broken_turns > 0:
 		final_dmg = maxi(1, int(final_dmg * 1.5))

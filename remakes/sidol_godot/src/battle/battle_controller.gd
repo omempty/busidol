@@ -64,6 +64,24 @@ func enemy_turn() -> Dictionary:
 	return {"damage": raw, "attacker": enemy}
 
 
+## 적 턴이 끝났으니 다시 플레이어 차례 — 씬 컨트롤러가 적 페이즈를 직접 굴린 뒤 부른다.
+##
+## 2026-08-28 실측 버그: 씬 흐름은 `enemy_turn()`을 쓰지 않고 BattleEnemyPhase로 직접
+## 적을 굴리는데, 상태를 되돌리는 곳이 `_advance_enemy()`뿐이라 아무도 그걸 부르지 않았다.
+## 그래서 state가 ENEMY_TURN에 갇히고 `submit_player_command`가 조용히 무시돼
+## **2턴째부터 플레이어 공격이 전혀 들어가지 않았다**(연출과 커맨드 창은 정상 동작해
+## 화면만 보면 알 수 없다). 4턴 프루브: 데미지 1, 0, 0, 0.
+func begin_player_phase() -> void:
+	if state == TurnState.FINISHED:
+		return
+	if player_combatant != null and player_combatant.is_down():
+		return
+	if _all_enemies_down():
+		return
+	active_enemy_idx = 0
+	state = TurnState.PLAYER_COMMAND
+
+
 func _advance_enemy() -> Dictionary:
 	active_enemy_idx += 1
 	if active_enemy_idx >= enemy_combatants.size():

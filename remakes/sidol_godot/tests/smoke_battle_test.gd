@@ -10,7 +10,12 @@ const TIMEOUT := 5.0
 func _ready() -> void:
 	var failures: Array[String] = []
 
-	GameState.player_stats = {"hp": 50, "ap": 30, "money": 0}
+	# 실제 새 게임과 같은 출발점 — 스탯 키가 빠지면 보상 경로가 다른 이유로 죽어
+	# 전투 버그와 구분되지 않는다.
+	GameState.reset()
+	GameState.player_stats["hp"] = 50
+	GameState.player_stats["ap"] = 30
+	GameState.player_stats["money"] = 0
 	GameState.pending_encounter = {"enemies": ["mad_eye"]}
 
 	var battle: BattleSceneController = BATTLE_SCENE.instantiate()
@@ -21,6 +26,10 @@ func _ready() -> void:
 	if battle.enemies.is_empty():
 		_finish(["적 생성 실패"], battle)
 		return
+	# 공격·스킬 검증 도중 적이 죽으면 승리 처리로 **필드 씬으로 전환**되어(스모크 씬이 사라져)
+	# 테스트가 영영 끝나지 않는다. 2026-08-28 턴 버그를 고치자 실제로 그렇게 됐다.
+	battle.enemies[0].max_hp = 999
+	battle.enemies[0].hp = 999
 	var hp_before: int = battle.enemies[0].hp
 
 	# --- 1) 공격 안무 재생 + 데미지 적용 (타이밍 링 헤드리스 타임아웃 포함) ---
@@ -39,9 +48,42 @@ func _ready() -> void:
 	if hp_after >= hp_before:
 		failures.append("공격 데미지 미적용")
 
+	# --- 1-0) 연속 턴 — 2턴째 공격도 실제로 들어가는가 ---
+	# 2026-08-28 실측 버그: 씬이 적 페이즈를 직접 굴리면서 BattleController의 상태를
+	# 되돌리지 않아 state가 ENEMY_TURN에 갇혔고, submit_player_command가 조용히 무시돼
+	# **2턴째부터 플레이어 공격이 0 피해**였다(연출·커맨드 창은 정상이라 화면으론 안 보인다).
+	var second_before: int = maxi(0, battle.enemies[0].hp)
+	battle._on_command(&"attack")
+	waited = 0.0
+	while battle._busy and waited < TIMEOUT:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	var second_after: int = maxi(0, battle.enemies[0].hp)
+	print("[smoke_battle] 2턴째 enemy hp %d -> %d" % [second_before, second_after])
+	if second_after >= second_before and second_before > 0:
+		failures.append("2턴째 공격 무효(턴 상태가 플레이어로 돌아오지 않음)")
+
+	# --- 1-2) 적 DP는 피해를 깎지 않는다 — 원작 공식(WARMODE.C DeadEnemy)과 같은 규약.
+	# 방어구는 리메이크 추가분이라 DP 경감은 플레이어 쪽에만 붙는다.
+	var dummy := Combatant.new("더미", 500, 10, 400)
+	dummy.dp_reduces_damage = false
+	var plain := dummy.take_damage(40)
+	if plain != 40:
+		failures.append("적 DP가 피해를 깎았다(기대 40, 실제 %d)" % plain)
+	var armored := Combatant.new("플레이어", 500, 10, 40)
+	if armored.take_damage(40) >= 40:
+		failures.append("플레이어 DP 경감이 적용되지 않았다")
+
 	# --- 1-1) 브레이크 게이지 UI — 약점 보유 적에게 게이지 라벨 생성 ---
 	if battle._ui._break_bars.is_empty():
 		failures.append("브레이크 게이지 미생성(약점 보유 적 존재)")
+
+	# --- 1-3) 보상 경로 — 스탯에 exp 키가 없어도 살아남는가 ---
+	# 턴 버그로 전투가 끝나지 않던 시절엔 이 경로가 한 번도 안 돌아 터진 줄도 몰랐다.
+	GameState.player_stats.erase("exp")
+	var lv_result := GameState.grant_exp(10)
+	if int(GameState.player_stats.get("exp", -1)) != 10:
+		failures.append("grant_exp가 exp 키 부재를 견디지 못함(%s)" % lv_result)
 
 	# --- 2) 스킬(전체 대상 화염) 안무 ---
 	(

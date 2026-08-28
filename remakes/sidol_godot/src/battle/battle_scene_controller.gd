@@ -265,6 +265,9 @@ func _resolve_turn() -> void:
 
 	_ui.refresh_bars()
 	_busy = false
+	# 커맨드 창을 열기 전에 판정 상태도 플레이어 차례로 돌려놓는다 —
+	# 이걸 빼먹으면 창은 열리는데 명령이 무시된다(2026-08-28 실측 버그).
+	controller.begin_player_phase()
 	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
 	_ui.show_command_menu()
 
@@ -280,6 +283,7 @@ func _end_player_defend() -> void:
 	if player_combatant.is_down():
 		_show_result(&"lose")
 		return
+	controller.begin_player_phase()
 	_ui.show_command_menu()
 
 

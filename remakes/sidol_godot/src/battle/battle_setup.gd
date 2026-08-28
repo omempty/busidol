@@ -59,6 +59,8 @@ static func build_enemies(def: Dictionary) -> Dictionary:
 		var c := Combatant.new(
 			str(edef.get("display_name", eid_str)), hp_val, ap_val, int(edef.get("dp", 5))
 		)
+		# 적 DP는 데이터로만 보존한다(원작 미반영) — 표시·설계 근거로 남기되 피해 계산에는 안 쓴다.
+		c.dp_reduces_damage = false
 		for w in edef.get("weaknesses", []):
 			c.weaknesses.append(StringName(str(w)))
 		combatants.append(c)
