@@ -4,6 +4,13 @@
   "_comment": "최종보스 각성 — 마스터 시나리오 씬 5-2/5-3 (@c507~@c515). 종료 시 start_battle로 SYS_BUILDER 전투 진입.",
   "steps": [
     {
+      "op": "illustration",
+      "args": {
+        "id": "scene_05_5f_sys_builder",
+        "fade": 0.5
+      }
+    },
+    {
       "op": "sfx",
       "id": "alarm_system"
     },
@@ -140,6 +147,13 @@
         "sys_builder"
       ],
       "on_win_flag": "q_f5_ai_battle_won"
+    },
+    {
+      "op": "illustration",
+      "args": {
+        "id": "",
+        "fade": 0.4
+      }
     }
   ]
 }

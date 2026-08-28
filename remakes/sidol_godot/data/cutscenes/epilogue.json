@@ -4,6 +4,13 @@
   "_comment": "에필로그 — 씬 E-1 후일담(@c601~@c605) + E-2 메타 엔딩. 종료 후 크레딧룸으로 전환(스탭롤=엔딩 크레딧).",
   "steps": [
     {
+      "op": "illustration",
+      "args": {
+        "id": "scene_06_epilogue_2026",
+        "fade": 0.5
+      }
+    },
+    {
       "op": "sfx",
       "id": "sfx_door_open"
     },
@@ -89,6 +96,13 @@
     {
       "op": "change_scene",
       "path": "res://scenes/credit_room.tscn"
+    },
+    {
+      "op": "illustration",
+      "args": {
+        "id": "",
+        "fade": 0.4
+      }
     }
   ]
 }

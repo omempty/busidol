@@ -48,6 +48,14 @@ func _ready() -> void:
 	if not GameState.has_flag("q_f1_opening_seen"):
 		failures.append("set_flags(q_f1_opening_seen) 미적용")
 
+	# --- 키아트 op: 그림이 아직 없어도 컷신이 멈추지 않는가 ---
+	# opening.json은 illustration(scene_01_prologue_rain)을 쓰지만 납품 전이다.
+	# 데이터가 그림보다 먼저 들어오는 순서라, 미납품이 컷신을 세우면 진행이 막힌다.
+	if cp._illustration == null:
+		failures.append("illustration 노드 미생성")
+	elif cp._illustration.visible or cp._illustration.texture != null:
+		failures.append("컷신 종료 후 키아트가 남아 있음")
+
 	# --- 퀴즈 미니게임: 실제 데이터(퀴즈맨 3문항) 정답 순회 → 통과 시그널 ---
 	GameState.flags.clear()
 	var mg_raw: Variant = JSON.parse_string(

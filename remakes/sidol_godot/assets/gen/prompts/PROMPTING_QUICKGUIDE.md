@@ -12,6 +12,16 @@ python tools/dev/asset_status.py
 
 ## 2. 의뢰 패키지 만들기
 
+가장 쉬운 길 — **`의뢰생성.bat`** (메뉴에서 카테고리 선택, 끝나면 현황을 보여 준다):
+
+```
+의뢰생성.bat                     메뉴
+의뢰생성.bat portraits           그 카테고리 전량
+의뢰생성.bat portraits prof_mo   한 건만 — 시범·부분 재생성
+```
+
+직접 부르려면:
+
 ```powershell
 python tools/convert/export_monster_packages.py    # 몬스터·보스   → assets/raw/llm/monsters/
 python tools/convert/export_npc_packages.py        # 필드 NPC      → assets/raw/llm/npcs/

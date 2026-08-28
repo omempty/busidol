@@ -16,6 +16,7 @@ const KNOWN_OPS := [
 	"grant_item",
 	"grant_skill",
 	"craft",
+	"illustration",
 	"minigame_quiz",
 	"minigame_battery",
 	"change_scene",
@@ -57,6 +58,7 @@ func _initialize() -> void:
 	_validate_l10n()
 	_validate_story_bonus()
 	_validate_battle_rules()
+	_validate_keyart()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -562,3 +564,59 @@ func _validate_battle_rules() -> void:
 			_err("battle_rules.json flee.%s가 0~1 밖: %s" % [key, v])
 	if float(rules.get("min_chance", 0.0)) >= float(rules.get("max_chance", 1.0)):
 		_err("battle_rules.json flee.min_chance가 max_chance 이상")
+
+
+## 컷신 illustration op ↔ 키아트 스펙·납품물 대조.
+##
+## 두 티어로 나눈다: **오타는 오류**(스펙에 없는 id를 가리키면 영영 안 뜬다),
+## **미납품은 경고**(그림이 데이터보다 늦게 오는 것이 정상 순서다).
+## op만 만들어 두고 아무 컷신도 쓰지 않으면 그것대로 사문화이므로 사용처 수도 보고한다.
+func _validate_keyart() -> void:
+	var spec_dir := "res://assets/spec/keyart"
+	var specs: Dictionary = {}
+	for f in DirAccess.get_files_at(spec_dir):
+		if f.ends_with(".json"):
+			specs[f.trim_suffix(".json")] = true
+
+	var used: Dictionary = {}
+	for f in DirAccess.get_files_at(DATA + "cutscenes"):
+		var parsed: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(DATA + "cutscenes/" + f)
+		)
+		if typeof(parsed) == TYPE_DICTIONARY:
+			_scan_illustration((parsed as Dictionary).get("steps", []), f, specs, used)
+
+	var missing_art: Array[String] = []
+	for art_id: String in used:
+		if not FileAccess.file_exists("res://assets/keyart/%s.png" % art_id):
+			missing_art.append(art_id)
+	if not missing_art.is_empty():
+		print(
+			(
+				"[validate] 경고 — 컷신이 쓰는데 아직 납품되지 않은 키아트 %d종: %s"
+				% [missing_art.size(), ", ".join(missing_art)]
+			)
+		)
+	var unused: Array[String] = []
+	for spec_id: String in specs:
+		if not used.has(spec_id):
+			unused.append(spec_id)
+	if not unused.is_empty():
+		print(
+			"[validate] 경고 — 스펙만 있고 어느 컷신도 쓰지 않는 키아트 %d종: %s" % [unused.size(), ", ".join(unused)]
+		)
+
+
+func _scan_illustration(steps: Array, file: String, specs: Dictionary, used: Dictionary) -> void:
+	for st: Dictionary in steps:
+		var args: Dictionary = st.get("args", {})
+		if str(st.get("op", "")) == "illustration":
+			var art_id := str(args.get("id", ""))
+			if not art_id.is_empty():
+				if not specs.has(art_id):
+					_err("%s illustration '%s' — assets/spec/keyart에 없는 키아트" % [file, art_id])
+				used[art_id] = true
+		for opt: Dictionary in args.get("options", []) as Array:
+			_scan_illustration(opt.get("steps", []), file, specs, used)
+		if st.has("steps"):
+			_scan_illustration(st["steps"], file, specs, used)

@@ -7,6 +7,7 @@ extends CanvasLayer
 ##   fade_in(밝아짐) / fade_out(어두워짐) {seconds}   shake {power, times}
 ##   sfx/bgm {id}   set_flags {args:{k:v}}   start_battle {enemies:[]}
 ##   grant_item {args:{item, count}}   craft {args:{requires:{}, grant:{}, flag}}
+##   illustration {args:{id, fade}} — 키아트 한 장을 화면에 띄운다(id 비우면 내림)
 ##   minigame_quiz {id} — 통과할 때까지 재도전 후 다음 스텝 진행
 ##   choice {args:{options:[{text(@t/@c), steps:[op...]}]}} — 선택 강제, 수렴형.
 ##     각 옵션의 steps를 서브 열로 실행 후 다음 스텝 진행(WP-5, D4 승인).
@@ -14,6 +15,8 @@ extends CanvasLayer
 signal finished(cutscene_id: StringName)
 
 const CUTSCENES_DIR := "res://data/cutscenes"
+## 채택된 키아트가 놓이는 자리 — 스펙은 assets/spec/keyart/<id>.json.
+const KEYART_DIR := "res://assets/keyart/"
 const SHAKE_STEP := 0.05
 
 var _steps: Array = []
@@ -22,6 +25,7 @@ var _running := false
 var _cutscene_id := &""
 var _box: DialogueBox
 var _overlay: ColorRect
+var _illustration: TextureRect
 var _field: Node2D
 
 
@@ -34,6 +38,17 @@ func setup(p_field: Node2D) -> void:
 	_box = DialogueBox.new()
 	_box.auto_advance = true
 	add_child(_box)
+
+	# 키아트(일러스트) 판 — 대사창보다 **아래**에 있어야 글자를 가리지 않는다.
+	_illustration = TextureRect.new()
+	_illustration.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_illustration.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_illustration.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_illustration.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_illustration.modulate.a = 0.0
+	_illustration.visible = false
+	add_child(_illustration)
+	move_child(_illustration, 0)
 
 	_overlay = ColorRect.new()
 	_overlay.color = Color(0, 0, 0, 0)
@@ -69,6 +84,7 @@ func _run() -> void:
 		return
 	_running = false
 	visible = false
+	_clear_illustration()
 	finished.emit(_cutscene_id)
 
 
@@ -127,6 +143,8 @@ func _execute(step: Dictionary) -> void:
 				print("[cutscene] 스킬 습득: %s" % skid)
 		"craft":
 			_execute_craft(step.get("args", {}))
+		"illustration":
+			await _show_illustration(step.get("args", {}))
 		"minigame_quiz":
 			await _run_quiz(StringName(str(step.get("id", ""))))
 		"minigame_battery":
@@ -315,3 +333,39 @@ func _execute_craft(args: Dictionary) -> void:
 		inv.add(StringName(item_id3), int(grant[item_id3]))
 	if args.has("flag"):
 		GameState.set_flag(str(args["flag"]), true)
+
+
+## 키아트 표시 — assets/keyart/<id>.png. **그림이 아직 없으면 조용히 건너뛴다.**
+##
+## 데이터(컷신)가 그림보다 먼저 들어오는 순서라, 미납품을 오류로 다루면 컷신 전체가 멈춘다.
+## 대신 validate가 "키아트 미납품 N종"을 상시 보고해 잊히지 않게 한다.
+func _show_illustration(args: Dictionary) -> void:
+	var art_id := str(args.get("id", ""))
+	var fade := float(args.get("fade", 0.4)) / SettingsManager.battle_speed_factor()
+	if art_id.is_empty():
+		await _fade_illustration(0.0, fade)
+		_clear_illustration()
+		return
+	var path := "%s%s.png" % [KEYART_DIR, art_id]
+	if not ResourceLoader.exists(path):
+		return  # 미납품 — 대사·연출은 그대로 진행된다
+	_illustration.texture = load(path)
+	_illustration.visible = true
+	await _fade_illustration(1.0, fade)
+
+
+func _fade_illustration(target: float, seconds: float) -> void:
+	if seconds <= 0.01:
+		_illustration.modulate.a = target
+		return
+	var tween := create_tween()
+	tween.tween_property(_illustration, "modulate:a", target, seconds)
+	await tween.finished
+
+
+func _clear_illustration() -> void:
+	if _illustration == null:
+		return
+	_illustration.visible = false
+	_illustration.texture = null
+	_illustration.modulate.a = 0.0
