@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "_comment": "전투 이펙트 시트 계약 — 2026-08-28 신설. 그전까지 전투 연출의 그림 에셋은 0장이었고 fx는 CPUParticles2D 점 스파크(hit_spark) 하나로 물리·화염·전격이 전부 같은 흰 불꽃이었다. battle_moves의 fx 채널 effect 토큰 = 여기 id. 시트 규격은 몬스터와 같은 128 셀 그리드(같은 검증기·같은 설치 경로를 쓰기 위함)이나, 정렬은 bottom_center가 아니라 center다 — 이펙트는 발이 없다.",
+  "_refs": "원작 참조: assets/raw/llm/00_reference/{effect,fire,mboom,rboom,ping1}/frame_*.png (원작 SPR에서 추출된 이펙트 프레임)",
+  "species": [
+    {
+      "id": "hit_spark",
+      "name_ko": "타격 스파크",
+      "cell": { "w": 128, "h": 128 },
+      "source": "placeholder",
+      "body_type": "effect",
+      "align": "center",
+      "element": "physical",
+      "token": "금속성 물리 타격이 꽂히는 순간의 불꽃. 중심에서 바깥으로 뻗는 짧고 굵은 빗살 8~10줄 + 파편 점. 노랑>주황>흰 코어 3단. 잔상 없이 5프레임 안에 사라진다",
+      "reference": ["effect", "ping1"],
+      "animations": {
+        "play": { "row": 0, "frames": 5, "fps": 18, "loop": false, "_desc": "타격 순간 → 확산 → 소멸" }
+      }
+    },
+    {
+      "id": "flame_burst",
+      "name_ko": "화염 폭발",
+      "cell": { "w": 128, "h": 128 },
+      "source": "placeholder",
+      "body_type": "effect",
+      "align": "center",
+      "element": "fire",
+      "token": "화염 비커가 깨지며 솟는 불기둥. 아래에서 위로 자라는 혀 모양 불꽃 + 흩어지는 불티. 흰-노랑 코어 / 주황 중간 / 진홍 외곽 3단 밴딩, 검은 연기 금지(남보라 연기)",
+      "reference": ["fire"],
+      "animations": {
+        "play": { "row": 0, "frames": 8, "fps": 14, "loop": false, "_desc": "점화 → 솟구침 → 잦아듦" }
+      }
+    },
+    {
+      "id": "volt_arc",
+      "name_ko": "전격 아크",
+      "cell": { "w": 128, "h": 128 },
+      "source": "placeholder",
+      "body_type": "effect",
+      "align": "center",
+      "element": "electric",
+      "token": "10,000V 방전. 각진 지그재그 번개 3~4줄이 프레임마다 다른 경로로 튄다. 흰 코어 + 하늘색 글로우 대신 하늘색 2단 밴딩, 곡선 금지(전기는 꺾인다)",
+      "reference": ["effect"],
+      "animations": {
+        "play": { "row": 0, "frames": 6, "fps": 16, "loop": false, "_desc": "방전 → 분기 → 잔전류" }
+      }
+    },
+    {
+      "id": "blast",
+      "name_ko": "대폭발",
+      "cell": { "w": 128, "h": 128 },
+      "source": "placeholder",
+      "body_type": "effect",
+      "align": "center",
+      "element": "none",
+      "token": "필살기 착탄 폭발. 흰 섬광 → 팽창하는 화구 → 퍼지는 링과 파편 → 남보라 연기. 셀을 거의 꽉 채우는 크기까지 커진다",
+      "reference": ["mboom", "rboom"],
+      "animations": {
+        "play": { "row": 0, "frames": 10, "fps": 14, "loop": false, "_desc": "섬광 → 화구 팽창 → 링 확산 → 연기" }
+      }
+    },
+    {
+      "id": "shield_up",
+      "name_ko": "보호막 전개",
+      "cell": { "w": 128, "h": 128 },
+      "source": "placeholder",
+      "body_type": "effect",
+      "align": "center",
+      "element": "none",
+      "token": "디버그 쉴드 전개. 아래에서 올라와 닫히는 육각 격자 방패막. 청록 선 + 안쪽은 비어 있음(불투명 채움 금지 — 캐릭터를 가린다). 마지막 프레임에 테두리만 남는다",
+      "reference": ["effect"],
+      "animations": {
+        "play": { "row": 0, "frames": 6, "fps": 12, "loop": false, "_desc": "전개 → 닫힘 → 유지 테두리" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "_comment": "전투 전용 SD 시트 계약 — 2026-08-28 신설. 주인공 시트(player_original)는 필드용이라 walk 4방향 + idle_down뿐이고 공격·피격 행이 없다. 그래서 전투에서 주인공은 idle 2프레임만 토글하고 나머지는 위치 트윈으로 때웠다. 적 시트에는 attack/hurt/death 행이 이미 있는데(c_bug·null_pointer·rogue_vending) 주인공만 없는 상태였다. 필드 도트와 같은 128 격자·같은 SD 체계로 전투 행만 추가한다.",
+  "_wiring": "설치되면 BattlePresenter가 player_battle 시트를 우선 쓰고(없으면 player로 폴백), battle_moves의 sprite 채널 anim=attack, 피격 시 hurt 행을 재생한다.",
+  "species": [
+    {
+      "id": "player_battle",
+      "name_ko": "부싯돌 시돌이 (전투 시트)",
+      "cell": { "w": 64, "h": 64 },
+      "source": "placeholder",
+      "body_type": "humanoid",
+      "pattern": "전투 전용",
+      "telegraph_visual": "",
+      "token": "1995년 공대생 주인공 '부싯돌'. 흰 셔츠 소매를 걷고 청바지, 헝클어진 검은 머리. 필드 도트(player_original.png)와 **같은 인물·같은 SD 등신**이며 전투 동작만 새로 그린다. 손에는 부싯돌(작은 라이터형 물건)",
+      "animations": {
+        "idle_battle": { "row": 0, "frames": 2, "fps": 3, "loop": true, "_desc": "전투 대기 — 파이팅 포즈로 무게중심 이동" },
+        "attack": { "row": 1, "frames": 4, "fps": 12, "loop": false, "_desc": "앞으로 파고들며 주먹 — 3프레임에서 팔이 가장 뻗는다" },
+        "cast": { "row": 2, "frames": 3, "fps": 10, "loop": false, "_desc": "아이템·기술 사용 — 부싯돌을 들어 그음" },
+        "hurt": { "row": 3, "frames": 2, "fps": 8, "loop": false, "_desc": "피격 — 상체가 젖혀졌다 버팀" },
+        "guard": { "row": 4, "frames": 2, "fps": 6, "loop": false, "_desc": "방어 — 팔을 교차해 막음" },
+        "win": { "row": 5, "frames": 3, "fps": 6, "loop": false, "_desc": "승리 — 주먹을 쥐어 올림(개그 톤 허용)" },
+        "down": { "row": 6, "frames": 3, "fps": 5, "loop": false, "_desc": "패배 — 무릎을 꿇고 쓰러짐" }
+      }
+    }
+  ]
+}

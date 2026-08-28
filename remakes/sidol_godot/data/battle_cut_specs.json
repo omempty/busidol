@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "_comment": "전투 대형 컷 계약 — 2026-08-28 신설. 원작(1995)은 전투를 320×200 전체 화면 프레임 시퀀스로 연출했다(격투게임 패러디, 리미티드 애니메이션): 주인공 공격 a1~a5(14프레임) · 회피/피격 d1~d4(11) · 적 공격 e1~e8(48) · 투사체 fire/lth. 리메이크는 그 층이 통째로 빠져 96px 필드 도트만 움직였다. 여기서는 **공격·피격 순간에만** 대형 컷을 띄우고 평소엔 기존 전투 화면을 유지한다.",
+  "_render": "배우만 그린 투명 배경 시트다(원작은 검은 화면이었으나 리메이크에는 battle_backdrop이 있다). 셀 512×512, 1행 = 한 동작, 좌→우 재생. 연출 속도 설정이 SKIP이면 컷을 건너뛴다 — 원작 WVISUAL=OFF와 같은 자리.",
+  "_refs": "원작 프레임: assets/raw/llm/00_reference/{a1,a2,a3,a5,d1,d2,d3}/frame_*.png (320×200) · 대형 PCX 컷: assets/originals_ref/bmp/{attack*,def*,ready*}.bmp",
+  "species": [
+    {
+      "id": "player_attack_swing",
+      "name_ko": "주인공 스트레이트",
+      "sheet_cell": 512,
+      "align": "bottom_center",
+      "actor": "player",
+      "trigger": "기본 공격",
+      "reference": ["a1"],
+      "pcx_refs": ["attack1", "attack1-", "attack2"],
+      "token": "흰 셔츠 소매를 걷은 공대생 주인공이 허리를 틀어 스트레이트를 뻗는다. 원작 A1 시퀀스 계승 — 준비 자세 → 체중 이동 → 주먹 뻗음(팔이 화면 밖으로 나갈 만큼) → 복귀. 청바지, 헝클어진 검은 머리",
+      "animations": {
+        "play": { "row": 0, "frames": 4, "fps": 14, "loop": false, "_desc": "준비 → 체중 이동 → 임팩트 → 복귀" }
+      }
+    },
+    {
+      "id": "player_attack_combo",
+      "name_ko": "주인공 연타",
+      "sheet_cell": 512,
+      "align": "bottom_center",
+      "actor": "player",
+      "trigger": "연속 펀치 스킬",
+      "reference": ["a2", "a3"],
+      "pcx_refs": ["attack3", "attack32", "attack4", "attack42"],
+      "token": "같은 주인공이 몸을 낮추고 좌우 연타를 넣는다. 프레임마다 상체 각도와 팔이 확실히 달라야 한다(원작 A2·A3처럼 포즈 차이를 크게). 잔상선 1~2줄 허용",
+      "animations": {
+        "play": { "row": 0, "frames": 4, "fps": 16, "loop": false, "_desc": "좌 훅 → 우 훅 → 어퍼 → 되돌림" }
+      }
+    },
+    {
+      "id": "player_finisher",
+      "name_ko": "부싯돌의 불꽃",
+      "sheet_cell": 512,
+      "align": "bottom_center",
+      "actor": "player",
+      "trigger": "필살기(finisher_ember)",
+      "reference": ["a5", "a4"],
+      "pcx_refs": ["attack5", "attack6a", "attack6b", "attack8"],
+      "token": "주인공이 부싯돌을 그어 불꽃을 일으키고 그대로 내지른다. 마지막 두 프레임은 화염이 팔을 감싼다 — 흰-노랑 코어/주황/진홍 3단 밴딩, 검은 연기 금지(남보라). 필살기이므로 포즈가 가장 크다",
+      "animations": {
+        "play": { "row": 0, "frames": 5, "fps": 12, "loop": false, "_desc": "부싯돌 그음 → 점화 → 도약 → 내지름 → 잔화" }
+      }
+    },
+    {
+      "id": "player_hurt",
+      "name_ko": "주인공 피격",
+      "sheet_cell": 512,
+      "align": "bottom_center",
+      "actor": "player",
+      "trigger": "적 공격 적중",
+      "reference": ["d2", "d3"],
+      "pcx_refs": ["def1", "def3", "def5"],
+      "token": "주인공이 맞고 상체가 젖혀진다. 표정은 이를 악문 쪽. 원작 DEF 시퀀스처럼 **넘어지지는 않는다** — 버티는 자세로 되돌아온다",
+      "animations": {
+        "play": { "row": 0, "frames": 3, "fps": 12, "loop": false, "_desc": "충격 → 젖혀짐 → 버팀" }
+      }
+    },
+    {
+      "id": "player_dodge",
+      "name_ko": "주인공 회피",
+      "sheet_cell": 512,
+      "align": "bottom_center",
+      "actor": "player",
+      "trigger": "회피 성공",
+      "reference": ["d1"],
+      "pcx_refs": ["def2", "def2s", "def4", "def4s"],
+      "token": "주인공이 상체를 뒤로 젖혀 공격을 흘린다(매트릭스식 과장 금지 — 몸싸움 감각). 마지막 프레임에 반격 준비 자세",
+      "animations": {
+        "play": { "row": 0, "frames": 4, "fps": 15, "loop": false, "_desc": "감지 → 젖힘 → 흘림 → 반격 준비" }
+      }
+    }
+  ]
+}

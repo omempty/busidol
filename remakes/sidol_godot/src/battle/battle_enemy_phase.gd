@@ -10,8 +10,12 @@ static func regular_attack(
 ) -> void:
 	var raw := DamageCalculator.enemy_hit(attacker.attack_stat(), EnemyManager.rng)
 	var actual: int = player.take_damage(raw)
+	# 적 시트에 attack 행이 있으면 그 동작으로 때린다(없으면 기존 연출 그대로).
+	presenter.play_enemy_anim(presenter.target_index, "attack")
 	presenter.show_damage_number(actual, true)
 	presenter.hurt_flash(presenter.player_sprite)
+	# 원작은 피격도 대형 컷이었다(DEF 시퀀스) — 시트가 없으면 조용히 건너뛴다.
+	presenter.play_cut("player_hurt")
 	presenter.play_screen_kf({"shake": 3})
 
 
@@ -38,5 +42,7 @@ static func dodge_sequence(
 		presenter.show_damage_number(actual, true)
 		presenter.hurt_flash(presenter.player_sprite)
 		presenter.play_screen_kf({"shake": 3, "flash": "#ff3333", "a": 0.25})
+	if hits == 0:
+		presenter.play_cut("player_dodge")  # 무피격 = 완전 회피 — 원작 D 시퀀스 자리
 	print("[battle] dodge phase done: hits=%d dmg=%d" % [hits, actual])
 	return hits

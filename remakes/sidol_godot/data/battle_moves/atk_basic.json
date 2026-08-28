@@ -5,21 +5,56 @@
   "_comment": "기본 공격(공격 커맨드 폴백) — 러지 후 타격",
   "channels": {
     "sprite": [
-      { "t": 0.0, "actor": "self", "anim": "rush", "pos": [26, -8], "dur": 0.08 },
-      { "t": 0.3, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.2 }
+      {
+        "t": 0.0,
+        "actor": "self",
+        "anim": "rush",
+        "pos": [
+          26,
+          -8
+        ],
+        "dur": 0.08,
+        "cut": "player_attack_swing"
+      },
+      {
+        "t": 0.3,
+        "actor": "self",
+        "anim": "idle",
+        "pos": [
+          0,
+          0
+        ],
+        "dur": 0.2
+      }
     ],
     "fx": [
-      { "t": 0.14, "effect": "hit_spark", "at_actor": "target" }
+      {
+        "t": 0.14,
+        "effect": "hit_spark",
+        "at_actor": "target"
+      }
     ],
     "screen": [
-      { "t": 0.14, "shake": 3 }
+      {
+        "t": 0.14,
+        "shake": 3
+      }
     ],
     "audio": [
-      { "t": 0.0, "sfx": "atk_swish" },
-      { "t": 0.14, "sfx": "impact_light" }
+      {
+        "t": 0.0,
+        "sfx": "atk_swish"
+      },
+      {
+        "t": 0.14,
+        "sfx": "impact_light"
+      }
     ],
     "logic": [
-      { "t": 0.14, "apply_damage": true }
+      {
+        "t": 0.14,
+        "apply_damage": true
+      }
     ]
   }
 }

@@ -5,31 +5,110 @@
   "_comment": "연속 펀치 — 3연타(apply_damage 3회), 설계상 캔슬 콤보의 단순 재현",
   "channels": {
     "sprite": [
-      { "t": 0.0, "actor": "self", "anim": "rush", "pos": [30, -6], "dur": 0.07 },
-      { "t": 0.16, "actor": "self", "anim": "attack", "pos": [34, -6], "dur": 0.06 },
-      { "t": 0.32, "actor": "self", "anim": "attack", "pos": [26, -10], "dur": 0.06 },
-      { "t": 0.62, "actor": "self", "anim": "idle", "pos": [0, 0], "dur": 0.28 }
+      {
+        "t": 0.0,
+        "actor": "self",
+        "anim": "rush",
+        "pos": [
+          30,
+          -6
+        ],
+        "dur": 0.07,
+        "cut": "player_attack_combo"
+      },
+      {
+        "t": 0.16,
+        "actor": "self",
+        "anim": "attack",
+        "pos": [
+          34,
+          -6
+        ],
+        "dur": 0.06
+      },
+      {
+        "t": 0.32,
+        "actor": "self",
+        "anim": "attack",
+        "pos": [
+          26,
+          -10
+        ],
+        "dur": 0.06
+      },
+      {
+        "t": 0.62,
+        "actor": "self",
+        "anim": "idle",
+        "pos": [
+          0,
+          0
+        ],
+        "dur": 0.28
+      }
     ],
     "fx": [
-      { "t": 0.1, "effect": "hit_spark", "at_actor": "target" },
-      { "t": 0.2, "effect": "hit_spark", "at_actor": "target" },
-      { "t": 0.36, "effect": "hit_spark", "at_actor": "target" }
+      {
+        "t": 0.1,
+        "effect": "hit_spark",
+        "at_actor": "target"
+      },
+      {
+        "t": 0.2,
+        "effect": "hit_spark",
+        "at_actor": "target"
+      },
+      {
+        "t": 0.36,
+        "effect": "hit_spark",
+        "at_actor": "target"
+      }
     ],
     "screen": [
-      { "t": 0.1, "shake": 2 },
-      { "t": 0.2, "shake": 2 },
-      { "t": 0.36, "shake": 4 }
+      {
+        "t": 0.1,
+        "shake": 2
+      },
+      {
+        "t": 0.2,
+        "shake": 2
+      },
+      {
+        "t": 0.36,
+        "shake": 4
+      }
     ],
     "audio": [
-      { "t": 0.0, "sfx": "atk_swish" },
-      { "t": 0.1, "sfx": "impact_light" },
-      { "t": 0.2, "sfx": "impact_light" },
-      { "t": 0.36, "sfx": "impact_heavy" }
+      {
+        "t": 0.0,
+        "sfx": "atk_swish"
+      },
+      {
+        "t": 0.1,
+        "sfx": "impact_light"
+      },
+      {
+        "t": 0.2,
+        "sfx": "impact_light"
+      },
+      {
+        "t": 0.36,
+        "sfx": "impact_heavy"
+      }
     ],
     "logic": [
-      { "t": 0.1, "apply_damage": true },
-      { "t": 0.2, "apply_damage": true },
-      { "t": 0.36, "apply_damage": true }
+      {
+        "t": 0.1,
+        "apply_damage": true
+      },
+      {
+        "t": 0.2,
+        "apply_damage": true
+      },
+      {
+        "t": 0.36,
+        "apply_damage": true
+      }
     ]
   }
 }
