@@ -48,11 +48,11 @@ func _logline(text: String) -> void:
 func _build() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0.05, 0.02, 0.08, 0.92)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(dim)
 
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vbox.offset_left = 16
 	vbox.offset_top = 12
 	vbox.offset_right = -16

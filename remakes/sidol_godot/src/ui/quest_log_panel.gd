@@ -11,48 +11,34 @@ var _rows: Array[Label] = []
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	_build()
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.72)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
+	var frame := ModalFrame.new()
+	frame.setup("UI_QUESTLOG_TITLE", "UI_CLOSE_ESC", Vector2(460, 0))
+	add_child(frame)
 
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 6)
-	add_child(vbox)
-
-	var caption := Label.new()
-	caption.text = tr("UI_QUESTLOG_TITLE")
-	caption.add_theme_font_size_override("font_size", 20)
-	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	vbox.add_child(caption)
+	# 목록이 길어 화면을 넘길 수 있다 — 스크롤 안에 담고 높이를 묶는다.
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 300)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	frame.body.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	list.add_theme_constant_override("separation", 4)
+	scroll.add_child(list)
 
 	var quests: Array = _load_quests()
 	for q: Dictionary in quests:
-		var row := Label.new()
-		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		row.add_theme_font_size_override("font_size", 15)
-		vbox.add_child(row)
+		var row := HudTheme.label("", 14, HudTheme.TEXT)
+		list.add_child(row)
 		row.set_meta("flag_id", str(q["id"]))
 		row.set_meta("zone", str(q.get("zone", "")))
 		row.set_meta("name", str(q.get("name", "")))
 		_rows.append(row)
-
-	var hint := Label.new()
-	hint.text = tr("UI_CLOSE_ESC")
-	hint.add_theme_color_override("font_color", Color(0.65, 0.65, 0.72))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	vbox.add_child(hint)
 
 	visibility_changed.connect(
 		func() -> void:

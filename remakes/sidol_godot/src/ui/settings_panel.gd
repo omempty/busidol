@@ -34,33 +34,41 @@ const ROW_COUNT := 14
 
 var _rows: Array[Label] = []
 var _values: Array[Label] = []
+var _cursors: Array[Label] = []
 var _index := 0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
 	_refresh()
 
 
 func _build() -> void:
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	add_child(vbox)
+	var frame := ModalFrame.new()
+	frame.setup("UI_SETTINGS_TITLE", "UI_SETTINGS_HINT", Vector2(440, 0))
+	add_child(frame)
+
 	for i in range(ROW_COUNT):
 		var row := HBoxContainer.new()
-		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_theme_constant_override("separation", 24)
-		vbox.add_child(row)
-		var name_lbl := Label.new()
-		name_lbl.add_theme_font_size_override("font_size", 18)
-		name_lbl.custom_minimum_size = Vector2(180, 0)
+		row.add_theme_constant_override("separation", 16)
+		frame.body.add_child(row)
+
+		# 커서 자리를 고정 폭으로 분리 — 구판은 "> "를 글자 앞에 붙여 행이 좌우로 튀었다.
+		var cursor := HudTheme.label("", 15, HudTheme.ACCENT)
+		cursor.custom_minimum_size = Vector2(14, 0)
+		row.add_child(cursor)
+		_cursors.append(cursor)
+
+		var name_lbl := HudTheme.label("", 15, HudTheme.TEXT)
+		name_lbl.custom_minimum_size = Vector2(190, 0)
 		row.add_child(name_lbl)
-		var val_lbl := Label.new()
-		val_lbl.add_theme_font_size_override("font_size", 18)
-		val_lbl.custom_minimum_size = Vector2(240, 0)
+
+		var val_lbl := HudTheme.label("", 15, HudTheme.TEXT_MUTED)
+		val_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(val_lbl)
+
 		_rows.append(name_lbl)
 		_values.append(val_lbl)
 
@@ -169,8 +177,11 @@ func _refresh() -> void:
 
 func _set_row(i: int, text: String, value_text: String) -> void:
 	var selected := i == _index
-	_rows[i].text = ("> " if selected else "  ") + text
-	_values[i].text = ("< %s >" % value_text) if selected else value_text
-	var color := Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1)
-	_rows[i].add_theme_color_override("font_color", color)
-	_values[i].add_theme_color_override("font_color", color)
+	_cursors[i].text = "▶" if selected else ""
+	_rows[i].text = text
+	# 값은 좌우 화살표로 바꾼다는 것을 선택된 행에서만 드러낸다.
+	_values[i].text = ("‹ %s ›" % value_text) if selected else value_text
+	_rows[i].add_theme_color_override("font_color", HudTheme.ACCENT if selected else HudTheme.TEXT)
+	_values[i].add_theme_color_override(
+		"font_color", HudTheme.TEXT if selected else HudTheme.TEXT_MUTED
+	)

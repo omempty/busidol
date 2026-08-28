@@ -17,6 +17,8 @@ const HP_OK := Color(0.29, 0.84, 0.5)
 const HP_WARN := Color(0.98, 0.75, 0.18)
 const HP_LOW := Color(0.94, 0.38, 0.36)
 const EXP := Color(0.4, 0.63, 0.96)
+const EQUIPPED := Color(0.5, 0.85, 0.56)  # 장착 중 표시
+const ROW_SELECTED := Color(1, 1, 1, 0.08)  # 목록에서 선택된 줄의 바탕
 
 const HP_WARN_AT := 0.5
 const HP_LOW_AT := 0.25
@@ -59,6 +61,15 @@ static func chip(color: Color, radius: int = 6, pad_x: int = 7, pad_y: int = 2) 
 	sb.content_margin_right = pad_x
 	sb.content_margin_top = pad_y
 	sb.content_margin_bottom = pad_y
+	return sb
+
+
+## 제목 아래 얇은 구분선 — 모달 헤더와 본문을 가른다.
+static func rule() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = BORDER
+	sb.content_margin_top = 1
+	sb.content_margin_bottom = 1
 	return sb
 
 

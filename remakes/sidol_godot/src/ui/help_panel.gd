@@ -17,38 +17,30 @@ const ROWS := [
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	_build()
 
 
 func _build() -> void:
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.72)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(dim)
+	var frame := ModalFrame.new()
+	frame.setup("UI_HELP_TITLE", "UI_CLOSE_ESC", Vector2(420, 0))
+	add_child(frame)
 
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 10)
-	add_child(vbox)
-
+	# 키캡(고정 폭) + 설명 2열 — 구판은 한 줄에 이어 붙여 눈이 키를 찾기 어려웠다.
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override("h_separation", 16)
+	grid.add_theme_constant_override("v_separation", 8)
+	frame.body.add_child(grid)
 	for row: Array in ROWS:
-		var line := Label.new()
+		var cap := PanelContainer.new()
+		cap.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.BG_SUNKEN, 5, 8, 3))
+		cap.size_flags_horizontal = Control.SIZE_SHRINK_END
 		# 2열은 키 이름일 수도, 번역 키일 수도 있다 — tr()은 미등록 키를 원문 그대로 돌려준다.
-		line.text = "%s   %s" % [tr(str(row[1])), tr(str(row[0]))]
-		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		line.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		line.add_theme_font_size_override("font_size", 17)
-		vbox.add_child(line)
-
-	var hint := Label.new()
-	hint.text = tr("UI_CLOSE_ESC")
-	hint.add_theme_color_override("font_color", Color(0.65, 0.65, 0.72))
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	vbox.add_child(hint)
+		cap.add_child(HudTheme.label(tr(str(row[1])), 13, HudTheme.ACCENT))
+		grid.add_child(cap)
+		grid.add_child(HudTheme.label(tr(str(row[0])), 14, HudTheme.TEXT))
 
 
 func _unhandled_input(event: InputEvent) -> void:

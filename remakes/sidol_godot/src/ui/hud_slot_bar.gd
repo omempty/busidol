@@ -60,13 +60,12 @@ func _icon(item_def: Dictionary) -> Control:
 	return glyph
 
 
-## 수량 배지 — 아이콘 위에 겹치되 우하단 고정.
+## 수량 배지 — 아이콘 위 우하단. PanelContainer는 자식을 늘려 채우므로 앵커·오프셋이 아니라
+## 정렬로 붙인다(구판은 오프셋을 줘 배지가 슬롯 밖으로 잘려 나갔다).
 func _count_badge(count: int) -> Control:
-	var badge := HudTheme.label(str(count), 10, HudTheme.TEXT)
-	badge.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	badge.offset_left = -20
-	badge.offset_top = -13
+	var badge := HudTheme.outlined_label(str(count), 10, HudTheme.TEXT)
 	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return badge
 

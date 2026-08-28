@@ -19,8 +19,8 @@ enum Screen { ROOT, SAVE, LOAD, LOG, HELP, SETTINGS }
 
 var _screen: Screen = Screen.ROOT
 var _index := 0
-var _root_box: VBoxContainer
-var _root_labels: Array[Label] = []
+var _root_box: ModalFrame
+var _root_labels: Array[HBoxContainer] = []
 var _slot_list: SaveSlotList
 var _settings_panel: SettingsPanel
 var _help_panel: HelpPanel
@@ -57,35 +57,14 @@ func _ready() -> void:
 
 
 func _build_root() -> void:
-	var ui := Control.new()
-	ui.set_anchors_preset(Control.PRESET_FULL_RECT)
-	add_child(ui)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	ui.add_child(dim)
-
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
-	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_theme_constant_override("separation", 8)
-	ui.add_child(vbox)
-	_root_box = vbox
-
-	var caption := Label.new()
-	caption.text = tr("UI_PAUSE_TITLE")
-	caption.add_theme_font_size_override("font_size", 20)
-	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caption.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	vbox.add_child(caption)
+	var frame := ModalFrame.new()
+	frame.setup("UI_PAUSE_TITLE", "UI_PAUSE_HINT", Vector2(300, 0))
+	add_child(frame)
+	_root_box = frame
 
 	for item_key in ROOT_ITEM_KEYS:
-		var row := Label.new()
-		row.text = tr(item_key)
-		row.add_theme_font_size_override("font_size", 18)
-		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		vbox.add_child(row)
+		var row := ModalFrame.row(tr(item_key), 17)
+		frame.body.add_child(row)
 		_root_labels.append(row)
 
 
@@ -167,9 +146,4 @@ func _to_title() -> void:
 
 func _refresh() -> void:
 	for i in range(_root_labels.size()):
-		var selected := i == _index
-		var prefix := "> " if selected else "  "
-		_root_labels[i].text = prefix + tr(ROOT_ITEM_KEYS[i])
-		_root_labels[i].add_theme_color_override(
-			"font_color", Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1)
-		)
+		ModalFrame.set_row_selected(_root_labels[i], i == _index)

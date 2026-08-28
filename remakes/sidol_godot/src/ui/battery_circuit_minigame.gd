@@ -25,7 +25,7 @@ func _ready() -> void:
 
 	var bg := ColorRect.new()
 	bg.color = Color(0.02, 0.04, 0.08, 0.92)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
 	var panel := PanelContainer.new()

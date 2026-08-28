@@ -16,7 +16,7 @@ var _index := 0
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_build()
 	visibility_changed.connect(
 		func() -> void:
@@ -28,7 +28,7 @@ func _ready() -> void:
 
 func _build() -> void:
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(vbox)
 	for i in range(SaveManager.SLOT_COUNT + 1):

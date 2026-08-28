@@ -70,16 +70,13 @@ UI_CLOSE_ESC,Esc — 닫기,Esc — Close
 UI_BAG_TITLE,— 가방 —,— Bag —
 UI_BAG_HINT,↑↓ 선택    I / ESC 닫기,↑↓ Select    I / ESC Close
 UI_BAG_EMPTY,가방이 비어 있다.,The bag is empty.
-UI_BAG_MORE,… 외 %d개,… and %d more
-UI_BAG_ATK,공격력 %d,Attack %d
-UI_BAG_ELEMENT,속성 %s,Element %s
-UI_BAG_HEAL,HP %d 회복,Restores %d HP
-UI_BAG_PRICE,가격 %s,Price %s
+UI_BAG_ATK,공격력,Attack
+UI_BAG_ELEMENT,속성,Element
+UI_BAG_HEAL,회복,Restores
+UI_BAG_PRICE,가격,Price
 UI_QUESTLOG_TITLE,— 진행 기록 —,— Quest log —
 UI_SHOP_TITLE,매점,Shop
 UI_SHOP_MONEY,소지금 %s,Money %s
-UI_SHOP_BUY,구매,Buy
-UI_SHOP_CLOSE,닫기,Close
 UI_HUD_HINT,SPACE 조사 · I 가방 · M 지도 · ESC 메뉴,SPACE Inspect · I Bag · M Map · ESC Menu
 UI_HUD_MONEY,소지금,Money
 UI_HUD_NEXT_LEVEL,다음까지 %d,%d to next
@@ -125,3 +122,28 @@ UI_CREDIT_QUIZ_TITLE,공식 퀴즈 도전,Take the official quiz
 UI_CREDIT_QUIZ_DESC,10문항 전부 정답에 도전한다.,Aim for all 10 answers correct.
 UI_CREDIT_QUIZ_START,SPACE: 도전,SPACE: Start
 UI_CREDIT_QUIZ_PERFECT,완벽했다. 자랑스럽게도 말이지.,Flawless. And proudly so.
+UI_SETTINGS_TITLE,설정,Settings
+UI_SETTINGS_HINT,↑↓ 항목   ←→ 값   Esc 닫기,↑↓ Row   ←→ Value   Esc Close
+UI_PAUSE_HINT,↑↓ 선택   Enter 확인   Esc 닫기,↑↓ Select   Enter Confirm   Esc Close
+UI_HELP_TITLE,조작법,Controls
+UI_BATTLE_NO_SKILL,습득한 기술 없음,No skills learned
+UI_KIND_WEAPON,무기,Weapon
+UI_KIND_ARMOR,방어구,Armor
+UI_KIND_CONSUMABLE,소모품,Consumable
+UI_KIND_SUBSTITUTE,시약,Reagent
+UI_KIND_MATERIAL,재료,Material
+UI_KIND_QUEST,중요 물품,Key item
+UI_KIND_MONEY,돈,Money
+UI_ELEM_PHYSICAL,물리,Physical
+UI_ELEM_ELECTRIC,전격,Electric
+UI_ELEM_FIRE,화염,Fire
+UI_ELEM_NONE,무속성,Neutral
+UI_BAG_DEF,방어력,Defense
+UI_BAG_POSITION,%d / %d,%d / %d
+UI_BAG_ACT_EQUIP,SPACE 장착,SPACE Equip
+UI_BAG_ACT_UNEQUIP,SPACE 해제,SPACE Unequip
+UI_BAG_ACT_USE,SPACE 사용,SPACE Use
+UI_BAG_ACT_NONE,여기서는 쓸 수 없다,Cannot be used here
+UI_SHOP_HINT,↑↓ 선택   SPACE 구매   Esc 닫기,↑↓ Select   SPACE Buy   Esc Close
+UI_SHOP_EMPTY,재고가 없다,Out of stock
+UI_SHOP_NO_MONEY,소지금 부족,Not enough money

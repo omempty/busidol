@@ -118,6 +118,13 @@ func show_skill_menu() -> void:
 				skill_selected.emit(skill)
 		)
 		_skill_panel.add_child(btn)
+	if _skills.is_empty():
+		# 빈 상자만 뜨면 "고장"으로 읽힌다 — 도구 메뉴와 같은 규약으로 이유를 적는다.
+		# (스킬은 GameState.owned_skills 게이팅이라 미습득이면 실제로 0개일 수 있다.)
+		var none := Button.new()
+		none.text = tr("UI_BATTLE_NO_SKILL")
+		none.disabled = true
+		_skill_panel.add_child(none)
 
 
 func show_item_menu() -> void:

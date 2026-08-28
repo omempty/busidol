@@ -106,9 +106,10 @@ func _build_hints() -> Control:
 	chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	chip.grow_vertical = Control.GROW_DIRECTION_END
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.modulate = Color(1, 1, 1, 0.55)
+	# 구판은 칩 전체를 0.55로 죽여 맵 무늬 위에서 글자가 읽히지 않았다.
+	# 배경은 그대로 두고 글자만 낮춘다 — 존재감은 낮게, 가독성은 확보.
 	chip.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
-	chip.add_child(HudTheme.label(tr(HINTS_KEY), 10, HudTheme.TEXT_MUTED))
+	chip.add_child(HudTheme.outlined_label(tr(HINTS_KEY), 10, HudTheme.TEXT_MUTED))
 	return chip
 
 
