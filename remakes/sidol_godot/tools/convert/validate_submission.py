@@ -11,6 +11,8 @@
              팔레트 이탈(경고)
   icon     — 96×96 규격(기존 아이콘 24종 실측치), 테두리 키잉, 내용 존재,
              팔레트 이탈(경고). 인벤토리·상점·슬롯바가 같은 크기로 쓴다
+  공통     — delivery_checks: 격자 안내선 잔존(반려) · 고유색 수 · 순수 검정 ·
+             반투명. 2026-08-28 실납품 9장이 위 항목만으로 전부 통과해 버려서 붙였다.
 
 실행: python tools/convert/validate_submission.py portrait <png>
       python tools/convert/validate_submission.py keyart <png>
@@ -29,6 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):
 import numpy as np
 from PIL import Image
 
+import delivery_checks as dc
 from llm_package_common import scale6to8
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -139,12 +142,26 @@ def check_palette(im: Image.Image, rep: Report, box: tuple[int, int, int, int]) 
         rep.ok(f"팔레트 평균 거리 {mean_d:.0f}")
 
 
+def apply_shared_checks(im: Image.Image, rep: Report, cell_w: int, cell_h: int) -> None:
+    """delivery_checks 묶음 — 격자 잔선·색 수·순수 검정·반투명.
+
+    등급 분기는 delivery_checks.is_fail 한 곳에서만 정한다(검증기 3종이 갈라지지 않게).
+    """
+    findings = dc.run_all(im, cell_w, cell_h)
+    if not findings:
+        rep.ok("잔선·색 수·검정·반투명 이상 없음")
+        return
+    for f in findings:
+        (rep.fail if dc.is_fail(f) else rep.warn)(f.msg)
+
+
 def validate_portrait(path: str, rep: Report) -> None:
     im = load_rgba(path)
     if im.size != PORTRAIT_SIZE:
         rep.fail(f"크기 {im.size[0]}x{im.size[1]} — 규격 {PORTRAIT_SIZE[0]}x{PORTRAIT_SIZE[1]}")
         return
     rep.ok(f"크기 {im.size[0]}x{im.size[1]}")
+    apply_shared_checks(im, rep, PORTRAIT_CELL, PORTRAIT_CELL)
     for i in range(3):
         box = (i * PORTRAIT_CELL, 0, (i + 1) * PORTRAIT_CELL, PORTRAIT_CELL)
         check_border_keyable(im, rep, box)
@@ -167,6 +184,8 @@ def validate_keyart(path: str, rep: Report) -> None:
         rep.fail(f"명도 표준편차 {arr.std():.1f} — 단색/무내용 이미지")
     else:
         rep.ok(f"명도 표준편차 {arr.std():.1f}")
+    # 키아트는 한 장 그림이라 셀이 없다 — 셀 변 대신 화면 1/8을 직선 판정 기준으로 쓴다.
+    apply_shared_checks(im, rep, im.width // 8, im.height // 8)
     check_palette(im, rep, (0, 0, im.width, im.height))
 
 
@@ -177,6 +196,7 @@ def validate_icon(path: str, rep: Report) -> None:
         return
     rep.ok(f"크기 {im.size[0]}x{im.size[1]}")
     box = (0, 0, im.width, im.height)
+    apply_shared_checks(im, rep, ICON_SIZE[0], ICON_SIZE[1])
     check_border_keyable(im, rep, box)
     check_common(im, rep, "아이콘", box)
     check_palette(im, rep, box)

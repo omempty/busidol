@@ -11,6 +11,9 @@
 이 검증기는 원본과 비교하지 않는다. `monster_anim_specs.json`의 **계약**만 본다:
 캔버스 크기 · 행별 프레임 수 · 빈 셀 투명 · 하단 중앙 정렬 · 배경 키잉 · 팔레트.
 
+2026-08-28 추가: 위 항목을 전부 통과한 납품에서 격자 안내선 잔선·라벨 바·고유색
+폭증이 나왔다(수동 검증). 공통 판정은 `delivery_checks.py`가 맡는다.
+
 사용: python tools/convert/validate_monster_sheet.py <납품.png>
       (파일명 `<id>_v<n>.png`에서 종 id를 뽑는다)
 exit 0=통과 / 1=반려
@@ -26,6 +29,7 @@ import sys
 import numpy as np
 from PIL import Image
 
+import delivery_checks as dc
 from llm_package_common import scale6to8
 
 # 콘솔이 cp949면 한글 리포트의 em dash에서 죽는다 — 보드는 -X utf8로 부르지만
@@ -38,7 +42,14 @@ SPECS = os.path.join(ROOT, "data", "monster_anim_specs.json")
 ## NPC도 같은 스키마·같은 그리드 계약을 쓴다 — 스펙이 두 파일로 나뉘어 있을 뿐이라
 ## 여기서 둘 다 훑는다(몬스터 파일에 없으면 NPC 파일에서 찾는다).
 NPC_SPECS = os.path.join(ROOT, "data", "npc_anim_specs.json")
+## 전투 이펙트도 같은 128 격자 계약을 쓴다 — 정렬만 다르다(spec.align="center").
+EFFECT_SPECS = os.path.join(ROOT, "data", "effect_specs.json")
+## 전투 대형 컷 — 셀이 512라 크기를 스펙이 정한다(spec.sheet_cell).
+CUT_SPECS = os.path.join(ROOT, "data", "battle_cut_specs.json")
+## 전투 전용 SD 시트(주인공) — 필드 시트와 같은 128 격자.
+ACTOR_SPECS = os.path.join(ROOT, "data", "battle_actor_specs.json")
 PALETTE_JSON = os.path.join(ROOT, "assets", "palette_master.json")
+## 기본 셀. 스펙에 sheet_cell이 있으면 그 값으로 바뀐다(대형 컷 512).
 CELL = 128
 MAGENTA = (255, 0, 255)
 ## 하단 중앙 정렬 허용 오차(셀 대비 비율)
@@ -67,7 +78,7 @@ class Report:
 
 
 def load_spec(asset_id: str) -> dict:
-    for path in (SPECS, NPC_SPECS):
+    for path in (SPECS, NPC_SPECS, EFFECT_SPECS, CUT_SPECS, ACTOR_SPECS):
         if not os.path.exists(path):
             continue
         data = json.load(io.open(path, encoding="utf-8"))
@@ -128,7 +139,7 @@ def check_palette(im: Image.Image, rep: Report) -> None:
         rep.ok(f"팔레트 평균 거리 {mean_d:.0f}")
 
 
-def check_grid(im: Image.Image, layout: list, cols: int, rep: Report) -> None:
+def check_grid(im: Image.Image, layout: list, cols: int, rep: Report, align: str = "bottom_center") -> None:
     for row, frames, name in layout:
         for col in range(cols):
             box = (col * CELL, row * CELL, (col + 1) * CELL, (row + 1) * CELL)
@@ -147,8 +158,23 @@ def check_grid(im: Image.Image, layout: list, cols: int, rep: Report) -> None:
             cx = (xs.min() + xs.max()) / 2.0
             if abs(cx - CELL / 2.0) > CELL * ALIGN_TOL_X:
                 rep.fail(f"{name} 행{row} 프레임{col} 가로 중앙 이탈(중심 x={cx:.0f}, 기대 {CELL // 2})")
-            if (CELL - 1 - ys.max()) > CELL * ALIGN_TOL_BOTTOM:
+            if align == "center":
+                # 이펙트는 발이 없다 — 세로도 중앙 기준으로 본다.
+                cy = (ys.min() + ys.max()) / 2.0
+                if abs(cy - CELL / 2.0) > CELL * ALIGN_TOL_BOTTOM:
+                    rep.fail(f"{name} 행{row} 프레임{col} 세로 중앙 이탈(중심 y={cy:.0f}, 기대 {CELL // 2})")
+            elif (CELL - 1 - ys.max()) > CELL * ALIGN_TOL_BOTTOM:
                 rep.fail(f"{name} 행{row} 프레임{col} 하단 정렬 이탈(바닥 여백 {CELL - 1 - ys.max()}px)")
+
+
+def set_cell(spec: dict) -> None:
+    """스펙이 정한 셀 크기를 모듈 전역에 반영한다.
+
+    셀을 함수 인자로 다 흘리는 대신 한 곳에서 바꾼다 — 이 검증기는 파일 하나를 보고
+    끝나는 일회성 프로세스라 전역이 더 읽기 쉽다.
+    """
+    global CELL
+    CELL = int(spec.get("sheet_cell", 128))
 
 
 def main() -> None:
@@ -165,6 +191,7 @@ def main() -> None:
         print(f"[monster] FAIL — {path}")
         sys.exit(1)
 
+    set_cell(spec)
     cols, rows, layout = sheet_contract(spec)
     want = (cols * CELL, rows * CELL)
     im = Image.open(path).convert("RGBA")
@@ -175,8 +202,10 @@ def main() -> None:
     rep.ok(f"크기 {im.size[0]}x{im.size[1]} ({rows}행 {cols}열)")
 
     check_background(im, rep)
-    check_grid(im, layout, cols, rep)
+    check_grid(im, layout, cols, rep, str(spec.get("align", "bottom_center")))
     check_palette(im, rep)
+    for f in dc.run_all(im, CELL, CELL):
+        (rep.fail if dc.is_fail(f) else rep.warn)(f.msg)
 
     if rep.errors:
         print(f"[monster] FAIL {len(rep.errors)}건 — {path}")
