@@ -31,6 +31,9 @@ func is_typing() -> bool:
 var _panel: PanelContainer
 var _name_label: Label
 var _body_label: Label
+## 화자 초상 — PortraitLibrary가 speaker(또는 step.portrait)로 찾는다.
+## 미설치 화자는 숨긴다(초상 16종이 다 차기 전에도 대화가 정상 동작해야 한다).
+var _portrait: TextureRect
 
 
 func _ready() -> void:
@@ -44,8 +47,19 @@ func _ready() -> void:
 	_panel.offset_bottom = -12
 	add_child(_panel)
 
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	_panel.add_child(row)
+
+	_portrait = TextureRect.new()
+	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # 도트 보존
+	_portrait.visible = false
+	row.add_child(_portrait)
+
 	var vbox := VBoxContainer.new()
-	_panel.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(vbox)
 	_name_label = Label.new()
 	_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
 	vbox.add_child(_name_label)
@@ -63,6 +77,10 @@ func _apply_text_scale() -> void:
 	_body_label.custom_minimum_size = Vector2(0, 72 * s)
 	_body_label.add_theme_font_size_override("font_size", int(17 * s))
 	_name_label.add_theme_font_size_override("font_size", int(15 * s))
+	if _portrait != null:
+		# 패널 높이(118*s)에서 여백을 뺀 정사각 — 초상 셀이 256이라 축소만 일어난다.
+		var side := 96.0 * s
+		_portrait.custom_minimum_size = Vector2(side, side)
 
 
 func start(p_seq_id: StringName, p_steps: Array) -> void:
@@ -111,10 +129,22 @@ func _load_step() -> void:
 		op_requested.emit(op, step.get("args", {}))
 		return
 	_name_label.text = str(step.get("speaker", ""))
+	_apply_portrait(step)
 	_body_label.text = Database.text(str(step["text"]))
 	_revealed = 0.0
 	_auto_wait = -1.0
 	_body_label.visible_characters = 0
+
+
+## 초상 적용 — step.portrait(에셋 id 직접 지정) 우선, 없으면 speaker 이름으로 조회.
+## 표정은 step.expr(스펙 expressions 이름). 못 찾으면 초상 자리를 접는다.
+func _apply_portrait(step: Dictionary) -> void:
+	if _portrait == null:
+		return
+	var key := str(step.get("portrait", step.get("speaker", "")))
+	var tex := PortraitLibrary.texture_for(key, str(step.get("expr", "")))
+	_portrait.texture = tex
+	_portrait.visible = tex != null
 
 
 func _process(delta: float) -> void:
