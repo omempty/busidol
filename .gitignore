@@ -5,7 +5,8 @@ originals/
 _shared/tools/godot/
 
 # ===== AI 생성 초안 (게이트 통과 전) =====
-remakes/sidol_godot/assets/raw/
+remakes/sidol_godot/assets/raw/*
+!remakes/sidol_godot/assets/raw/.gdignore
 
 # ===== Godot 캐시 =====
 .godot/

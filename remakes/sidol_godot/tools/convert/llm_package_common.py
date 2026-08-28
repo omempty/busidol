@@ -125,6 +125,15 @@ def prepare_workspace() -> None:
       없으면 목록이 빈 채로 뜬다(사람이 mkdir 하던 것을 여기서 없앤다).
     """
     os.makedirs(LLM_ROOT, exist_ok=True)
+    # assets/raw/는 **엔진이 스캔하면 안 되는** 작업 폴더다(AGENTS.md 규약).
+    # .gdignore가 없으면 Godot이 의뢰 첨부 이미지를 전부 임포트하며 .import를 만든다
+    # (2026-08-28 실측 1,274개). raw/는 gitignored라 클론 직후엔 없으므로 여기서 깐다.
+    raw_root = os.path.dirname(LLM_ROOT)
+    gdignore = os.path.join(raw_root, ".gdignore")
+    if not os.path.exists(gdignore):
+        os.makedirs(raw_root, exist_ok=True)
+        io.open(gdignore, "w", encoding="utf-8").close()
+        print(".gdignore 생성: %s (엔진 스캔 제외)" % raw_root)
     if os.path.exists(AGENT_PROMPT):
         shutil.copyfile(AGENT_PROMPT, os.path.join(LLM_ROOT, "README_먼저읽기.md"))
     for cat in SUBMIT_CATEGORIES:

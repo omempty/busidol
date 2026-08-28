@@ -3,6 +3,7 @@
 > 목적: 이미지 생성 LLM에 에셋을 의뢰하고, 납품을 심사(승인/반려/재요청)하는 전체 사이클.
 > 소요: 패키지 생성 5분 + LLM 의뢰(유저) + 심사 루프.
 > **경로·규격의 단일 출처는 [LLM_WORKFLOW.md](LLM_WORKFLOW.md)다.** 이 문서는 실행 순서만 다룬다.
+> 곁눈질용 1장 요약은 [PROMPTING_QUICKGUIDE.md](PROMPTING_QUICKGUIDE.md).
 
 ## 이 문서는 누구 것인가 (중요)
 

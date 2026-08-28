@@ -65,4 +65,8 @@ godot --path . --resolution 960x540 res://tools/dev/ui_shots.tscn -- <출력 폴
 - **커밋 소유권**: 각자 자기 경로만 스테이징한다. 메인 개발은 `git add -A` 대신
   명시적 경로 스테이징을 사용한다(에셋 에이전트 작업물 오염 방지).
 - `assets/raw/`는 gitignored + `.gdignore` — 초안은 버전 관리·엔진 스캔 양측에서 분리.
+  (`.gdignore`만은 git이 추적한다. 없으면 Godot이 의뢰 첨부 이미지를 전부 임포트한다 —
+  2026-08-28 실측 `.import` 1,274개. 패키지 생성기가 없으면 자동으로 깐다.)
+- 그래픽 의뢰 요약: `assets/gen/prompts/PROMPTING_QUICKGUIDE.md`(1장) ·
+  현황: `python tools/dev/asset_status.py`
 - 채택(게이트 통과 → 패킹 → `res://assets/sprites/`)은 메인 개발 측에서만 수행.

@@ -12,7 +12,8 @@ __pycache__/
 .venv/
 
 # AI 생성 원본(raw)은 대용량 — 게이트 통과분(atlas)만 커밋
-assets/raw/
+assets/raw/*
+!assets/raw/.gdignore
 
 # 참조 자료 임포트 사이드카 제외
 assets/originals_ref/**/*.import
