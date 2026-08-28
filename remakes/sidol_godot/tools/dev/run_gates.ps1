@@ -23,6 +23,8 @@ $gates = @(
     @{ name = "Smoke cutscene";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_cutscene.tscn");                   fatal = $true }
     @{ name = "Smoke dialogue";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_dialogue.tscn");                   fatal = $true }
     @{ name = "Smoke transitions";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_transitions.tscn");                fatal = $true }
+    @{ name = "Smoke fx/portrait";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_fx.tscn");                        fatal = $true }
+    @{ name = "Smoke battle input"; args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_battle_input.tscn");              fatal = $true }
     @{ name = "SelfCheck";           args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_selfcheck.tscn");                  fatal = $true }
     @{ name = "Smoke choice";        args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_choice.tscn");                     fatal = $true }
     @{ name = "Smoke inventory";     args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_inventory.tscn");                  fatal = $true }
