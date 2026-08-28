@@ -58,6 +58,9 @@ ALIGN_TOL_BOTTOM = 0.14
 ## 마젠타 근처이나 정확히 마젠타가 아닌 픽셀 = 혼색/AA. 이 비율을 넘으면 키잉이 깨진다.
 MAGENTA_AA_LIMIT = 0.01
 PALETTE_WARN_DIST = 60
+## 본체가 셀 내용에서 차지해야 할 최소 비율 — 미만이면 조각이 흩어진 것으로 보고 알린다
+## (사망·폭발 프레임은 정상적으로 낮으므로 경고에 머문다).
+MAIN_BLOB_MIN = 0.5
 
 
 class Report:
@@ -154,7 +157,20 @@ def check_grid(im: Image.Image, layout: list, cols: int, rep: Report, align: str
                 continue
             if not declared:
                 continue
-            ys, xs = np.nonzero(mask)
+            # 정렬은 **본체(가장 큰 덩어리)** 기준으로 잰다. 셀 전체 bbox로 재면
+            # 잔선·파편·액자가 경계를 부풀려 어긋난 배치가 되레 '정상'으로 보인다
+            # (mad_eye·sparker 리마스터 첫 납품이 그렇게 통과했다).
+            parts = dc.blobs(mask)
+            main = parts[0] if parts else None
+            if main is None:
+                continue
+            if main["n"] < int(mask.sum()) * MAIN_BLOB_MIN:
+                rep.warn(
+                    "%s 행%d 프레임%d 본체가 내용의 %d%% — 조각이 흩어져 있다(정렬은 본체 기준으로 판정)"
+                    % (name, row, col, 100 * main["n"] // max(int(mask.sum()), 1))
+                )
+            ys = np.array([main["y0"], main["y1"]])
+            xs = np.array([main["x0"], main["x1"]])
             cx = (xs.min() + xs.max()) / 2.0
             if abs(cx - CELL / 2.0) > CELL * ALIGN_TOL_X:
                 rep.fail(f"{name} 행{row} 프레임{col} 가로 중앙 이탈(중심 x={cx:.0f}, 기대 {CELL // 2})")

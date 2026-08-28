@@ -37,6 +37,10 @@ LINE_COLOR_SPREAD = 40
 LINE_MAX_THICKNESS = 3
 ## 액자 판정 — 내용이 있는 셀 중 이 비율 이상에서 같은 좌표·같은 색 직선이 나오면 액자다.
 BORDER_REPEAT_RATIO = 0.6
+## 반쪽 잘림 판정 — 두 덩어리가 이만큼 비슷하고, 이만큼 벌어져 있고, 각자 충분히 크면.
+SPLIT_SIZE_RATIO = 0.6
+SPLIT_MIN_GAP = 4
+SPLIT_MIN_PIXELS = 300
 ## 고유색 계약 — 프롬프트가 박는 값(24~48)의 상한. 넘으면 그라데이션 유입.
 COLOR_BUDGET = 48
 ## 후처리 양자화로도 살리기 어려운 수준 — 이 위는 사실상 리샘플된 풀컬러 이미지다.
@@ -321,6 +325,87 @@ def check_frame_border(im: Image.Image, cell_w: int, cell_h: int) -> list:
     ]
 
 
+def blobs(mask: np.ndarray) -> list:
+    """8방향 연결 덩어리 목록(큰 것부터). 각 항목 {n, x0, x1, y0, y1}.
+
+    셀 안의 '내용'을 하나로 뭉뚱그려 bbox를 재면 잔선·파편·액자가 경계를 부풀려
+    정렬 검사가 통째로 무의미해진다(실납품에서 실제로 그렇게 통과했다).
+    본체를 골라내려면 덩어리를 나눠 봐야 한다.
+    """
+    h, w = mask.shape
+    seen = np.zeros_like(mask, dtype=bool)
+    out = []
+    for sy in range(h):
+        for sx in range(w):
+            if not mask[sy, sx] or seen[sy, sx]:
+                continue
+            stack = [(sy, sx)]
+            seen[sy, sx] = True
+            xs, ys = [], []
+            while stack:
+                y, x = stack.pop()
+                xs.append(x)
+                ys.append(y)
+                for dy in (-1, 0, 1):
+                    for dx in (-1, 0, 1):
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < h and 0 <= nx < w and mask[ny, nx] and not seen[ny, nx]:
+                            seen[ny, nx] = True
+                            stack.append((ny, nx))
+            out.append(
+                {"n": len(xs), "x0": min(xs), "x1": max(xs), "y0": min(ys), "y1": max(ys)}
+            )
+    return sorted(out, key=lambda b: -b["n"])
+
+
+def _split_cell(cell: np.ndarray, cell_w: int) -> str:
+    """한 셀이 '반쪽 두 개'인지 — 비슷한 크기 · 가로로 벌어짐 · 좌우 반쪽에 하나씩."""
+    bs = blobs(cell)
+    if len(bs) < 2:
+        return ""
+    a, b = bs[0], bs[1]
+    if b["n"] < a["n"] * SPLIT_SIZE_RATIO or min(a["n"], b["n"]) < SPLIT_MIN_PIXELS:
+        return ""
+    left, right = (a, b) if a["x0"] < b["x0"] else (b, a)
+    gap = right["x0"] - left["x1"]
+    if gap < SPLIT_MIN_GAP:
+        return ""
+    if not (left["x1"] < cell_w * 0.55 and right["x0"] > cell_w * 0.45):
+        return ""
+    return "%dpx+%dpx(간격 %dpx)" % (a["n"], b["n"], gap)
+
+
+def check_split_cells(im: Image.Image, cell_w: int, cell_h: int) -> list:
+    """셀 하나에 **두 포즈의 반쪽**이 들어온 경우 — 납품물의 자체 격자가 계약과 어긋난 것.
+
+    mad_eye·sparker 리마스터 첫 납품에서 나왔다(셀 5칸). 기존 검사는 통과시켰다 —
+    잘린 두 조각이 합쳐져 bbox가 셀을 거의 채우니 중앙·하단 정렬이 되레 '정상'으로 보였다.
+    파편이 흩어지는 사망 프레임과 구분하려고 **비슷한 크기 + 좌우 분리**를 함께 건다
+    (원작·기존 시트 27장에서 오탐 0 확인).
+    """
+    op = opaque_mask(im)
+    h, w = op.shape
+    hits = []
+    for r in range(max(1, h // cell_h)):
+        for c in range(max(1, w // cell_w)):
+            cell = op[r * cell_h:(r + 1) * cell_h, c * cell_w:(c + 1) * cell_w]
+            if cell.sum() < 50:
+                continue
+            note = _split_cell(cell, cell_w)
+            if note:
+                hits.append("r%dc%d %s" % (r, c, note))
+    if not hits:
+        return []
+    return [
+        Finding(
+            "split_cell",
+            "셀 %d칸이 반쪽 두 개다 — 납품물의 격자가 계약과 어긋났다(셀 단위 재배치 필요): %s%s"
+            % (len(hits), ", ".join(hits[:3]), " …" if len(hits) > 3 else ""),
+            len(hits),
+        )
+    ]
+
+
 def check_color_budget(im: Image.Image, budget: int = COLOR_BUDGET) -> list:
     """고유색 수 — 계약(24~48색) 대비.
 
@@ -404,6 +489,7 @@ def run_all(im: Image.Image, cell_w: int, cell_h: int, budget: int = COLOR_BUDGE
     out = []
     out += check_guide_residue(im, cell_w, cell_h)
     out += check_frame_border(im, cell_w, cell_h)
+    out += check_split_cells(im, cell_w, cell_h)
     out += check_flat_placeholder(im)
     out += check_color_budget(im, budget)
     out += check_pure_black(im)
@@ -474,7 +560,7 @@ def _dense_line_mask(rgb: np.ndarray, mask: np.ndarray, cell_w: int, cell_h: int
 
 
 ## 어떤 코드가 반려(FAIL)이고 어떤 게 경고(WARN)인가 — 검증기가 공유하는 단일 기준.
-FAIL_CODES = {"guide_residue", "color_hard", "flat_placeholder"}
+FAIL_CODES = {"guide_residue", "color_hard", "flat_placeholder", "split_cell"}
 
 
 def is_fail(f: Finding) -> bool:
