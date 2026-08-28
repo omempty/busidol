@@ -26,3 +26,6 @@ assets/gen/prompts/*.import
 
 # 번역 임포트 산출물(ui.csv에서 재생성)
 *.translation
+
+# 현황판 — tools/dev/make_dashboard.py가 저장소 상태에서 다시 굽는다(스냅샷을 커밋하면 낡는다)
+현황판.html

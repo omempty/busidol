@@ -27,6 +27,9 @@ $gens = [ordered]@{
     "npcs"      = @{ script = "tools/convert/export_npc_packages.py";       label = "필드 NPC" }
     "portraits" = @{ script = "tools/convert/export_portrait_packages.py";  label = "대화 초상" }
     "keyart"    = @{ script = "tools/convert/export_keyart_packages.py";    label = "컷신 키아트" }
+    "effects"   = @{ script = "tools/convert/export_effect_packages.py";    label = "전투 이펙트" }
+    "battle_cuts" = @{ script = "tools/convert/export_battle_cut_packages.py"; label = "전투 대형 컷" }
+    "battle_actors" = @{ script = "tools/convert/export_battle_actor_packages.py"; label = "전투 SD 시트" }
 }
 
 function Show-Status {
