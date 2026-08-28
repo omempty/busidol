@@ -50,7 +50,7 @@ static func check_layers(rep: AuditReport, renderer: MapRenderer, rt: MapRuntime
 	for oid: int in out_of_range:
 		rep.warn(
 			"오브젝트 id 범위 밖",
-			"obj_id=%d ×%d셀 — 아틀라스 미수록(원본 OBJ.SPR 재추출 대상)" % [oid, out_of_range[oid]]
+			"obj_id=%d ×%d셀 — 아틀라스 미수록(원본 OBJ.SPR에 없는 id)" % [oid, out_of_range[oid]]
 		)
 	if missing_object == 0:
 		rep.ok("오브젝트 렌더", "%d셀 전부 배치" % object_total)

@@ -32,20 +32,31 @@ func ok(check: String, detail: String = "") -> void:
 
 
 func warn(check: String, detail: String) -> void:
+	# WARN도 보류 대상이다 — 원작 데이터에 기인해 영영 안 없어지는 항목이 상시 21건 쌓이면
+	# 새로 생긴 WARN이 그 속에 묻힌다. 대신 사유·근거를 known_issues.json에 적게 한다.
+	if _try_waive(check, detail):
+		return
 	warns += 1
 	_emit("WARN", check, detail)
 
 
 func fail(check: String, detail: String) -> void:
-	var w := _waiver_index(check, detail)
-	if w >= 0:
-		_waiver_hits[w] = int(_waiver_hits.get(w, 0)) + 1
-		lines.append(
-			"  [KNOWN] %-20s %s%s — %s" % [check, _prefix(), detail, _waivers[w].get("reason", "")]
-		)
+	if _try_waive(check, detail):
 		return
 	fails += 1
 	_emit("FAIL", check, detail)
+
+
+## 보류 목록에 있으면 [KNOWN]으로 강등하고 true. 적중 기록은 낡은 보류 판정에 쓴다.
+func _try_waive(check: String, detail: String) -> bool:
+	var w := _waiver_index(check, detail)
+	if w < 0:
+		return false
+	_waiver_hits[w] = int(_waiver_hits.get(w, 0)) + 1
+	lines.append(
+		"  [KNOWN] %-20s %s%s — %s" % [check, _prefix(), detail, _waivers[w].get("reason", "")]
+	)
+	return true
 
 
 func _waiver_index(check: String, detail: String) -> int:

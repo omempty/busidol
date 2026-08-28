@@ -31,7 +31,7 @@ $gates = @(
     @{ name = "World audit";         args = @("--headless", "--path", "@PROJ@", "res://tools/audit/world_audit.tscn");                fatal = $true }
 )
 
-$total = $gates.Count + 1   # +1 = 내보내기 포함 규칙(python)
+$total = $gates.Count + 2   # +2 = 내보내기 포함 규칙 · 원본 대조(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -49,6 +49,15 @@ Write-Host ("[{0}/{1}] Export pack rules..." -f $i, $total)
 python (Join-Path $PSScriptRoot "export_check.py") $Godot
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Export pack rules"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Originals match..." -f $i, $total)
+# 원본이 없는 환경(CI·협업자 PC)에서는 스스로 SKIP하고 0을 돌려준다.
+python (Join-Path $PSScriptRoot "originals_check.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Originals match"
     exit 1
 }
 

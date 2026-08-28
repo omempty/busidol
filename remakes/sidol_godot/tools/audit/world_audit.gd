@@ -19,6 +19,10 @@ const FIELD_SCENE := preload("res://scenes/field.tscn")
 const BATTLE_SCENE := preload("res://scenes/battle.tscn")
 const FLOORS := [0, 1, 2, 3, 4, 5]
 const SIM_TICKS := 40  # 이동 규칙 검증용 시뮬레이션 물리 틱 수
+## 아무도 안 움직였을 때만 더 굴려 보는 관측 창. 40틱=약 0.66초라
+## 행동 주기가 긴 종(teleport 0.45초·ambusher 0.4초)만 있는 층은 우연히 0회가 된다
+## — 실제로 f0(sparker 2체)이 그렇게 오탐 WARN을 냈다. 설계상 정지와 진짜 정지를 가른다.
+const IDLE_RECHECK_TICKS := 180  # 약 3초
 const WATCHDOG := 240.0
 const WAIVERS := "res://tools/audit/known_issues.json"
 const VIEW := Rect2(Vector2.ZERO, Vector2(960, 540))
@@ -177,7 +181,17 @@ func _simulate_motion(field: Node2D, rt: MapRuntime, floor_no: int, enemies: Arr
 			var e: EnemyEntity = b["ref"]
 			if is_instance_valid(e) and e.mover.grid_pos != b["cell"]:
 				moved += 1
-	MotionProbe.check_activity(_rep, moved, SIM_TICKS, enemies.size())
+	var ticks := SIM_TICKS
+	if moved == 0:
+		for t2 in IDLE_RECHECK_TICKS:
+			var before2 := MotionProbe.snapshot(enemies)
+			await get_tree().physics_frame
+			for b2: Dictionary in before2:
+				var e2: EnemyEntity = b2["ref"]
+				if is_instance_valid(e2) and e2.mover.grid_pos != b2["cell"]:
+					moved += 1
+		ticks += IDLE_RECHECK_TICKS
+	MotionProbe.check_activity(_rep, moved, ticks, enemies.size())
 
 
 ## 전투 씬 UI — 커맨드·기술·도구 세 메뉴를 모두 열어 본다.

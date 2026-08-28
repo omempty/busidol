@@ -1,6 +1,6 @@
 {
-  "_comment": "월드 감사(tools/audit/world_audit.tscn)에서 FAIL로 잡히지만 코드가 아니라 원본 맵 데이터에 기인해 보류 중인 항목. scope+check가 일치하고 detail이 부분 문자열로 포함되면 [KNOWN]으로 강등된다. 한 번도 안 걸린 항목은 '낡은 보류'로 보고되니 해결되면 지운다.",
-  "_schema": "waivers[] = {scope, check, detail, reason, since}",
+  "_comment": "월드 감사(tools/audit/world_audit.tscn)에서 FAIL·WARN으로 잡히지만 코드가 아니라 원본 데이터에 기인해 보류 중인 항목. scope+check가 일치하고 detail이 부분 문자열로 포함되면 [KNOWN]으로 강등된다. 한 번도 안 걸린 항목은 '낡은 보류'로 보고되니 해결되면 지운다. 보류에는 반드시 실측 근거를 적는다 — 근거 없는 보류는 결함을 덮는 것과 같다.",
+  "_schema": "waivers[] = {scope, check, detail, reason, since} · detail은 실측 수치까지 적어 보류가 '그때 그 상태'에만 걸리게 한다(수치가 변하면 다시 보고된다)",
   "waivers": [
     {
       "scope": "f0",
@@ -36,6 +36,118 @@
       "detail": "(2, 23)",
       "reason": "ATT 186 상자가 ATT 199(빈 상자) 뒤에 갇혀 있다 — 앞 상자를 열어도 개봉분은 벽(ATT 1)으로 남는 원작 규약이라 영영 접근 불가. 게다가 186은 legacy_ref 미수록이라 열려도 빈손",
       "since": "2026-08-27"
+    },
+    {
+      "scope": "f3",
+      "check": "오브젝트 id 범위 밖",
+      "detail": "obj_id=173",
+      "reason": "원작 자체가 비어 있는 칸이다 — OBJ.SPR 실측 173프레임(id 0~172)인데 GOODITEM.H가 MAX_OBJ 174로 한 칸 더 요청한다(원작에서도 미로드 슬롯). 과요청은 원작 패턴 (ITEM.SPR 35 vs NUM_ITEM 37 · PANNEL.SPR 6 vs 5). 2026-08-28 원본 대조",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f4",
+      "check": "오브젝트 id 범위 밖",
+      "detail": "obj_id=173",
+      "reason": "원작 자체가 비어 있는 칸이다 — OBJ.SPR 실측 173프레임(id 0~172)인데 GOODITEM.H가 MAX_OBJ 174로 한 칸 더 요청한다(원작에서도 미로드 슬롯). 과요청은 원작 패턴 (ITEM.SPR 35 vs NUM_ITEM 37 · PANNEL.SPR 6 vs 5). 2026-08-28 원본 대조",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f0",
+      "check": "상자 매핑 없음",
+      "detail": "ATT=185",
+      "reason": "원작에도 정의가 없는 값이다 — GOODITEM.H의 아이템 ATT는 150~184(35종)와 MEET 198·EMPTY 199뿐이고, ITEM_STRUCT는 NUM_ITEM(37)으로 선언됐지만 초기화 항목이 35개라 인덱스 35·36(=ATT 185·186)은 0으로 채워진 빈 항목이다. 원작에서 열면 이름 없는 빈 아이템이 나온다. 2026-08-28 원본 소스 대조",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f0",
+      "check": "상자 매핑 없음",
+      "detail": "ATT=186",
+      "reason": "원작에도 정의가 없는 값이다 — GOODITEM.H의 아이템 ATT는 150~184(35종)와 MEET 198·EMPTY 199뿐이고, ITEM_STRUCT는 NUM_ITEM(37)으로 선언됐지만 초기화 항목이 35개라 인덱스 35·36(=ATT 185·186)은 0으로 채워진 빈 항목이다. 원작에서 열면 이름 없는 빈 아이템이 나온다. 2026-08-28 원본 소스 대조",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f0",
+      "check": "고립 구역",
+      "detail": "1개 미도달 · 최대 고립 1개",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f0",
+      "check": "근거 없는 차단",
+      "detail": "56셀 — 지면만 있고 ATT 1",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f1",
+      "check": "고립 구역",
+      "detail": "2609개 미도달 · 최대 고립 1428개",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f1",
+      "check": "근거 없는 차단",
+      "detail": "434셀 — 지면만 있고 ATT 1",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f2",
+      "check": "고립 구역",
+      "detail": "2632개 미도달 · 최대 고립 1428개",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f2",
+      "check": "근거 없는 차단",
+      "detail": "465셀 — 지면만 있고 ATT 1",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f3",
+      "check": "고립 구역",
+      "detail": "2928개 미도달 · 최대 고립 1438개",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f3",
+      "check": "근거 없는 차단",
+      "detail": "320셀 — 지면만 있고 ATT 1",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f4",
+      "check": "고립 구역",
+      "detail": "2710개 미도달 · 최대 고립 1426개",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f4",
+      "check": "근거 없는 차단",
+      "detail": "412셀 — 지면만 있고 ATT 1",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f5",
+      "check": "고립 구역",
+      "detail": "2250개 미도달 · 최대 고립 1170개",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
+    },
+    {
+      "scope": "f5",
+      "check": "근거 없는 차단",
+      "detail": "540셀 — 지면만 있고 ATT 1",
+      "reason": "원본 F*.MAP과 바이트 단위 일치 확인(2026-08-28, TILE/OBJ/ATT 3평면 × 6층 78,000셀 불일치 0 · tools/dev/originals_check.py가 상시 감시) — 변환 산물이 아니라 원작 맵 그대로다. detail에 실측 수치를 박아 두었으므로 값이 달라지면 보류가 풀리고 다시 보고된다",
+      "since": "2026-08-28"
     }
   ]
 }

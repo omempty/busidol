@@ -11,6 +11,10 @@ import os
 import re
 import subprocess
 import sys
+
+# 콘솔 코드페이지가 cp949여도 한글·em대시가 깨지지 않게 한다(bash·cmd 양쪽).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
