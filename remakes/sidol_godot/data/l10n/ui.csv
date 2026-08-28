@@ -148,6 +148,7 @@ UI_SHOP_HINT,↑↓ 선택   SPACE 구매   Esc 닫기,↑↓ Select   SPACE Buy
 UI_SHOP_EMPTY,재고가 없다,Out of stock
 UI_SHOP_NO_MONEY,소지금 부족,Not enough money
 UI_BATTLE_MENU_BACK,Esc 뒤로,Esc Back
+UI_BATTLE_HOTKEYS,1~9 선택 · Q/E 대상 · R 반복,1-9 select · Q/E target · R repeat
 UI_BATTLE_RESULT_WIN,WIN!,WIN!
 UI_BATTLE_RESULT_LOSE,LOSE...,LOSE...
 UI_BATTLE_RESULT_FLEE,FLEE,FLEE

@@ -13,6 +13,9 @@ extends CanvasLayer
 signal command_selected(cmd_id: StringName)
 signal skill_selected(skill: Dictionary)
 signal item_selected(item_def: Dictionary)
+## 단축키 — 대상 전환(Q/E)과 직전 행동 반복(R). 컨트롤러가 처리한다.
+signal target_cycled(direction: int)
+signal repeat_requested
 
 ## 커맨드 id ↔ 표시 키. id는 번역과 무관한 계약값(컨트롤러가 이걸로 분기한다).
 const COMMANDS: Array[Dictionary] = [
@@ -22,6 +25,8 @@ const COMMANDS: Array[Dictionary] = [
 	{"id": &"item", "key": "UI_BATTLE_CMD_ITEM"},
 	{"id": &"flee", "key": "UI_BATTLE_CMD_FLEE"},
 ]
+## 숫자 단축키로 바로 고를 수 있는 항목 수(1~9). 그 뒤 항목은 커서로 간다.
+const SLOT_KEYS := 9
 const MENU_MARGIN := 16.0
 const MENU_WIDTH := 168.0
 ## 적 카드 폭은 슬롯 간격(100px)보다 좁아야 한다 — 넓게 잡았더니 2체 이상일 때
@@ -48,6 +53,8 @@ var _disabled_commands: Dictionary = {}  # 커맨드 id → true면 흐리게 + 
 var _skills: Array[Dictionary] = []
 var _player: Combatant
 var _enemies: Array[Combatant] = []
+var _enemy_cards: Array[PanelContainer] = []  # 대상 강조용
+var _target_index := 0
 
 
 func build(p_player: Combatant, p_enemies: Array[Combatant], skills: Array[Dictionary]) -> void:
@@ -73,6 +80,19 @@ func refresh_bars() -> void:
 	if _player_ap != null:
 		_player_ap.text = "AP %d   DP %d" % [_player.attack_stat(), _player.dp]
 	_refresh_status()
+
+
+## 현재 대상 강조 — Q/E로 바뀐 대상을 화면이 즉시 보여 준다.
+func set_target(index: int) -> void:
+	_target_index = index
+	for i in _enemy_cards.size():
+		var card := _enemy_cards[i]
+		if not is_instance_valid(card):
+			continue
+		if i == index:
+			card.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.ROW_SELECTED, 8, 7, 3))
+		else:
+			card.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
 
 
 func _set_gauge(gauge: HudGauge, hp: int, max_hp: int) -> void:
@@ -213,6 +233,10 @@ func _open_menu(kind: StringName, entries: Array[Dictionary]) -> void:
 		_menu_rows.append(row)
 	if kind != &"command":
 		box.add_child(HudTheme.label(tr("UI_BATTLE_MENU_BACK"), 10, HudTheme.TEXT_MUTED))
+	# 단축키 안내 — 메뉴 아래 한 줄. 번역 키는 data/l10n/ui.csv.
+	var hint := HudTheme.label(tr("UI_BATTLE_HOTKEYS"), 10, HudTheme.TEXT_MUTED)
+	hint.name = "Hotkeys"
+	box.add_child(hint)
 	_refresh_menu()
 
 
@@ -225,6 +249,12 @@ func _make_menu_row(index: int, entry: Dictionary) -> Control:
 	var cursor := HudTheme.label("", 13, HudTheme.ACCENT)
 	cursor.custom_minimum_size = Vector2(13, 0)
 	row.add_child(cursor)
+
+	# 숫자 배지 — 단축키가 있다는 사실 자체를 화면이 알려 준다(설명서를 읽게 만들지 않는다).
+	if index < SLOT_KEYS:
+		var slot := HudTheme.label("%d" % (index + 1), 11, HudTheme.TEXT_MUTED)
+		slot.custom_minimum_size = Vector2(11, 0)
+		row.add_child(slot)
 	# 노드 경로가 아니라 참조로 들고 있는다 — 컨테이너 이름은 엔진이 자동으로 붙여 바뀐다.
 	_menu_cursors.append(cursor)
 
@@ -266,7 +296,32 @@ func _refresh_menu() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# 대상 전환·반복은 메뉴가 열려 있지 않아도(연출 중이 아니면) 받는다.
+	if event.is_action_pressed(&"battle_target_prev"):
+		target_cycled.emit(-1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(&"battle_target_next"):
+		target_cycled.emit(1)
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed(&"battle_repeat"):
+		repeat_requested.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if _menu_panel == null or _menu_entries.is_empty():
+		return
+	# 숫자 단축키 — 커서를 옮기고 곧바로 결정한다(두 번 누르지 않게).
+	for i in mini(_menu_entries.size(), SLOT_KEYS):
+		if not event.is_action_pressed(StringName("battle_slot_%d" % (i + 1))):
+			continue
+		if bool(_menu_entries[i].get("disabled", false)):
+			get_viewport().set_input_as_handled()
+			return
+		_menu_index = i
+		_refresh_menu()
+		_confirm_menu()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(&"move_up"):
 		_move_menu(-1)
@@ -332,6 +387,7 @@ func _build_enemy_status() -> void:
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
 		add_child(card)
+		_enemy_cards.append(card)
 
 		var box := VBoxContainer.new()
 		box.add_theme_constant_override("separation", 4)

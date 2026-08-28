@@ -13,6 +13,9 @@ var _on_win_flag := ""  # 승리 시 세팅되는 시나리오 플래그 (pendin
 
 var _ui: BattleUI
 var _busy := false
+## 현재 지목한 적(Q/E) · 직전 행동(R 반복) — 둘 다 UI가 아니라 여기서 상태를 갖는다.
+var _target_index := 0
+var _last_action: Dictionary = {}
 var _skills: Array[Dictionary] = []
 var _flee_failures := 0  # 이 전투에서 도망에 실패한 횟수 — 시도마다 확률이 오른다
 
@@ -55,6 +58,9 @@ func _setup_ui() -> void:
 	_ui.command_selected.connect(_on_command)
 	_ui.skill_selected.connect(_on_skill_selected)
 	_ui.item_selected.connect(_on_item_selected)
+	_ui.target_cycled.connect(_on_target_cycled)
+	_ui.repeat_requested.connect(_on_repeat_requested)
+	_ui.set_target(_target_index)
 
 
 ## 연출 계층 구성 — 안무 실행기와 프리젠터를 바인딩
@@ -97,9 +103,41 @@ func _setup_combatants(def: Dictionary) -> void:
 
 ## 커맨드 분기는 번역 불변 id로 한다 — 구판은 tr()로 만든 한국어 문자열을 그대로 비교해
 ## 언어를 바꾸면 전투 커맨드가 통째로 먹통이 됐다(2026-08-28 l10n 도입 후 실측).
+## Q/E — 살아 있는 적 사이에서 대상을 옮긴다. 대상 개념이 없어 늘 첫 번째 적만
+## 때리던 것을 고친 자리(적 2체 이상 전투에서 뒤쪽 적을 지목할 방법이 없었다).
+func _on_target_cycled(direction: int) -> void:
+	if _busy or enemies.size() <= 1:
+		return
+	var start := _target_index
+	for step in enemies.size():
+		var idx := wrapi(start + direction * (step + 1), 0, enemies.size())
+		if not enemies[idx].is_down():
+			_target_index = idx
+			_ui.set_target(idx)
+			AudioManager.play_sfx(&"sfx_menu_move")
+			return
+
+
+## R — 직전 행동을 그대로 한 번 더. 턴제에서 같은 공격을 반복하는 조작 비용을 없앤다.
+func _on_repeat_requested() -> void:
+	if _busy or _last_action.is_empty():
+		return
+	match StringName(str(_last_action.get("kind", ""))):
+		&"command":
+			_on_command(StringName(str(_last_action["id"])))
+		&"skill":
+			_on_skill_selected(_last_action["skill"])
+		&"item":
+			var item_id := StringName(str(_last_action["item"].get("id", "")))
+			if GameState.inventory.count(item_id) > 0:
+				_on_item_selected(_last_action["item"])
+
+
 func _on_command(cmd_id: StringName) -> void:
 	if _busy:
 		return
+	if cmd_id != &"skill" and cmd_id != &"item":
+		_last_action = {"kind": &"command", "id": cmd_id}
 	match cmd_id:
 		&"attack":
 			_begin_player_action(
@@ -148,6 +186,7 @@ func _try_flee() -> void:
 
 
 func _on_skill_selected(skill: Dictionary) -> void:
+	_last_action = {"kind": &"skill", "skill": skill}
 	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
 	_begin_player_action(
 		{
@@ -164,6 +203,7 @@ func _on_skill_selected(skill: Dictionary) -> void:
 func _on_item_selected(item_def: Dictionary) -> void:
 	if _busy:
 		return
+	_last_action = {"kind": &"item", "item": item_def}
 	_busy = true
 	_ui.hide_menu()
 	var results := ItemEffects.use_in_battle(item_def, player_combatant)
@@ -241,14 +281,26 @@ func _on_choreo_finished(_move_id: StringName) -> void:
 	_resolve_turn()
 
 
+## 현재 대상 — 지목한 적이 살아 있으면 그 적, 아니면 첫 생존자.
 func _alive_enemy_index() -> int:
+	if (
+		_target_index >= 0
+		and _target_index < enemies.size()
+		and not enemies[_target_index].is_down()
+	):
+		return _target_index
 	for i in enemies.size():
 		if not enemies[i].is_down():
+			_target_index = i
+			_ui.set_target(i)
 			return i
 	return 0
 
 
 func _first_alive_enemy() -> Combatant:
+	var idx := _alive_enemy_index()
+	if idx < enemies.size() and not enemies[idx].is_down():
+		return enemies[idx]
 	for e in enemies:
 		if not e.is_down():
 			return e
