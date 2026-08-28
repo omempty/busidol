@@ -1,5 +1,10 @@
 ; Engine configuration file.
-; Godot 4.x — docs/02_design/02_godot_architecture.md §1 기준
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -17,7 +22,6 @@ EventBus="*res://src/autoload/event_bus.gd"
 GameState="*res://src/autoload/game_state.gd"
 Database="*res://src/autoload/database.gd"
 AudioManager="*res://src/autoload/audio_manager.gd"
-SceneRouter="*res://src/autoload/scene_router.gd"
 SettingsManager="*res://src/autoload/settings_manager.gd"
 SaveManager="*res://src/autoload/save_manager.gd"
 
@@ -26,19 +30,17 @@ SaveManager="*res://src/autoload/save_manager.gd"
 window/size/viewport_width=960
 window/size/viewport_height=540
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/event_editor/plugin.cfg")
+
+[internationalization]
+
+locale/translations=PackedStringArray("res://data/l10n/ui.ko.translation", "res://data/l10n/ui.en.translation")
+locale/fallback="ko"
 
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
 2d/snap/snap_2d_transforms_to_pixel=true
-
-[internationalization]
-
-; UI 문자열 단일 소스 = data/l10n/ui.csv (메모장 편집 가능, AGENTS.md 콘텐츠 규칙).
-; .translation은 임포트 산출물이라 커밋하지 않는다 — CI는 --import로 다시 만든다.
-locale/translations=PackedStringArray("res://data/l10n/ui.ko.translation", "res://data/l10n/ui.en.translation")
-locale/fallback="ko"
-
-[editor_plugins]
-enabled=PackedStringArray("res://addons/event_editor/plugin.cfg")

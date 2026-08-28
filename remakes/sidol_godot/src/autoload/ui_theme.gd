@@ -10,9 +10,12 @@ extends Node
 ##   3) Godot 기본                                     ← 아무것도 없을 때
 ## 파일만 1번 자리에 떨어뜨리면 코드 변경 없이 적용된다.
 
-## 번들 폰트 탐색 경로 — 확장자 순서대로 본다.
+## 번들 폰트 탐색 — 앞에서부터 먼저 찾은 것을 쓴다.
+## ui_pixel: 진짜 픽셀 한글 폰트(도트와 톤이 완전히 맞는 정답. 들어오면 자동으로 우선)
+## ui_main : 외곽선 폰트(현재 D2Coding — OFL이라 배포 가능한 현실적 선택)
 const FONT_DIR := "res://assets/fonts/"
-const FONT_STEM := "ui_pixel"
+const PIXEL_STEM := "ui_pixel"
+const FONT_STEMS: Array[String] = [PIXEL_STEM, "ui_main"]
 const FONT_EXTS: Array[String] = ["ttf", "otf", "ttc", "fnt", "font"]
 
 ## 시스템 폴백 후보 — 픽셀/비트맵 계열 한글 페이스. 앞에서부터 설치된 것을 쓴다.
@@ -61,15 +64,18 @@ func _resolve_font() -> Font:
 
 
 func _load_bundled() -> Font:
-	for ext: String in FONT_EXTS:
-		var path := "%s%s.%s" % [FONT_DIR, FONT_STEM, ext]
-		if not ResourceLoader.exists(path):
-			continue
-		var res: Resource = load(path)
-		if res is FontFile:
-			return _make_crisp(res as FontFile)
-		if res is Font:
-			return res as Font
+	for stem: String in FONT_STEMS:
+		for ext: String in FONT_EXTS:
+			var path := "%s%s.%s" % [FONT_DIR, stem, ext]
+			if not ResourceLoader.exists(path):
+				continue
+			var res: Resource = load(path)
+			if res is FontFile:
+				# 안티에일리어싱을 끄는 건 **픽셀 폰트일 때만** 맞다.
+				# 외곽선 폰트(D2Coding 등)에서 끄면 계단만 남아 오히려 지저분해진다.
+				return _make_crisp(res as FontFile) if stem == PIXEL_STEM else res as FontFile
+			if res is Font:
+				return res as Font
 	return null
 
 

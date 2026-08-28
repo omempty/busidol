@@ -37,8 +37,6 @@ func submit_player_command(cmd: Dictionary) -> void:
 			_resolve_attack(player_combatant, target, cmd)
 		&"skill":
 			_resolve_skill(player_combatant, target, cmd)
-		&"item":
-			pass  # TODO(Phase 4): 소모품 사용
 		&"flee":
 			battle_finished.emit(&"flee")
 			return

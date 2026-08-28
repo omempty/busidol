@@ -9,7 +9,6 @@ const REQUIRED_AUTOLOADS := [
 	"GameState",
 	"Database",
 	"AudioManager",
-	"SceneRouter",
 	"SettingsManager",
 	"SaveManager",
 ]
