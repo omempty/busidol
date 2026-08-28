@@ -52,7 +52,7 @@ color:#8fe0b0;padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-i
 </head>
 <body>
 <header>
-  <h1>LLM 납품 심사</h1><span class="meta">10_submitted → 20_processed / _rejected + 재요청 패키지</span>
+  <h1>LLM 납품 심사</h1><a class="meta" href="/현황판.html" target="_blank" style="margin-left:8px">현황판</a><span class="meta">10_submitted → 20_processed / _rejected + 재요청 패키지</span>
   <nav id="cats"></nav>
   <nav>
     <button class="act" id="batch-ok">전체 승인</button>
@@ -82,7 +82,7 @@ async function api(path, body){
 async function initCats(){
   const {categories} = await api('/api/categories');
   const nav = $('#cats'); nav.innerHTML='';
-  const labels = {portraits:'포트레이트', keyart:'키아트', monsters:'몬스터', sprites:'스프라이트'};
+  const labels = {portraits:'포트레이트', keyart:'키아트', monsters:'몬스터', sprites:'스프라이트', npcs:'NPC', items:'아이템', effects:'전투 이펙트'};
   for (const [cat, n] of Object.entries(categories)){
     const b = document.createElement('button');
     b.textContent = `${labels[cat]||cat} (${n})`;
@@ -126,12 +126,17 @@ function card(it){
     <div class="row">
       <button class="b ok" data-a="approve">승인</button>
       <button class="b bad" data-a="reject">반려</button>
+      <button class="b" data-a="fix">셀 편집</button>
       <button class="b" data-a="reject-confirm" style="display:none">반려 확정</button>
       <button class="b" data-a="cancel" style="display:none">취소</button>
     </div>`;
   const fb = el.querySelector('.fb'), mdout = el.querySelector('.mdout');
   const btns = Object.fromEntries([...el.querySelectorAll('button')].map(b=>[b.dataset.a,b]));
   btns.approve.onclick = () => act(it.file, 'approve', '');
+  // 규약을 못 맞춘 납품을 통째로 다시 그리게 하는 대신, 셀 단위로 고쳐 다음 버전으로 낸다.
+  btns.fix.onclick = () => window.open(
+    `/tools/review/sprite_fixer.html?cat=${encodeURIComponent(CUR)}&file=${encodeURIComponent(it.file)}`,
+    '_blank');
   btns.reject.onclick = () => { fb.style.display='block';
     btns.reject.style.display=btns.approve.style.display='none';
     btns['reject-confirm'].style.display=btns.cancel.style.display='inline-block'; };

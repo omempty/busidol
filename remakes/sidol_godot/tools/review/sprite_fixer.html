@@ -1,0 +1,779 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>셀 편집기 — 납품 시트 규약 맞추기</title>
+<!--
+  통짜로 생성된 납품 시트를 **셀 단위로 고쳐 그리드 계약에 맞추는** 편집기.
+
+  왜: 생성 모델이 규약을 못 맞추는 지점이 반복된다(격자 안내선 잔존, 라벨 글자,
+  고유색 폭증, 셀 정렬 이탈, 캔버스 크기 어긋남). 이것들 때문에 시트 전체를 다시
+  그리게 하는 것은 낭비다 — 잔선 한 줄·바 하나를 지우면 통과할 납품이 많다.
+  서버(review_server.py)가 계약을 알려 주고, 편집 결과는 **다음 버전 번호로**
+  10_submitted에 다시 들어가 기존 심사 흐름(검증 → 승인 → 설치)을 그대로 탄다.
+
+  열기: 심사 보드의 [셀 편집] 버튼, 또는
+        http://127.0.0.1:8643/tools/review/sprite_fixer.html?cat=monsters&file=c_bug_v3.png
+-->
+<style>
+  :root{--bg:#14141b;--panel:#1c1c26;--line:#2e2e3d;--fg:#e8e6f2;--dim:#9a94b8;
+        --ok:#57d78a;--bad:#ff6b6b;--warn:#ffc861;--acc:#8b7cff}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:13px/1.5 "Segoe UI",system-ui,sans-serif}
+  header{display:flex;gap:12px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--line);
+         background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+  h1{font-size:14px;margin:0;color:#cfc7ff}
+  .meta{color:var(--dim);font-size:12px}
+  main{display:grid;grid-template-columns:1fr 340px;gap:0;height:calc(100vh - 47px)}
+  #stage{overflow:auto;background:#0e0e14;position:relative}
+  #view{image-rendering:pixelated;display:block;margin:16px auto;cursor:crosshair;
+        background-image:linear-gradient(45deg,#23232e 25%,transparent 25%),
+                         linear-gradient(-45deg,#23232e 25%,transparent 25%),
+                         linear-gradient(45deg,transparent 75%,#23232e 75%),
+                         linear-gradient(-45deg,transparent 75%,#23232e 75%);
+        background-size:16px 16px;background-position:0 0,0 8px,8px -8px,-8px 0}
+  aside{border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:10px}
+  section{margin-bottom:14px}
+  section h2{font-size:12px;color:var(--acc);margin:0 0 6px;letter-spacing:.4px}
+  button{background:#262633;color:var(--fg);border:1px solid var(--line);border-radius:6px;
+         padding:5px 9px;font-size:12px;cursor:pointer}
+  button:hover{border-color:var(--acc)}
+  button.primary{background:#3a2f7a;border-color:#5a4bd0}
+  button.danger{border-color:#6b2b2b}
+  button:disabled{opacity:.45;cursor:default}
+  .row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+  input[type=number]{width:64px;background:#101018;color:var(--fg);border:1px solid var(--line);
+                     border-radius:5px;padding:3px 5px}
+  table.stat{width:100%;border-collapse:collapse;font-size:12px}
+  table.stat td{padding:2px 4px;border-bottom:1px solid #24242f}
+  table.stat td:first-child{color:var(--dim);white-space:nowrap}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+  pre#log{background:#101018;border:1px solid var(--line);border-radius:6px;padding:6px;
+          max-height:180px;overflow:auto;font-size:11px;white-space:pre-wrap;margin:0}
+  .sw{width:18px;height:18px;border:1px solid var(--line);border-radius:4px;display:inline-block;
+      vertical-align:middle}
+  .hint{color:var(--dim);font-size:11px}
+</style>
+
+<header>
+  <h1>셀 편집기</h1>
+  <span class="meta" id="title">불러오는 중…</span>
+  <span class="meta" id="contract"></span>
+  <span style="flex:1"></span>
+  <button id="undo">되돌리기 (Ctrl+Z)</button>
+  <button id="redo">다시</button>
+  <label class="meta">확대 <select id="zoom">
+    <option value="0">맞춤</option><option value="1">1x</option>
+    <option value="2" selected>2x</option><option value="4">4x</option><option value="8">8x</option>
+  </select></label>
+  <label class="meta"><input type="checkbox" id="showgrid" checked> 격자</label>
+  <button id="save" class="primary">다음 버전으로 저장</button>
+</header>
+
+<main>
+  <div id="stage"><canvas id="view"></canvas></div>
+  <aside>
+    <section>
+      <h2>계측 (계약 대조)</h2>
+      <table class="stat" id="stats"></table>
+    </section>
+
+    <section>
+      <h2>한 번에 고치기</h2>
+      <div class="row">
+        <button id="autofix" class="primary">자동 정리</button>
+        <span class="hint">키잉 → 잔선 제거 → 알파 이진화 → 양자화 → 정렬 스냅</span>
+      </div>
+    </section>
+
+    <section>
+      <h2>시트 전체</h2>
+      <div class="row">
+        <button data-op="key">마젠타 키잉</button>
+        <button data-op="guides">격자 잔선 제거</button>
+        <button data-op="binarize">알파 이진화</button>
+      </div>
+      <div class="row">
+        <button data-op="quantize">색 양자화</button>
+        <input type="number" id="ncolors" value="48" min="2" max="256">색
+        <button data-op="deblack">순수검정 → 남색</button>
+      </div>
+      <div class="row">
+        <button data-op="regrid">계약 격자로 재배치</button>
+        <input type="number" id="srccell" value="0" min="0" title="원본 셀 크기(0=자동)">
+        <span class="hint">원본 셀</span>
+      </div>
+      <div class="row">
+        <button data-op="scale">계약 크기로 리샘플(nearest)</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>선택한 셀 <span class="meta" id="cellinfo">(없음)</span></h2>
+      <div class="row">
+        <button data-op="snap">정렬 스냅</button>
+        <button data-op="clear">비우기</button>
+        <button data-op="flip">좌우 반전</button>
+      </div>
+      <div class="row">
+        <button data-op="copy">복사</button>
+        <button data-op="paste">붙여넣기</button>
+        <button data-op="snapall">전 셀 정렬 스냅</button>
+      </div>
+      <div class="row hint">방향키 = 1px 이동 · Shift+방향키 = 8px · Del = 비우기</div>
+    </section>
+
+    <section>
+      <h2>색 지우개 <span class="sw" id="pickedsw"></span> <span class="meta" id="picked">스포이드로 색 선택</span></h2>
+      <div class="row">
+        <button data-op="erasecolor">이 색 전역 삭제</button>
+        <input type="number" id="tol" value="24" min="0" max="200"> 허용오차
+      </div>
+      <div class="row hint">Alt+클릭 = 스포이드 · 드래그 = 사각 영역 지우기(Shift 누르고 드래그)</div>
+    </section>
+
+    <section>
+      <h2>기록</h2>
+      <pre id="log"></pre>
+    </section>
+  </aside>
+</main>
+
+<script>
+"use strict";
+const qs = new URLSearchParams(location.search);
+const CAT = qs.get("cat") || "monsters";
+const FILE = qs.get("file") || "";
+const $ = s => document.querySelector(s);
+const view = $("#view"), vctx = view.getContext("2d");
+
+let contract = null;      // 서버가 준 그리드 계약
+let work = null;          // 편집 대상 캔버스(원본 해상도)
+let wctx = null;
+let sel = null;           // {r, c}
+let clip = null;          // 셀 클립보드 ImageData
+let picked = null;        // 스포이드 색 [r,g,b]
+const undoStack = [], redoStack = [];
+
+function log(msg, cls) {
+  const el = $("#log");
+  el.innerHTML += `<span class="${cls || ""}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ---------------------------------------------------------------- 불러오기
+async function boot() {
+  if (!FILE) { $("#title").textContent = "?cat=…&file=… 인자가 필요하다"; return; }
+  const res = await fetch(`/api/fixer/contract?cat=${encodeURIComponent(CAT)}&file=${encodeURIComponent(FILE)}`);
+  contract = await res.json();
+  $("#title").textContent = `${contract.asset_id} · ${CAT}/${FILE}`;
+  $("#contract").textContent = contract.cell
+    ? `계약 ${contract.size[0]}×${contract.size[1]} · 셀 ${contract.cell} · ${contract.rows}행 ${contract.cols}열 · 정렬 ${contract.align}`
+    : "계약 없음(자유 규격)";
+  const img = new Image();
+  img.onload = () => {
+    work = document.createElement("canvas");
+    work.width = img.width; work.height = img.height;
+    wctx = work.getContext("2d", { willReadFrequently: true });
+    wctx.imageSmoothingEnabled = false;
+    wctx.drawImage(img, 0, 0);
+    log(`불러옴: ${img.width}×${img.height}`);
+    redraw();
+  };
+  img.onerror = () => log("이미지를 못 읽었다: " + contract.web, "bad");
+  img.src = contract.web + "?t=" + Date.now();
+}
+
+// ---------------------------------------------------------------- 화면
+function zoomFactor() {
+  const z = parseInt($("#zoom").value, 10);
+  if (z) return z;
+  const box = $("#stage").clientWidth - 40;
+  return Math.max(1, Math.floor(box / work.width));
+}
+
+function redraw() {
+  if (!work) return;
+  const z = zoomFactor();
+  view.width = work.width * z; view.height = work.height * z;
+  vctx.imageSmoothingEnabled = false;
+  vctx.clearRect(0, 0, view.width, view.height);
+  vctx.drawImage(work, 0, 0, view.width, view.height);
+  if ($("#showgrid").checked && contract.cell) drawGrid(z);
+  updateStats();
+}
+
+function drawGrid(z) {
+  const cell = contract.cell * z;
+  vctx.save();
+  vctx.lineWidth = 1;
+  for (let r = 0; r < contract.rows; r++) {
+    const frames = (contract.layout[r] || {}).frames ?? contract.cols;
+    for (let c = 0; c < contract.cols; c++) {
+      // 계약상 있어야 할 셀 = 보라, 비어 있어야 할 셀 = 회색 점선
+      const declared = c < frames;
+      vctx.strokeStyle = declared ? "rgba(139,124,255,.55)" : "rgba(120,120,140,.35)";
+      vctx.setLineDash(declared ? [] : [4, 4]);
+      vctx.strokeRect(c * cell + .5, r * cell + .5, cell - 1, cell - 1);
+    }
+  }
+  vctx.setLineDash([]);
+  if (sel) {
+    vctx.strokeStyle = "#ffc861"; vctx.lineWidth = 2;
+    vctx.strokeRect(sel.c * cell + 1, sel.r * cell + 1, cell - 2, cell - 2);
+  }
+  vctx.restore();
+}
+
+// ---------------------------------------------------------------- 계측
+function imageData() { return wctx.getImageData(0, 0, work.width, work.height); }
+function putImageData(d) { wctx.putImageData(d, 0, 0); }
+
+function isMagentaHue(r, g, b) {
+  return Math.abs(r - b) < 40 && g + 40 < Math.min(r, b) && Math.max(r, b) > 40;
+}
+function isCyanHue(r, g, b) {
+  return Math.abs(g - b) < 40 && r + 40 < Math.min(g, b) && Math.max(g, b) > 40;
+}
+
+/**
+ * 격자 안내선 판정 — 게이트(delivery_checks.py)와 **같은 세 조건**을 쓴다.
+ *   밀도 ≥30% · 단색(채널 폭 ≤40) · 두께 ≤3px
+ * 셋을 다 걸어야 그림과 구분된다. 하나라도 빼면 원작 도트의 음영이나 아이콘의
+ * 평면 채색이 선으로 잡혀 그림을 지워 버린다(실측으로 확인한 순서다).
+ * 반환: 지워야 할 픽셀 인덱스 배열.
+ */
+function guideLinePixels(d) {
+  const { width: w, height: h, data } = d;
+  const cell = contract.cell || Math.min(w, h);
+  const DENSITY = 0.3, SPREAD = 40, MAX_T = 3;
+  const hit = new Uint8Array(w * h);
+  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
+    if (data[i + 3] <= 8) continue;
+    const r = data[i], g = data[i + 1], b = data[i + 2];
+    if (isMagentaHue(r, g, b) || isCyanHue(r, g, b)) hit[p] = 1;
+  }
+  const out = [];
+  const rows = Math.max(1, Math.floor(h / cell)), cols = Math.max(1, Math.floor(w / cell));
+  for (let cr = 0; cr < rows; cr++) for (let cc = 0; cc < cols; cc++) {
+    const x0 = cc * cell, y0 = cr * cell;
+    const cw = Math.min(cell, w - x0), ch = Math.min(cell, h - y0);
+    for (const horiz of [true, false]) {
+      const n = horiz ? ch : cw, m = horiz ? cw : ch;
+      const flags = new Array(n).fill(false), pix = [];
+      for (let i = 0; i < n; i++) {
+        let cnt = 0, lo = [255, 255, 255], hi = [0, 0, 0];
+        const idx = [];
+        for (let j = 0; j < m; j++) {
+          const p = horiz ? (y0 + i) * w + x0 + j : (y0 + j) * w + x0 + i;
+          if (!hit[p]) continue;
+          cnt++; idx.push(p);
+          const q = p * 4;
+          for (let c = 0; c < 3; c++) {
+            if (data[q + c] < lo[c]) lo[c] = data[q + c];
+            if (data[q + c] > hi[c]) hi[c] = data[q + c];
+          }
+        }
+        pix.push(idx);
+        flags[i] = cnt >= m * DENSITY && Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) <= SPREAD;
+      }
+      let i = 0;
+      while (i < n) {
+        if (!flags[i]) { i++; continue; }
+        let j = i;
+        while (j < n && flags[j]) j++;
+        if (j - i <= MAX_T) for (let k = i; k < j; k++) out.push(...pix[k]);
+        i = j;
+      }
+    }
+  }
+  return out;
+}
+
+function guideRuns(d) { return guideLinePixels(d); }
+
+function stats(d) {
+  const { data } = d;
+  let semi = 0, opaque = 0, black = 0;
+  const colors = new Set();
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a > 0 && a < 255) semi++;
+    if (a > 8) {
+      opaque++;
+      colors.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+      if (!data[i] && !data[i + 1] && !data[i + 2]) black++;
+    }
+  }
+  return { semi, opaque, black, colors: colors.size, runs: guideLinePixels(d).length };
+}
+
+/** 셀 안의 불투명 픽셀 경계상자(마젠타 배경 제외). 없으면 null. */
+function cellBBox(d, r, c) {
+  const cell = contract.cell, w = d.width, data = d.data;
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let y = 0; y < cell; y++) {
+    for (let x = 0; x < cell; x++) {
+      const i = ((r * cell + y) * w + (c * cell + x)) * 4;
+      if (data[i + 3] <= 8) continue;
+      if (data[i] === 255 && data[i + 1] === 0 && data[i + 2] === 255) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+
+function updateStats() {
+  const d = imageData();
+  const s = stats(d);
+  const sizeOk = !contract.cell || (work.width === contract.size[0] && work.height === contract.size[1]);
+  const rows = [];
+  const line = (k, v, cls) => rows.push(`<tr><td>${k}</td><td class="${cls || ""}">${v}</td></tr>`);
+  line("캔버스", `${work.width}×${work.height}` + (contract.cell ? ` / 계약 ${contract.size[0]}×${contract.size[1]}` : ""), sizeOk ? "ok" : "bad");
+  line("고유색", `${s.colors}` + ` / 계약 48 이하`, s.colors <= 48 ? "ok" : (s.colors > 4096 ? "bad" : "warn"));
+  line("반투명 픽셀", s.semi, s.semi ? "bad" : "ok");
+  line("격자 잔선", s.runs + "px", s.runs ? "bad" : "ok");
+  line("순수 검정", s.black + "px", s.black > s.opaque * 0.005 ? "warn" : "ok");
+
+  if (contract.cell && sizeOk) {
+    const bad = [];
+    for (let r = 0; r < contract.rows; r++) {
+      const frames = (contract.layout[r] || {}).frames ?? contract.cols;
+      for (let c = 0; c < contract.cols; c++) {
+        const bb = cellBBox(d, r, c);
+        const declared = c < frames;
+        if (declared && !bb) { bad.push(`r${r}c${c} 비어 있음(계약 ${frames}프레임)`); continue; }
+        if (!declared && bb) { bad.push(`r${r}c${c} 여분 셀에 내용`); continue; }
+        if (!bb) continue;
+        const cx = (bb.x0 + bb.x1) / 2, cell = contract.cell;
+        if (Math.abs(cx - cell / 2) > cell * 0.12) bad.push(`r${r}c${c} 가로 중앙 이탈 ${Math.round(cx - cell / 2)}px`);
+        if (contract.align === "center") {
+          const cy = (bb.y0 + bb.y1) / 2;
+          if (Math.abs(cy - cell / 2) > cell * 0.14) bad.push(`r${r}c${c} 세로 중앙 이탈 ${Math.round(cy - cell / 2)}px`);
+        } else if (contract.align === "bottom_center" && (cell - 1 - bb.y1) > cell * 0.14) {
+          bad.push(`r${r}c${c} 하단 정렬 이탈 ${cell - 1 - bb.y1}px`);
+        }
+      }
+    }
+    line("셀 정렬", bad.length ? `${bad.length}건` : "이상 없음", bad.length ? "bad" : "ok");
+    if (bad.length) rows.push(`<tr><td colspan="2" class="hint">${bad.slice(0, 8).join("<br>")}${bad.length > 8 ? "<br>…" : ""}</td></tr>`);
+  }
+  $("#stats").innerHTML = rows.join("");
+}
+
+// ---------------------------------------------------------------- 편집 연산
+function pushUndo() {
+  undoStack.push(imageData());
+  if (undoStack.length > 24) undoStack.shift();
+  redoStack.length = 0;
+}
+
+function opKeyMagenta(d, tol) {
+  const data = d.data; let n = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (Math.abs(data[i] - 255) + data[i + 1] + Math.abs(data[i + 2] - 255) <= tol * 3) {
+      data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0; n++;
+    }
+  }
+  return n;
+}
+
+/**
+ * 안내선 색 오염 정리 — 지운 잔선 **주변 2px 안**의 마젠타/청록 픽셀만 이웃 그림색으로 메운다.
+ *
+ * 범위를 안 좁히면 그림을 먹는다: 청록 유령 `null_pointer`는 전 마젠타/청록 픽셀을
+ * 오염으로 보면 불투명 83,786px 중 45,959px이 대상이 됐다(실측). 오염은 안내선이 지나간
+ * 자리에만 생긴다. 또 색 공간 최근접으로 메우면 어두운 마젠타가 살구색 손가락에 붙어
+ * 외곽선이 분홍이 된다 — **공간적으로**(이웃 최빈색) 메운다.
+ */
+function opDetaint(d, seeds) {
+  const { width: w, height: h, data } = d;
+  if (!seeds || !seeds.length) return 0;
+  const band = new Set();
+  for (const p of seeds) {
+    const x = p % w, y = (p - x) / w;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < w && ny < h) band.add(ny * w + nx);
+    }
+  }
+  let mark = [];
+  for (const p of band) {
+    const q = p * 4;
+    if (data[q + 3] <= 8) continue;
+    if (isMagentaHue(data[q], data[q + 1], data[q + 2]) || isCyanHue(data[q], data[q + 1], data[q + 2])) mark.push(p);
+  }
+  const total = mark.length;
+  const bad = new Set(mark);
+  for (let pass = 0; pass < 2 && mark.length; pass++) {
+    const next = [];
+    for (const p of mark) {
+      const x = p % w, y = (p - x) / w;
+      const tally = new Map();
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const np = ny * w + nx;
+        if (bad.has(np)) continue;
+        const q = np * 4;
+        if (data[q + 3] <= 8) continue;
+        const key = (data[q] << 16) | (data[q + 1] << 8) | data[q + 2];
+        tally.set(key, (tally.get(key) || 0) + 1);
+      }
+      if (!tally.size) { next.push(p); continue; }
+      let best = 0, bestN = -1;
+      for (const [k, n] of tally) if (n > bestN) { bestN = n; best = k; }
+      const q = p * 4;
+      data[q] = (best >> 16) & 255; data[q + 1] = (best >> 8) & 255; data[q + 2] = best & 255;
+      bad.delete(p);
+    }
+    mark = next;
+  }
+  return total;
+}
+
+/** 격자 잔선 제거 — guideLinePixels가 고른 픽셀만 투명으로. 그림 픽셀은 건드리지 않는다. */
+function opRemoveGuides(d) {
+  const data = d.data;
+  const px = guideLinePixels(d);
+  for (const p of px) {
+    const q = p * 4;
+    data[q] = data[q + 1] = data[q + 2] = data[q + 3] = 0;
+  }
+  return px.length;
+}
+
+function opBinarize(d) {
+  const data = d.data; let n = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0 || a === 255) continue;
+    n++;
+    if (a >= 128) data[i + 3] = 255;
+    else { data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0; }
+  }
+  return n;
+}
+
+/**
+ * median-cut 양자화 — 불투명 픽셀만. 설치 단계(install_delivery.py)와 같은 방식.
+ *
+ * 팔레트 계산에서 **안내선 색(마젠타·청록) 픽셀을 뺀다.** 넣고 돌리면 잔여 마젠타가
+ * 어두운 외곽선과 같은 상자에 묶여 평균이 자주색이 되고, 스프라이트 전체에 분홍 테두리가
+ * 생긴다(실측: c_bug 자동 정리 결과). 뺀 픽셀은 마지막에 **그림 팔레트의 최근접 색**으로
+ * 흡수시킨다 — 지우면 외곽선에 구멍이 난다.
+ */
+function opQuantize(d, n) {
+  const data = d.data;
+  const px = [], tainted = [];
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] <= 8) continue;
+    if (isMagentaHue(data[i], data[i + 1], data[i + 2]) || isCyanHue(data[i], data[i + 1], data[i + 2])) tainted.push(i);
+    else px.push(i);
+  }
+  if (!px.length) return 0;
+  let boxes = [px];
+  while (boxes.length < n) {
+    boxes.sort((a, b) => boxRange(data, b) - boxRange(data, a));
+    const big = boxes.shift();
+    if (!big || big.length < 2 || boxRange(data, big) === 0) { if (big) boxes.push(big); break; }
+    const ch = widestChannel(data, big);
+    big.sort((a, b) => data[a + ch] - data[b + ch]);
+    const mid = big.length >> 1;
+    boxes.push(big.slice(0, mid), big.slice(mid));
+  }
+  const palette = [];
+  for (const box of boxes) {
+    let r = 0, g = 0, b = 0;
+    for (const i of box) { r += data[i]; g += data[i + 1]; b += data[i + 2]; }
+    r = Math.round(r / box.length); g = Math.round(g / box.length); b = Math.round(b / box.length);
+    palette.push([r, g, b]);
+    for (const i of box) { data[i] = r; data[i + 1] = g; data[i + 2] = b; }
+  }
+  for (const i of tainted) {
+    let best = 0, bestD = 1e9;
+    for (let k = 0; k < palette.length; k++) {
+      const p = palette[k];
+      const dd = Math.abs(data[i] - p[0]) + Math.abs(data[i + 1] - p[1]) + Math.abs(data[i + 2] - p[2]);
+      if (dd < bestD) { bestD = dd; best = k; }
+    }
+    data[i] = palette[best][0]; data[i + 1] = palette[best][1]; data[i + 2] = palette[best][2];
+  }
+  return boxes.length;
+}
+function widestChannel(data, box) {
+  const lo = [255, 255, 255], hi = [0, 0, 0];
+  for (const i of box) for (let c = 0; c < 3; c++) {
+    const v = data[i + c]; if (v < lo[c]) lo[c] = v; if (v > hi[c]) hi[c] = v;
+  }
+  const spans = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
+  return spans.indexOf(Math.max(...spans));
+}
+function boxRange(data, box) {
+  const c = widestChannel(data, box);
+  let lo = 255, hi = 0;
+  for (const i of box) { const v = data[i + c]; if (v < lo) lo = v; if (v > hi) hi = v; }
+  return hi - lo;
+}
+
+function opDeblack(d) {
+  const data = d.data; let n = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] > 8 && !data[i] && !data[i + 1] && !data[i + 2]) {
+      data[i] = 0x0a; data[i + 1] = 0x08; data[i + 2] = 0x2e; n++;  // 짙은 남색(#0A082E)
+    }
+  }
+  return n;
+}
+
+function opEraseColor(d, rgb, tol) {
+  const data = d.data; let n = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] === 0) continue;
+    if (Math.abs(data[i] - rgb[0]) + Math.abs(data[i + 1] - rgb[1]) + Math.abs(data[i + 2] - rgb[2]) <= tol * 3) {
+      data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0; n++;
+    }
+  }
+  return n;
+}
+
+/** 셀 내용을 계약 정렬 위치로 옮긴다. */
+function snapCell(r, c) {
+  const cell = contract.cell;
+  const d = wctx.getImageData(c * cell, r * cell, cell, cell);
+  const bb = bboxOf(d);
+  if (!bb) return false;
+  const cx = (bb.x0 + bb.x1) / 2;
+  let dx = Math.round(cell / 2 - cx), dy;
+  if (contract.align === "center") dy = Math.round(cell / 2 - (bb.y0 + bb.y1) / 2);
+  else dy = (cell - 1 - Math.floor(cell * 0.04)) - bb.y1;   // 하단 여백 4%로 접지
+  if (!dx && !dy) return false;
+  wctx.clearRect(c * cell, r * cell, cell, cell);
+  const tmp = document.createElement("canvas");
+  tmp.width = cell; tmp.height = cell;
+  tmp.getContext("2d").putImageData(d, 0, 0);
+  wctx.drawImage(tmp, c * cell + dx, r * cell + dy);
+  return true;
+}
+
+function bboxOf(d) {
+  const { width: w, height: h, data } = d;
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (data[i + 3] <= 8) continue;
+    if (data[i] === 255 && data[i + 1] === 0 && data[i + 2] === 255) continue;
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+
+/** 임의 셀 크기로 그려 온 시트를 계약 격자에 재배치한다(크기 불일치 납품 구제). */
+function regrid(srcCell) {
+  const cell = contract.cell;
+  const sc = srcCell || Math.round(work.width / contract.cols);
+  const srcRows = Math.floor(work.height / sc), srcCols = Math.floor(work.width / sc);
+  const out = document.createElement("canvas");
+  out.width = contract.size[0]; out.height = contract.size[1];
+  const octx = out.getContext("2d");
+  octx.imageSmoothingEnabled = false;
+  for (let r = 0; r < Math.min(srcRows, contract.rows); r++) {
+    const frames = (contract.layout[r] || {}).frames ?? contract.cols;
+    for (let c = 0; c < Math.min(srcCols, frames); c++) {
+      octx.drawImage(work, c * sc, r * sc, sc, sc, c * cell, r * cell, cell, cell);
+    }
+  }
+  work.width = out.width; work.height = out.height;
+  wctx = work.getContext("2d", { willReadFrequently: true });
+  wctx.imageSmoothingEnabled = false;
+  wctx.drawImage(out, 0, 0);
+  return `${srcCols}×${srcRows}(셀 ${sc}) → ${contract.cols}×${contract.rows}(셀 ${cell})`;
+}
+
+function scaleToContract() {
+  const out = document.createElement("canvas");
+  out.width = contract.size[0]; out.height = contract.size[1];
+  const octx = out.getContext("2d");
+  octx.imageSmoothingEnabled = false;
+  octx.drawImage(work, 0, 0, out.width, out.height);
+  work.width = out.width; work.height = out.height;
+  wctx = work.getContext("2d", { willReadFrequently: true });
+  wctx.imageSmoothingEnabled = false;
+  wctx.drawImage(out, 0, 0);
+}
+
+// ---------------------------------------------------------------- 조작 배선
+const OPS = {
+  key: () => { const d = imageData(); const n = opKeyMagenta(d, 40); putImageData(d); log(`마젠타 키잉 ${n}px`); },
+  guides: () => {
+    const d = imageData();
+    const seeds = guideLinePixels(d);
+    const n = opRemoveGuides(d);
+    const t = opDetaint(d, seeds);
+    putImageData(d);
+    log(`격자 잔선 제거 ${n}px · 가장자리 오염 정리 ${t}px`, n || t ? "ok" : "");
+  },
+  binarize: () => { const d = imageData(); const n = opBinarize(d); putImageData(d); log(`알파 이진화 ${n}px`); },
+  quantize: () => {
+    const n = parseInt($("#ncolors").value, 10) || 48;
+    const d = imageData(); const k = opQuantize(d, n); putImageData(d); log(`색 양자화 → ${k}색`);
+  },
+  deblack: () => { const d = imageData(); const n = opDeblack(d); putImageData(d); log(`순수검정 치환 ${n}px`); },
+  erasecolor: () => {
+    if (!picked) return log("스포이드로 색을 먼저 찍어라", "warn");
+    const d = imageData();
+    const n = opEraseColor(d, picked, parseInt($("#tol").value, 10) || 0);
+    putImageData(d); log(`색 삭제 ${n}px`);
+  },
+  regrid: () => log("재배치: " + regrid(parseInt($("#srccell").value, 10) || 0)),
+  scale: () => { scaleToContract(); log(`리샘플 → ${work.width}×${work.height}`); },
+  snap: () => { if (sel) log(snapCell(sel.r, sel.c) ? `r${sel.r}c${sel.c} 정렬` : "이동 불필요"); },
+  snapall: () => {
+    let n = 0;
+    for (let r = 0; r < contract.rows; r++)
+      for (let c = 0; c < ((contract.layout[r] || {}).frames ?? contract.cols); c++)
+        if (snapCell(r, c)) n++;
+    log(`전 셀 정렬 스냅 ${n}칸`);
+  },
+  clear: () => { if (sel) { wctx.clearRect(sel.c * contract.cell, sel.r * contract.cell, contract.cell, contract.cell); log(`r${sel.r}c${sel.c} 비움`); } },
+  flip: () => {
+    if (!sel) return;
+    const cell = contract.cell;
+    const tmp = document.createElement("canvas"); tmp.width = cell; tmp.height = cell;
+    tmp.getContext("2d").putImageData(wctx.getImageData(sel.c * cell, sel.r * cell, cell, cell), 0, 0);
+    wctx.clearRect(sel.c * cell, sel.r * cell, cell, cell);
+    wctx.save(); wctx.translate(sel.c * cell + cell, sel.r * cell); wctx.scale(-1, 1);
+    wctx.drawImage(tmp, 0, 0); wctx.restore();
+    log(`r${sel.r}c${sel.c} 좌우 반전`);
+  },
+  copy: () => { if (sel) { clip = wctx.getImageData(sel.c * contract.cell, sel.r * contract.cell, contract.cell, contract.cell); log("셀 복사"); } },
+  paste: () => { if (sel && clip) { wctx.putImageData(clip, sel.c * contract.cell, sel.r * contract.cell); log(`r${sel.r}c${sel.c}에 붙여넣기`); } },
+};
+
+document.querySelectorAll("[data-op]").forEach(b => {
+  b.onclick = () => {
+    if (!work) return;
+    pushUndo();
+    OPS[b.dataset.op]();
+    redraw();
+  };
+});
+
+$("#autofix").onclick = () => {
+  if (!work) return;
+  pushUndo();
+  if (contract.cell && (work.width !== contract.size[0] || work.height !== contract.size[1])) {
+    log("크기 불일치 — 계약 격자로 재배치부터", "warn");
+    log("재배치: " + regrid(parseInt($("#srccell").value, 10) || 0));
+  }
+  const d = imageData();
+  log(`마젠타 키잉 ${opKeyMagenta(d, 40)}px`);
+  const seeds = guideLinePixels(d);
+  log(`격자 잔선 제거 ${opRemoveGuides(d)}px`);
+  log(`가장자리 오염 정리 ${opDetaint(d, seeds)}px`);
+  log(`알파 이진화 ${opBinarize(d)}px`);
+  log(`색 양자화 → ${opQuantize(d, parseInt($("#ncolors").value, 10) || 48)}색`);
+  putImageData(d);
+  if (contract.cell) OPS.snapall();
+  redraw();
+  log("자동 정리 완료 — 계측 패널을 확인하라", "ok");
+};
+
+// 캔버스 상호작용 — 셀 선택 / 스포이드 / 사각 지우개
+let dragStart = null;
+view.onmousedown = e => {
+  if (!work) return;
+  const z = zoomFactor(), rect = view.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / z), y = Math.floor((e.clientY - rect.top) / z);
+  if (e.altKey) {
+    const p = wctx.getImageData(x, y, 1, 1).data;
+    picked = [p[0], p[1], p[2]];
+    $("#picked").textContent = `rgb(${picked.join(",")}) a=${p[3]}`;
+    $("#pickedsw").style.background = `rgb(${picked.join(",")})`;
+    return;
+  }
+  if (e.shiftKey) { dragStart = { x, y }; return; }
+  if (contract.cell) {
+    sel = { r: Math.floor(y / contract.cell), c: Math.floor(x / contract.cell) };
+    const name = (contract.layout[sel.r] || {}).name || "";
+    const frames = (contract.layout[sel.r] || {}).frames ?? contract.cols;
+    $("#cellinfo").textContent = `r${sel.r}c${sel.c} ${name} (${sel.c < frames ? "계약 프레임" : "여분 — 투명이어야 함"})`;
+    redraw();
+  }
+};
+view.onmouseup = e => {
+  if (!dragStart) return;
+  const z = zoomFactor(), rect = view.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / z), y = Math.floor((e.clientY - rect.top) / z);
+  const x0 = Math.min(dragStart.x, x), y0 = Math.min(dragStart.y, y);
+  const w = Math.abs(x - dragStart.x) + 1, h = Math.abs(y - dragStart.y) + 1;
+  pushUndo();
+  wctx.clearRect(x0, y0, w, h);
+  log(`영역 지우기 ${w}×${h} @(${x0},${y0})`);
+  dragStart = null;
+  redraw();
+};
+
+document.onkeydown = e => {
+  if (!work) return;
+  if (e.ctrlKey && e.key.toLowerCase() === "z") { undo(); return; }
+  if (e.ctrlKey && e.key.toLowerCase() === "y") { redo(); return; }
+  if (!sel || !contract.cell) return;
+  const step = e.shiftKey ? 8 : 1;
+  const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+  if (moves[e.key]) {
+    e.preventDefault();
+    pushUndo();
+    const cell = contract.cell;
+    const d = wctx.getImageData(sel.c * cell, sel.r * cell, cell, cell);
+    const tmp = document.createElement("canvas"); tmp.width = cell; tmp.height = cell;
+    tmp.getContext("2d").putImageData(d, 0, 0);
+    wctx.clearRect(sel.c * cell, sel.r * cell, cell, cell);
+    wctx.save();
+    wctx.beginPath(); wctx.rect(sel.c * cell, sel.r * cell, cell, cell); wctx.clip();
+    wctx.drawImage(tmp, sel.c * cell + moves[e.key][0], sel.r * cell + moves[e.key][1]);
+    wctx.restore();
+    redraw();
+  } else if (e.key === "Delete") { pushUndo(); OPS.clear(); redraw(); }
+};
+
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(imageData());
+  const d = undoStack.pop();
+  work.width = d.width; work.height = d.height;
+  wctx = work.getContext("2d", { willReadFrequently: true });
+  putImageData(d); redraw(); log("되돌림");
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(imageData());
+  const d = redoStack.pop();
+  work.width = d.width; work.height = d.height;
+  wctx = work.getContext("2d", { willReadFrequently: true });
+  putImageData(d); redraw(); log("다시 적용");
+}
+$("#undo").onclick = undo;
+$("#redo").onclick = redo;
+$("#zoom").onchange = redraw;
+$("#showgrid").onchange = redraw;
+
+$("#save").onclick = async () => {
+  if (!work) return;
+  const out = contract.next_file;
+  $("#save").disabled = true;
+  const res = await fetch("/api/fixer/save", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ cat: CAT, file: FILE, out, png: work.toDataURL("image/png") }),
+  });
+  const j = await res.json();
+  $("#save").disabled = false;
+  if (j.error) return log("저장 실패: " + j.error, "bad");
+  log("저장: " + j.saved, "ok");
+  const v = j.validation || {};
+  log((v.pass ? "검증 PASS" : "검증 FAIL") + "\n" + (v.lines || []).join("\n"), v.pass ? "ok" : "bad");
+};
+
+boot();
+</script>
