@@ -7,6 +7,9 @@
 - 절대 금지: 타입 무시(`as` 남용), 기존 테스트 삭제, docs와 다른 매직넘버 하드코딩.
 - **콘텐츠 하드코딩 금지**: 대사·아이템·스탯·퀘스트 조건 등은 반드시 `data/**`(JSON/CSV,
   메모장 편집 가능)에서 읽는다. GDScript 소스에 게임 콘텐츠 값을 직접 쓰지 않는다.
+- **UI 문자열도 마찬가지**: 화면에 보이는 문자열은 `data/l10n/ui.csv`(keys·ko·en)에 두고
+  `tr("UI_...")`로 읽는다. 정적 함수에서는 `TranslationServer.translate()`.
+  `validate.gd`가 코드↔표를 양방향 대조하므로 한쪽만 고치면 관문에서 걸린다.
 - 완료 정의: 헤드리스 import 통과 + 스모크 실행 + Validator 0오류.
 
 ## 레이아웃 (컬렉션)
@@ -24,11 +27,15 @@
 ## 검증 루프 (완료 조건)
 
 ```powershell
+검증실행.bat                                             # 관문 15단계 (아래는 그 일부)
 godot --headless --path . --script tools/import_all.gd   # 데이터 임포트+스키마
 godot --headless --path . --script tools/validate.gd     # 참조/플래그 검사
 godot --headless --path . res://tests/smoke.tscn         # 부팅 스모크 (exit 0)
 python tools/convert/talk_convert.py --check             # 데이터 변환기 자체검증
 ```
+
+관문 목록의 단일 소스는 `tools/dev/run_gates.ps1` — `검증실행.bat`과 CI(`.github/workflows/verify.yml`)가
+같은 파일을 돌린다. 단계를 늘릴 곳은 그 하나다.
 
 - AI는 "완료" 주장 전에 위 명령의 실제 출력을 붙인다. 출력 없는 완료 보고 = 미완료.
 - 파일 규모: 스크립트 1개 = 책임 1개, 권장 ≤200행 / 상한 300행.
