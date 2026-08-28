@@ -1,37 +1,13 @@
 {
  "schema_version": 2,
- "source": "assets/raw/llm/10_submitted/monsters/rogue_vending_v1.png (640x512, 128 cell, 5x4)",
+ "source": "20_processed/rogue_vending/processed_sheet.png (640x512, 128 cell)",
  "cell": 128,
  "cell_w": 128,
  "cell_h": 128,
  "cols": 5,
  "scale": 0.6667,
  "animations": {
-  "idle_down": {
-   "row": 0,
-   "frames": 2,
-   "fps": 2,
-   "loop": true
-  },
-  "walk_down": {
-   "row": 0,
-   "frames": 2,
-   "fps": 2,
-   "loop": true
-  },
-  "walk_up": {
-   "row": 0,
-   "frames": 2,
-   "fps": 2,
-   "loop": true
-  },
-  "walk_left": {
-   "row": 0,
-   "frames": 2,
-   "fps": 2,
-   "loop": true
-  },
-  "walk_right": {
+  "idle": {
    "row": 0,
    "frames": 2,
    "fps": 2,

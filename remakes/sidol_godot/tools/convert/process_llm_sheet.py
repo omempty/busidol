@@ -53,6 +53,23 @@ def load_spec(path: str | None, char: str) -> tuple[dict | None, str]:
         if os.path.isfile(cand):
             with open(cand, encoding="utf-8") as fh:
                 return json.load(fh), os.path.relpath(cand, ROOT)
+    # data/*_specs.json 계열 — 몬스터·NPC·이펙트·대형 컷은 여기에 계약이 있다.
+    # 셀 크기가 128이 아닌 종(대형 컷 512)을 기본값으로 자르면 시트가 조각난다.
+    for name in ("monster_anim_specs.json", "npc_anim_specs.json",
+                 "effect_specs.json", "battle_cut_specs.json",
+                 "battle_actor_specs.json"):
+        data_path = os.path.join(ROOT, "data", name)
+        if not os.path.isfile(data_path):
+            continue
+        with open(data_path, encoding="utf-8") as fh:
+            for sp in json.load(fh).get("species", []):
+                if sp.get("id") != char:
+                    continue
+                cell = int(sp.get("sheet_cell", DEFAULT_CELL))
+                return (
+                    {"cell": {"w": cell, "h": cell}, "animations": sp.get("animations", {})},
+                    f"data/{name}",
+                )
     return None, "기본 표준(셀 128, 애니맵 없음)"
 
 

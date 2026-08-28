@@ -1,40 +1,16 @@
 {
  "schema_version": 2,
- "source": "assets/raw/llm/10_submitted/monsters/flying_thesis_v1.png (512x384, 128 cell, 4x3)",
+ "source": "20_processed/flying_thesis/processed_sheet.png (512x384, 128 cell)",
  "cell": 128,
  "cell_w": 128,
  "cell_h": 128,
  "cols": 4,
  "scale": 0.6667,
  "animations": {
-  "walk_down": {
+  "walk": {
    "row": 0,
    "frames": 4,
    "fps": 6,
-   "loop": true
-  },
-  "walk_up": {
-   "row": 0,
-   "frames": 4,
-   "fps": 6,
-   "loop": true
-  },
-  "walk_left": {
-   "row": 0,
-   "frames": 4,
-   "fps": 6,
-   "loop": true
-  },
-  "walk_right": {
-   "row": 0,
-   "frames": 4,
-   "fps": 6,
-   "loop": true
-  },
-  "idle_down": {
-   "row": 0,
-   "frames": 2,
-   "fps": 2,
    "loop": true
   },
   "attack": {
