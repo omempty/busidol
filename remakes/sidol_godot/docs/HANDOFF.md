@@ -1,7 +1,8 @@
 # 세션 핸드오프 — 다음 세션 시작 가이드
 
 > 작성일: 2026-08-29 (8차 세션 종료) · Phase 9 마감 트랙 —
-> **납품 게이트 3종 · 채택본 설치 단계 · 전투 연출 층 · GUI 없는 발주 경로**
+> **납품 게이트 3종 · 채택본 설치 단계 · 전투 연출 층 · GUI 없는 발주 경로 ·
+> 원작 몬스터 리마스터 의뢰**
 > (7차까지의 기록은 §3.6~3.10)
 
 ## 1. 현재 상태 한 줄 요약
@@ -147,6 +148,29 @@ assets/sprites/c_bug_remake.png    b15f476f0ff1a96a48dcdd4998542300   <- 바이�
 - `현황판.bat` → 정적 `현황판.html`(서버 불필요). 수치는 `asset_status.collect()` 단일 소스
 - `sprite_fixer.html` — 통짜 시트를 계약 그리드 위에서 셀 단위로 수리(게이트와 같은 판정)
 
+### 원작 몬스터 리마스터 (세션 막바지)
+
+원작에서 이관한 8종(sparker·mad_eye·vulgar·dworm·ozzy·iron_voc·hellcop·o_ray)은
+**의뢰할 방법이 없었다** — `export_monster_packages.py`는 source가 placeholder인 종만 훑고
+프롬프트도 "신규 창작이다"로 시작한다. 그래서 1995년 도트 그대로 남아 있었다(`_remake` 0장).
+
+계약을 짜다 **시트와 스펙이 8종 전부 불일치**한 것을 발견했다. 이관 시트는 보행 4방향
+2프레임 + idle뿐인데 스펙은 다른 구성을 선언하고 있었고, 특히 `sparker`·`o_ray`는
+walk 행이 아예 없었다(정지형·순간이동으로 적힌 전투 전용 구성) — 그대로 리마스터를 받으면
+**필드에서 보행 애니가 사라진다**(`SpriteSets.pose_anim`이 walk_/idle_ 이름으로 찾는다).
+8종 스펙을 필드+전투 요구로 정리했다: 행0~3 walk 4방향 4프레임 · 행4 idle_down ·
+이후 attack/hurt/death(+dworm burrow·emerge). `_remake`가 없는 종이라 현재 동작에는 영향 없음.
+
+`export_monster_remaster_packages.py`(`의뢰생성.bat remaster`)는 계약을 셋으로 가른다 —
+**바꾸지 않는 것**(실루엣·색 정체성·크기감) / **격상하는 것**(명암 4~6단·질감·색 24~48) /
+**새로 그리는 것**(원작에 없던 attack·hurt·death — 원작 전투는 대형 컷이 담당해 도트 모션이
+없었다). 첨부의 핵심은 그 몬스터 자신의 원작 그림 두 벌이다: 이관 시트 + 원작 SPR 프레임
+(source 문자열 "I.SPR frames 008-015"에서 범위를 읽어 8배 확대). 서브팔레트도 계열 평균이
+아니라 **그 몬스터 자신의 색**에서 뽑는다.
+
+`asset_status`에 "원작 몬스터 리마스터" 행 추가 — `_original`이 있어 "보유"로 세어지던
+8종의 진행률이 따로 보인다(0/8). 전체 공백은 84 → **92종**.
+
 ### 관문
 
 `tests/smoke_fx.tscn`(이펙트·컷·초상 배선) · `tests/smoke_battle_input.tscn`(단축키를
@@ -154,12 +178,16 @@ InputEventAction으로 실제 주입) 추가 → **18종 전부 통과**. 공용
 
 ### 다음 세션 연계
 
-1. **실제 발주 사이클을 한 번 완주**한다 — `묶음포장.bat --pick 2`로 초상 1~2건을 뽑아
-   웹 LLM에 던지고 `납품처리.bat`까지. 가이드: `assets/gen/prompts/LLM_REQUEST_GUIDE.md`
+1. **실제 발주 사이클을 한 번 완주**한다. 시범 묶음이 이미 포장돼 있다 —
+   `assets/raw/llm/_batch/리마스터시범/`(mad_eye·sparker). 폴더째 넘기거나 각 항목의
+   `웹붙여넣기.md`(4KB)를 웹 채팅에 붙여넣고, 받으면
+   `납품처리.bat --from assets/raw/llm/_batch/리마스터시범/_제출`.
+   가이드: `assets/gen/prompts/LLM_REQUEST_GUIDE.md`(따라 하면 되는 순서로 다시 썼다)
 2. 재작업 대상: `null_pointer_v3`(라벨 글자) · `npc_friend_jeongsun_v2`(대사 말풍선) ·
    `npc_cafeteria_girl_v2`(신원 불일치). `npc_girl_v2`·`prof_chem_v2`·`npc_guard_v2`는
    승인하면 그대로 설치된다(잔선·색은 설치 단계가 정리)
-3. 미납품 층: 이펙트 5 · 대형 컷 5 · SD 전투 시트 1 · 보스 2 · 아이콘 40 · 키아트 6
+3. 미납품 층(공백 92종): **원작 몬스터 리마스터 8** · 이펙트 5 · 대형 컷 5 ·
+   SD 전투 시트 1 · 보스 2 · 중간보스 5 · NPC 4 · 초상 16 · 아이콘 40 · 키아트 6
 4. 초상 v1 플레이스홀더 16장은 게이트가 반려한다 — 지우거나 그대로 두되 설치하지 말 것
 
 ## 3.6 7차 세션 (2026-08-28) — P3 출하 트랙 마감 + 퀘스트 아이템 3종 연결
