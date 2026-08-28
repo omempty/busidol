@@ -54,7 +54,7 @@ func _build_card() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
-	header.add_child(HudTheme.label("M 닫기", 10, HudTheme.TEXT_MUTED))
+	header.add_child(HudTheme.label(tr("UI_MAP_CLOSE"), 10, HudTheme.TEXT_MUTED))
 
 	_image_view = TextureRect.new()
 	_image_view.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -78,7 +78,7 @@ func build(def: MapDefinition) -> void:
 			img.set_pixel(x, y, _color_for(def.attr_at(Vector2i(x, y))))
 	_image_view.texture = ImageTexture.create_from_image(img)
 	_image_view.custom_minimum_size = Vector2(def.width * SCALE, def.height * SCALE)
-	_title.text = "%s 지도" % def.map_id.to_upper()
+	_title.text = tr("UI_MAP_TITLE") % def.map_id.to_upper()
 
 
 func track(player: PlayerEntity) -> void:

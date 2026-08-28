@@ -48,7 +48,7 @@ func _build_ui() -> void:
 	panel.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "— 가방 —"
+	title.text = tr("UI_BAG_TITLE")
 	title.add_theme_font_size_override("font_size", 18)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
@@ -78,7 +78,7 @@ func _build_ui() -> void:
 	detail.add_child(_detail_body)
 
 	_hint_label = Label.new()
-	_hint_label.text = "↑↓ 선택    I / ESC 닫기"
+	_hint_label.text = tr("UI_BAG_HINT")
 	_hint_label.add_theme_font_size_override("font_size", 11)
 	_hint_label.modulate = Color(1, 1, 1, 0.45)
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -165,7 +165,7 @@ func _rebuild_list() -> void:
 		child.queue_free()
 	if _rows.is_empty():
 		var empty := Label.new()
-		empty.text = "가방이 비어 있다."
+		empty.text = tr("UI_BAG_EMPTY")
 		empty.modulate = Color(1, 1, 1, 0.5)
 		empty.add_theme_font_size_override("font_size", 13)
 		_list_box.add_child(empty)
@@ -176,7 +176,7 @@ func _rebuild_list() -> void:
 		_list_box.add_child(_make_row(i))
 	if _rows.size() > MAX_ROWS_SHOWN:
 		var more := Label.new()
-		more.text = "… 외 %d개" % (_rows.size() - MAX_ROWS_SHOWN)
+		more.text = tr("UI_BAG_MORE") % (_rows.size() - MAX_ROWS_SHOWN)
 		more.add_theme_font_size_override("font_size", 11)
 		more.modulate = Color(1, 1, 1, 0.4)
 		_list_box.add_child(more)
@@ -257,10 +257,12 @@ func _refresh_detail() -> void:
 	if not desc.is_empty():
 		_detail_body.append_text(desc + "\n\n")
 	if item_def.has("ap"):
-		_detail_body.append_text("공격력 %d\n" % int(item_def["ap"]))
+		_detail_body.append_text((tr("UI_BAG_ATK") % int(item_def["ap"])) + "\n")
 	if item_def.has("element") and str(item_def["element"]) != "physical":
-		_detail_body.append_text("속성 %s\n" % str(item_def["element"]))
+		_detail_body.append_text((tr("UI_BAG_ELEMENT") % str(item_def["element"])) + "\n")
 	if item_def.has("hp_restore"):
-		_detail_body.append_text("HP %d 회복\n" % int(item_def["hp_restore"]))
+		_detail_body.append_text((tr("UI_BAG_HEAL") % int(item_def["hp_restore"])) + "\n")
 	if item_def.has("price"):
-		_detail_body.append_text("\n가격 %s" % HudTheme.money(int(item_def["price"])))
+		_detail_body.append_text(
+			"\n" + (tr("UI_BAG_PRICE") % HudTheme.money(int(item_def["price"])))
+		)

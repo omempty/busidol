@@ -36,7 +36,7 @@ func _ready() -> void:
 	var vbox := VBoxContainer.new()
 	panel.add_child(vbox)
 	var title := Label.new()
-	title.text = "10,000V 고전압 회로"
+	title.text = tr("UI_BATTERY_TITLE")
 	title.add_theme_color_override("font_color", Color(0.4, 0.8, 1.0))
 	vbox.add_child(title)
 	_slots_lbl = Label.new()
@@ -107,7 +107,7 @@ func _refresh() -> void:
 		parts.append("> " + txt if i == _cursor else "  " + txt)
 	_slots_lbl.text = " ".join(parts)
 	_info_lbl.text = (
-		"직렬 합계 %dV × 과충전 x%d = %dV  /  목표 %dV\n(←→ 슬롯 | ↑↓ 건전지 | SPACE 레버)"
+		(tr("UI_BATTERY_HINT") + "\n" + tr("UI_BATTERY_HINT2"))
 		% [
 			total_voltage() / _lever if _lever > 0 else 0,
 			_lever,

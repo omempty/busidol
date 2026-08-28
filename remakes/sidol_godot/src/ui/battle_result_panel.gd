@@ -32,14 +32,18 @@ func show_summary(rewards: Dictionary, growth: Dictionary) -> void:
 	box.add_theme_constant_override("separation", 7)
 	card.add_child(box)
 
-	var title := HudTheme.label("전투 승리", 17, HudTheme.ACCENT)
+	var title := HudTheme.label(tr("UI_RESULT_WIN"), 17, HudTheme.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 	box.add_child(_divider())
 
 	box.add_child(_row("EXP", "+%s" % HudTheme.grouped(int(rewards.get("exp", 0))), HudTheme.EXP))
 	box.add_child(
-		_row("소지금", "+%s" % HudTheme.money(int(rewards.get("money", 0))), HudTheme.ACCENT)
+		_row(
+			tr("UI_RESULT_MONEY"),
+			"+%s" % HudTheme.money(int(rewards.get("money", 0))),
+			HudTheme.ACCENT
+		)
 	)
 
 	if bool(growth.get("level_up", false)):
@@ -47,7 +51,7 @@ func show_summary(rewards: Dictionary, growth: Dictionary) -> void:
 		box.add_child(_level_up_block(growth))
 
 	box.add_child(_divider())
-	var hint := HudTheme.label("SPACE  계속", 11, HudTheme.TEXT_MUTED)
+	var hint := HudTheme.label(tr("UI_RESULT_CONTINUE"), 11, HudTheme.TEXT_MUTED)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(hint)
 	_armed = true
@@ -82,7 +86,7 @@ func _level_up_block(growth: Dictionary) -> Control:
 	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	block.add_child(head)
 	if hp_up > 0:
-		block.add_child(_row("최대 HP", "+%d" % hp_up, HudTheme.HP_OK))
+		block.add_child(_row(tr("UI_RESULT_MAX_HP"), "+%d" % hp_up, HudTheme.HP_OK))
 	if ap_up > 0:
 		block.add_child(_row("AP", "+%d" % ap_up, HudTheme.HP_OK))
 	return block

@@ -22,3 +22,6 @@ assets/gen/viewers/samples/*.import
 
 # 프롬프트 패키지 Godot 임포트 메타데이터
 assets/gen/prompts/*.import
+
+# 번역 임포트 산출물(ui.csv에서 재생성)
+*.translation

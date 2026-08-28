@@ -8,12 +8,12 @@ class_name StatusChips
 ## 아이콘이 들어오면 라벨 자리만 TextureRect로 바꾸면 된다.
 
 ## Combatant.active_effects의 kind → (표기, 색)
-const LABELS := {
-	&"dot": "지속",
-	&"buff_damage_taken": "방어",
-	&"paralysis": "마비",
-	&"buff_attack": "공격",
-	&"buff_status_resist": "저항",
+const LABEL_KEYS := {
+	&"dot": "UI_STATUS_DOT",
+	&"buff_damage_taken": "UI_STATUS_GUARD",
+	&"paralysis": "UI_STATUS_PARALYSIS",
+	&"buff_attack": "UI_STATUS_ATTACK",
+	&"buff_status_resist": "UI_STATUS_RESIST",
 }
 const COLORS := {
 	&"dot": Color(0.94, 0.45, 0.30),
@@ -39,9 +39,11 @@ static func refresh(row: HBoxContainer, effects: Array[Dictionary]) -> void:
 	row.visible = not effects.is_empty()
 	for fx: Dictionary in effects:
 		var kind: StringName = fx.get("kind", &"")
-		if not LABELS.has(kind):
+		if not LABEL_KEYS.has(kind):
 			continue
-		row.add_child(_chip(String(LABELS[kind]), int(fx.get("turns", 0)), COLORS[kind]))
+		# 정적 함수라 tr()을 못 쓴다 — 번역 서버를 직접 조회한다.
+		var label := String(TranslationServer.translate(String(LABEL_KEYS[kind])))
+		row.add_child(_chip(label, int(fx.get("turns", 0)), COLORS[kind]))
 
 
 static func _chip(text: String, turns: int, color: Color) -> PanelContainer:

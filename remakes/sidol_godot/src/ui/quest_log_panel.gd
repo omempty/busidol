@@ -29,7 +29,7 @@ func _build() -> void:
 	add_child(vbox)
 
 	var caption := Label.new()
-	caption.text = "— 진행 기록 —"
+	caption.text = tr("UI_QUESTLOG_TITLE")
 	caption.add_theme_font_size_override("font_size", 20)
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caption.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -48,7 +48,7 @@ func _build() -> void:
 		_rows.append(row)
 
 	var hint := Label.new()
-	hint.text = "Esc — 닫기"
+	hint.text = tr("UI_CLOSE_ESC")
 	hint.add_theme_color_override("font_color", Color(0.65, 0.65, 0.72))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

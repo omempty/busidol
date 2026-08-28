@@ -14,6 +14,8 @@ enum EncounterDensity { NONE, LOW, NORMAL, HIGH }
 enum ScreenMode { WINDOWED, FULLSCREEN }
 ## 난이도(G-FAITH) — growth.json difficulty_presets의 키와 1:1.
 enum Difficulty { EASY, NORMAL, HARD }
+## 표시 언어 — UI 문자열은 data/l10n/ui.csv 한 곳에서 온다(04_uiux §6).
+enum Language { KO, EN }
 
 const SETTINGS_PATH := "user://settings.json"
 const BUSES: Array[StringName] = [&"Master", &"BGM", &"SFX", &"Voice"]
@@ -26,6 +28,8 @@ const TEXT_SCALE := {
 ## 밀도 → 층별 스폰 수 배율. monsters.json의 count에 곱한다.
 ## 난이도 enum → growth.json difficulty_presets 키.
 const DIFFICULTY_KEYS := ["easy", "normal", "hard"]
+## 언어 enum → 로케일 코드. data/l10n/ui.csv의 열 이름과 1:1.
+const LANGUAGE_CODES := ["ko", "en"]
 const ENCOUNTER_SCALE := {
 	EncounterDensity.NONE: 0.0,
 	EncounterDensity.LOW: 0.5,
@@ -41,6 +45,7 @@ var encounter_density: EncounterDensity = EncounterDensity.NORMAL
 var screen_mode: ScreenMode = ScreenMode.WINDOWED
 var vsync := true
 var difficulty: Difficulty = Difficulty.NORMAL
+var language: Language = Language.KO
 var volumes := {}  # StringName -> float
 
 
@@ -131,6 +136,8 @@ func load_settings() -> void:
 		int(data.get("difficulty", int(difficulty))), 0, int(Difficulty.HARD)
 	)
 	difficulty = df_v
+	var lang_v: Variant = clampi(int(data.get("language", int(language))), 0, int(Language.EN))
+	language = lang_v
 	_apply_all()
 
 
@@ -147,6 +154,7 @@ func save_settings() -> void:
 	data["screen_mode"] = int(screen_mode)
 	data["vsync"] = vsync
 	data["difficulty"] = int(difficulty)
+	data["language"] = int(language)
 	var fh := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if fh == null:
 		push_error("settings.json 저장 실패: %s" % FileAccess.get_open_error())
@@ -163,6 +171,7 @@ func _apply_all() -> void:
 	for bus in BUSES:
 		_apply_bus(bus)
 	apply_display()
+	apply_language()
 	Database.difficulty = difficulty_key()
 
 
@@ -180,3 +189,9 @@ func apply_display() -> void:
 	DisplayServer.window_set_vsync_mode(
 		DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED
 	)
+
+
+## 표시 언어 적용 — project.godot에 등록된 ui.csv 번역으로 전환한다.
+## 대사(@t/@c)는 Database가 별도로 다루므로 여기서는 UI 문자열만 바뀐다.
+func apply_language() -> void:
+	TranslationServer.set_locale(LANGUAGE_CODES[int(language)])

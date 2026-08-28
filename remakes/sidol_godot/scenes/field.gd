@@ -182,7 +182,8 @@ func _physics_process(_delta: float) -> void:
 	var chest := _chest_in_front()
 	if chest.x >= 0:
 		_prompt.show_at(
-			"SPACE 열기", Vector2(chest.x + 0.5, chest.y) * MapDefinition.TILE_PX - Vector2(0, 26)
+			tr("UI_FIELD_OPEN"),
+			Vector2(chest.x + 0.5, chest.y) * MapDefinition.TILE_PX - Vector2(0, 26)
 		)
 		if interact_edge:
 			_open_chest(chest)
@@ -242,7 +243,7 @@ func _open_chest(cell: Vector2i) -> void:
 	if attr == CHEST_MEET:
 		# 원작 MEET — 상자를 열면 몬스터가 튀어나온다.
 		AudioManager.play_sfx(&"sfx_encounter")
-		_show_pickup_popup("무언가 튀어나왔다!")
+		_show_pickup_popup(tr("UI_FIELD_AMBUSH"))
 		var species := Database.encounter_species(GameState.current_floor)
 		if not species.is_empty():
 			_trigger_encounter(str(species[0]["id"]))
@@ -251,7 +252,7 @@ func _open_chest(cell: Vector2i) -> void:
 	var item_id := Database.legacy_item(attr)
 	if attr == CHEST_EMPTY or item_id.is_empty():
 		AudioManager.play_sfx(&"sfx_menu_move")
-		_show_pickup_popup("비어 있다")
+		_show_pickup_popup(tr("UI_FIELD_EMPTY"))
 		return
 
 	var def := Database.get_item(item_id)
@@ -259,7 +260,7 @@ func _open_chest(cell: Vector2i) -> void:
 	# money 계열은 소지품이 아니라 골드로 — ItemEffects가 판정한다.
 	if ItemEffects.on_acquire(item_id, 1):
 		GameState.inventory.add(item_id, 1)
-		_show_pickup_popup("%s 획득!" % str(def.get("name_ko", item_id)))
+		_show_pickup_popup(tr("UI_FIELD_GOT_ITEM") % str(def.get("name_ko", item_id)))
 	else:
 		_show_pickup_popup("%s" % str(def.get("name_ko", item_id)))
 

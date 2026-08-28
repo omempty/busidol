@@ -5,13 +5,14 @@ extends Control
 
 signal closed
 
+## [번역 키, 번역 키 또는 키 이름] — 키 이름(Esc·I·M)은 언어와 무관해 그대로 둔다.
 const ROWS := [
-	["이동", "방향키 / WASD"],
-	["조사 · 대화 · 확인", "Space / Z"],
-	["취소 · 일시정지", "Esc"],
-	["가방 열기", "I"],
-	["미니맵 토글", "M"],
-	["세이브", "층 이동 · 전투 승리 시 자동 기록 (일시정지에서 수동 가능)"],
+	["UI_HELP_MOVE", "UI_HELP_MOVE_KEYS"],
+	["UI_HELP_INTERACT", "Space / Z"],
+	["UI_HELP_CANCEL", "Esc"],
+	["UI_HELP_BAG", "I"],
+	["UI_HELP_MAP", "M"],
+	["UI_HELP_SAVE", "UI_HELP_SAVE_DESC"],
 ]
 
 
@@ -35,14 +36,15 @@ func _build() -> void:
 
 	for row: Array in ROWS:
 		var line := Label.new()
-		line.text = "%s   %s" % [row[1], row[0]]
+		# 2열은 키 이름일 수도, 번역 키일 수도 있다 — tr()은 미등록 키를 원문 그대로 돌려준다.
+		line.text = "%s   %s" % [tr(str(row[1])), tr(str(row[0]))]
 		line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		line.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		line.add_theme_font_size_override("font_size", 17)
 		vbox.add_child(line)
 
 	var hint := Label.new()
-	hint.text = "Esc — 닫기"
+	hint.text = tr("UI_CLOSE_ESC")
 	hint.add_theme_color_override("font_color", Color(0.65, 0.65, 0.72))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

@@ -52,7 +52,7 @@ static func use_on_field(def: Dictionary) -> String:
 		return ""  # 만HP — 낭비 방지
 	stats["hp"] = mini(before + restore, max_hp)
 	GameState.state_changed.emit()
-	return "HP %d 회복" % (int(stats["hp"]) - before)
+	return String(TranslationServer.translate("UI_ITEM_HEAL")) % (int(stats["hp"]) - before)
 
 
 ## 전투 사용 — 회복 + 상태이상 해제 + 공격 버프. 반환: 결과 문구 목록.
@@ -66,7 +66,7 @@ static func use_in_battle(def: Dictionary, target: Combatant) -> Array[String]:
 
 	var cured := _cure(def, target)
 	if not cured.is_empty():
-		out.append("%s 해제" % ", ".join(cured))
+		out.append(String(TranslationServer.translate("UI_ITEM_CURED")) % ", ".join(cured))
 
 	var applies := str(def.get("applies", ""))
 	if not applies.is_empty():
@@ -95,7 +95,12 @@ static func use_in_battle(def: Dictionary, target: Combatant) -> Array[String]:
 					}
 				)
 			)
-			out.append("%s (%d턴)" % [str(edef.get("_desc", applies)).split(" —")[0], dur])
+			out.append(
+				(
+					String(TranslationServer.translate("UI_ITEM_STATUS_TURNS"))
+					% [str(edef.get("_desc", applies)).split(" —")[0], dur]
+				)
+			)
 
 	var buff := int(def.get("ap_buff", 0))
 	var turns := int(def.get("ap_buff_turns", 0))
@@ -103,7 +108,7 @@ static func use_in_battle(def: Dictionary, target: Combatant) -> Array[String]:
 		var amount := buff if buff > 0 else DEFAULT_AP_BUFF
 		var dur := turns if turns > 0 else DEFAULT_AP_BUFF_TURNS
 		target.attach_effect({"kind": &"buff_attack", "turns": dur, "magnitude": amount})
-		out.append("공격력 +%d (%d턴)" % [amount, dur])
+		out.append(String(TranslationServer.translate("UI_ITEM_ATK_BUFF")) % [amount, dur])
 	return out
 
 

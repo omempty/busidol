@@ -38,7 +38,7 @@ func _ready() -> void:
 	var vbox := VBoxContainer.new()
 	panel.add_child(vbox)
 	_title_lbl = Label.new()
-	_title_lbl.text = "공대생 생존 퀴즈"
+	_title_lbl.text = tr("UI_QUIZ_TITLE")
 	_title_lbl.add_theme_color_override("font_color", Color(0.5, 0.9, 1.0))
 	vbox.add_child(_title_lbl)
 	_q_lbl = Label.new()

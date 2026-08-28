@@ -54,6 +54,7 @@ func _initialize() -> void:
 	_validate_legacy_ref()
 	_validate_item_reachability()
 	_validate_skill_grants()
+	_validate_l10n()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -358,18 +359,39 @@ func _validate_item_reachability() -> void:
 	for shop: Dictionary in (shops.get("shops", {}) as Dictionary).values():
 		for iid: String in shop.get("stock", []):
 			reachable[iid] = true
-	var cutscene_text := ""
 	for f in DirAccess.get_files_at(DATA + "cutscenes"):
-		cutscene_text += FileAccess.get_file_as_string(DATA + "cutscenes/" + f)
+		var parsed: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(DATA + "cutscenes/" + f)
+		)
+		if typeof(parsed) == TYPE_DICTIONARY:
+			_scan_item_grants((parsed as Dictionary).get("steps", []), reachable)
 
 	var orphans: Array[String] = []
 	for it: Dictionary in raw.get("items", []):
 		var iid := str(it["id"])
-		if reachable.has(iid) or cutscene_text.contains(iid):
+		if reachable.has(iid):
 			continue
 		orphans.append("%s(%s)" % [iid, str(it.get("name_ko", ""))])
 	if not orphans.is_empty():
 		print("[validate] 경고 — 획득 경로 없는 아이템 %d종: %s" % [orphans.size(), ", ".join(orphans)])
+
+
+## 컷신 명령열에서 "실제로 지급하는" op만 골라 담는다 — grant_item.item · craft.grant 키.
+## 파일 전체 문자열 포함으로 세면 craft.requires나 주석의 단순 언급도 통과해 버려
+## "쓰기만 하고 주지는 않는" 아이템이 사문화된 채 숨는다.
+func _scan_item_grants(steps: Array, reachable: Dictionary) -> void:
+	for st: Dictionary in steps:
+		var args: Dictionary = st.get("args", {})
+		match str(st.get("op", "")):
+			"grant_item":
+				reachable[str(args.get("item", ""))] = true
+			"craft":
+				for gid: String in args.get("grant", {}) as Dictionary:
+					reachable[gid] = true
+		for opt: Dictionary in args.get("options", []) as Array:
+			_scan_item_grants(opt.get("steps", []), reachable)
+		if st.has("steps"):
+			_scan_item_grants(st["steps"], reachable)
 
 
 ## 상자 ATT ↔ 아이템 매핑이 실재하는 id를 가리키는가.
@@ -434,3 +456,55 @@ func _load_json(path: String) -> Variant:
 	if raw == null:
 		_err("JSON 파싱 실패: " + path)
 	return raw
+
+
+## UI 문자열 ↔ 번역표(data/l10n/ui.csv) 양방향 대조.
+## 한쪽만 검사하면 반쪽이 조용히 죽는다: 키만 있고 표에 없으면 화면에 키가 그대로 뜨고,
+## 표에만 있고 코드가 안 쓰면 번역 비용만 남는 사문화 데이터가 된다(2026-08-27 교훈).
+func _validate_l10n() -> void:
+	var path := "res://data/l10n/ui.csv"
+	var fh := FileAccess.open(path, FileAccess.READ)
+	if fh == null:
+		_err("l10n 표 없음: %s" % path)
+		return
+	var header: PackedStringArray = fh.get_csv_line()
+	var table: Dictionary = {}
+	var blanks: Array[String] = []
+	while not fh.eof_reached():
+		var row: PackedStringArray = fh.get_csv_line()
+		if row.size() < 2 or row[0].is_empty():
+			continue
+		table[row[0]] = true
+		for col in range(1, header.size()):
+			if col >= row.size() or row[col].strip_edges().is_empty():
+				blanks.append("%s[%s]" % [row[0], header[col]])
+	fh.close()
+
+	var used: Dictionary = {}
+	var re := RegEx.create_from_string('"(UI_[A-Z0-9_]+)"')
+	for f in _gd_files("res://src") + _gd_files("res://scenes"):
+		for m in re.search_all(FileAccess.get_file_as_string(f)):
+			used[m.get_string(1)] = f
+
+	for key: String in used:
+		if not table.has(key):
+			_err("%s가 쓰는 번역 키 '%s'가 ui.csv에 없음" % [str(used[key]).get_file(), key])
+	var unused: Array[String] = []
+	for key2: String in table:
+		if not used.has(key2):
+			unused.append(key2)
+	if not unused.is_empty():
+		print("[validate] 경고 — 아무 데서도 안 쓰는 번역 키 %d개: %s" % [unused.size(), ", ".join(unused)])
+	if not blanks.is_empty():
+		print("[validate] 경고 — 번역 빈칸 %d개: %s" % [blanks.size(), ", ".join(blanks)])
+
+
+## 디렉터리 아래 .gd 전부(재귀).
+func _gd_files(dir_path: String) -> Array[String]:
+	var out: Array[String] = []
+	for d in DirAccess.get_directories_at(dir_path):
+		out += _gd_files(dir_path + "/" + d)
+	for f in DirAccess.get_files_at(dir_path):
+		if f.ends_with(".gd"):
+			out.append(dir_path + "/" + f)
+	return out

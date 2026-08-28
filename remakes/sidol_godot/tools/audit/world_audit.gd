@@ -25,6 +25,8 @@ const VIEW := Rect2(Vector2.ZERO, Vector2(960, 540))
 ## 필드 위에 열리는 패널 — 하나씩 닫고 열어야 남의 위반이 이 이름으로 보고되지 않는다.
 const FIELD_PANELS := ["가방", "빠른 이동", "매점"]
 const BATTLE_MENUS := ["커맨드", "기술", "도구"]
+## 메뉴 패널은 로케일마다 문자열 길이가 달라 배치가 달라진다 — ui.csv의 열과 1:1.
+const MENU_LOCALES := ["ko", "en"]
 
 var _rep := AuditReport.new()
 
@@ -45,6 +47,7 @@ func _ready() -> void:
 	for f: int in FLOORS:
 		await _audit_floor(f)
 	await _audit_battle_ui()
+	await _audit_menu_ui()
 
 	print("\n".join(_rep.lines))
 	var tail := _rep.summary_tail()
@@ -243,3 +246,30 @@ func _find_renderer(field: Node2D) -> MapRenderer:
 		if child is MapRenderer:
 			return child
 	return null
+
+
+## 타이틀·일시정지에서 열리는 패널(설정·도움말)이 화면 안에 들어오는가.
+## 필드/전투 밖이라 기존 검사가 닿지 않던 자리다 — 설정은 행이 늘 때마다 아래로 자란다
+## (2026-08-28 언어 행 추가). 언어를 바꾸면 문자열 길이가 달라지므로 로케일별로 본다.
+func _audit_menu_ui() -> void:
+	var layer := CanvasLayer.new()
+	add_child(layer)
+	var panels := {"설정": SettingsPanel.new(), "도움말": HelpPanel.new()}
+	for name: String in panels:
+		layer.add_child(panels[name])
+	for locale: String in MENU_LOCALES:
+		TranslationServer.set_locale(locale)
+		for name2: String in panels:
+			var panel: Control = panels[name2]
+			panel.visible = true
+			if panel.has_method("_refresh"):
+				panel.call("_refresh")
+			await get_tree().process_frame
+			await get_tree().process_frame
+			_rep.scope("menu_ui/%s/%s" % [locale, name2])
+			UiProbe.check_onscreen(_rep, panel, VIEW, "%s 패널(%s)" % [name2, locale])
+			panel.visible = false
+	TranslationServer.set_locale(SettingsManager.LANGUAGE_CODES[int(SettingsManager.language)])
+	_rep.scope("menu_ui")
+	layer.queue_free()
+	await get_tree().process_frame

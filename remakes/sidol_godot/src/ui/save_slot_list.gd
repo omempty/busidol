@@ -8,7 +8,7 @@ enum Mode { SAVE, LOAD }
 signal slot_chosen(slot: int)
 signal canceled
 
-const ROW_LABELS := ["오토세이브", "슬롯 1", "슬롯 2", "슬롯 3"]
+const ROW_KEYS := ["UI_SAVE_AUTO", "UI_SAVE_SLOT_1", "UI_SAVE_SLOT_2", "UI_SAVE_SLOT_3"]
 
 var mode: Mode = Mode.LOAD
 var _rows: Array[Label] = []
@@ -75,12 +75,12 @@ func _refresh() -> void:
 		var meta := SaveManager.slot_meta(i)
 		var text := ""
 		if meta.is_empty():
-			text = "%s   (비어 있음)" % ROW_LABELS[i]
+			text = tr("UI_SAVE_EMPTY") % tr(ROW_KEYS[i])
 		else:
 			text = (
-				"%s   F%d · Lv%d · %d원 · %s"
+				tr("UI_SAVE_ENTRY")
 				% [
-					ROW_LABELS[i],
+					tr(ROW_KEYS[i]),
 					int(meta["floor"]),
 					int(meta["level"]),
 					int(meta["money"]),

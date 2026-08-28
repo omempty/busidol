@@ -5,14 +5,14 @@ extends CanvasLayer
 
 const FIELD_SCENE := "res://scenes/field.tscn"
 const TITLE_SCENE := "res://scenes/main.tscn"
-const ROOT_ITEMS: Array[String] = [
-	"계속하기",
-	"세이브",
-	"로드",
-	"진행 기록",
-	"도움말",
-	"설정",
-	"타이틀로",
+const ROOT_ITEM_KEYS: Array[String] = [
+	"UI_PAUSE_RESUME",
+	"UI_PAUSE_SAVE",
+	"UI_PAUSE_LOAD",
+	"UI_PAUSE_QUESTLOG",
+	"UI_PAUSE_HELP",
+	"UI_PAUSE_SETTINGS",
+	"UI_PAUSE_TO_TITLE",
 ]
 
 enum Screen { ROOT, SAVE, LOAD, LOG, HELP, SETTINGS }
@@ -73,15 +73,15 @@ func _build_root() -> void:
 	_root_box = vbox
 
 	var caption := Label.new()
-	caption.text = "— 일시정지 —"
+	caption.text = tr("UI_PAUSE_TITLE")
 	caption.add_theme_font_size_override("font_size", 20)
 	caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	caption.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(caption)
 
-	for item in ROOT_ITEMS:
+	for item_key in ROOT_ITEM_KEYS:
 		var row := Label.new()
-		row.text = item
+		row.text = tr(item_key)
 		row.add_theme_font_size_override("font_size", 18)
 		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -169,7 +169,7 @@ func _refresh() -> void:
 	for i in range(_root_labels.size()):
 		var selected := i == _index
 		var prefix := "> " if selected else "  "
-		_root_labels[i].text = prefix + ROOT_ITEMS[i]
+		_root_labels[i].text = prefix + tr(ROOT_ITEM_KEYS[i])
 		_root_labels[i].add_theme_color_override(
 			"font_color", Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1)
 		)

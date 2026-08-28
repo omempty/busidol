@@ -1,0 +1,127 @@
+keys,ko,en
+UI_MENU_NEW_GAME,새 게임,New Game
+UI_MENU_CONTINUE,계속하기,Continue
+UI_MENU_CONTINUE_EMPTY,  계속하기 (기록 없음),  Continue (no save)
+UI_MENU_SETTINGS,설정,Settings
+UI_MENU_HELP,도움말,Help
+UI_MENU_QUIT,종료,Quit
+UI_MENU_TITLE,BSD 시돌이의 모험,"BSD Sidol's Adventure"
+UI_MENU_HINT,↑↓ 선택   Enter/Z 확인   ←→ 아트 모드,↑↓ Select   Enter/Z Confirm   ←→ Art mode
+UI_MENU_ART_MODE,아트 모드: < %s >,Art mode: < %s >
+UI_ART_LEGACY,레거시 (원작 도트),Legacy (original pixels)
+UI_ART_REMAKE,리메이크 (신규),Remake (new art)
+UI_PAUSE_TITLE,— 일시정지 —,— Paused —
+UI_PAUSE_RESUME,계속하기,Resume
+UI_PAUSE_SAVE,세이브,Save
+UI_PAUSE_LOAD,로드,Load
+UI_PAUSE_QUESTLOG,진행 기록,Quest log
+UI_PAUSE_HELP,도움말,Help
+UI_PAUSE_SETTINGS,설정,Settings
+UI_PAUSE_TO_TITLE,타이틀로,Back to title
+UI_SAVE_AUTO,오토세이브,Autosave
+UI_SAVE_SLOT_1,슬롯 1,Slot 1
+UI_SAVE_SLOT_2,슬롯 2,Slot 2
+UI_SAVE_SLOT_3,슬롯 3,Slot 3
+UI_SAVE_EMPTY,%s   (비어 있음),%s   (empty)
+UI_SAVE_ENTRY,%s   F%d · Lv%d · %d원 · %s,%s   F%d · Lv%d · %d ON · %s
+UI_SETTINGS_MASTER_VOL,마스터 볼륨,Master volume
+UI_SETTINGS_BGM_VOL,BGM 볼륨,Music volume
+UI_SETTINGS_SFX_VOL,효과음 볼륨,SFX volume
+UI_SETTINGS_VOICE_VOL,보이스 볼륨,Voice volume
+UI_SETTINGS_SPEED,연출 속도,Cutscene speed
+UI_SETTINGS_ART,아트 모드,Art mode
+UI_SETTINGS_TEXT_SIZE,본문 글자 크기,Text size
+UI_SETTINGS_SHAKE,화면 흔들림,Screen shake
+UI_SETTINGS_DENSITY,몬스터 밀도,Monster density
+UI_SETTINGS_DIFFICULTY,난이도,Difficulty
+UI_SETTINGS_SCREEN,화면 모드,Window mode
+UI_SETTINGS_VSYNC,수직 동기,VSync
+UI_SETTINGS_LANGUAGE,언어 / Language,Language
+UI_SETTINGS_CONTROLS,조작법,Controls
+UI_SETTINGS_CONTROLS_HINT,(확인 키로 보기),(press confirm)
+UI_OPT_SPEED_NORMAL,보통,Normal
+UI_OPT_SPEED_FAST,빠름,Fast
+UI_OPT_SPEED_SKIP,스킵,Skip
+UI_OPT_TEXT_SMALL,작음,Small
+UI_OPT_TEXT_NORMAL,보통,Normal
+UI_OPT_TEXT_LARGE,크게,Large
+UI_OPT_ON,켬,On
+UI_OPT_OFF,끔,Off
+UI_OPT_DENSITY_NONE,없음,None
+UI_OPT_DENSITY_LOW,적게,Low
+UI_OPT_DENSITY_NORMAL,보통,Normal
+UI_OPT_DENSITY_HIGH,많게,High
+UI_OPT_DIFF_EASY,쉬움,Easy
+UI_OPT_DIFF_NORMAL,보통,Normal
+UI_OPT_DIFF_HARD,도전,Hard
+UI_OPT_SCREEN_WINDOW,창 모드,Windowed
+UI_OPT_SCREEN_FULL,전체 화면,Fullscreen
+UI_OPT_LANG_KO,한국어,Korean
+UI_OPT_LANG_EN,English,English
+UI_HELP_MOVE,이동,Move
+UI_HELP_MOVE_KEYS,방향키 / WASD,Arrow keys / WASD
+UI_HELP_INTERACT,조사 · 대화 · 확인,Inspect · Talk · Confirm
+UI_HELP_CANCEL,취소 · 일시정지,Cancel · Pause
+UI_HELP_BAG,가방 열기,Open bag
+UI_HELP_MAP,미니맵 토글,Toggle minimap
+UI_HELP_SAVE,세이브,Save
+UI_HELP_SAVE_DESC,층 이동 · 전투 승리 시 자동 기록 (일시정지에서 수동 가능),Auto-saved on floor change and battle win (manual save from pause)
+UI_CLOSE_ESC,Esc — 닫기,Esc — Close
+UI_BAG_TITLE,— 가방 —,— Bag —
+UI_BAG_HINT,↑↓ 선택    I / ESC 닫기,↑↓ Select    I / ESC Close
+UI_BAG_EMPTY,가방이 비어 있다.,The bag is empty.
+UI_BAG_MORE,… 외 %d개,… and %d more
+UI_BAG_ATK,공격력 %d,Attack %d
+UI_BAG_ELEMENT,속성 %s,Element %s
+UI_BAG_HEAL,HP %d 회복,Restores %d HP
+UI_BAG_PRICE,가격 %s,Price %s
+UI_QUESTLOG_TITLE,— 진행 기록 —,— Quest log —
+UI_SHOP_TITLE,매점,Shop
+UI_SHOP_MONEY,소지금 %s,Money %s
+UI_SHOP_BUY,구매,Buy
+UI_SHOP_CLOSE,닫기,Close
+UI_HUD_HINT,SPACE 조사 · I 가방 · M 지도 · ESC 메뉴,SPACE Inspect · I Bag · M Map · ESC Menu
+UI_HUD_MONEY,소지금,Money
+UI_HUD_NEXT_LEVEL,다음까지 %d,%d to next
+UI_HUD_MONEY_UNIT,%s온,%s ON
+UI_MAP_CLOSE,M 닫기,M Close
+UI_MAP_TITLE,%s 지도,%s map
+UI_FASTTRAVEL_TITLE,계단 — 어디로 갈까,Stairs — where to?
+UI_FASTTRAVEL_HINT,↑↓ 선택   SPACE 이동   ESC 취소,↑↓ Select   SPACE Go   ESC Cancel
+UI_FIELD_OPEN,SPACE 열기,SPACE Open
+UI_FIELD_AMBUSH,무언가 튀어나왔다!,Something jumped out!
+UI_FIELD_EMPTY,비어 있다,It is empty
+UI_FIELD_GOT_ITEM,%s 획득!,Got %s!
+UI_BATTLE_CMD_ATTACK,공격,Attack
+UI_BATTLE_CMD_SKILL,기술,Skill
+UI_BATTLE_CMD_GUARD,방어,Guard
+UI_BATTLE_CMD_ITEM,도구,Item
+UI_BATTLE_CMD_FLEE,도망,Flee
+UI_BATTLE_NO_ITEM,사용 가능한 도구 없음,No usable item
+UI_BATTLE_PLAYER_NAME,부싯돌,Sidol
+UI_RESULT_WIN,전투 승리,Victory
+UI_RESULT_MONEY,소지금,Money
+UI_RESULT_CONTINUE,SPACE  계속,SPACE  Continue
+UI_RESULT_MAX_HP,최대 HP,Max HP
+UI_STATUS_DOT,지속,DoT
+UI_STATUS_GUARD,방어,Guard
+UI_STATUS_PARALYSIS,마비,Paralysis
+UI_STATUS_ATTACK,공격,Attack
+UI_STATUS_RESIST,저항,Resist
+UI_ITEM_HEAL,HP %d 회복,Restored %d HP
+UI_ITEM_CURED,%s 해제,%s cured
+UI_ITEM_STATUS_TURNS,%s (%d턴),%s (%d turns)
+UI_ITEM_ATK_BUFF,공격력 +%d (%d턴),Attack +%d (%d turns)
+UI_QUIZ_TITLE,공대생 생존 퀴즈,Engineering survival quiz
+UI_BATTERY_TITLE,"10,000V 고전압 회로","10,000V circuit"
+UI_BATTERY_HINT,"직렬 합계 %dV × 과충전 x%d = %dV  /  목표 %dV","Series %dV × overcharge x%d = %dV  /  target %dV"
+UI_BATTERY_HINT2,"(←→ 슬롯 | ↑↓ 건전지 | SPACE 레버)","(←→ slot | ↑↓ battery | SPACE lever)"
+UI_CREDIT_MODE_TEAM,부싯돌 개발팀,Busidol dev team
+UI_CREDIT_MODE_AFTER,엔딩 후일담,Epilogue
+UI_CREDIT_MODE_ROLL,스탭롤,Staff roll
+UI_CREDIT_MODE_QUIZ,공식 퀴즈,Official quiz
+UI_CREDIT_HINT,↑↓ 모드 | ← → 항목 | ESC 나가기,↑↓ Mode | ←→ Item | ESC Leave
+UI_CREDIT_QUIZ_TITLE,공식 퀴즈 도전,Take the official quiz
+UI_CREDIT_QUIZ_DESC,10문항 전부 정답에 도전한다.,Aim for all 10 answers correct.
+UI_CREDIT_QUIZ_START,SPACE: 도전,SPACE: Start
+UI_CREDIT_QUIZ_PERFECT,완벽했다. 자랑스럽게도 말이지.,Flawless. And proudly so.

@@ -7,21 +7,30 @@ extends Control
 signal closed
 signal controls_requested
 
-const SPEED_LABELS := ["보통", "빠름", "스킵"]
-const ART_LABELS := ["레거시 (원작 도트)", "리메이크 (신규)"]
-const TEXT_LABELS := ["작음", "보통", "크게"]
-const SHAKE_LABELS := ["켬", "끔"]
+## 표시 문자열은 전부 data/l10n/ui.csv — 여기 있는 것은 번역 키다(const는 tr()을 못 담는다).
+const SPEED_KEYS := ["UI_OPT_SPEED_NORMAL", "UI_OPT_SPEED_FAST", "UI_OPT_SPEED_SKIP"]
+const ART_KEYS := ["UI_ART_LEGACY", "UI_ART_REMAKE"]
+const TEXT_KEYS := ["UI_OPT_TEXT_SMALL", "UI_OPT_TEXT_NORMAL", "UI_OPT_TEXT_LARGE"]
+const SHAKE_KEYS := ["UI_OPT_ON", "UI_OPT_OFF"]
 ## Q6 — 접촉이 곧 강제 전투라 밀도가 곧 피로도. 없음은 탐험/시나리오 전용 모드.
-const DENSITY_LABELS := ["없음", "적게", "보통", "많게"]
-const DIFFICULTY_LABELS := ["쉬움", "보통", "도전"]
-const SCREEN_LABELS := ["창 모드", "전체 화면"]
-const VSYNC_LABELS := ["켬", "끔"]
+const DENSITY_KEYS := [
+	"UI_OPT_DENSITY_NONE", "UI_OPT_DENSITY_LOW", "UI_OPT_DENSITY_NORMAL", "UI_OPT_DENSITY_HIGH"
+]
+const DIFFICULTY_KEYS := ["UI_OPT_DIFF_EASY", "UI_OPT_DIFF_NORMAL", "UI_OPT_DIFF_HARD"]
+const SCREEN_KEYS := ["UI_OPT_SCREEN_WINDOW", "UI_OPT_SCREEN_FULL"]
+const VSYNC_KEYS := ["UI_OPT_ON", "UI_OPT_OFF"]
+const LANGUAGE_KEYS := ["UI_OPT_LANG_KO", "UI_OPT_LANG_EN"]
+const VOLUME_KEYS := [
+	"UI_SETTINGS_MASTER_VOL", "UI_SETTINGS_BGM_VOL", "UI_SETTINGS_SFX_VOL", "UI_SETTINGS_VOICE_VOL"
+]
 const VOLUME_STEP := 0.1
 const ROW_DENSITY := 8
 const ROW_DIFFICULTY := 9
 const ROW_SCREEN := 10
 const ROW_VSYNC := 11
-const ROW_CONTROLS := 12
+const ROW_LANGUAGE := 12
+const ROW_CONTROLS := 13
+const ROW_COUNT := 14
 
 var _rows: Array[Label] = []
 var _values: Array[Label] = []
@@ -39,7 +48,7 @@ func _build() -> void:
 	vbox.set_anchors_preset(Control.PRESET_FULL_RECT)
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	add_child(vbox)
-	for i in range(13):
+	for i in range(ROW_COUNT):
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 24)
@@ -121,6 +130,11 @@ func _adjust(dir: int) -> void:
 			SettingsManager.screen_mode = next_v
 		ROW_VSYNC:
 			SettingsManager.vsync = not SettingsManager.vsync
+		ROW_LANGUAGE:
+			var values: Array = SettingsManager.Language.values()
+			var idx: int = values.find(SettingsManager.language)
+			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
+			SettingsManager.language = next_v
 	SettingsManager.save_settings()
 	_refresh()
 
@@ -128,17 +142,29 @@ func _adjust(dir: int) -> void:
 func _refresh() -> void:
 	for i in range(4):
 		var bus: StringName = SettingsManager.BUSES[i]
-		var names := ["마스터 볼륨", "BGM 볼륨", "효과음 볼륨", "보이스 볼륨"]
-		_set_row(i, names[i], "%d%%" % roundi(SettingsManager.get_volume(bus) * 100))
-	_set_row(4, "연출 속도", SPEED_LABELS[int(SettingsManager.effect_speed)])
-	_set_row(5, "아트 모드", ART_LABELS[int(SettingsManager.art_mode)])
-	_set_row(6, "본문 글자 크기", TEXT_LABELS[int(SettingsManager.text_size)])
-	_set_row(7, "화면 흔들림", SHAKE_LABELS[0 if SettingsManager.screen_shake else 1])
-	_set_row(ROW_DENSITY, "몬스터 밀도", DENSITY_LABELS[int(SettingsManager.encounter_density)])
-	_set_row(ROW_DIFFICULTY, "난이도", DIFFICULTY_LABELS[int(SettingsManager.difficulty)])
-	_set_row(ROW_SCREEN, "화면 모드", SCREEN_LABELS[int(SettingsManager.screen_mode)])
-	_set_row(ROW_VSYNC, "수직 동기", VSYNC_LABELS[0 if SettingsManager.vsync else 1])
-	_set_row(ROW_CONTROLS, "조작법", "(확인 키로 보기)")
+		_set_row(i, tr(VOLUME_KEYS[i]), "%d%%" % roundi(SettingsManager.get_volume(bus) * 100))
+	_set_row(4, tr("UI_SETTINGS_SPEED"), tr(SPEED_KEYS[int(SettingsManager.effect_speed)]))
+	_set_row(5, tr("UI_SETTINGS_ART"), tr(ART_KEYS[int(SettingsManager.art_mode)]))
+	_set_row(6, tr("UI_SETTINGS_TEXT_SIZE"), tr(TEXT_KEYS[int(SettingsManager.text_size)]))
+	_set_row(7, tr("UI_SETTINGS_SHAKE"), tr(SHAKE_KEYS[0 if SettingsManager.screen_shake else 1]))
+	_set_row(
+		ROW_DENSITY,
+		tr("UI_SETTINGS_DENSITY"),
+		tr(DENSITY_KEYS[int(SettingsManager.encounter_density)])
+	)
+	_set_row(
+		ROW_DIFFICULTY,
+		tr("UI_SETTINGS_DIFFICULTY"),
+		tr(DIFFICULTY_KEYS[int(SettingsManager.difficulty)])
+	)
+	_set_row(
+		ROW_SCREEN, tr("UI_SETTINGS_SCREEN"), tr(SCREEN_KEYS[int(SettingsManager.screen_mode)])
+	)
+	_set_row(ROW_VSYNC, tr("UI_SETTINGS_VSYNC"), tr(VSYNC_KEYS[0 if SettingsManager.vsync else 1]))
+	_set_row(
+		ROW_LANGUAGE, tr("UI_SETTINGS_LANGUAGE"), tr(LANGUAGE_KEYS[int(SettingsManager.language)])
+	)
+	_set_row(ROW_CONTROLS, tr("UI_SETTINGS_CONTROLS"), tr("UI_SETTINGS_CONTROLS_HINT"))
 
 
 func _set_row(i: int, text: String, value_text: String) -> void:

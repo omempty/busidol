@@ -33,5 +33,12 @@ window/stretch/aspect="keep"
 textures/canvas_textures/default_texture_filter=0
 2d/snap/snap_2d_transforms_to_pixel=true
 
+[internationalization]
+
+; UI 문자열 단일 소스 = data/l10n/ui.csv (메모장 편집 가능, AGENTS.md 콘텐츠 규칙).
+; .translation은 임포트 산출물이라 커밋하지 않는다 — CI는 --import로 다시 만든다.
+locale/translations=PackedStringArray("res://data/l10n/ui.ko.translation", "res://data/l10n/ui.en.translation")
+locale/fallback="ko"
+
 [editor_plugins]
 enabled=PackedStringArray("res://addons/event_editor/plugin.cfg")

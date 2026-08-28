@@ -4,8 +4,11 @@ extends Node
 ## 경로 결정은 SpriteSets가 담당(부재 세트 자동 폴백).
 
 const FIELD_SCENE := "res://scenes/field.tscn"
-const ART_LABELS: Array[String] = ["레거시 (원작 도트)", "리메이크 (신규)"]
-const MENU_ITEMS: Array[String] = ["새 게임", "계속하기", "설정", "도움말", "종료"]
+## 표시 문자열은 data/l10n/ui.csv — const는 tr()을 담을 수 없어 키만 둔다.
+const ART_KEYS: Array[String] = ["UI_ART_LEGACY", "UI_ART_REMAKE"]
+const MENU_ITEM_KEYS: Array[String] = [
+	"UI_MENU_NEW_GAME", "UI_MENU_CONTINUE", "UI_MENU_SETTINGS", "UI_MENU_HELP", "UI_MENU_QUIT"
+]
 
 enum Screen { MENU, CONTINUE, SETTINGS, HELP }
 
@@ -49,16 +52,16 @@ func _build_menu() -> void:
 	ui.add_child(vbox)
 
 	var title := Label.new()
-	title.text = "BSD 시돌이의 모험"
+	title.text = tr("UI_MENU_TITLE")
 	title.add_theme_font_size_override("font_size", 40)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	vbox.add_child(title)
 
 	vbox.add_child(_spacer(18))
-	for item in MENU_ITEMS:
+	for item_key in MENU_ITEM_KEYS:
 		var row := Label.new()
-		row.text = item
+		row.text = tr(item_key)
 		row.add_theme_font_size_override("font_size", 22)
 		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -73,7 +76,7 @@ func _build_menu() -> void:
 	vbox.add_child(_mode_label)
 
 	var hint := Label.new()
-	hint.text = "↑↓ 선택   Enter/Z 확인   ←→ 아트 모드"
+	hint.text = tr("UI_MENU_HINT")
 	hint.add_theme_color_override("font_color", Color(0.65, 0.65, 0.72))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -152,11 +155,11 @@ func _refresh() -> void:
 		var selected := i == _index
 		var prefix := "> " if selected else "  "
 		if i == 1 and not has_save:
-			_menu_labels[i].text = "  계속하기 (기록 없음)"
+			_menu_labels[i].text = tr("UI_MENU_CONTINUE_EMPTY")
 			_menu_labels[i].add_theme_color_override("font_color", Color(0.45, 0.45, 0.5))
 		else:
-			_menu_labels[i].text = prefix + MENU_ITEMS[i]
+			_menu_labels[i].text = prefix + tr(MENU_ITEM_KEYS[i])
 			_menu_labels[i].add_theme_color_override(
 				"font_color", Color(1.0, 0.95, 0.6) if selected else Color(1, 1, 1)
 			)
-	_mode_label.text = "아트 모드: < %s >" % ART_LABELS[int(SettingsManager.art_mode)]
+	_mode_label.text = tr("UI_MENU_ART_MODE") % tr(ART_KEYS[int(SettingsManager.art_mode)])

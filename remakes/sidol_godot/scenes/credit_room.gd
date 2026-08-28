@@ -15,7 +15,9 @@ var _quiz_active := false
 
 var _mode := 0
 var _mode_count := 3
-var _mode_names: Array[String] = ["부싯돌 개발팀", "엔딩 후일담", "스탭롤", "공식 퀴즈"]
+var _mode_keys: Array[String] = [
+	"UI_CREDIT_MODE_TEAM", "UI_CREDIT_MODE_AFTER", "UI_CREDIT_MODE_ROLL", "UI_CREDIT_MODE_QUIZ"
+]
 var _idx := 0
 
 var _mode_lbl: Label
@@ -73,7 +75,7 @@ func _ready() -> void:
 	_roll_clip.add_child(_roll_lbl)
 
 	var hint := Label.new()
-	hint.text = "↑↓ 모드 | ← → 항목 | ESC 나가기"
+	hint.text = tr("UI_CREDIT_HINT")
 	hint.position = Vector2(220, 288)
 	hint.modulate = Color(1, 1, 1, 0.4)
 	add_child(hint)
@@ -107,7 +109,7 @@ func _load_data() -> void:
 
 func _apply_mode() -> void:
 	_idx = 0
-	_mode_lbl.text = "[%d/%d] %s" % [_mode + 1, _mode_count, _mode_names[_mode]]
+	_mode_lbl.text = "[%d/%d] %s" % [_mode + 1, _mode_count, tr(_mode_keys[_mode])]
 	_panel.visible = _mode != 2
 	_roll_clip.visible = _mode == 2
 	if _mode == 2:
@@ -157,9 +159,9 @@ func _refresh_card() -> void:
 
 
 func _refresh_quiz() -> void:
-	_title_lbl.text = "공식 퀴즈 도전"
-	_sub_lbl.text = str(_quiz_cfg.get("intro", "10문항 전부 정답에 도전한다."))
-	_quote_lbl.text = "SPACE: 도전"
+	_title_lbl.text = tr("UI_CREDIT_QUIZ_TITLE")
+	_sub_lbl.text = str(_quiz_cfg.get("intro", tr("UI_CREDIT_QUIZ_DESC")))
+	_quote_lbl.text = tr("UI_CREDIT_QUIZ_START")
 
 
 func _start_quiz() -> void:
@@ -192,7 +194,7 @@ func _on_quiz_finished(passed: bool) -> void:
 
 func _refresh_hint_cleared() -> void:
 	if GameState.has_flag(str(_quiz_cfg.get("perfect_flag", ""))):
-		_quote_lbl.text = '"%s"' % "완벽했다. 자랑스럽게도 말이지."
+		_quote_lbl.text = '"%s"' % tr("UI_CREDIT_QUIZ_PERFECT")
 
 
 func _input(event: InputEvent) -> void:

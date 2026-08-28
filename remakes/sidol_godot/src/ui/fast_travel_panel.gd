@@ -74,7 +74,7 @@ func _build() -> void:
 	box.add_theme_constant_override("separation", 6)
 	card.add_child(box)
 
-	var title := HudTheme.label("계단 — 어디로 갈까", 15, HudTheme.ACCENT)
+	var title := HudTheme.label(tr("UI_FASTTRAVEL_TITLE"), 15, HudTheme.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(title)
 
@@ -93,7 +93,7 @@ func _build() -> void:
 	rule2.color = HudTheme.BORDER
 	rule2.custom_minimum_size = Vector2(0, 1)
 	box.add_child(rule2)
-	var hint := HudTheme.label("↑↓ 선택   SPACE 이동   ESC 취소", 11, HudTheme.TEXT_MUTED)
+	var hint := HudTheme.label(tr("UI_FASTTRAVEL_HINT"), 11, HudTheme.TEXT_MUTED)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(hint)
 

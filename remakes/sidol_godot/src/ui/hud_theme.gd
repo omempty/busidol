@@ -91,7 +91,7 @@ static func hp_color(ratio: float) -> Color:
 ## 화폐 표기 — 단위는 "온"(items.json의 100온/500온/1000온이 정본).
 ## HUD·전투 보상·상점이 같은 문자열을 쓰게 하는 단일 출처.
 static func money(value: int) -> String:
-	return "%s온" % grouped(value)
+	return String(TranslationServer.translate("UI_HUD_MONEY_UNIT")) % grouped(value)
 
 
 ## 천 단위 구분 — 자릿수가 커지는 수치의 가독성.

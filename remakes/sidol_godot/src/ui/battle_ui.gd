@@ -7,7 +7,13 @@ signal command_selected(cmd_text: String)
 signal skill_selected(skill: Dictionary)
 signal item_selected(item_def: Dictionary)
 
-const CMD_TEXTS: Array[String] = ["공격", "기술", "방어", "도구", "도망"]
+const CMD_KEYS: Array[String] = [
+	"UI_BATTLE_CMD_ATTACK",
+	"UI_BATTLE_CMD_SKILL",
+	"UI_BATTLE_CMD_GUARD",
+	"UI_BATTLE_CMD_ITEM",
+	"UI_BATTLE_CMD_FLEE"
+]
 const MENU_MARGIN := 16.0
 const MENU_WIDTH := 132.0
 const PLAYER_BAR_COLOR := Color(0.3, 1.0, 0.5)
@@ -92,8 +98,9 @@ func show_result(result: StringName) -> void:
 func show_command_menu() -> void:
 	hide_menu()
 	_menu_root = _new_menu_box()
-	for cmd_text: String in CMD_TEXTS:
+	for cmd_key: String in CMD_KEYS:
 		var btn := Button.new()
+		var cmd_text := tr(cmd_key)
 		btn.text = cmd_text
 		btn.pressed.connect(func() -> void: command_selected.emit(cmd_text))
 		_menu_root.add_child(btn)
@@ -132,7 +139,7 @@ func show_item_menu() -> void:
 		_item_panel.add_child(btn)
 	if usable == 0:
 		var none := Button.new()
-		none.text = "사용 가능한 도구 없음"
+		none.text = tr("UI_BATTLE_NO_ITEM")
 		none.disabled = true
 		_item_panel.add_child(none)
 
@@ -233,7 +240,7 @@ func _build_enemy_status() -> void:
 
 func _build_player_status() -> void:
 	var pname := Label.new()
-	pname.text = "부싯돌"
+	pname.text = tr("UI_BATTLE_PLAYER_NAME")
 	pname.position = Vector2(16, 14)
 	add_child(pname)
 

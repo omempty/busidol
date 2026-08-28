@@ -56,12 +56,14 @@ func _build() -> void:
 	outer.add_theme_constant_override("separation", 6)
 	panel.add_child(outer)
 
-	var title := HudTheme.label("매점", 16, HudTheme.ACCENT)
+	var title := HudTheme.label(tr("UI_SHOP_TITLE"), 16, HudTheme.ACCENT)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	outer.add_child(title)
 
 	_money_label = HudTheme.label("", 13, HudTheme.TEXT)
-	_money_label.text = "소지금 %s" % HudTheme.money(GameState.player_stats.get("money", 0))
+	_money_label.text = (
+		tr("UI_SHOP_MONEY") % HudTheme.money(GameState.player_stats.get("money", 0))
+	)
 	_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	outer.add_child(_money_label)
 
@@ -87,13 +89,13 @@ func _build() -> void:
 		row.add_child(price_lbl)
 
 		var btn := Button.new()
-		btn.text = "구매"
+		btn.text = tr("UI_SHOP_BUY")
 		btn.pressed.connect(_on_buy.bind(item_def))
 		row.add_child(btn)
 		vbox.add_child(row)
 
 	var close_btn := Button.new()
-	close_btn.text = "닫기"
+	close_btn.text = tr("UI_SHOP_CLOSE")
 	close_btn.pressed.connect(close)
 	outer.add_child(close_btn)
 
@@ -125,4 +127,4 @@ func _on_buy(item_def: Dictionary) -> void:
 		return
 	GameState.player_stats["money"] = money - price
 	GameState.inventory.add(StringName(str(item_def["id"])))
-	_money_label.text = "소지금 %s" % HudTheme.money(GameState.player_stats["money"])
+	_money_label.text = tr("UI_SHOP_MONEY") % HudTheme.money(GameState.player_stats["money"])

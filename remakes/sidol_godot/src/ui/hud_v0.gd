@@ -11,7 +11,7 @@ const MARGIN := 12.0
 const PULSE_ALPHA := 0.45
 const PULSE_TIME := 0.55
 ## 조작 힌트 — InputMap 액션 실제 바인딩과 같은 순서(input_bootstrap.ACTIONS).
-const HINTS := "SPACE 조사 · I 가방 · M 지도 · ESC 메뉴"
+const HINTS_KEY := "UI_HUD_HINT"
 
 var _floor_chip: Label
 var _lv_label: Label
@@ -86,7 +86,7 @@ func _build_header() -> Control:
 func _build_money_row() -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
-	row.add_child(HudTheme.label("소지금", 10, HudTheme.TEXT_MUTED))
+	row.add_child(HudTheme.label(tr("UI_HUD_MONEY"), 10, HudTheme.TEXT_MUTED))
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
@@ -108,7 +108,7 @@ func _build_hints() -> Control:
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.modulate = Color(1, 1, 1, 0.55)
 	chip.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
-	chip.add_child(HudTheme.label(HINTS, 10, HudTheme.TEXT_MUTED))
+	chip.add_child(HudTheme.label(tr(HINTS_KEY), 10, HudTheme.TEXT_MUTED))
 	return chip
 
 
@@ -158,7 +158,7 @@ func _exp_span(level: int, cur_exp: int) -> Dictionary:
 		return {"ratio": 1.0, "text": "MAX"}
 	var span := maxi(next_exp - floor_exp, 1)
 	var gained := clampi(cur_exp - floor_exp, 0, span)
-	return {"ratio": float(gained) / float(span), "text": "다음까지 %d" % (span - gained)}
+	return {"ratio": float(gained) / float(span), "text": tr("UI_HUD_NEXT_LEVEL") % (span - gained)}
 
 
 ## 레벨 진입 누적 경험치 — 테이블에 없는 레벨(만렙 초과)은 -1.
