@@ -1,5 +1,6 @@
 {
   "id": "f1_gas",
+  "_comment": "스토리 바이블 §4.1 — 창고: 라이터 회수 후 삼룡 괴물에게서 휘발유 획득.",
   "steps": [
     {
       "op": "dialogue",
@@ -9,6 +10,13 @@
           "text": "@c123"
         }
       ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_LIGHTER",
+        "count": 1
+      }
     },
     {
       "op": "grant_item",

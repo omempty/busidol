@@ -33,9 +33,21 @@
     {
       "op": "grant_item",
       "args": {
-        "item": "ITEM_CURE_ALLIN",
+        "item": "ITEM_DIPLOMA",
         "count": 1
       }
+    },
+    {
+      "op": "craft",
+      "args": {
+        "requires": {
+          "ITEM_DIPLOMA": 1
+        },
+        "grant": {
+          "ITEM_CURE_ALLIN": 1
+        }
+      }
     }
-  ]
+  ],
+  "_comment": "마스터 시나리오 §3-2② — 교수 날인 졸업 확인서를 대학원생에게 넘기고 [앨린]과 등가교환."
 }

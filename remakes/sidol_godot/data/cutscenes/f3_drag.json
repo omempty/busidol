@@ -33,8 +33,19 @@
     {
       "op": "grant_item",
       "args": {
-        "item": "ITEM_CURE_DRAG",
+        "item": "ITEM_APPROVAL",
         "count": 1
+      }
+    },
+    {
+      "op": "craft",
+      "args": {
+        "requires": {
+          "ITEM_APPROVAL": 1
+        },
+        "grant": {
+          "ITEM_CURE_DRAG": 1
+        }
       }
     },
     {
@@ -43,5 +54,6 @@
         "Q_QUAN_DONE": true
       }
     }
-  ]
+  ],
+  "_comment": "마스터 시나리오 §3-2① — 심부름 완료 시 권교수가 품의서에 날인, 그 품의서를 남앵골 교수에게 제출해 [드래그] 수령."
 }

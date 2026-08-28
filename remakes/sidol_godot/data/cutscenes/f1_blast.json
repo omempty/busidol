@@ -1,12 +1,14 @@
 {
   "id": "f1_blast",
+  "_comment": "마스터 시나리오 §1 클라이맥스 — 소포 폭탄 + 휘발유 + 라이터 조합으로 2층 철문 폭파.",
   "steps": [
     {
       "op": "craft",
       "args": {
         "requires": {
           "ITEM_SOPO": 1,
-          "ITEM_GASOLINE": 1
+          "ITEM_GASOLINE": 1,
+          "ITEM_LIGHTER": 1
         },
         "flag": "Q_F1_BLAST"
       }
