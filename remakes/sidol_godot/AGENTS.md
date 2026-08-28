@@ -37,6 +37,14 @@ python tools/convert/talk_convert.py --check             # 데이터 변환기 �
 관문 목록의 단일 소스는 `tools/dev/run_gates.ps1` — `검증실행.bat`과 CI(`.github/workflows/verify.yml`)가
 같은 파일을 돌린다. 단계를 늘릴 곳은 그 하나다.
 
+UI를 고쳤으면 **눈으로 확인한다** — 관문은 "화면 밖으로 나갔는가"만 본다:
+
+```powershell
+godot --path . --resolution 960x540 res://tools/dev/ui_shots.tscn -- <출력 폴더>
+```
+
+필드/전투의 각 패널을 실제로 세워 PNG로 남긴다(창 모드 필요 — 헤드리스는 렌더 결과가 없다).
+
 - AI는 "완료" 주장 전에 위 명령의 실제 출력을 붙인다. 출력 없는 완료 보고 = 미완료.
 - 파일 규모: 스크립트 1개 = 책임 1개, 권장 ≤200행 / 상한 300행.
 - 네이밍: Resource=`XxxDef/Table`, 노드=snake_case 파일=클래스명, 시그널=과거형,
