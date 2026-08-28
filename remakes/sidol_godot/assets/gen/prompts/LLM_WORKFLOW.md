@@ -22,7 +22,13 @@
            카드당 원본|납품|앵커 3열 비교 + 자동 검증 배지
            승인 -> §4 표대로 처리 · 반려 -> 재요청 md 생성 + _rejected 이동
 
-[5] 패킹   메인 개발이 채택분을 res://assets/ 로 배포 (§6)
+[5] 편집   (선택) 규약 미달 납품을 셀 단위로 고친다 — tools/review/sprite_fixer.html
+           심사 보드 [셀 편집] 버튼. 결과는 다음 버전으로 10_submitted에 재납품되어
+           [4]를 다시 탄다. 통째 재생성보다 싼 경우가 많다(잔선·라벨·색 수)
+
+[6] 설치   tools/convert/install_delivery.py  (승인 시 심사 서버가 자동 실행)
+           20_processed -> assets/sprites|portraits|keyart|icons|effects
+           색 48 양자화 · 안내선 잔선 제거 · 메타 JSON 생성(스펙에서 산출)
 ```
 
 ## 2. 카테고리 계약
@@ -31,9 +37,17 @@
 |---|---|---|---|---|
 | `portraits` | `export_portrait_packages.py` (16종) | `raw/llm/portraits/<id>/` | 768×256, 3셀(표정 3종) | `validate_submission.py portrait` |
 | `keyart` | `export_keyart_packages.py` (6종) | `raw/llm/keyart/<id>/` | 1920×1080 (480×270 nearest 축소 전제) | `validate_submission.py keyart` |
-| `monsters` | `export_monster_packages.py` (11종) | `raw/llm/monsters/<id>/` | 그리드 계약 자동 산출(행별 프레임) | `validate_retouch_sheet.py` |
+| `monsters` | `export_monster_packages.py` (11종) | `raw/llm/monsters/<id>/` | 그리드 계약 자동 산출(행별 프레임) | `validate_monster_sheet.py` |
+| `npcs` | `export_npc_packages.py` (4종) | `raw/llm/npcs/<id>/` | 몬스터와 같은 128 격자 | `validate_monster_sheet.py` |
+| `items` | `export_item_icon_packages.py` (40종) | `raw/llm/items/<ID>/` | 96×96 1장 | `validate_submission.py icon` |
+| `effects` | `export_effect_packages.py` (5종) | `raw/llm/effects/<id>/` | 셀 128 × 프레임, **중앙 정렬** | `validate_monster_sheet.py` |
+| `battle_cuts` | `export_battle_cut_packages.py` (5종) | `raw/llm/battle_cuts/<id>/` | 셀 **512** × 프레임, 배우만 | `validate_monster_sheet.py` |
 | `sprites` | `export_player_sheet.py`(리터치) · `export_player_gen_package.py`(신규) | **`assets/gen/prompts/`** | 표준 셀 128 그리드 계약 | `validate_retouch_sheet.py` |
 
+- **공용 참조는 카테고리 루트에 1부**만 둔다(`style_ref.png`·`scale_ref.png`·`subpalette.png`·
+  `orig_*.png`, 아이템은 `_kind/<분류>/`). 패키지 폴더에는 그 패키지에서만 쓰는 것
+  (`prompt.md`·`grid_template.png`·`grid_guide.png`·`<id>_source.png`)만 남는다.
+  프롬프트의 "입력 (첨부)" 목록이 경로의 단일 근거다.
 - `sprites`만 패키지 산출 위치가 다르다 — git 추적 대상이라 `raw/llm/`(gitignored) 밖에 둔다.
 - 카테고리 이름 4종은 `tools/review/review_server.py`의 `CATEGORIES`가 권위다.
   **여기 없는 이름으로 폴더를 만들면 심사 보드가 무시한다.**
@@ -99,5 +113,11 @@ assets/raw/llm/10_submitted/<카테고리>/<id>_v<n>.png
 | 마젠타 배경 잔존·혼색·AA | 원작 톤·팔레트 감각 |
 | 투명도 비율, 도트 bbox 편차 | 프레임 간 동작 연속성(보행 위상) |
 | 빈 셀·프레임 수 불일치 | 게임 내 크기감(타일 대비 비율) |
+| **격자 안내선 잔존**(반감광 포함) | **캔버스 안 글자**(애니 이름·대사 — 검사가 못 읽는다) |
+| **고유색 수**(계약 48) | 표정·동작이 실제로 요구대로인가 |
+
+2026-08-28에 아래 세 줄이 추가됐다. 그전 게이트는 규격만 봤고, 납품 9장이 **전부 통과**한 뒤
+수동 검증에서 5건이 반려급으로 드러났다(잔선 8건 · 라벨 글자 2건 · 신원 불일치 1건 ·
+고유색 16k~50k 9건). `tools/convert/delivery_checks.py`가 그 판정의 단일 소스다.
 
 `20_processed/` 산출물은 `뷰어실행.bat`(tools/viewer.html)로 검수한다.
