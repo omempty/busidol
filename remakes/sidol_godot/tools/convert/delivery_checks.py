@@ -35,6 +35,8 @@ LINE_DENSITY = 0.3
 LINE_COLOR_SPREAD = 40
 ## 안내선은 얇다 — 연속으로 이만큼 넘게 뭉치면 선이 아니라 채색 면이다.
 LINE_MAX_THICKNESS = 3
+## 액자 판정 — 내용이 있는 셀 중 이 비율 이상에서 같은 좌표·같은 색 직선이 나오면 액자다.
+BORDER_REPEAT_RATIO = 0.6
 ## 고유색 계약 — 프롬프트가 박는 값(24~48)의 상한. 넘으면 그라데이션 유입.
 COLOR_BUDGET = 48
 ## 후처리 양자화로도 살리기 어려운 수준 — 이 위는 사실상 리샘플된 풀컬러 이미지다.
@@ -235,6 +237,90 @@ def check_guide_residue(im: Image.Image, cell_w: int, cell_h: int) -> list:
     return findings
 
 
+def _repeated_lines(op: np.ndarray, cell_w: int, cell_h: int) -> tuple:
+    """셀마다 **같은 좌표**에 나타나는 긴 직선을 센다. 반환 (내용 셀 수, {(축, 좌표): 셀 수}).
+
+    색은 보지 않는다 — "선을 지우라"는 지시를 색만 바꿔 피해 갈 수 있기 때문이다.
+    """
+    from collections import Counter
+
+    h, w = op.shape
+    tally: Counter = Counter()
+    cells = 0
+    for r in range(max(1, h // cell_h)):
+        for c in range(max(1, w // cell_w)):
+            sub = op[r * cell_h:(r + 1) * cell_h, c * cell_w:(c + 1) * cell_w]
+            if not sub.any():
+                continue
+            cells += 1
+            rows_n, cols_n = sub.shape
+            for x in np.nonzero(sub.sum(axis=0) >= rows_n * LINE_RUN_RATIO)[0]:
+                tally[("col", int(x))] += 1
+            for y in np.nonzero(sub.sum(axis=1) >= cols_n * LINE_RUN_RATIO)[0]:
+                tally[("row", int(y))] += 1
+    return cells, tally
+
+
+def _thin_groups(coords: list) -> list:
+    """연속 좌표를 묶어 **얇은 그룹만** 남긴다.
+
+    이 조건이 액자와 그림을 가른다(실측):
+      액자   — 셀마다 같은 자리에 **1~3px 단독 선**(mad_eye 리마스터: col21 · row26)
+      그림   — 반복되는 것은 몸통이라 **수십 px 덩어리**(guard_idle_original: col48~79 = 32px)
+    """
+    if not coords:
+        return []
+    coords = sorted(coords)
+    out, run = [], [coords[0]]
+    for v in coords[1:]:
+        if v == run[-1] + 1:
+            run.append(v)
+        else:
+            out.append(run)
+            run = [v]
+    out.append(run)
+    return [g for g in out if len(g) <= LINE_MAX_THICKNESS]
+
+
+def check_frame_border(im: Image.Image, cell_w: int, cell_h: int) -> list:
+    """셀마다 같은 자리에 반복되는 **얇은** 직선 = 액자·안내선을 색만 바꿔 그린 것.
+
+    안내선 검사(check_guide_residue)는 마젠타·청록 **색상**만 본다. 실납품에서
+    "선을 전부 지우라"는 지시를 **색만 바꿔 그대로 그리는** 회피가 나왔다
+    (mad_eye 리마스터: 셀마다 x=21에 짙은 적색 세로선, y=26에 남보라 가로선).
+    그래서 이 검사는 색을 보지 않고 **반복 + 얇음**만 본다 —
+    그림의 직선은 프레임마다 흔들리고, 반복되는 것은 얇지 않다.
+
+    **경고에 머문다(반려가 아니다).** 기계적으로는 "액자"와 "곧은 모서리가 프레임마다
+    같은 자리에 오는 그림"을 완전히 가를 수 없다(c_bug·flying_thesis 리메이크가 걸린다).
+    사람이 그림을 보고 판단할 자리이므로 신호만 올린다 — 액자가 맞으면 셀 편집기의
+    스포이드(Alt+클릭) → "이 색 전역 삭제"로 지우면 된다.
+    """
+    op = opaque_mask(im)
+    cells, tally = _repeated_lines(op, cell_w, cell_h)
+    if cells < 3:
+        return []
+    threshold = max(2, int(cells * BORDER_REPEAT_RATIO))
+    hits = []
+    for axis in ("col", "row"):
+        coords = [pos for (ax, pos), n in tally.items() if ax == axis and n >= threshold]
+        for group in _thin_groups(coords):
+            hits.append((axis, group))
+    if not hits:
+        return []
+    where = ", ".join(
+        "%s%s" % (ax, g[0] if len(g) == 1 else "%d~%d" % (g[0], g[-1])) for ax, g in hits[:4]
+    )
+    return [
+        Finding(
+            "frame_border",
+            "셀 %d개 중 %d개 이상에서 같은 자리에 반복되는 얇은 직선 %d줄 — 액자·안내선으로 보인다(%s)"
+            % (cells, threshold, len(hits), where),
+            len(hits),
+        )
+    ]
+
+
 def check_color_budget(im: Image.Image, budget: int = COLOR_BUDGET) -> list:
     """고유색 수 — 계약(24~48색) 대비.
 
@@ -317,6 +403,7 @@ def run_all(im: Image.Image, cell_w: int, cell_h: int, budget: int = COLOR_BUDGE
     """표준 묶음 — 잔선 · 색 수 · 순수 검정 · 반투명."""
     out = []
     out += check_guide_residue(im, cell_w, cell_h)
+    out += check_frame_border(im, cell_w, cell_h)
     out += check_flat_placeholder(im)
     out += check_color_budget(im, budget)
     out += check_pure_black(im)
