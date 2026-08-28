@@ -30,3 +30,6 @@ remakes/sidol_godot/.git/
 # ===== 도구 산출물 =====
 .playwright-mcp/
 viewer_map.png
+
+# ===== 빌드 산출물 (export_presets.cfg의 export_path) =====
+build/

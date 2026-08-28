@@ -1,0 +1,50 @@
+# 헤드리스 관문 CI — 로컬 검증실행.bat 과 같은 목록(tools/dev/run_gates.ps1)을 돌린다.
+# 목록을 여기에 다시 적지 않는 것이 핵심: 두 벌이 되면 한쪽만 녹색인 상태가 생긴다.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+
+jobs:
+  gates:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Godot 캐시
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: godot-bin
+          key: godot-${{ env.GODOT_VERSION }}-win64
+
+      - name: Godot 내려받기
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          $ver = "${{ env.GODOT_VERSION }}"
+          $zip = "Godot_v$ver`_win64.zip"
+          $url = "https://github.com/godotengine/godot/releases/download/$ver/$zip"
+          Invoke-WebRequest -Uri $url -OutFile godot.zip
+          Expand-Archive godot.zip -DestinationPath godot-bin
+          Get-ChildItem -Recurse godot-bin | Select-Object FullName
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 관문 15단계
+        shell: pwsh
+        run: |
+          # 콘솔 빌드(_console.exe)를 쓴다 — stdout이 파이프로 나와야 결과를 읽을 수 있다.
+          $exe = (Get-ChildItem -Recurse godot-bin -Filter "*_console.exe" | Select-Object -First 1).FullName
+          if (-not $exe) { $exe = (Get-ChildItem -Recurse godot-bin -Filter "Godot_v*.exe" | Select-Object -First 1).FullName }
+          Write-Host "godot: $exe"
+          pwsh tools/dev/run_gates.ps1 -Godot $exe
