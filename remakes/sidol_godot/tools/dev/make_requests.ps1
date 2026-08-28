@@ -23,6 +23,7 @@ Set-Location $proj
 # 카테고리 → 생성기. 순서는 지금 비어 있는 정도(보스 > 아이콘 > NPC > 초상 > 키아트)를 따른다.
 $gens = [ordered]@{
     "monsters"  = @{ script = "tools/convert/export_monster_packages.py";   label = "몬스터·보스" }
+    "remaster"  = @{ script = "tools/convert/export_monster_remaster_packages.py"; label = "원작 몬스터 리마스터" }
     "items"     = @{ script = "tools/convert/export_item_icon_packages.py"; label = "아이템 아이콘" }
     "npcs"      = @{ script = "tools/convert/export_npc_packages.py";       label = "필드 NPC" }
     "portraits" = @{ script = "tools/convert/export_portrait_packages.py";  label = "대화 초상" }

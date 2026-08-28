@@ -101,33 +101,33 @@
      "frames": 2,
      "fps": 2
     },
-    "burrow": {
-     "row": 5,
-     "frames": 3,
-     "fps": 6,
-     "loop": false,
-     "_desc": "땅에 파고들며 사라짐"
-    },
-    "emerge": {
-     "row": 6,
-     "frames": 3,
-     "fps": 8,
-     "loop": false,
-     "_desc": "지면 파열+입 벌림"
-    },
     "attack": {
-     "row": 7,
+     "row": 5,
      "frames": 4,
      "fps": 10,
      "loop": false,
      "_desc": "촉수 3개 동시 분출"
     },
     "death": {
-     "row": 8,
+     "row": 6,
      "frames": 4,
      "fps": 8,
      "loop": false,
      "_desc": "절단된 촉수 경련→점액"
+    },
+    "burrow": {
+     "row": 7,
+     "frames": 3,
+     "fps": 6,
+     "loop": false,
+     "_desc": "땅에 파고들며 사라짐"
+    },
+    "emerge": {
+     "row": 8,
+     "frames": 3,
+     "fps": 8,
+     "loop": false,
+     "_desc": "지면 파열+입 벌림"
     }
    },
    "token": "기어다니는 거대 촉수 구더기. 축축한 점액 질감, 마디마다 이빨 줄",
@@ -384,27 +384,47 @@
    "telegraph_visual": "expanding_ring_0.5s",
    "source": "original_e_spr",
    "animations": {
-    "idle": {
+    "walk_down": {
      "row": 0,
      "frames": 4,
+     "fps": 6
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
      "fps": 4,
      "_desc": "원환 회전+빛 발산"
     },
     "attack": {
-     "row": 1,
+     "row": 5,
      "frames": 6,
      "fps": 10,
      "loop": false,
      "_desc": "확장 펄스 링 발산"
     },
     "hurt": {
-     "row": 2,
+     "row": 6,
      "frames": 2,
      "fps": 8,
      "loop": false
     },
     "death": {
-     "row": 3,
+     "row": 7,
      "frames": 4,
      "fps": 6,
      "loop": false,
@@ -425,27 +445,47 @@
    "telegraph_visual": "glitch_flicker_0.3s",
    "source": "original_e_spr",
    "animations": {
-    "idle": {
+    "walk_down": {
      "row": 0,
      "frames": 4,
+     "fps": 6
+    },
+    "walk_up": {
+     "row": 1,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_left": {
+     "row": 2,
+     "frames": 4,
+     "fps": 6
+    },
+    "walk_right": {
+     "row": 3,
+     "frames": 4,
+     "fps": 6
+    },
+    "idle_down": {
+     "row": 4,
+     "frames": 2,
      "fps": 8,
      "_desc": "전기 아크 지직거림"
     },
     "attack": {
-     "row": 1,
+     "row": 5,
      "frames": 5,
      "fps": 12,
      "loop": false,
      "_desc": "방전 폭발"
     },
     "hurt": {
-     "row": 2,
+     "row": 6,
      "frames": 2,
      "fps": 8,
      "loop": false
     },
     "death": {
-     "row": 3,
+     "row": 7,
      "frames": 3,
      "fps": 6,
      "loop": false,

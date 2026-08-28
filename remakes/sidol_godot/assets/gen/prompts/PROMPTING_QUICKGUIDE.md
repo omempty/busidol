@@ -34,6 +34,7 @@ python tools/dev/asset_status.py
 
 ```powershell
 python tools/convert/export_monster_packages.py    # 몬스터·보스   → assets/raw/llm/monsters/
+python tools/convert/export_monster_remaster_packages.py  # 원작 몬스터 8종 리마스터 → 같은 폴더
 python tools/convert/export_npc_packages.py        # 필드 NPC      → assets/raw/llm/npcs/
 python tools/convert/export_item_icon_packages.py  # 아이템 아이콘 → assets/raw/llm/items/
 python tools/convert/export_portrait_packages.py   # 대화 초상     → assets/raw/llm/portraits/

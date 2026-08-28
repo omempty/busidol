@@ -155,7 +155,7 @@ def web_prompt(cat: str, asset_id: str, text: str, files: list) -> str:
     """웹 채팅에 한 번에 붙여넣을 축약 의뢰문."""
     stops = ("\n## ", "\n### ")
     parts = [WEB_STYLE_HEAD, ""]
-    for head in ("## 그릴 것", "## 몬스터", "## 캐릭터", "## 이펙트", "## 씬"):
+    for head in ("## 그릴 것", "## 대상", "## 몬스터", "## 캐릭터", "## 이펙트", "## 씬"):
         sec = extract_section(text, head, stops)
         if sec:
             parts += [sec, ""]
@@ -165,7 +165,9 @@ def web_prompt(cat: str, asset_id: str, text: str, files: list) -> str:
         if sec:
             parts += [sec, ""]
             break
-    for head in ("## 리미티드 애니메이션 규칙", "## 이펙트 전용 규칙", "## 신원 유지 (위반 시 반려)"):
+    # 카테고리별 핵심 계약 절 — 하나라도 빠지면 축약본이 계약을 잃는다(리마스터 계약 누락 실측).
+    for head in ("## 리마스터 계약 (위반 시 반려)", "## 리미티드 애니메이션 규칙",
+                 "## 이펙트 전용 규칙", "## 신원 유지 (위반 시 반려)"):
         sec = extract_section(text, head, stops)
         if sec:
             parts += [sec, ""]

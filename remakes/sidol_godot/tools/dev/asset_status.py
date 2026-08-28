@@ -87,6 +87,13 @@ def collect() -> list:
         if f.startswith("npcs_"):
             npc_ids += [str(n["id"]) for n in load("data/maps/" + f).get("npcs", [])]
     add("필드 NPC", "npcs", sorted(set(npc_ids)), stems, "없으면 주인공 얼굴")
+    # 원작 이관 8종은 _original이 있어 "보유"로 세어지지만 1995년 도트 그대로다.
+    # 리마스터(=_remake) 진행률은 따로 봐야 보인다.
+    remaster_ids = [x["id"] for x in load("data/monster_anim_specs.json").get("species", [])
+                    if str(x.get("source", "")).startswith("original_")]
+    add("원작 몬스터 리마스터", "monsters", remaster_ids,
+        {f[: -len("_remake.png")] for f in listdir("assets/sprites") if f.endswith("_remake.png")},
+        "없으면 원작 도트 그대로(게임은 돈다)")
     add("아이템 아이콘", "items", [i["id"] for i in load("data/items.json").get("items", [])],
         {f[:-4] for f in listdir("assets/icons")}, "없으면 색 상자 + 글자")
     add("대화 초상", "portraits", [f[:-5] for f in listdir("assets/spec/portraits", ".json")],
