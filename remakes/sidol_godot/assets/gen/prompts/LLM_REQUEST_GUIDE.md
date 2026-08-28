@@ -224,6 +224,7 @@ python tools/dev/asset_status.py     # 공백이 줄었는가
 | 포트 충돌 | `python tools\review\review_server.py 9000` 후 URL 포트만 바꿔 접속 |
 | `python`을 찾을 수 없다 | PATH 확인. `py -3 tools\convert\...`로도 실행된다 |
 | 현황판이 낡았다 | `현황판.bat`이 매번 다시 굽는다(파일은 gitignored) |
+| 프롬프트가 가리키는 첨부가 없다 | `python tools/dev/package_check.py` — 의뢰생성 후 자동으로도 돈다. 누락이 나오면 그 카테고리 생성기를 다시 돌린다 |
 
 ## 주의
 

@@ -73,6 +73,10 @@ foreach ($cat in $targets) {
     if ($Id) { python $gens[$cat].script $Id } else { python $gens[$cat].script }
 }
 
+# 생성 직후 무결성 검사 — 프롬프트가 가리키는 첨부가 실제로 있는지 본다.
+# (공용 참조 정리가 패키지 고유 파일을 지운 사고가 있었다 — 2026-08-29)
+python tools/dev/package_check.py
+
 Write-Host ""
 Write-Host "  패키지 위치  assets\raw\llm\<카테고리>\<id>\prompt.md"
 Write-Host "  그림 LLM에는 prompt.md 전문 + 그 폴더 이미지 전부 + 카테고리 루트 palette_swatch.png 만 준다"

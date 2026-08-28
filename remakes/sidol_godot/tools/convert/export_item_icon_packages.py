@@ -218,7 +218,12 @@ def main() -> None:
     if targets:
         todo = [i for i in items if i["id"] in targets]
     else:
-        todo = [i for i in items if i["id"] not in have]
+        # 아이콘이 이미 있어도 **패키지 폴더가 남아 있으면 함께 갱신**한다.
+        # 안 그러면 옛 구조(패키지 안 style_ref_*·subpalette)를 가리키는 낡은 prompt.md가
+        # 남아 첨부가 통째로 없는 의뢰문이 된다(ITEM_BOOK 실측).
+        existing = {d for d in os.listdir(OUT_ROOT)
+                    if os.path.isdir(os.path.join(OUT_ROOT, d)) and not d.startswith("_")}
+        todo = [i for i in items if i["id"] not in have or i["id"] in existing]
     for item in todo:
         export_one(item, items, icons)
     print(f"done -> {OUT_ROOT} ({len(todo)}종 / 전체 {len(items)}종 중 아이콘 보유 {len(have)}종)")

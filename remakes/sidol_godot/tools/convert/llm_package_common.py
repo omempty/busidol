@@ -156,9 +156,14 @@ def shared_ref_names() -> set:
 
 
 def dedupe_package_dirs(cat_root: str) -> int:
-    """패키지 폴더에 남은 공용 참조 복사본을 지운다. 반환: 지운 파일 수.
+    """패키지 폴더에 남은 공용 참조 **복사본**을 지운다. 반환: 지운 파일 수.
 
-    씬 전용 참조(orig_this_scene.png)와 패키지 고유 입력(<id>_source.png)은 건드리지 않는다.
+    **프롬프트가 그 이름을 로컬 경로로 가리키면 지우지 않는다.** 이름이 같아도 그 패키지가
+    직접 만든 고유 파일일 수 있다 — 리마스터 패키지는 `subpalette.png`를 **그 몬스터 자신의
+    색**으로 만들어 `subpalette.png`(../ 없이)로 참조한다. 이름만 보고 지웠더니
+    `의뢰생성.bat monsters` 한 번에 리마스터 8종의 서브팔레트가 통째로 사라졌다(실측).
+
+    씬 전용 참조(orig_this_scene.png)와 패키지 고유 입력(<id>_source.png)은 애초에 대상이 아니다.
     """
     if not os.path.isdir(cat_root):
         return 0
@@ -168,10 +173,15 @@ def dedupe_package_dirs(cat_root: str) -> int:
         pkg = os.path.join(cat_root, entry)
         if not os.path.isdir(pkg):
             continue
+        prompt_path = os.path.join(pkg, "prompt.md")
+        prompt = io.open(prompt_path, encoding="utf-8").read() if os.path.exists(prompt_path) else ""
         for f in list(os.listdir(pkg)):
-            if f in names:
-                os.remove(os.path.join(pkg, f))
-                removed += 1
+            if f not in names:
+                continue
+            if ("`%s`" % f) in prompt:  # 로컬 참조 = 이 패키지가 소유한 파일
+                continue
+            os.remove(os.path.join(pkg, f))
+            removed += 1
     return removed
 
 
