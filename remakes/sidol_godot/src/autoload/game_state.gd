@@ -40,8 +40,29 @@ func has_flag(flag_id: String) -> bool:
 	return bool(flags.get(flag_id, false))
 
 
+## 플래그 설정 — 처음 켜지는 순간 growth.json의 스토리 보너스 EXP를 지급한다.
+##
+## 2026-08-28까지 `story_bonus_exp`는 **아무도 읽지 않는 사문화 데이터**였다.
+## growth.json은 "스토리 보너스 EXP로 노가다 방지"라고 적어 두었지만 지급 경로가 없어,
+## 실제로는 잡몹만으로 레벨을 채워야 했다(계측: 만렙까지 394전투).
+## 세이브 로드는 flags 딕셔너리를 통째로 갈아끼우므로 이 경로를 타지 않는다(중복 지급 없음).
 func set_flag(flag_id: String, value: Variant = true) -> void:
+	var was_on := bool(flags.get(flag_id, false))
 	flags[flag_id] = value
+	if not was_on and bool(value):
+		var bonus := Database.story_bonus_exp(flag_id)
+		if bonus > 0:
+			var result := grant_exp(bonus)
+			print(
+				(
+					"[growth] 스토리 보너스 %s +%d EXP%s"
+					% [
+						flag_id,
+						bonus,
+						(" → Lv%d" % int(result["level"])) if bool(result["level_up"]) else ""
+					]
+				)
+			)
 	state_changed.emit()
 
 

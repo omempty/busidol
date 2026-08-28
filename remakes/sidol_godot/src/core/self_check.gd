@@ -188,12 +188,37 @@ func _check_growth() -> Array:
 	if bool(result["level_up"]):
 		return _fail("만렙 초과 레벨업 발생")
 
+	# 스토리 보너스 배선 — 플래그가 **처음** 켜질 때만 지급되는가.
+	# growth.json의 story_bonus_exp는 2026-08-28까지 아무도 읽지 않는 사문화 데이터였다
+	# (성장의 63%가 여기서 나오도록 재설계했으므로 배선이 끊기면 노가다 게임이 된다).
+	var probe_flag := ""
+	var probe_bonus := 0
+	for flag_id: String in Database.story_bonus_table():
+		if not GameState.has_flag(flag_id):
+			probe_flag = flag_id
+			probe_bonus = Database.story_bonus_exp(flag_id)
+			break
+	var bonus_note := "보너스 미배치"
+	if probe_bonus > 0:
+		GameState.player_stats["exp"] = 0
+		GameState.player_stats["level"] = 1
+		GameState.set_flag(probe_flag, true)
+		var got := int(GameState.player_stats.get("exp", 0))
+		GameState.set_flag(probe_flag, true)  # 두 번째 호출은 지급하지 않아야 한다
+		var again := int(GameState.player_stats.get("exp", 0))
+		GameState.flags.erase(probe_flag)
+		if got < probe_bonus:
+			return _fail("스토리 보너스 미지급: %s (기대 %d, 실제 %d)" % [probe_flag, probe_bonus, got])
+		if again != got:
+			return _fail("스토리 보너스 중복 지급: %s (%d → %d)" % [probe_flag, got, again])
+		bonus_note = "보너스 %s +%d" % [probe_flag, probe_bonus]
+
 	GameState.player_stats["exp"] = saved_exp
 	GameState.player_stats["level"] = saved_level
 	GameState.player_stats["hp"] = saved_hp
 	GameState.player_stats["ap"] = saved_ap
 	GameState.state_changed.emit()
-	return _ok("성장(경험치→레벨업) 판정")
+	return _ok("성장(경험치→레벨업·%s) 판정" % bonus_note)
 
 
 func _check_inventory() -> Array:

@@ -55,6 +55,7 @@ func _initialize() -> void:
 	_validate_item_reachability()
 	_validate_skill_grants()
 	_validate_l10n()
+	_validate_story_bonus()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -508,3 +509,29 @@ func _gd_files(dir_path: String) -> Array[String]:
 		if f.ends_with(".gd"):
 			out.append(dir_path + "/" + f)
 	return out
+
+
+## 스토리 보너스 EXP가 실재 퀘스트 플래그를 가리키는가 + 성장에서 차지하는 몫은 얼마인가.
+## 이 표는 2026-08-28까지 **아무도 읽지 않는 사문화 데이터**였다(지급 경로 자체가 없었다).
+## 이제 성장의 60%가량이 여기서 나오므로, 오타 하나가 곧 "그 층만 노가다"가 된다.
+func _validate_story_bonus() -> void:
+	var growth: Dictionary = _load_json(DATA + "growth.json") as Dictionary
+	var table: Dictionary = growth.get("story_bonus_exp", {})
+	var quests: Dictionary = _load_json(DATA + "quests_v2.json") as Dictionary
+	var ids: Dictionary = {}
+	for q: Dictionary in quests.get("quests", []):
+		ids[str(q.get("id", ""))] = true
+	var total := 0
+	for key: String in table:
+		if key.begins_with("_"):
+			continue
+		if not ids.has(key):
+			_err("growth.json story_bonus_exp의 '%s'가 quests_v2.json에 없는 퀘스트" % key)
+		total += int(table[key])
+	var levels: Array = growth.get("levels", [])
+	var max_accum := 0
+	for e: Dictionary in levels:
+		max_accum = maxi(max_accum, int(e.get("exp_accum", 0)))
+	if max_accum > 0:
+		var share := 100.0 * float(total) / float(max_accum)
+		print("[validate] 스토리 보너스 %d EXP — 만렙 요구치 %d의 %.0f%%" % [total, max_accum, share])

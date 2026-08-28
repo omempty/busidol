@@ -2,7 +2,6 @@
   "schema_version": 2,
   "_comment": "성장 곡선 + 난이도 설정. exp_accum은 누적 경험치. 난이도는 SettingsManager에서 전역 배율로 적용.",
   "_design_note": "기본(normal) 기준: 각 층에서 자연히 1~2레벨업. 스토리 보너스 EXP로 노가다 방지.",
-
   "difficulty_presets": {
     "easy": {
       "label_ko": "쉬움",
@@ -32,35 +31,119 @@
       "_desc": "전략적 아이템 사용 필수"
     }
   },
-
   "levels": [
-    {"level": 1,  "exp_accum": 0,    "hp_up": 0,  "ap_up": 0},
-    {"level": 2,  "exp_accum": 40,   "hp_up": 10, "ap_up": 4},
-    {"level": 3,  "exp_accum": 110,  "hp_up": 14, "ap_up": 5},
-    {"level": 4,  "exp_accum": 210,  "hp_up": 18, "ap_up": 7},
-    {"level": 5,  "exp_accum": 350,  "hp_up": 22, "ap_up": 9},
-    {"level": 6,  "exp_accum": 550,  "hp_up": 28, "ap_up": 11},
-    {"level": 7,  "exp_accum": 800,  "hp_up": 34, "ap_up": 13},
-    {"level": 8,  "exp_accum": 1120, "hp_up": 42, "ap_up": 15},
-    {"level": 9,  "exp_accum": 1500, "hp_up": 48, "ap_up": 17},
-    {"level": 10, "exp_accum": 1960, "hp_up": 55, "ap_up": 20},
-    {"level": 11, "exp_accum": 2500, "hp_up": 62, "ap_up": 23},
-    {"level": 12, "exp_accum": 3150, "hp_up": 70, "ap_up": 26},
-    {"level": 13, "exp_accum": 3900, "hp_up": 78, "ap_up": 29},
-    {"level": 14, "exp_accum": 4800, "hp_up": 88, "ap_up": 33},
-    {"level": 15, "exp_accum": 5850, "hp_up": 100,"ap_up": 38}
+    {
+      "level": 1,
+      "exp_accum": 0,
+      "hp_up": 0,
+      "ap_up": 0
+    },
+    {
+      "level": 2,
+      "exp_accum": 40,
+      "hp_up": 10,
+      "ap_up": 4
+    },
+    {
+      "level": 3,
+      "exp_accum": 110,
+      "hp_up": 14,
+      "ap_up": 5
+    },
+    {
+      "level": 4,
+      "exp_accum": 210,
+      "hp_up": 18,
+      "ap_up": 7
+    },
+    {
+      "level": 5,
+      "exp_accum": 350,
+      "hp_up": 22,
+      "ap_up": 9
+    },
+    {
+      "level": 6,
+      "exp_accum": 550,
+      "hp_up": 28,
+      "ap_up": 11
+    },
+    {
+      "level": 7,
+      "exp_accum": 800,
+      "hp_up": 34,
+      "ap_up": 13
+    },
+    {
+      "level": 8,
+      "exp_accum": 1120,
+      "hp_up": 42,
+      "ap_up": 15
+    },
+    {
+      "level": 9,
+      "exp_accum": 1500,
+      "hp_up": 48,
+      "ap_up": 17
+    },
+    {
+      "level": 10,
+      "exp_accum": 1960,
+      "hp_up": 55,
+      "ap_up": 20
+    },
+    {
+      "level": 11,
+      "exp_accum": 2500,
+      "hp_up": 62,
+      "ap_up": 23
+    },
+    {
+      "level": 12,
+      "exp_accum": 3150,
+      "hp_up": 70,
+      "ap_up": 26
+    },
+    {
+      "level": 13,
+      "exp_accum": 3900,
+      "hp_up": 78,
+      "ap_up": 29
+    },
+    {
+      "level": 14,
+      "exp_accum": 4800,
+      "hp_up": 88,
+      "ap_up": 33
+    },
+    {
+      "level": 15,
+      "exp_accum": 5850,
+      "hp_up": 100,
+      "ap_up": 38
+    }
   ],
-
   "story_bonus_exp": {
-    "_comment": "퀘스트/스토리 이벤트 완료 시 일괄 지급",
-    "Q_F1_START": 20,
-    "Q_F1_BLAST": 40,
-    "Q_F2_HP": 30,
-    "Q_F2_FIGHTER": 50,
-    "Q_F2_POSTER": 40,
-    "Q_F3_CURE_REQ": 50,
-    "Q_F0_DISK": 60,
-    "Q_F4_SACRIFICE": 80,
-    "Q_F5_BOSS_CURE": 100
+    "_comment": "퀘스트/스토리 이벤트 플래그가 처음 켜질 때 일괄 지급(GameState.set_flag). 성장의 절반은 여기서 나온다 — 잡몹만으로 채우면 층당 40~60전투가 필요하다. 설계 목표: 층당 자연 전투 20~25회로 다음 층 권장 레벨에 도달.",
+    "Q_F1_START": 30,
+    "Q_F1_SOPO": 40,
+    "Q_F1_GAS": 45,
+    "Q_F1_BLAST": 70,
+    "Q_F2_HP": 100,
+    "Q_F2_FIGHTER": 140,
+    "Q_F2_POSTER": 200,
+    "Q_F3_CURE_REQ": 150,
+    "Q_F3_DRAG": 160,
+    "Q_F3_ALLIN": 160,
+    "Q_F3_PALIN": 160,
+    "Q_F3_CURE_DONE": 255,
+    "Q_F0_DISK": 300,
+    "Q_F4_BATTERY": 450,
+    "Q_F4_SACRIFICE": 650,
+    "Q_F5_BOSS_CURE": 300,
+    "Q_F5_AI_BATTLE": 300,
+    "Q_QUIZ_ALL": 80,
+    "Q_QUAN_DONE": 60,
+    "Q_HP_ALL": 60
   }
 }

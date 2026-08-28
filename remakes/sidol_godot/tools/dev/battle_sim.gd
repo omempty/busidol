@@ -29,6 +29,7 @@ func _ready() -> void:
 	print("층  Lv  적종           턴(평균/최대)  승률    받은HP/최대  적1타  내1타  적HP  EXP/체  레벨업까지")
 	for f: int in FLOOR_LEVELS:
 		_run_floor(f, int(FLOOR_LEVELS[f]), runs)
+	_report_pacing()
 	print("[battle_sim] done")
 	get_tree().quit(0)
 
@@ -192,3 +193,61 @@ func _kills_to_level(level: int, exp_per_kill: float) -> String:
 	if here < 0 or next < 0:
 		return "MAX"
 	return "%d체" % int(ceil(float(next - here) / exp_per_kill))
+
+
+## 성장 페이싱 — "다음 층 권장 레벨에 닿으려면 몇 전투가 필요한가".
+##
+## 층당 20~25회면 현대 RPG의 자연 진행, 40회를 넘으면 노가다다.
+## 성장 경로는 본편 층(f1~f5)만 잡는다 — f0(지하)는 f1에서 조건 없이 내려갈 수 있는
+## **초반 탐험 층**이라(transitions: stairs_east_down guard 1~5, flag 없음) 진행 순서에
+## 넣을 수 없다. 원작 수치(적 HP 11~21·EXP 2~5)도 그 위치에 맞는다.
+func _report_pacing() -> void:
+	var story := Database.story_bonus_table()
+	var plan := [
+		{"floor": 1, "level": 5, "quests": ["Q_F1_START", "Q_F1_SOPO", "Q_F1_GAS", "Q_F1_BLAST"]},
+		{"floor": 2, "level": 8, "quests": ["Q_F2_HP", "Q_F2_FIGHTER", "Q_F2_POSTER"]},
+		{
+			"floor": 3,
+			"level": 11,
+			"quests": ["Q_F3_CURE_REQ", "Q_F3_DRAG", "Q_F3_ALLIN", "Q_F3_PALIN", "Q_F3_CURE_DONE"]
+		},
+		{"floor": 4, "level": 14, "quests": ["Q_F0_DISK", "Q_F4_BATTERY", "Q_F4_SACRIFICE"]},
+		{"floor": 5, "level": 15, "quests": ["Q_F5_BOSS_CURE", "Q_F5_AI_BATTLE"]},
+	]
+	print("")
+	print("성장 페이싱 — 층  목표Lv  필요EXP  스토리  전투몫  EXP/체  필요 전투수")
+	var prev_level := 1
+	var total := 0.0
+	for row: Dictionary in plan:
+		var floor_no := int(row["floor"])
+		var level := int(row["level"])
+		var need := _exp_accum(level) - _exp_accum(prev_level)
+		var bonus := 0
+		for q: String in row["quests"]:
+			bonus += int(story.get(q, 0))
+		var by_battle := maxi(need - bonus, 0)
+		var per := _exp_per_kill(floor_no)
+		var battles := float(by_battle) / maxf(per, 0.001)
+		total += battles
+		print(
+			(
+				"                f%-2d %5d %8d %7d %7d %6.1f %8.0f회"
+				% [floor_no, level, need, bonus, by_battle, per, battles]
+			)
+		)
+		prev_level = level
+	print("                → 만렙까지 총 %.0f전투 (스토리 보너스 합 %d)" % [total, _sum(story)])
+
+
+func _exp_accum(level: int) -> int:
+	for entry: Dictionary in Database.level_table():
+		if int(entry.get("level", 0)) == level:
+			return int(entry.get("exp_accum", 0))
+	return 0
+
+
+func _sum(table: Dictionary) -> int:
+	var out := 0
+	for k: String in table:
+		out += int(table[k])
+	return out

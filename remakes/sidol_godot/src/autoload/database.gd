@@ -29,6 +29,22 @@ func level_table() -> Array:
 	return _growth.get("levels", [])
 
 
+## 퀘스트 플래그 → 스토리 보너스 EXP. growth.json이 값의 출처(하드코딩 금지).
+## 성장의 절반은 여기서 나온다 — 잡몹만으로 레벨을 채우면 층당 40~60전투가 필요했다.
+func story_bonus_exp(flag_id: String) -> int:
+	var table: Dictionary = _growth.get("story_bonus_exp", {})
+	return int(table.get(flag_id, 0))
+
+
+## 보너스 표 전체 — 검사·계측 도구가 쓴다.
+func story_bonus_table() -> Dictionary:
+	var out: Dictionary = {}
+	for k: String in _growth.get("story_bonus_exp", {}):
+		if not k.begins_with("_"):
+			out[k] = int((_growth["story_bonus_exp"] as Dictionary)[k])
+	return out
+
+
 func get_enemy_def(id: StringName) -> Dictionary:
 	return _enemies.get(
 		String(id),
