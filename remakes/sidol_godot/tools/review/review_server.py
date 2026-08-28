@@ -40,7 +40,11 @@ CATEGORIES = {
     # 몬스터는 신규 창작이라 리터치 검증기(주인공 시트 대조)를 쓰면 무조건 반려된다 —
     # 종별 그리드 계약만 보는 전용 검증기를 쓴다.
     "monsters": {"mode": None, "validator": "monster"},
+    # NPC도 필드 캐릭터 시트라 몬스터와 같은 그리드 계약을 쓴다(스펙 파일만 다르다).
+    "npcs": {"mode": None, "validator": "monster"},
     "sprites": {"mode": None, "validator": "retouch"},
+    # 아이템 아이콘 — 96×96 단일 이미지. 시트 컷팅이 없으므로 submission 계열.
+    "items": {"mode": "icon", "validator": "submission"},
 }
 VERSION_RE = re.compile(r"^(?P<id>.+)_v(?P<n>\d+)\.png$", re.IGNORECASE)
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8643

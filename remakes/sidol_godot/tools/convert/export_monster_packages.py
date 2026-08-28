@@ -20,17 +20,38 @@ import sys
 from PIL import Image, ImageDraw
 
 from llm_package_common import (
+    NEGATIVE_RULES,
+    style_bible_block,
+    SELF_CHECK,
     copy_original_refs,
+    dominant_colors,
+    make_grid_template,
     make_palette_swatch,
+    make_subpalette,
+    measure_tone,
     prepare_workspace,
     refs_block,
+    tone_block,
 )
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SPECS = os.path.join(ROOT, "data", "monster_anim_specs.json")
 OUT_ROOT = os.path.join(ROOT, "assets", "raw", "llm", "monsters")
+## 원작 참조 묶음 이름 — NPC 생성기가 같은 템플릿을 쓰면서 참조만 바꿔 끼운다.
+REF_CATEGORY = "monsters"
 PALETTE_JSON = os.path.join(ROOT, "assets", "palette_master.json")
+## 스타일 앵커 — 파일럿에서 **합격해 게임에 들어간 신규 시트**가 있으면 그것을 우선한다.
+## 시범 1~2건으로 톤을 확정한 뒤 전체를 돌리는 방식이라, 앵커가 원작 도트에 고정돼 있으면
+## 합격본의 감각이 다음 의뢰에 전달되지 않는다(전체 적용분이 파일럿과 따로 논다).
 STYLE_ANCHOR = os.path.join(ROOT, "assets", "sprites", "mad_eye_original.png")
+
+
+def style_anchor_path() -> str:
+    d = os.path.join(ROOT, "assets", "sprites")
+    adopted = sorted(f for f in os.listdir(d) if f.endswith("_remake.png")) if os.path.isdir(d) else []
+    if adopted:
+        return os.path.join(d, adopted[0])
+    return STYLE_ANCHOR
 ## 주인공 시트 — 크기 기준. 이게 없으면 그림 LLM은 시돌이가 얼마나 큰지 모른 채 그린다.
 SCALE_REF = os.path.join(ROOT, "assets", "sprites", "player_original.png")
 ## 주인공 아트 실높이(셀 128 안, player_original.png 실측). 모든 크기 지시의 기준선.
@@ -38,6 +59,8 @@ PLAYER_ART_H = 96
 CELL = 128
 
 PROMPT_TEMPLATE = """# {name_ko}(`{sid}`) 몬스터 스프라이트 시트 생성 의뢰
+
+{style_bible}
 
 ## 역할
 너는 1995년 한국 공대 배경 캠퍼스 호러 JRPG의 몬스터 도트 디자이너다.
@@ -50,7 +73,12 @@ PROMPT_TEMPLATE = """# {name_ko}(`{sid}`) 몬스터 스프라이트 시트 생�
 ## 입력 (첨부)
 1. `style_ref.png` — 원작에서 이관한 기존 몬스터 시트(도트 스타일·정렬 기준)
 2. `scale_ref.png` — **주인공 시돌이 시트. 크기의 절대 기준**(셀 128 안 아트 높이 96px)
-3. `../palette_swatch.png` — 사용 가능한 256색 마스터 팔레트
+3. `grid_template.png` — **정확한 캔버스 크기의 빈 격자**({sheet_w}×{sheet_h}).
+   가능하면 **이 이미지를 열어 그 위에 그린다.** 마젠타 선 = 셀 경계, 청록 선 = 안전 여백.
+   선 자체는 납품물에 남기지 않는다(투명으로 지운다)
+4. `subpalette.png` — **이 계열에서 실제로 많이 쓰인 색**. 아래 hex 안에서 고른다:
+   `{subpalette_hex}`
+5. `../palette_swatch.png` — 마스터 팔레트 전체(위 색으로 부족할 때만 참고)
 {orig_refs}
 
 **원작 그림이 화풍의 1차 근거다.** 규칙 문장보다 첨부 그림을 먼저 따른다 —
@@ -75,6 +103,13 @@ PROMPT_TEMPLATE = """# {name_ko}(`{sid}`) 몬스터 스프라이트 시트 생�
 - 팔레트: 첨부 스왑치 내 색 우선. 형광/파스텔 붕괴/EGA 원색 유입 금지
 {sd_clause}
 - 연출 참고(telegraph): {telegraph}
+
+{tone_block}
+
+{negative_rules}
+
+{self_check}
+6. 행 수·행별 프레임 수가 위 표와 정확히 같은가? 남는 셀은 투명인가?
 
 ## 납품물
 1. 스프라이트 시트 PNG 1장 ({sheet_w}×{sheet_h})
@@ -116,6 +151,20 @@ def size_class(cell_w: int) -> str:
     return f"106~124px (주인공 {PLAYER_ART_H}px의 110~129% — 대형)"
 
 
+def _tone_refs() -> list:
+    """톤·색 실측에 쓸 참조 — 원작에서 이관한 캐릭터 시트 전부(타일·오브젝트 제외)."""
+    d = os.path.join(ROOT, "assets", "sprites")
+    if not os.path.isdir(d):
+        return []
+    return [
+        os.path.join(d, f)
+        for f in sorted(os.listdir(d))
+        if f.endswith(("_original.png", "_remake.png"))
+        and "obj" not in f
+        and "tiles" not in f
+    ]
+
+
 def export_one(sp: dict) -> None:
     sid = sp["id"]
     anims = sorted(sp["animations"].items(), key=lambda kv: int(kv[1].get("row", 0)))
@@ -133,9 +182,24 @@ def export_one(sp: dict) -> None:
     boss_line = " · **보스**" if sp.get("is_boss") else ""
     out_dir = os.path.join(OUT_ROOT, sid)
     os.makedirs(out_dir, exist_ok=True)
-    listed = copy_original_refs("monsters", out_dir)
+    listed = copy_original_refs(REF_CATEGORY, out_dir)
+
+    # 크기·프레임 수는 문장으로 못 고친다 — 정답 크기의 빈 격자를 준다.
+    row_labels = [f"{int(a.get('row', 0))} {n} x{int(a.get('frames', 1))}" for n, a in anims]
+    make_grid_template(os.path.join(out_dir, "grid_template.png"), cols, rows, CELL, row_labels)
+    # 톤·색은 기존 캐릭터 시트에서 실측해 계약으로 준다(문서가 아니라 파일이 출처).
+    refs = _tone_refs()
+    tone = measure_tone(refs)
+    sub_hex = make_subpalette(
+        dominant_colors(refs, 16), os.path.join(out_dir, "subpalette.png")
+    )
     prompt = PROMPT_TEMPLATE.format(
-        orig_refs=refs_block(listed, 4),
+        orig_refs=refs_block(listed, 6),
+        style_bible=style_bible_block(),
+        subpalette_hex=sub_hex,
+        tone_block=tone_block(tone, "원작에서 이관한 캐릭터 시트"),
+        negative_rules=NEGATIVE_RULES,
+        self_check=SELF_CHECK,
         sid=sid,
         name_ko=sp.get("name_ko", sid),
         pattern=sp.get("pattern", ""),
@@ -153,8 +217,9 @@ def export_one(sp: dict) -> None:
     )
     with io.open(os.path.join(out_dir, "prompt.md"), "w", encoding="utf-8") as f:
         f.write(prompt)
-    if os.path.exists(STYLE_ANCHOR):
-        shutil.copyfile(STYLE_ANCHOR, os.path.join(out_dir, "style_ref.png"))
+    anchor = style_anchor_path()
+    if os.path.exists(anchor):
+        shutil.copyfile(anchor, os.path.join(out_dir, "style_ref.png"))
     if os.path.exists(SCALE_REF):
         shutil.copyfile(SCALE_REF, os.path.join(out_dir, "scale_ref.png"))
     print(f"{sid}: {sheet_w}x{sheet_h} ({rows}행 {cols}열) prompt.md")

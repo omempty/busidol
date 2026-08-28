@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "_comment": "필드 NPC 스프라이트 스펙 — 전용 시트가 없어 주인공 플레이스홀더로 나오는 4종. 규격은 원작 이관 NPC 시트(rescue_girl_original.json 등)와 같다: 셀 128, 2프레임 4방향 보행 + 정면 idle. 몬스터 스펙과 같은 스키마라 같은 생성기(export_npc_packages.py)가 읽는다.",
+  "_policy": "필드 캐릭터는 SD 등신(주인공 시돌이 기준) — body_type humanoid.",
+  "style_target": "쯔바이/나르실리온/악튜러스풍 JRPG + 1995 한국 공대 캠퍼스",
+  "_animations_note": "행 순서 고정: walk_down · walk_up · walk_left · walk_right · idle_down.",
+  "species": [
+    {
+      "id": "dev1",
+      "name_ko": "HP실 개발자 1",
+      "cell": { "w": 48, "h": 48 },
+      "source": "placeholder",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대)",
+      "telegraph_visual": "",
+      "token": "1995년 대학 동아리방에서 밤새 게임을 만드는 남학생. 후줄근한 티셔츠, 헝클어진 머리, 눈 밑 그늘. 손에 플로피 디스켓 또는 커피. 피곤하지만 즐거운 얼굴",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 2, "fps": 6, "_desc": "정면 보행 2프레임" },
+        "walk_up": { "row": 1, "frames": 2, "fps": 6, "_desc": "뒷모습 보행 2프레임" },
+        "walk_left": { "row": 2, "frames": 2, "fps": 6, "_desc": "좌향 보행 2프레임" },
+        "walk_right": { "row": 3, "frames": 2, "fps": 6, "_desc": "우향 보행 2프레임" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "dev2",
+      "name_ko": "HP실 개발자 2",
+      "cell": { "w": 48, "h": 48 },
+      "source": "placeholder",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대)",
+      "telegraph_visual": "",
+      "token": "같은 동아리 여학생 개발자. 안경, 단정한 셔츠에 소매 걷음, 스케치북이나 그래프 용지를 든 그래픽 담당. dev1과 나란히 섰을 때 실루엣이 구분되게",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 2, "fps": 6, "_desc": "정면 보행 2프레임" },
+        "walk_up": { "row": 1, "frames": 2, "fps": 6, "_desc": "뒷모습 보행 2프레임" },
+        "walk_left": { "row": 2, "frames": 2, "fps": 6, "_desc": "좌향 보행 2프레임" },
+        "walk_right": { "row": 3, "frames": 2, "fps": 6, "_desc": "우향 보행 2프레임" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "lab_student",
+      "name_ko": "화공과 실습생",
+      "cell": { "w": 48, "h": 48 },
+      "source": "placeholder",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대)",
+      "telegraph_visual": "",
+      "token": "화학공학과 실습 가운 차림 학생. 흰 가운에 얼룩, 보안경을 이마에 올림, 시약병을 든 손. 3층 실험실 톤",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 2, "fps": 6, "_desc": "정면 보행 2프레임" },
+        "walk_up": { "row": 1, "frames": 2, "fps": 6, "_desc": "뒷모습 보행 2프레임" },
+        "walk_left": { "row": 2, "frames": 2, "fps": 6, "_desc": "좌향 보행 2프레임" },
+        "walk_right": { "row": 3, "frames": 2, "fps": 6, "_desc": "우향 보행 2프레임" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "afterschool_student",
+      "name_ko": "야간 자습 학생",
+      "cell": { "w": 48, "h": 48 },
+      "source": "placeholder",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대)",
+      "telegraph_visual": "",
+      "token": "밤늦게까지 남아 있는 전자공학과 학생. 점퍼를 걸치고 두꺼운 전공서와 계산기를 안고 있음. 졸린 눈, 4층 복도 톤",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 2, "fps": 6, "_desc": "정면 보행 2프레임" },
+        "walk_up": { "row": 1, "frames": 2, "fps": 6, "_desc": "뒷모습 보행 2프레임" },
+        "walk_left": { "row": 2, "frames": 2, "fps": 6, "_desc": "좌향 보행 2프레임" },
+        "walk_right": { "row": 3, "frames": 2, "fps": 6, "_desc": "우향 보행 2프레임" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡" }
+      }
+    }
+  ]
+}

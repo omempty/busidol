@@ -1,4 +1,4 @@
-"""LLM 납품 자동 판정 게이트 — 포트레이트·키아트.
+"""LLM 납품 자동 판정 게이트 — 포트레이트·키아트·아이템 아이콘.
 
 스프라이트 시트는 validate_retouch_sheet.py / process_llm_sheet.py가 담당.
 본 스크립트는 그 외 카테고리의 납품(10_submitted/)을 규격·키잉·AA·내용 충실
@@ -9,9 +9,12 @@
              (투명 또는 마젠타), 반투명 AA 픽셀 비율, 팔레트 이탈(경고)
   keyart   — 1920×1080 규격(16:9 이탈은 경고), 무내용(단색) 판정,
              팔레트 이탈(경고)
+  icon     — 96×96 규격(기존 아이콘 24종 실측치), 테두리 키잉, 내용 존재,
+             팔레트 이탈(경고). 인벤토리·상점·슬롯바가 같은 크기로 쓴다
 
 실행: python tools/convert/validate_submission.py portrait <png>
       python tools/convert/validate_submission.py keyart <png>
+      python tools/convert/validate_submission.py icon <png>
 종료코드: 0=PASS(경고 포함) / 1=FAIL
 """
 from __future__ import annotations
@@ -37,6 +40,8 @@ MAGENTA_TOL = 90  # 마젠타 판정 거리 — 혼색 혐의는 AA/키잉 검�
 PORTRAIT_SIZE = (768, 256)
 PORTRAIT_CELL = 256
 KEYART_SIZE = (1920, 1080)
+## 아이템 아이콘 — 기존 assets/icons/*.png 24종이 전부 96×96이다(실측).
+ICON_SIZE = (96, 96)
 
 AA_FAIL_RATIO = 0.05   # 반투명 픽셀 >5% — AA 유입 판정
 AA_WARN_RATIO = 0.01
@@ -165,14 +170,29 @@ def validate_keyart(path: str, rep: Report) -> None:
     check_palette(im, rep, (0, 0, im.width, im.height))
 
 
+def validate_icon(path: str, rep: Report) -> None:
+    im = load_rgba(path)
+    if im.size != ICON_SIZE:
+        rep.fail(f"크기 {im.size[0]}x{im.size[1]} — 규격 {ICON_SIZE[0]}x{ICON_SIZE[1]}")
+        return
+    rep.ok(f"크기 {im.size[0]}x{im.size[1]}")
+    box = (0, 0, im.width, im.height)
+    check_border_keyable(im, rep, box)
+    check_common(im, rep, "아이콘", box)
+    check_palette(im, rep, box)
+
+
+MODES = {"portrait": validate_portrait, "keyart": validate_keyart, "icon": validate_icon}
+
+
 def main() -> None:
-    if len(sys.argv) != 3 or sys.argv[1] not in ("portrait", "keyart"):
+    if len(sys.argv) != 3 or sys.argv[1] not in MODES:
         raise SystemExit(__doc__)
     mode, path = sys.argv[1], sys.argv[2]
     if not os.path.exists(path):
         raise SystemExit(f"파일 없음: {path}")
     rep = Report()
-    (validate_portrait if mode == "portrait" else validate_keyart)(path, rep)
+    MODES[mode](path, rep)
     for line in rep.lines:
         print(line)
     print(f"[{mode}] {'FAIL' if rep.failed else 'PASS'} — {path}")

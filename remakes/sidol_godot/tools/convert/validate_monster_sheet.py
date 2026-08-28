@@ -35,6 +35,9 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SPECS = os.path.join(ROOT, "data", "monster_anim_specs.json")
+## NPC도 같은 스키마·같은 그리드 계약을 쓴다 — 스펙이 두 파일로 나뉘어 있을 뿐이라
+## 여기서 둘 다 훑는다(몬스터 파일에 없으면 NPC 파일에서 찾는다).
+NPC_SPECS = os.path.join(ROOT, "data", "npc_anim_specs.json")
 PALETTE_JSON = os.path.join(ROOT, "assets", "palette_master.json")
 CELL = 128
 MAGENTA = (255, 0, 255)
@@ -64,10 +67,13 @@ class Report:
 
 
 def load_spec(asset_id: str) -> dict:
-    data = json.load(io.open(SPECS, encoding="utf-8"))
-    for sp in data.get("species", []):
-        if sp.get("id") == asset_id:
-            return sp
+    for path in (SPECS, NPC_SPECS):
+        if not os.path.exists(path):
+            continue
+        data = json.load(io.open(path, encoding="utf-8"))
+        for sp in data.get("species", []):
+            if sp.get("id") == asset_id:
+                return sp
     return {}
 
 
