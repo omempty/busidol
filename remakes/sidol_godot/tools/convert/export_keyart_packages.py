@@ -21,10 +21,14 @@ import sys
 from PIL import Image, ImageDraw
 
 from llm_package_common import (
+    NEGATIVE_RULES,
+    SELF_CHECK,
     copy_original_refs,
+    dedupe_package_dirs,
     make_palette_swatch,
     prepare_workspace,
     refs_block,
+    style_bible_block,
 )
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -35,6 +39,8 @@ TONE_ANCHOR = os.path.join(ROOT, "assets", "originals_ref", "remastered", "i_fie
 
 PROMPT_TEMPLATE = """# {title}(`{scene_id}`) 키아트 의뢰
 
+{style_bible}
+
 ## 역할
 너는 1995년 한국 공대 배경 캠퍼스 호러 JRPG의 컷씬 일러스트레이터다.
 **완전 신규 창작** 구간이다 — 원작 그래픽 제약은 없으나 아래 톤 규칙이 바인딩된다.
@@ -43,9 +49,9 @@ PROMPT_TEMPLATE = """# {title}(`{scene_id}`) 키아트 의뢰
 - 제목: {title}
 - 묘사: {description}
 
-## 입력 (첨부)
+## 입력 (첨부) — 아래 경로의 파일이 첨부물의 전부다(`..` = 카테고리 루트, 공용 1부)
 1. `../palette_swatch.png` — 사용 가능한 256색 마스터 팔레트
-2. `tone_anchor.png` — 게임 도트 아트(채도·명암 감각 기준)
+2. `../tone_anchor.png` — 게임 도트 아트(채도·명암 감각 기준)
 {orig_refs}
 
 **원작 그림이 화풍의 1차 근거다.** 규칙 문장보다 첨부 그림을 먼저 따른다 —
@@ -67,6 +73,10 @@ PROMPT_TEMPLATE = """# {title}(`{scene_id}`) 키아트 의뢰
 - 팔레트: 첨부 스왑치 내 색 우선. 형광/파스텔 붕괴/EGA 원색 유입 금지
 - 무드 태그 체계: 레트로 / 개그(B급 공대 유머) / 모험 / 감동 / 메타픽션
 
+{negative_rules}
+
+{self_check}
+
 ## 납품물
 1. 키아트 PNG 1장 (1920×1080)
 2. (선택) 연출 의도 요약 3줄 이내
@@ -79,25 +89,33 @@ def export_one(spec_path: str) -> None:
     out_dir = os.path.join(OUT_ROOT, scene_id)
     os.makedirs(out_dir, exist_ok=True)
 
-    listed = copy_original_refs("keyart", out_dir, scene_id)
+    # 씬 전용 참조(orig_this_scene)는 패키지에, 공용 원작 그림은 카테고리 루트에 1부.
+    scene_only = copy_original_refs("", out_dir, scene_id)
+    shared = copy_original_refs("keyart", OUT_ROOT, prefix="../")
+    listed = scene_only + shared
     prompt = PROMPT_TEMPLATE.format(
         scene_id=scene_id,
         title=spec.get("title", scene_id),
         description=spec.get("description", ""),
         orig_refs=refs_block(listed, 3),
+        style_bible=style_bible_block(),
+        negative_rules=NEGATIVE_RULES,
+        self_check=SELF_CHECK,
     )
     with io.open(os.path.join(out_dir, "prompt.md"), "w", encoding="utf-8") as f:
         f.write(prompt)
-    if os.path.exists(TONE_ANCHOR):
-        shutil.copyfile(TONE_ANCHOR, os.path.join(out_dir, "tone_anchor.png"))
-    print(f"{scene_id}: prompt.md + 원작참조 {len(listed)}장"
-          + (" + tone_anchor.png" if os.path.exists(TONE_ANCHOR) else ""))
+    print(f"{scene_id}: prompt.md + 원작참조 {len(listed)}장")
 
 
 def main() -> None:
     os.makedirs(OUT_ROOT, exist_ok=True)
     prepare_workspace()
     make_palette_swatch(os.path.join(OUT_ROOT, "palette_swatch.png"))
+    if os.path.exists(TONE_ANCHOR):
+        shutil.copyfile(TONE_ANCHOR, os.path.join(OUT_ROOT, "tone_anchor.png"))
+    removed = dedupe_package_dirs(OUT_ROOT)
+    if removed:
+        print(f"공용 참조 정리: 패키지 폴더에서 중복 {removed}개 제거")
     targets = sys.argv[1:]
     for spec_path in sorted(glob.glob(os.path.join(SPEC_DIR, "*.json"))):
         scene_id = os.path.splitext(os.path.basename(spec_path))[0]

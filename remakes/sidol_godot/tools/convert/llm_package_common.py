@@ -11,6 +11,19 @@
 **어두침침한 팔레트**가 나오는데, 프롬프트가 "첨부 스왑치 내 색 우선"이라고 못 박고
 있어 생성 이미지 전체가 어두워진다. 8비트로 올려서(<<2) 그린다.
 
+## 격자 템플릿이 결함의 발원지였다 (2026-08-28)
+
+`make_grid_template`이 안내선을 **반투명**(마젠타 alpha 110 · 청록 alpha 70)으로 깔고
+행 이름을 **글자로** 찍어 줬다. 그림 LLM은 그 위에 그린 뒤 배경째 합성해 납품했고 결과는:
+
+- 안내선 → 불투명 반감광 마젠타(#850080 대)로 구워짐. 정확한 #FF00FF가 아니라
+  마젠타 키잉도, near-magenta 검사도 못 지웠다(실납품 8/9장에서 검출).
+- 행 라벨 → `null_pointer_v3`가 "Idle / Attack Seg / Fault Claws / Hurt / Death…"
+  글자 바를 6칸에 그려 넣었다. 프롬프트의 "캔버스 안 글자 금지"와 정면 충돌.
+
+그래서 템플릿은 **불투명 순수 #FF00FF 선만** 긋고(남아도 키잉으로 지워진다),
+라벨·안전 여백 같은 설명은 별도 `grid_guide.png`로 분리한다(그 위에 그리지 못하게).
+
 ## 원작 참조 (2026-08-26 추가)
 
 원작 일러스트(`assets/originals_ref/`)가 어느 패키지에도 첨부되지 않고 있었다.
@@ -26,13 +39,25 @@ import shutil
 
 from PIL import Image, ImageDraw
 
+import delivery_checks as dc
+
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PALETTE_JSON = os.path.join(ROOT, "assets", "palette_master.json")
 ORIGINALS = os.path.join(ROOT, "assets", "originals_ref")
 LLM_ROOT = os.path.join(ROOT, "assets", "raw", "llm")
 AGENT_PROMPT = os.path.join(ROOT, "assets", "gen", "prompts", "GRAPHIC_AGENT_PROMPT.md")
 STYLE_BIBLE = os.path.join(ROOT, "assets", "style_bible.md")
-SUBMIT_CATEGORIES = ("portraits", "keyart", "monsters", "sprites", "npcs", "items")
+SUBMIT_CATEGORIES = (
+    "portraits",
+    "keyart",
+    "monsters",
+    "sprites",
+    "npcs",
+    "items",
+    "effects",
+    "battle_cuts",
+    "battle_actors",
+)
 
 ## 카테고리별 원작 참조 — (원본 파일, 첨부 이름, 프롬프트에 적을 설명)
 ORIGINAL_REFS = {
@@ -88,10 +113,15 @@ def make_palette_swatch(out_path: str) -> None:
     print(f"palette_swatch.png ({len(colors)} colors, 6bit->8bit 보정)")
 
 
-def copy_original_refs(category: str, out_dir: str, scene_id: str = "") -> list:
-    """카테고리(+씬)에 맞는 원작 참조를 패키지 폴더에 복사한다.
+def copy_original_refs(category: str, out_dir: str, scene_id: str = "", prefix: str = "") -> list:
+    """카테고리(+씬)에 맞는 원작 참조를 복사한다.
 
-    반환: 프롬프트에 넣을 [(첨부이름, 설명), ...] — 실제로 복사된 것만.
+    out_dir을 **카테고리 루트**로 주고 prefix="../"를 함께 주면 패키지마다 복사되지 않는다.
+    같은 그림이 패키지 수만큼 복제되던 것을 1부로 줄이는 자리다(2026-08-28):
+    몬스터 11패키지 × (style_ref 23KB + scale_ref 5KB + orig 15KB + subpalette) ≈ 500KB가
+    전부 같은 파일이었다. 프롬프트의 "입력(첨부)" 목록이 경로의 단일 근거다.
+
+    반환: 프롬프트에 넣을 [(첨부경로, 설명), ...] — 실제로 복사된 것만.
     """
     listed = []
     entries = list(ORIGINAL_REFS.get(category, []))
@@ -102,8 +132,47 @@ def copy_original_refs(category: str, out_dir: str, scene_id: str = "") -> list:
         if not os.path.exists(src):
             continue
         shutil.copyfile(src, os.path.join(out_dir, dst_name))
-        listed.append((dst_name, desc))
+        listed.append((prefix + dst_name, desc))
     return listed
+
+
+## 카테고리 안에서 모든 패키지가 똑같이 쓰는 참조 파일 이름 — 패키지 폴더에서 발견되면
+## 구판(패키지마다 복사) 잔재이므로 지운다.
+SHARED_REF_NAMES = (
+    "palette_swatch.png",
+    "style_ref.png",
+    "scale_ref.png",
+    "subpalette.png",
+    "tone_anchor.png",
+)
+
+
+def shared_ref_names() -> set:
+    names = set(SHARED_REF_NAMES)
+    for entries in ORIGINAL_REFS.values():
+        for _src, dst, _desc in entries:
+            names.add(dst)
+    return names
+
+
+def dedupe_package_dirs(cat_root: str) -> int:
+    """패키지 폴더에 남은 공용 참조 복사본을 지운다. 반환: 지운 파일 수.
+
+    씬 전용 참조(orig_this_scene.png)와 패키지 고유 입력(<id>_source.png)은 건드리지 않는다.
+    """
+    if not os.path.isdir(cat_root):
+        return 0
+    names = shared_ref_names()
+    removed = 0
+    for entry in sorted(os.listdir(cat_root)):
+        pkg = os.path.join(cat_root, entry)
+        if not os.path.isdir(pkg):
+            continue
+        for f in list(os.listdir(pkg)):
+            if f in names:
+                os.remove(os.path.join(pkg, f))
+                removed += 1
+    return removed
 
 
 def refs_block(listed: list, start_index: int) -> str:
@@ -151,12 +220,39 @@ def prepare_workspace() -> None:
 # 그래도 어긋난 납품은 후처리(normalize_icon.py)가 규격으로 되돌린다.
 # ---------------------------------------------------------------------------
 
+## 고유색 계약 — 프롬프트와 게이트가 같은 수를 봐야 한다("48색으로 그려라"라고 시켜 놓고
+## 다른 수로 반려하면 재의뢰가 무한 반복된다). 정본은 delivery_checks.COLOR_BUDGET.
+COLOR_BUDGET = dc.COLOR_BUDGET
+
+
+def identity_block(tokens: list) -> str:
+    """정체성 확인 블록 — 고정 서술 토큰을 **체크리스트로 되돌려 준다**.
+
+    왜: `npc_cafeteria_girl`의 토큰은 "앞치마+머리 수건, 활짝 웃는 얼굴"이었는데
+    납품물은 금발·맨어깨·앞치마 없음이었다(2026-08-28). 토큰을 본문에 한 줄 적는 것만으론
+    안 지켜진다 — 그림에 그 요소가 실제로 보이는지 항목으로 물어야 한다.
+    """
+    items = [t.strip() for t in tokens if t and t.strip()]
+    if not items:
+        return ""
+    lines = ["### 정체성 확인 — 아래 요소가 **그림에 실제로 보이는가** (없으면 다른 인물이다)"]
+    for t in items:
+        lines.append(f"- [ ] {t}")
+    lines.append("")
+    lines.append("재해석은 화풍·완성도에만 허용된다. 인물의 신원 표지(복장·머리·소품·연령대)는 바꾸지 않는다.")
+    return chr(10).join(lines)
+
+
 ## 어떤 카테고리든 공통으로 금지되는 것 — 생성 모델이 습관적으로 넣는 것들.
 NEGATIVE_RULES = """### 하지 말 것 (하나라도 어기면 반려)
 - 그라데이션·글로우·블러·베벨·드롭섀도 등 후처리 효과
 - 3D 렌더·벡터 일러스트·수채/유화 질감 — **도트(픽셀) 그림만**
 - 흰색/회색 배경, 체커보드를 그림으로 그리는 것, 배경에 깔린 그림자
 - 캔버스 안의 글자·숫자·로고·서명·워터마크·설명 라벨
+  (**애니 이름·프레임 번호를 그려 넣는 것 포함** — 참고용 `grid_guide.png`의 라벨을
+  따라 그린 납품이 실제로 있었다. 라벨은 설명이지 그림이 아니다)
+- **격자 안내선(마젠타·청록)을 남기는 것** — 흐리게·반투명으로 남겨도 반려다.
+  납품물에 안내선이 남으면 자동 검사가 직선 런으로 잡아낸다
 - 액자·테두리 선·둥근 모서리 마스크
 - 요청한 것 외의 물건을 곁들여 배치하는 것(단품만)
 - 반투명 안티에일리어싱 남발 — 원작 아트의 반투명 픽셀은 **0%**다"""
@@ -278,6 +374,9 @@ def dominant_colors(paths: list, count: int = 16) -> list:
         rgb, alpha = a[:, :, :3], a[:, :, 3]
         for c in rgb[alpha > 200][::3]:
             tally[tuple(int(v) for v in c)] += 1
+    # 순수 검정은 프롬프트가 외곽선·그림자에 금지한 색이다(원작 SPR 배경이 검정이라
+    # 그냥 세면 1위로 올라온다). 금지해 놓고 추천하면 지시가 서로 싸운다.
+    tally.pop((0, 0, 0), None)
     return [c for c, _ in tally.most_common(count)]
 
 
@@ -301,6 +400,11 @@ def make_grid_template(out_path: str, cols: int, rows: int, cell: int, labels: l
 
     크기·프레임 수는 문장으로 지시해도 계속 어긋난다(실납품 확인). 정답 크기의
     빈 격자를 주고 그 위에 그리게 하면 편집형 모델에서 실패율이 크게 떨어진다.
+
+    선은 **불투명 순수 #FF00FF**만 쓴다. 반투명으로 깔면 납품물에 반감광 보라(#850080 대)로
+    구워져 키잉도 검사도 못 지운다(2026-08-28 실납품 8/9장). 순수 마젠타면 남아도
+    배경 키잉이 같이 지운다 — 실수의 비용을 0으로 만드는 쪽을 택한다.
+    라벨·안전 여백 설명은 같은 폴더의 `grid_guide.png`로 뺀다(그 위에 그리지 않게).
     """
     w, h = cols * cell, rows * cell
     img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
@@ -308,21 +412,44 @@ def make_grid_template(out_path: str, cols: int, rows: int, cell: int, labels: l
     for r in range(rows):
         for c in range(cols):
             x0, y0 = c * cell, r * cell
-            d.rectangle([x0, y0, x0 + cell - 1, y0 + cell - 1], outline=(255, 0, 255, 110))
-            # 셀 안전 여백 — 캐릭터가 셀 경계에 붙지 않게 하는 안내선
+            d.rectangle([x0, y0, x0 + cell - 1, y0 + cell - 1], outline=(255, 0, 255, 255))
+    img.save(out_path)
+    # 단일 셀 캔버스(아이콘)는 설명할 격자가 없다 — 가이드를 만들지 않는다.
+    if cols * rows > 1 or labels:
+        make_grid_guide(os.path.join(os.path.dirname(out_path), "grid_guide.png"),
+                        cols, rows, cell, labels)
+
+
+def make_grid_guide(out_path: str, cols: int, rows: int, cell: int, labels: list) -> None:
+    """설명용 격자 — 행 라벨·안전 여백·프레임 수를 적은 **참고 이미지**.
+
+    캔버스 크기를 일부러 다르게(우측에 설명 여백을 붙여) 만든다: 이 그림 위에 그리면
+    규격이 안 맞아 자동으로 반려되므로, "참고용"이라는 지시가 그림으로도 강제된다.
+    """
+    pad_right = max(160, cell)
+    img = Image.new("RGBA", (cols * cell + pad_right, rows * cell), (16, 16, 20, 255))
+    d = ImageDraw.Draw(img)
+    for r in range(rows):
+        for c in range(cols):
+            x0, y0 = c * cell, r * cell
+            d.rectangle([x0, y0, x0 + cell - 1, y0 + cell - 1], outline=(255, 0, 255, 200))
             pad = max(4, cell // 16)
             d.rectangle(
                 [x0 + pad, y0 + pad, x0 + cell - 1 - pad, y0 + cell - 1 - pad],
-                outline=(0, 255, 255, 70),
+                outline=(0, 255, 255, 140),
             )
         if r < len(labels):
-            d.text((4, r * cell + 4), labels[r], fill=(255, 255, 0, 200))
+            d.text((cols * cell + 6, r * cell + 6), labels[r], fill=(255, 255, 0, 255))
+    d.text((cols * cell + 6, rows * cell - 14), "GUIDE ONLY - DO NOT DRAW HERE", fill=(255, 80, 80, 255))
     img.save(out_path)
 
 
 SELF_CHECK = """### 납품 전 스스로 확인 (하나라도 아니오면 다시 그려라)
 1. 캔버스 크기가 요구 규격과 **픽셀 단위로 정확히** 같은가?
 2. 배경이 완전 투명 또는 마젠타 단색인가? (흰색·회색·체커보드 아님)
-3. 색을 세어 봤을 때 요구한 범위 안인가?
-4. 반투명(부분 투명) 픽셀이 거의 없는가?
-5. 캔버스 안에 글자·워터마크·액자가 없는가?"""
+3. 고유색이 **%d색 이하**인가? 부드러운 그라데이션·리샘플 흔적이 없는가?
+   (실납품이 16,000~50,000색으로 온 적이 있다. 그건 도트 그림이 아니다)
+4. 반투명(부분 투명) 픽셀이 거의 없는가? (계약 0%%)
+5. 캔버스 안에 글자·워터마크·액자가 없는가?
+6. **격자 안내선을 전부 지웠는가?** 셀 경계·안전 여백 선, 행 라벨 글자가
+   한 줄도 남아 있으면 안 된다(흐리게 남은 것도 검출된다)""" % COLOR_BUDGET

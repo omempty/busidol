@@ -24,6 +24,8 @@ from llm_package_common import (
     style_bible_block,
     SELF_CHECK,
     copy_original_refs,
+    dedupe_package_dirs,
+    identity_block,
     dominant_colors,
     make_grid_template,
     make_palette_swatch,
@@ -70,15 +72,18 @@ PROMPT_TEMPLATE = """# {name_ko}(`{sid}`) 몬스터 스프라이트 시트 생�
 - 이름: {name_ko} (행동 패턴: {pattern}{boss_line})
 - 컨셉 토큰: {token}
 
-## 입력 (첨부)
-1. `style_ref.png` — 원작에서 이관한 기존 몬스터 시트(도트 스타일·정렬 기준)
-2. `scale_ref.png` — **주인공 시돌이 시트. 크기의 절대 기준**(셀 128 안 아트 높이 96px)
+## 입력 (첨부) — 아래 경로의 파일이 첨부물의 전부다(`..` = 카테고리 루트, 공용 1부)
+1. `../style_ref.png` — 원작에서 이관한 기존 몬스터 시트(도트 스타일·정렬 기준)
+2. `../scale_ref.png` — **주인공 시돌이 시트. 크기의 절대 기준**(셀 128 안 아트 높이 96px)
 3. `grid_template.png` — **정확한 캔버스 크기의 빈 격자**({sheet_w}×{sheet_h}).
-   가능하면 **이 이미지를 열어 그 위에 그린다.** 마젠타 선 = 셀 경계, 청록 선 = 안전 여백.
-   선 자체는 납품물에 남기지 않는다(투명으로 지운다)
-4. `subpalette.png` — **이 계열에서 실제로 많이 쓰인 색**. 아래 hex 안에서 고른다:
+   가능하면 **이 이미지를 열어 그 위에 그린다.** 마젠타 선 = 셀 경계다.
+   **다 그린 뒤 그 선을 전부 지운다** — 흐리게 남기는 것도 반려(자동 검출된다)
+4. `grid_guide.png` — 행 이름·프레임 수·안전 여백을 적은 **설명 그림. 참고만 한다.**
+   캔버스 크기가 일부러 다르니 이 그림 위에 그리면 규격 위반으로 반려된다.
+   여기 적힌 글자는 **설명이지 그림이 아니다** — 납품물에 글자를 옮겨 그리지 마라
+5. `../subpalette.png` — **이 계열에서 실제로 많이 쓰인 색**. 아래 hex 안에서 고른다:
    `{subpalette_hex}`
-5. `../palette_swatch.png` — 마스터 팔레트 전체(위 색으로 부족할 때만 참고)
+6. `../palette_swatch.png` — 마스터 팔레트 전체(위 색으로 부족할 때만 참고)
 {orig_refs}
 
 **원작 그림이 화풍의 1차 근거다.** 규칙 문장보다 첨부 그림을 먼저 따른다 —
@@ -106,10 +111,12 @@ PROMPT_TEMPLATE = """# {name_ko}(`{sid}`) 몬스터 스프라이트 시트 생�
 
 {tone_block}
 
+{identity}
+
 {negative_rules}
 
 {self_check}
-6. 행 수·행별 프레임 수가 위 표와 정확히 같은가? 남는 셀은 투명인가?
+7. 행 수·행별 프레임 수가 위 표와 정확히 같은가? 남는 셀은 투명인가?
 
 ## 납품물
 1. 스프라이트 시트 PNG 1장 ({sheet_w}×{sheet_h})
@@ -182,16 +189,18 @@ def export_one(sp: dict) -> None:
     boss_line = " · **보스**" if sp.get("is_boss") else ""
     out_dir = os.path.join(OUT_ROOT, sid)
     os.makedirs(out_dir, exist_ok=True)
-    listed = copy_original_refs(REF_CATEGORY, out_dir)
+    # 원작 참조·스타일·크기 기준·서브팔레트는 **카테고리 루트에 1부**(main이 만든다).
+    listed = copy_original_refs(REF_CATEGORY, OUT_ROOT, prefix="../")
 
     # 크기·프레임 수는 문장으로 못 고친다 — 정답 크기의 빈 격자를 준다.
+    # (라벨은 grid_guide.png로 분리된다 — 템플릿에 글자를 넣으면 납품물이 따라 그린다)
     row_labels = [f"{int(a.get('row', 0))} {n} x{int(a.get('frames', 1))}" for n, a in anims]
     make_grid_template(os.path.join(out_dir, "grid_template.png"), cols, rows, CELL, row_labels)
     # 톤·색은 기존 캐릭터 시트에서 실측해 계약으로 준다(문서가 아니라 파일이 출처).
     refs = _tone_refs()
     tone = measure_tone(refs)
     sub_hex = make_subpalette(
-        dominant_colors(refs, 16), os.path.join(out_dir, "subpalette.png")
+        dominant_colors(refs, 16), os.path.join(OUT_ROOT, "subpalette.png")
     )
     prompt = PROMPT_TEMPLATE.format(
         orig_refs=refs_block(listed, 6),
@@ -200,6 +209,7 @@ def export_one(sp: dict) -> None:
         tone_block=tone_block(tone, "원작에서 이관한 캐릭터 시트"),
         negative_rules=NEGATIVE_RULES,
         self_check=SELF_CHECK,
+        identity=identity_block([sp.get("token", "")]),
         sid=sid,
         name_ko=sp.get("name_ko", sid),
         pattern=sp.get("pattern", ""),
@@ -217,18 +227,26 @@ def export_one(sp: dict) -> None:
     )
     with io.open(os.path.join(out_dir, "prompt.md"), "w", encoding="utf-8") as f:
         f.write(prompt)
+    print(f"{sid}: {sheet_w}x{sheet_h} ({rows}행 {cols}열) prompt.md + grid 2장")
+
+
+def export_shared_refs() -> None:
+    """카테고리 루트에 공용 참조 1부 — 패키지마다 복사하지 않는다."""
+    make_palette_swatch(os.path.join(OUT_ROOT, "palette_swatch.png"))
     anchor = style_anchor_path()
     if os.path.exists(anchor):
-        shutil.copyfile(anchor, os.path.join(out_dir, "style_ref.png"))
+        shutil.copyfile(anchor, os.path.join(OUT_ROOT, "style_ref.png"))
     if os.path.exists(SCALE_REF):
-        shutil.copyfile(SCALE_REF, os.path.join(out_dir, "scale_ref.png"))
-    print(f"{sid}: {sheet_w}x{sheet_h} ({rows}행 {cols}열) prompt.md")
+        shutil.copyfile(SCALE_REF, os.path.join(OUT_ROOT, "scale_ref.png"))
+    removed = dedupe_package_dirs(OUT_ROOT)
+    if removed:
+        print(f"공용 참조 정리: 패키지 폴더에서 중복 {removed}개 제거")
 
 
 def main() -> None:
     os.makedirs(OUT_ROOT, exist_ok=True)
     prepare_workspace()
-    make_palette_swatch(os.path.join(OUT_ROOT, "palette_swatch.png"))
+    export_shared_refs()
     targets = set(sys.argv[1:])
     data = json.load(io.open(SPECS, encoding="utf-8"))
     for sp in data["species"]:

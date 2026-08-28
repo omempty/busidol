@@ -72,13 +72,13 @@ PROMPT_TEMPLATE = """# {name_ko}(`{item_id}`) 아이템 아이콘 생성 의뢰
 - 분류: {kind_ko} — {kind_hint}
 {stat_lines}
 
-## 입력 (첨부)
-1. `style_ref_1.png` · `style_ref_2.png` · `style_ref_3.png` — **이미 게임에 들어간 기존 아이콘**.
-   선 굵기·음영 단계·여백 비율의 기준이다. 새 아이콘이 이것들과 나란히 놓였을 때
-   따로 놀면 반려된다.
-2. `canvas_template.png` — **정확한 {icon_px}×{icon_px} 캔버스**(청록 선 = 비워 둘 안전 여백).
-   가능하면 이 이미지를 열어 그 위에 그린다. 선은 납품물에 남기지 않는다
-3. `subpalette.png` — **기존 아이콘에서 실제로 많이 쓰인 색**. 아래 hex를 중심으로 고른다:
+## 입력 (첨부) — 아래 경로의 파일이 첨부물의 전부다(`..` = 카테고리 루트, 공용 1부)
+1. `{kind_dir}/style_ref_1.png` · `{kind_dir}/style_ref_2.png` · `{kind_dir}/style_ref_3.png`
+   — **이미 게임에 들어간 같은 분류의 기존 아이콘**. 선 굵기·음영 단계·여백 비율의
+   기준이다. 새 아이콘이 이것들과 나란히 놓였을 때 따로 놀면 반려된다.
+2. `../canvas_template.png` — **정확한 {icon_px}×{icon_px} 캔버스**(마젠타 선 = 캔버스 경계).
+   가능하면 이 이미지를 열어 그 위에 그리고, **다 그린 뒤 선을 전부 지운다**(흐리게 남겨도 반려)
+3. `{kind_dir}/subpalette.png` — **같은 분류 아이콘에서 실제로 많이 쓰인 색**. 아래 hex 중심:
    `{subpalette_hex}`
 4. `../palette_swatch.png` — 마스터 팔레트 전체(위 색으로 부족할 때만)
 
@@ -158,16 +158,20 @@ def export_one(item: dict, items: list, icons: list) -> None:
     out_dir = os.path.join(OUT_ROOT, item_id)
     os.makedirs(out_dir, exist_ok=True)
 
+    # 스타일 앵커·서브팔레트는 **분류(kind)마다 같다** — 아이템 64종에 같은 그림을
+    # 복사하면 40벌이 된다. 분류 폴더에 1부만 두고 프롬프트가 그 경로를 가리킨다.
+    kind_key = kind or "etc"
+    kind_dir_abs = os.path.join(OUT_ROOT, "_kind", kind_key)
+    os.makedirs(kind_dir_abs, exist_ok=True)
     for n, src_name in enumerate(pick_anchors(items, kind, icons), start=1):
         shutil.copyfile(
-            os.path.join(ICON_DIR, src_name), os.path.join(out_dir, f"style_ref_{n}.png")
+            os.path.join(ICON_DIR, src_name), os.path.join(kind_dir_abs, f"style_ref_{n}.png")
         )
 
     anchors = [os.path.join(ICON_DIR, f) for f in pick_anchors(items, kind, icons)]
     all_icons = [os.path.join(ICON_DIR, f) for f in icons]
-    make_grid_template(os.path.join(out_dir, "canvas_template.png"), 1, 1, ICON_PX, [])
     sub_hex = make_subpalette(
-        dominant_colors(anchors or all_icons, 12), os.path.join(out_dir, "subpalette.png")
+        dominant_colors(anchors or all_icons, 12), os.path.join(kind_dir_abs, "subpalette.png")
     )
     prompt = PROMPT_TEMPLATE.format(
         style_bible=style_bible_block(),
@@ -179,18 +183,32 @@ def export_one(item: dict, items: list, icons: list) -> None:
         name_ko=item.get("name_ko", item_id),
         kind_ko=kind_ko,
         kind_hint=kind_hint,
+        kind_dir=f"../_kind/{kind_key}",
         stat_lines=stat_lines(item),
         icon_px=ICON_PX,
     )
     with io.open(os.path.join(out_dir, "prompt.md"), "w", encoding="utf-8") as f:
         f.write(prompt)
-    print(f"{item_id}: {kind_ko} — prompt.md + 앵커 3장")
+    print(f"{item_id}: {kind_ko} — prompt.md (앵커는 _kind/%s 공용)" % kind_key)
 
 
 def main() -> None:
     os.makedirs(OUT_ROOT, exist_ok=True)
     prepare_workspace()
     make_palette_swatch(os.path.join(OUT_ROOT, "palette_swatch.png"))
+    # 캔버스 템플릿은 전 아이템이 같은 96×96 한 장 — 루트에 1부.
+    make_grid_template(os.path.join(OUT_ROOT, "canvas_template.png"), 1, 1, ICON_PX, [])
+    removed = 0
+    for pkg in sorted(os.listdir(OUT_ROOT)):
+        d = os.path.join(OUT_ROOT, pkg)
+        if not os.path.isdir(d) or pkg == "_kind":
+            continue
+        for f in list(os.listdir(d)):
+            if f.startswith("style_ref_") or f in ("subpalette.png", "canvas_template.png", "grid_guide.png"):
+                os.remove(os.path.join(d, f))
+                removed += 1
+    if removed:
+        print(f"공용 참조 정리: 패키지 폴더에서 중복 {removed}개 제거")
     items = load_items()
     icons = existing_icons()
     have = {f[:-4] for f in icons}

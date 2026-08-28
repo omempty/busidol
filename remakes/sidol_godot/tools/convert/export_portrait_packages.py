@@ -16,16 +16,28 @@ import glob
 import io
 import json
 import os
+import re
 import sys
 
 from PIL import Image, ImageDraw
 
 from llm_package_common import (
+    NEGATIVE_RULES,
+    SELF_CHECK,
     copy_original_refs,
+    dedupe_package_dirs,
+    identity_block,
+    make_grid_guide,
+    make_grid_template,
     make_palette_swatch,
     prepare_workspace,
     refs_block,
+    style_bible_block,
 )
+
+## 셀 규격 — 768×256(256셀 3개). 검증기(validate_submission.py PORTRAIT_SIZE)와 같은 수.
+CELL = 256
+COLS = 3
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 SPEC_DIR = os.path.join(ROOT, "assets", "spec", "portraits")
@@ -34,6 +46,8 @@ OUT_ROOT = os.path.join(ROOT, "assets", "raw", "llm", "portraits")
 PALETTE_JSON = os.path.join(ROOT, "assets", "palette_master.json")
 
 PROMPT_TEMPLATE = """# {name}(`{asset_id}`) 포트레이트 리마스터 의뢰
+
+{style_bible}
 
 ## 역할
 너는 1995년 DOS RPG의 원작 캐릭터 얼굴을 현대 JRPG 톤으로 격상시키는
@@ -44,9 +58,12 @@ PROMPT_TEMPLATE = """# {name}(`{asset_id}`) 포트레이트 리마스터 의뢰
 - 이름: {name}
 - 고정 서술 토큰: {token}
 
-## 입력 (첨부)
+## 입력 (첨부) — 아래 경로의 파일이 첨부물의 전부다(`..` = 카테고리 루트, 공용 1부)
 1. `{asset_id}_source.png` — {source_desc}
-2. `../palette_swatch.png` — 사용 가능한 256색 마스터 팔레트
+2. `../grid_template.png` — **정확한 캔버스 크기의 빈 격자**(768×256, 256셀 3개).
+   마젠타 선 = 셀 경계다. **다 그린 뒤 그 선을 전부 지운다**(흐리게 남겨도 반려)
+3. `grid_guide.png` — 셀별 표정 이름을 적은 **설명 그림. 참고만 한다**(글자를 옮겨 그리지 마라)
+4. `../palette_swatch.png` — 사용 가능한 256색 마스터 팔레트
 {orig_refs}
 
 **원작 초상이 화풍의 1차 근거다.** 규칙 문장보다 첨부 그림을 먼저 따른다 —
@@ -70,6 +87,12 @@ PROMPT_TEMPLATE = """# {name}(`{asset_id}`) 포트레이트 리마스터 의뢰
 - 팔레트: 첨부 스왑치 내 색 우선. 형광/파스텔 붕괴/EGA 원색 유입 금지
 - 따뜻하고 채도 있는 톤으로 격상 (어두운 VGA 레트로 그대로 반려)
 
+{identity}
+
+{negative_rules}
+
+{self_check}
+
 ## 납품물
 1. 리마스터 시트 PNG 1장 (768×256)
 2. (선택) 변경 요약 3줄 이내
@@ -92,6 +115,17 @@ def source_desc(im: Image.Image, name: str) -> str:
     return "원작 얼굴 크롭 (신원·구도·헤어·의상 기준)"
 
 
+def identity_tokens(token: str) -> list:
+    """고정 서술 토큰 → 체크 항목 목록.
+
+    "식당 아가씨: 앞치마+머리 수건, 활짝 웃는 얼굴" → ["앞치마+머리 수건", "활짝 웃는 얼굴"].
+    한 줄로 적어 두면 무시된다(실납품: 앞치마·머리 수건이 통째로 빠진 금발 인물이 왔다).
+    """
+    body = token.split(":", 1)[-1]
+    parts = re.split(r"[,·]| / ", body)
+    return [p.strip() for p in parts if p.strip()]
+
+
 def export_one(spec_path: str) -> None:
     spec = json.load(io.open(spec_path, encoding="utf-8"))
     asset_id = spec["asset_id"]
@@ -107,23 +141,42 @@ def export_one(spec_path: str) -> None:
     src.resize((src.width * k, src.height * k), Image.NEAREST).save(
         os.path.join(out_dir, f"{asset_id}_source.png"))
 
-    listed = copy_original_refs("portraits", out_dir)
+    # 공용 원작 초상은 카테고리 루트에 1부 — 16패키지에 같은 그림을 복사하지 않는다.
+    listed = copy_original_refs("portraits", OUT_ROOT, prefix="../")
+    exprs = [str(e) for e in spec.get("expressions", ["normal", "worried", "determined"])]
+    # 격자 자체는 16종이 동일(768×256) — 루트에 1부. 표정 이름만 패키지별로 다르다.
+    make_grid_guide(
+        os.path.join(out_dir, "grid_guide.png"), COLS, 1, CELL,
+        [" | ".join("%d %s" % (i + 1, e) for i, e in enumerate(exprs[:COLS]))],
+    )
     prompt = PROMPT_TEMPLATE.format(
         asset_id=asset_id,
         name=spec.get("name", asset_id),
         token=spec.get("subject_token", "(미정)"),
         source_desc=source_desc(src, spec.get("name", asset_id)),
-        orig_refs=refs_block(listed, 3),
+        orig_refs=refs_block(listed, 5),
+        style_bible=style_bible_block(),
+        identity=identity_block(identity_tokens(spec.get("subject_token", ""))),
+        negative_rules=NEGATIVE_RULES,
+        self_check=SELF_CHECK,
     )
     with io.open(os.path.join(out_dir, "prompt.md"), "w", encoding="utf-8") as f:
         f.write(prompt)
-    print(f"{asset_id}: source x{k} + prompt.md")
+    print(f"{asset_id}: source x{k} + prompt.md + grid_guide.png")
 
 
 def main() -> None:
     os.makedirs(OUT_ROOT, exist_ok=True)
     prepare_workspace()
     make_palette_swatch(os.path.join(OUT_ROOT, "palette_swatch.png"))
+    make_grid_template(os.path.join(OUT_ROOT, "grid_template.png"), COLS, 1, CELL, [])
+    for pkg in sorted(os.listdir(OUT_ROOT)):
+        stale = os.path.join(OUT_ROOT, pkg, "grid_template.png")
+        if os.path.isfile(stale):
+            os.remove(stale)
+    removed = dedupe_package_dirs(OUT_ROOT)
+    if removed:
+        print(f"공용 참조 정리: 패키지 폴더에서 중복 {removed}개 제거")
     targets = sys.argv[1:]
     for spec_path in sorted(glob.glob(os.path.join(SPEC_DIR, "*.json"))):
         asset_id = os.path.splitext(os.path.basename(spec_path))[0]
