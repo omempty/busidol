@@ -18,6 +18,8 @@ const HP_WARN := Color(0.98, 0.75, 0.18)
 const HP_LOW := Color(0.94, 0.38, 0.36)
 const EXP := Color(0.4, 0.63, 0.96)
 const EQUIPPED := Color(0.5, 0.85, 0.56)  # 장착 중 표시
+const BREAK_ON := Color(1.0, 0.45, 0.2)  # 브레이크 성립 — 약점을 찔렀다는 신호
+const TRACK := Color(1, 1, 1, 0.16)  # 게이지 빈 칸 — 어두운 카드 위에서도 형태가 남는다
 const ROW_SELECTED := Color(1, 1, 1, 0.08)  # 목록에서 선택된 줄의 바탕
 
 const HP_WARN_AT := 0.5

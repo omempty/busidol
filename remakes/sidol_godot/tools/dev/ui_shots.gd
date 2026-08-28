@@ -108,7 +108,8 @@ func _capture_field() -> void:
 
 
 func _capture_battle() -> void:
-	GameState.pending_encounter = {"enemies": ["hellcop"], "on_win_flag": ""}
+	# 약점 보유 종을 섞는다 — 브레이크 게이지가 그려지는지 보려면 필요하다.
+	GameState.pending_encounter = {"enemies": ["mad_eye", "vulgar"], "on_win_flag": ""}
 	for iid: String in ["ITEM_MEDICINE", "ITEM_CONDITION"]:
 		GameState.inventory.add(StringName(iid), 2)
 	var battle: Node = BATTLE_SCENE.instantiate()

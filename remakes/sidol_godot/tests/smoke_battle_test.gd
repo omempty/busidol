@@ -24,7 +24,8 @@ func _ready() -> void:
 	var hp_before: int = battle.enemies[0].hp
 
 	# --- 1) 공격 안무 재생 + 데미지 적용 (타이밍 링 헤드리스 타임아웃 포함) ---
-	battle._on_command("공격")
+	# 커맨드는 번역 불변 id로 넘긴다(구판은 한국어 문자열이라 언어를 바꾸면 깨졌다).
+	battle._on_command(&"attack")
 	var waited := 0.0
 	while battle._busy and waited < TIMEOUT:
 		await get_tree().process_frame
@@ -39,8 +40,8 @@ func _ready() -> void:
 		failures.append("공격 데미지 미적용")
 
 	# --- 1-1) 브레이크 게이지 UI — 약점 보유 적에게 게이지 라벨 생성 ---
-	if battle._ui._break_labels.is_empty():
-		failures.append("브레이크 게이지 라벨 미생성(약점 보유 적 존재)")
+	if battle._ui._break_bars.is_empty():
+		failures.append("브레이크 게이지 미생성(약점 보유 적 존재)")
 
 	# --- 2) 스킬(전체 대상 화염) 안무 ---
 	(

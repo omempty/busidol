@@ -92,11 +92,13 @@ func _setup_combatants(def: Dictionary) -> void:
 	_enemy_ids.assign(built["ids"])
 
 
-func _on_command(cmd_text: String) -> void:
+## 커맨드 분기는 번역 불변 id로 한다 — 구판은 tr()로 만든 한국어 문자열을 그대로 비교해
+## 언어를 바꾸면 전투 커맨드가 통째로 먹통이 됐다(2026-08-28 l10n 도입 후 실측).
+func _on_command(cmd_id: StringName) -> void:
 	if _busy:
 		return
-	match cmd_text:
-		"공격":
+	match cmd_id:
+		&"attack":
 			_begin_player_action(
 				{
 					"type": &"attack",
@@ -105,16 +107,16 @@ func _on_command(cmd_text: String) -> void:
 				},
 				&"atk_basic"
 			)
-		"기술":
+		&"skill":
 			_ui.show_skill_menu()
-		"방어":
+		&"guard":
 			player_combatant.attach_effect(
 				{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50}
 			)
 			_end_player_defend()
-		"도구":
+		&"item":
 			_ui.show_item_menu()
-		"도망":
+		&"flee":
 			battle_ended.emit(&"flee", {})
 			BattleRewards.apply(&"flee", {}, player_combatant.hp, _on_win_flag)
 			get_tree().change_scene_to_file("res://scenes/field.tscn")
