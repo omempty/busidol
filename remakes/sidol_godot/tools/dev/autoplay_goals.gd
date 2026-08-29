@@ -141,6 +141,10 @@ func _npcs(field: Node2D) -> Array:
 			"kind": "NPC",
 			"label": npc.display_name,
 			"cell": npc.cell,
+			# **몸 전체를 낸다.** NPC는 2×2인데 앵커 한 칸만 보면, 아랫줄로는 말을 걸 수
+			# 있는데도 「걸어서 닿을 수 없다」로 적힌다 — 게임은 `npc.occupies()`로 몸을
+			# 통째로 보므로 도구만 못 간다고 하는 자리가 생긴다(2026-08-29 f3 화공과 교수).
+			"cells": npc.body_cells(),
 			"mode": "face",
 			"passable": false,  # NPC 몸 셀은 통행 오버라이드로 막혀 있다
 			"rank": RANK_NPC,

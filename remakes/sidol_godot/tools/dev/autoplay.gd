@@ -39,6 +39,11 @@ const APPROACH_WINDOW := 3
 const DIRS := [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
 ## 문 한 번에 건너뛰는 칸 수 — TransitionGate._try_door와 같은 규약.
 const DOOR_JUMP := 3
+## 어깨 칸으로 붙는 것에 매기는 벌점(칸). **정면을 우선한다** — 어깨로 붙으면 정면
+## 두 칸이 빈 바닥일 수 있고, 그러면 방향을 트는 대신 그리로 걸어가 버려 조사가
+## 아예 안 된다(2026-08-29 f3 랩실생도가 「밟았는데 아무 일도 없었다」로 잡혔다).
+## 맵 지름보다 크게 잡아 정면 후보가 하나라도 있으면 언제나 이기게 한다.
+const SHOULDER_PENALTY := 1000
 ## 씬 전환(전투 진입·복귀)을 기다릴 상한. 전투가 서 있는 동안은 세지 않는다.
 const SCENE_FRAMES := 600
 ## 전투가 아무리 길어도 여기까지 — 이걸 넘기면 전투가 끝나지 않는 것이다.
@@ -334,6 +339,10 @@ func _approach(player: PlayerEntity, reach: Dictionary, candidate: Dictionary) -
 			return {}
 		return {"anchor": cell, "dir": Vector2i.ZERO, "distance": int(reach[cell])}
 
+	# 조사 대상이 여러 칸일 수 있다(NPC는 2×2 몸이다). 하나라도 전방에 들어오면 된다.
+	var targets: Array = candidate.get("cells", [cell])
+	if targets.is_empty():
+		targets = [cell]
 	var best: Dictionary = {}
 	var best_distance := 1 << 30
 	for dy in range(-APPROACH_WINDOW, APPROACH_WINDOW + 1):
@@ -342,13 +351,16 @@ func _approach(player: PlayerEntity, reach: Dictionary, candidate: Dictionary) -
 			if not reach.has(anchor):
 				continue
 			var distance := int(reach[anchor])
-			if distance >= best_distance:
-				continue
 			for dir: Vector2i in DIRS:
-				if cell in InteractProbe.probe_cells(player.mover, anchor, dir):
-					best = {"anchor": anchor, "dir": dir, "distance": distance}
-					best_distance = distance
-					break
+				var probe := InteractProbe.probe_cells(player.mover, anchor, dir)
+				var rank := _hit_rank(probe, targets)
+				if rank < 0:
+					continue
+				var score := rank * SHOULDER_PENALTY + distance
+				if score >= best_distance:
+					continue
+				best = {"anchor": anchor, "dir": dir, "distance": distance}
+				best_distance = score
 	return best
 
 
@@ -699,3 +711,12 @@ func _write_report(driver: AutoplayDriver) -> void:
 	var lines: Array[String] = [driver.build_report("자동 주행 결과", ALL_FLOORS)]
 	lines.append_array(_log.sections())
 	_log.store(_arg_str("--out", OUT_PATH), lines, "autoplay")
+
+
+## 조사 후보 칸 목록에서 목표를 몇 순위로 집는가. 0=정면 두 칸, 1=어깨, -1=못 집는다.
+func _hit_rank(probe: Array, targets: Array) -> int:
+	for i in probe.size():
+		for want: Vector2i in targets:
+			if probe[i] == want:
+				return 0 if i < 2 else 1
+	return -1
