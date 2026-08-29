@@ -22,6 +22,10 @@ const SHAKE_STEP := 0.05
 var _steps: Array = []
 var _idx := 0
 var _running := false
+## 씬을 넘겨주고 끝났는가(전투 진입·씬 전환). **중단과 구별해야 한다** — 이때는
+## 이 노드 자체가 사라지므로 마무리를 하면 안 되고, 그 밖의 중단(재료 부족 등)은
+## 반드시 마무리해야 한다. 안 그러면 finished를 기다리는 쪽이 영영 안 깨어난다.
+var _handoff := false
 var _cutscene_id := &""
 var _box: DialogueBox
 var _overlay: ColorRect
@@ -65,6 +69,7 @@ func play(config: Dictionary) -> void:
 	_steps = config.get("steps", [])
 	_idx = 0
 	_running = true
+	_handoff = false
 	visible = true
 	_run()
 
@@ -80,8 +85,12 @@ func is_running() -> bool:
 
 func _run() -> void:
 	await _run_steps(_steps)
-	if not _running:
-		return
+	if _handoff:
+		return  # 전투·씬 전환 — 이 노드는 곧 사라진다
+	# 중간에 멎었어도(재료 부족 등) **마무리는 한다.** 여기서 그냥 빠져나가면
+	# finished가 안 나가 필드가 입력을 영영 안 돌려받고 막까지 화면에 남는다 —
+	# 재료 없이 그 자리를 조사한 플레이어는 게임이 멈춘 것으로 본다
+	# (2026-08-29 자동 주행이 f1·f2에서 「진행 정지」로 실측).
 	_running = false
 	visible = false
 	_clear_illustration()
@@ -150,6 +159,7 @@ func _execute(step: Dictionary) -> void:
 		"minigame_battery":
 			await _run_battery(StringName(str(step.get("id", ""))))
 		"change_scene":
+			_handoff = true
 			_running = false
 			get_tree().change_scene_to_file(str(step.get("path", "")))
 		"actor_move":
@@ -158,6 +168,7 @@ func _execute(step: Dictionary) -> void:
 			GameState.pending_encounter = {
 				"enemies": step.get("enemies", []), "on_win_flag": str(step.get("on_win_flag", ""))
 			}
+			_handoff = true
 			_running = false
 			get_tree().change_scene_to_file("res://scenes/battle.tscn")
 		_:

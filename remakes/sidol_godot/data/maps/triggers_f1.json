@@ -45,11 +45,17 @@
     {
       "id": "f1_blast",
       "type": "interact",
-      "cells": [[3, 0]],
+      "cells": [
+        [
+          100,
+          63
+        ]
+      ],
       "action": {
         "cutscene": "f1_blast"
       },
-      "once": false
+      "once": false,
+      "_comment": "마스터 시나리오 §1 클라이맥스 「2층 철문 대폭파」 — 그 철문이 곧 F1→F2 계단이다(transitions.json stairs_center_up_f1 anchor=[100,63]). 자리표시자 (3,0)은 맵 상단봉인 띠 안이라 걸어서 그 앞에 설 수 없었다(2026-08-29 cell_probe 실측)."
     }
   ]
 }

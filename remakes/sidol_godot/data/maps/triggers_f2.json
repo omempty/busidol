@@ -15,11 +15,17 @@
     {
       "id": "f2_poster",
       "type": "interact",
-      "cells": [[0, 0]],
+      "cells": [
+        [
+          100,
+          63
+        ]
+      ],
       "action": {
         "cutscene": "f2_poster"
       },
-      "once": false
+      "once": false,
+      "_comment": "마스터 시나리오 씬 2-3 「3층 계단의 완종이」 — 그 계단이 F2→F3 전환 앵커다(transitions.json stairs_center_up_f2 anchor=[100,63], requires_flag=Q_F2_POSTER).자리표시자 (0,0)은 ATT 2에 도달 불가였다(2026-08-29 cell_probe 실측)."
     }
   ]
 }
