@@ -152,9 +152,8 @@ func _open_gates() -> void:
 	for t: Dictionary in JsonUtil.load_dict(AutoplayGoals.TRANSITIONS_PATH, "sweep").get(
 		"transitions", []
 	):
-		var req: Variant = t.get("requires_flag")
-		if req != null:
-			GameState.set_flag(str(req), true)
+		for r: String in AutoplayGoals.flags_of(t.get("requires_flag")):
+			GameState.set_flag(r, true)
 	for floor_variant: Variant in ALL_FLOORS:
 		var path := "res://data/maps/triggers_f%d.json" % int(floor_variant)
 		if not FileAccess.file_exists(path):
@@ -174,9 +173,8 @@ func _open_gates() -> void:
 		for t: Dictionary in rows:
 			if str(t.get("type", "")) == "auto" and not all_auto:
 				continue
-			var req: Variant = t.get("requires_flag")
-			if req != null:
-				GameState.set_flag(str(req), true)
+			for r: String in AutoplayGoals.flags_of(t.get("requires_flag")):
+				GameState.set_flag(r, true)
 
 
 ## 성장 테이블 만렙 + 전 기술 + **최고 무장**. 균형이 아니라 도달이 목적이라 수치를

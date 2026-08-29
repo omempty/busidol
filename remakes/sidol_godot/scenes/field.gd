@@ -192,12 +192,20 @@ func _physics_process(_delta: float) -> void:
 	_prompt.visible = false
 
 
-## 대사 시퀀스의 op 스텝 — 지금은 shop 하나. 구판은 op이 실행되지 않았다.
+## 대사 시퀀스의 op 스텝 — shop과 set_flags. 구판은 op이 실행되지 않았다.
+##
+## **set_flags를 여기서 처리하지 않으면 대사가 세우는 플래그가 통째로 죽는다.**
+## 컷신(CutscenePlayer)에는 있고 대사에는 없어서, dialogue_sequences.json이 적어 둔
+## set_flags가 "알 수 없는 시퀀스 op"로 버려지고 있었다(2026-08-29 발견).
 func _on_dialogue_op(op_name: String, _args: Dictionary) -> void:
 	match op_name:
 		"shop":
 			player.mover.enabled = false
 			shop.open()
+		"set_flags":
+			for k: String in _args:
+				GameState.set_flag(k, _args[k])
+			player.mover.enabled = true
 		_:
 			push_warning("알 수 없는 시퀀스 op: %s" % op_name)
 			player.mover.enabled = true

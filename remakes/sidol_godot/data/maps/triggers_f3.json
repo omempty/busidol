@@ -1,16 +1,26 @@
 {
   "schema_version": 1,
-  "_comment": "F3 트리거 — 시나리오가 q_f3_quiz_gate를 세팅하면(드래그·앨린 획득 후) 퀴즈맨 게이트 가동.",
+  "_comment": "F3 트리거 — 퀴즈맨 게이트는 시약 둘(드래그·앨린)을 얻은 뒤 복도 끝에서 열린다.",
   "triggers": [
     {
       "id": "f3_quiz_gate",
-      "type": "auto",
+      "type": "zone",
       "once": true,
-      "requires_flag": "q_f3_quiz_gate",
+      "cells": [
+        [
+          125,
+          21
+        ]
+      ],
+      "requires_flag": [
+        "Q_F3_DRAG",
+        "Q_F3_ALLIN"
+      ],
       "done_flag": "Q_F3_PALIN",
       "action": {
         "cutscene": "quiz_paline"
-      }
+      },
+      "_comment": "마스터 시나리오 씬 3-2 ③ — 「복도 끝」 퀴즈맨. 옛 requires_flag q_f3_quiz_gate는 세우는 곳이 아무 데도 없어 팰린이 영영 안 나왔다(q_f2_hp_gate·q_f4_battery_gate와 같은 유형). auto가 아니라 zone인 이유: auto면 시약을 다 얻고도 층을 나갔다 돌아와야 열린다. 교수실 열(드래그 111,19 · 앨린 98,18)에서 화공과(138,19)로 가는 복도. cell_probe f3 실측: (125,21) 설 수 있음."
     },
     {
       "id": "f3_drag",

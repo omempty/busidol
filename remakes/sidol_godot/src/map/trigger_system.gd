@@ -73,8 +73,14 @@ func _consumed(t: Dictionary) -> bool:
 	var done := str(t.get("done_flag", ""))
 	if not done.is_empty() and GameState.has_flag(done):
 		return true
+	# requires_flag는 문자열 하나 또는 목록이다. **목록이면 전부 서 있어야 한다** —
+	# 퀴즈맨 게이트처럼 앞선 두 사건(드래그·앨린)이 모두 끝나야 열리는 문이 있다.
 	var req: Variant = t.get("requires_flag")
-	if req != null and not GameState.has_flag(str(req)):
+	if req is Array:
+		for r: Variant in req:
+			if not GameState.has_flag(str(r)):
+				return true
+	elif req != null and not GameState.has_flag(str(req)):
 		return true
 	return false
 

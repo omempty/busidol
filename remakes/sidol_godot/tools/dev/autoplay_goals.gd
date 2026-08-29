@@ -42,11 +42,14 @@ func _stairs(floor_no: int, visited: Dictionary) -> Array:
 		if floor_no < int(t["guard_min_floor"]) or floor_no > int(t["guard_max_floor"]):
 			continue
 		var to_floor := floor_no + int(t["floor_delta"])
-		var req: Variant = t.get("requires_flag")
-		var locked: bool = req != null and not GameState.has_flag(str(req))
+		var reqs := flags_of(t.get("requires_flag"))
+		var locked := false
+		for r: String in reqs:
+			if not GameState.has_flag(r):
+				locked = true
 		var label := "f%d → f%d" % [floor_no, to_floor]
 		if locked:
-			label += "  (%s 필요)" % str(req)
+			label += "  (%s 필요)" % ", ".join(reqs)
 		var goal := {
 			"id": str(t["id"]),
 			"kind": "계단",
@@ -73,8 +76,11 @@ func _triggers(field: Node2D, floor_no: int) -> Array:
 		var kind := str(t.get("type", ""))
 		if kind == "auto":
 			continue
-		var req: Variant = t.get("requires_flag")
-		if req != null and not GameState.has_flag(str(req)):
+		var blocked := false
+		for r: String in flags_of(t.get("requires_flag")):
+			if not GameState.has_flag(r):
+				blocked = true
+		if blocked:
 			continue
 		var done := str(t.get("done_flag", ""))
 		if not done.is_empty() and GameState.has_flag(done):
@@ -161,3 +167,15 @@ func _chests(field: Node2D) -> Array:
 			}
 			out.append(goal)
 	return out
+
+
+## requires_flag는 문자열 하나이거나 목록이다(TriggerSystem._consumed와 같은 규약).
+static func flags_of(v: Variant) -> Array:
+	if v == null:
+		return []
+	if v is Array:
+		var out: Array = []
+		for e: Variant in v:
+			out.append(str(e))
+		return out
+	return [str(v)]

@@ -14,6 +14,7 @@ extends Node
 ##  8) 전층 착지 좌표 유효성(warn)    — transitions 오프셋과 맵 통행 정합(f0 격차 추적용)
 ##  9) 전환 게이트 데이터 정합        — 동일 앵커 guard 범위 중복(이중 발화)·
 ##                                     requires_flag가 퀘스트 id와 불일치 조기 발견
+## 10) 세우는 곳 없는 게이트 플래그   — 요구만 하고 아무도 세우지 않는 문(세 번 겪은 결함)
 
 const FLOORS := [1, 2, 3, 0, 4, 5]  # 마스터 시나리오 진행 순서
 
@@ -36,6 +37,7 @@ func run_all() -> PackedStringArray:
 		_check_sequence_text_refs(),
 		_check_credits_flags(),
 		_check_flee_rule(),
+		_check_flag_setters(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -540,3 +542,110 @@ func _check_flee_rule() -> Array:
 	if FleeRule.allowed(rules, true) and not bool(rules.get("boss_allowed", false)):
 		return _fail("보스전 도망이 규칙과 달리 허용됨")
 	return _ok("도망 확률 규약(기본 %.0f%% · 실패 누적↑ · 보스 금지)" % (p0 * 100.0))
+
+
+## 세우는 곳 없는 게이트 플래그 —
+## requires_flag는 **누군가 세워 줘야** 열린다. 세우는 곳이 하나도 없으면 그 문은
+## 영영 안 열리는데 데이터는 멀쩡해 보인다. 이 저장소에서 같은 결함이 세 번 났다
+## (q_f2_hp_gate · q_f4_battery_gate · q_f3_quiz_gate — 전부 층 훑기로 뒤늦게 발견).
+##
+## 세우는 쪽은 데이터 다섯 군데다: 트리거 done_flag / 컷신·시퀀스의 set_flags·craft flag /
+## 전투 on_win_flag / monsters.json first_win_flag. 코드가 세우는 것은
+## credits.json의 all_seen_flag·perfect_flag 둘뿐이라 여기서 세어 준다(credit_room.gd).
+func _check_flag_setters() -> Array:
+	var lines: Array = []
+	var setters := {}
+	var collect: Callable = func(o: Variant, src: String, f: Callable) -> void:
+		if o is Dictionary:
+			var d: Dictionary = o
+			var args: Dictionary = d.get("args", {}) if d.get("args") is Dictionary else {}
+			if str(d.get("op", "")) == "set_flags":
+				for k: Variant in args:
+					setters[str(k)] = src
+			if args.has("flag"):
+				setters[str(args["flag"])] = src
+			if d.has("on_win_flag"):
+				setters[str(d["on_win_flag"])] = src
+			if d.has("first_win_flag") and not str(d["first_win_flag"]).is_empty():
+				setters[str(d["first_win_flag"])] = src
+			for v: Variant in d.values():
+				f.call(v, src, f)
+		elif o is Array:
+			for v: Variant in o:
+				f.call(v, src, f)
+
+	for path: String in (
+		_cutscene_paths() + ["res://data/dialogue_sequences.json", "res://data/monsters.json"]
+	):
+		collect.call(JsonUtil.load_value(path, "SelfCheck"), path.get_file(), collect)
+
+	var craw: Variant = JsonUtil.load_value("res://data/credits.json", "SelfCheck")
+	if craw is Dictionary:
+		var cd: Dictionary = craw
+		setters[str(cd.get("all_seen_flag", ""))] = "credit_room.gd"
+		var mq: Variant = cd.get("meta_quiz")
+		if mq is Dictionary:
+			setters[str((mq as Dictionary).get("perfect_flag", ""))] = "credit_room.gd"
+
+	var qraw: Variant = JsonUtil.load_value("res://data/quests_v2.json", "SelfCheck")
+
+	# 요구하는 쪽 — 트리거와 전환. done_flag도 세우는 쪽이므로 함께 모은다.
+	var required := {}  # flag -> 어디서 요구하나
+	for f: int in FLOORS:
+		var path := "res://data/maps/triggers_f%d.json" % f
+		if not FileAccess.file_exists(path):
+			continue
+		var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
+		if not (raw is Dictionary):
+			continue
+		for t: Dictionary in (raw as Dictionary).get("triggers", []):
+			var done := str(t.get("done_flag", ""))
+			if not done.is_empty():
+				setters[done] = "triggers_f%d:%s" % [f, str(t.get("id"))]
+			for req: String in _flag_list(t.get("requires_flag")):
+				required[req] = "트리거 f%d/%s" % [f, str(t.get("id"))]
+	var traw: Variant = JsonUtil.load_value("res://data/maps/transitions.json", "SelfCheck")
+	if traw is Dictionary:
+		for t: Dictionary in (traw as Dictionary).get("transitions", []):
+			for req: String in _flag_list(t.get("requires_flag")):
+				required[req] = "전환 %s" % str(t.get("id"))
+
+	for flag: String in required:
+		if not setters.has(flag):
+			lines += _fail("%s의 requires_flag를 세우는 곳이 없다: %s" % [required[flag], flag])
+
+	# 퀘스트 선행 사슬은 런타임 관문이 아니라 표시용이라 경고로만 남긴다.
+	if qraw is Dictionary:
+		for q: Dictionary in (qraw as Dictionary).get("quests", []):
+			var reqs: Variant = q.get("requires", [])
+			if reqs is String:
+				reqs = [reqs]
+			for r: Variant in reqs:
+				if not setters.has(str(r)):
+					lines.append("[warn] 퀘스트 %s의 선행 %s를 세우는 곳이 없다" % [str(q.get("id")), str(r)])
+
+	if not lines.any(func(l: String) -> bool: return l.begins_with("[FAIL]")):
+		lines += _ok("게이트 플래그 %d종 모두 세우는 곳이 있다" % required.size())
+	return lines
+
+
+func _flag_list(v: Variant) -> Array:
+	if v == null:
+		return []
+	if v is Array:
+		var out: Array = []
+		for e: Variant in v:
+			out.append(str(e))
+		return out
+	return [str(v)]
+
+
+func _cutscene_paths() -> Array:
+	var out: Array = []
+	var dir := DirAccess.open("res://data/cutscenes")
+	if dir == null:
+		return out
+	for name: String in dir.get_files():
+		if name.get_extension() == "json":
+			out.append("res://data/cutscenes/" + name)
+	return out
