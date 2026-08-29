@@ -456,7 +456,8 @@ func _spawn_npcs() -> void:
 			str(n["name"]),
 			StringName(str(n["sequence_id"])),
 			cell,
-			Color(tint_arr[0], tint_arr[1], tint_arr[2])
+			Color(tint_arr[0], tint_arr[1], tint_arr[2]),
+			n.get("sequence_variants", [])
 		)
 		npcs.append(npc)
 		# 고정 액터는 실체가 있어야 한다 — 통과해 지나가지 못하게 몸 셀을 막는다.
@@ -549,12 +550,14 @@ func _start_dialogue(npc: NpcEntity) -> void:
 	_talking_npc = npc
 	player.mover.enabled = false
 	_prompt.visible = false
-	var steps: Array = Database.sequence(npc.sequence_id)
+	# **지금 상태에 맞는 대사**를 고른다 — 두 번째로 찾아가면 다른 말을 할 수 있다.
+	var seq := npc.resolve_sequence()
+	var steps: Array = Database.sequence(seq)
 	if steps.is_empty():
-		push_warning("빈 시퀀스: %s" % npc.sequence_id)
+		push_warning("빈 시퀀스: %s" % seq)
 		player.mover.enabled = true
 		return
-	dialogue_box.start(npc.sequence_id, steps)
+	dialogue_box.start(seq, steps)
 
 
 func _on_dialogue_finished(_seq_id: StringName) -> void:

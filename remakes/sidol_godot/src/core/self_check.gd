@@ -89,6 +89,12 @@ func _check_npc_sequences() -> Array:
 			if Database.sequence(seq).is_empty():
 				bad += 1
 				lines += _fail("NPC %s 시퀀스 없음: %s" % [str(n.get("id")), seq])
+			# 조건부 변형 대사도 같이 본다 — 오타가 나면 그 대사만 조용히 안 나온다.
+			for v: Variant in n.get("sequence_variants", []):
+				var vs := StringName(str(Dictionary(v).get("sequence_id", "")))
+				if Database.sequence(vs).is_empty():
+					bad += 1
+					lines += _fail("NPC %s 변형 시퀀스 없음: %s" % [str(n.get("id")), vs])
 	if bad == 0:
 		lines += _ok("모든 NPC 시퀀스 참조 유효")
 	return lines

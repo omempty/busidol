@@ -240,3 +240,18 @@ func reset() -> void:
 	field_roster = {}
 	inventory.clear()
 	state_changed.emit()
+
+
+## `requires_flag` 규약 — **문자열 하나이거나 목록**이고, 목록이면 전부 서 있어야 한다.
+##
+## 트리거·전환·NPC 대사 변형이 같은 규약을 쓴다. 세 군데가 각자 해석하기 시작하면
+## 「트리거는 열렸는데 대사는 안 바뀐다」 같은 어긋남이 생긴다.
+func has_all_flags(req: Variant) -> bool:
+	if req == null:
+		return true
+	if req is Array:
+		for r: Variant in req:
+			if not has_flag(str(r)):
+				return false
+		return true
+	return has_flag(str(req))

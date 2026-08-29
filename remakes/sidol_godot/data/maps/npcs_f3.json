@@ -30,6 +30,13 @@
         1.0,
         0.85,
         0.6
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F3_CURE_REQ",
+          "sequence_id": "prof_chem_cure_request",
+          "_comment": "두 번째 대면 — 해독제 의뢰 본문(원작 TALK.TXT @t8~@t20). 첫 대면(prof_chem_first)이 Q_F3_CURE_REQ를 세우므로, 다시 찾아가면 이쪽이 나온다. 전에는 NPC 하나에 시퀀스 하나뿐이라 이 대사가 데이터에만 있고 영영 재생되지 않았다(2026-08-29)."
+        }
       ]
     }
   ]

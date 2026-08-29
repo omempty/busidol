@@ -6,6 +6,9 @@ extends Node2D
 var npc_id := &""
 var display_name := ""
 var sequence_id := &""
+## 상태에 따라 갈아 끼우는 대사. `[{requires_flag: String|Array, sequence_id: String}]`,
+## **먼저 맞는 것이 이긴다**. 비어 있으면 sequence_id 하나만 쓴다(종전과 같다).
+var sequence_variants: Array = []
 var cell := Vector2i.ZERO
 var sprite := AnimatedSprite2D.new()
 var _paths: Dictionary = {}
@@ -30,16 +33,36 @@ var _facing := &"down"
 ## 비주얼 조립까지 여기서 끝낸다. _ready()에 두면 add_child() 시점에 먼저 돌아
 ## npc_id가 아직 빈 문자열 — 전용 시트를 못 찾고 전원이 주인공 얼굴로 나왔다.
 func setup(
-	p_id: StringName, p_name: String, p_seq: StringName, p_cell: Vector2i, tint: Color
+	p_id: StringName,
+	p_name: String,
+	p_seq: StringName,
+	p_cell: Vector2i,
+	tint: Color,
+	p_variants: Array = []
 ) -> void:
 	npc_id = p_id
 	display_name = p_name
 	sequence_id = p_seq
+	sequence_variants = p_variants
 	cell = p_cell
 	position = GridMover.block_center(cell)
 	modulate = tint
 	z_index = 15
 	_build_visual()
+
+
+## 지금 이 사람이 할 말. **NPC 하나에 시퀀스 하나**뿐이라, 두 번째로 찾아갔을 때
+## 다른 말을 하는 대사는 데이터에 있어도 아무도 재생하지 않았다 —
+## `prof_chem_cure_request`(해독제 의뢰 본문, 원작 TALK.TXT @t8~@t20)가 그랬다.
+## 조건은 데이터가 갖는다: 코드는 플래그가 서 있는지만 본다.
+func resolve_sequence() -> StringName:
+	for v: Variant in sequence_variants:
+		if v is not Dictionary:
+			continue
+		var d: Dictionary = v
+		if GameState.has_all_flags(d.get("requires_flag")):
+			return StringName(str(d.get("sequence_id", "")))
+	return sequence_id
 
 
 ## NPC는 움직이지 않는 고정 액터이므로 그려지는 2×2를 그대로 점유한다
