@@ -19,6 +19,9 @@ var inventory_panel: InventoryPanel
 var fast_travel: FastTravelPanel
 var shop: ShopUI
 var _prompt: InteractPrompt
+var _focus: InteractFocus
+var fx: FieldFx
+var renderer: MapRenderer
 var _talking_npc: NpcEntity
 var _trigger_seq_active := false
 var _prev_states := {}
@@ -40,9 +43,13 @@ func _ready() -> void:
 	runtime = MapRuntime.new(def)
 	_apply_chest_overrides()
 
-	var renderer := MapRenderer.new()
+	renderer = MapRenderer.new()
 	add_child(renderer)
 	renderer.build(runtime)
+	_restore_opened_chests()
+
+	fx = FieldFx.new()
+	add_child(fx)
 
 	player = PlayerEntity.new()
 	add_child(player)
@@ -81,6 +88,9 @@ func _ready() -> void:
 
 	_prompt = InteractPrompt.new()
 	add_child(_prompt)
+
+	_focus = InteractFocus.new()
+	add_child(_focus)
 
 	_spawn_npcs()
 
@@ -174,6 +184,7 @@ func _physics_process(_delta: float) -> void:
 	var npc := _npc_in_front()
 	if npc != null:
 		_prompt.show_at("%s   SPACE" % npc.display_name, npc.position + Vector2(0, -46))
+		_focus.show_cells(npc.body_cells())
 		if interact_edge:
 			_start_dialogue(npc)
 		return
@@ -185,11 +196,21 @@ func _physics_process(_delta: float) -> void:
 			tr("UI_FIELD_OPEN"),
 			Vector2(chest.x + 0.5, chest.y) * MapDefinition.TILE_PX - Vector2(0, 26)
 		)
+		# **어느 상자가 열리는지 보여 준다.** 나란히 놓인 상자 앞에서는 알약만으로
+		# 대상을 알 수 없었다(덩어리 판정과 같은 _chest_group을 그대로 쓴다).
+		_focus.show_cells(_chest_group(chest, runtime.attr_at(chest)))
 		if interact_edge:
 			_open_chest(chest)
 		return
 
 	_prompt.visible = false
+	_focus.clear()
+
+
+## 문 통과 연출 — TransitionGate가 3칸 점프 직전에 부른다(연출만, 판정은 게이트의 몫).
+func play_door_fx(anchor: Vector2i, dir: Vector2i, hold: float) -> void:
+	if fx != null and renderer != null:
+		fx.door_open(renderer, anchor, dir, hold)
 
 
 ## 대사 시퀀스의 op 스텝 — shop과 set_flags. 구판은 op이 실행되지 않았다.
@@ -245,9 +266,17 @@ func _chest_in_front() -> Vector2i:
 ## 구판은 `chest_%d` 이벤트만 쏘고 **아무것도 주지 않았다** — 표는 있는데 안 썼다.
 func _open_chest(cell: Vector2i) -> void:
 	var attr := runtime.attr_at(cell)
-	for c in _chest_group(cell, attr):
+	var group := _chest_group(cell, attr)
+	# 연출을 먼저 띄우고(원래 그림을 복제한다) 그 다음 그림을 지운다 — 순서가 바뀌면
+	# 복제할 그림이 이미 없다.
+	if fx != null and renderer != null:
+		fx.chest_open(renderer, group)
+	for c in group:
 		runtime.set_override_attr(c, 1)  # 빈 상자 처리
 		GameState.set_chest_override(c, 1)  # 세이브 유지 대상
+		if renderer != null:
+			renderer.clear_object(c)
+	_focus.clear()
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
 
 	if attr == CHEST_MEET:
@@ -313,9 +342,10 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	for child in get_children():
 		if child is MapRenderer:
 			child.queue_free()
-	var renderer := MapRenderer.new()
+	renderer = MapRenderer.new()
 	add_child(renderer)
 	renderer.build(runtime)
+	_restore_opened_chests()
 	# 착지 보정 — 계단/빠른 이동 앵커가 그 층에서 막혀 있을 수 있다(층마다 지형이 다르다).
 	var landing := _nearest_body_spot(new_anchor)
 	player.attach_map(runtime, landing if landing.x >= 0 else new_anchor)
@@ -332,6 +362,17 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 		triggers.load_for_floor(GameState.current_floor)
 	_talking_npc = null
 	_prompt.visible = false
+	if _focus != null:
+		_focus.clear()
+
+
+## 이미 연 상자는 그림도 없어야 한다 — 맵을 다시 지으면 정의(원본)에서 그리므로
+## 열린 상자가 되살아난 것처럼 보인다. 오버라이드가 남긴 기록으로 그림을 다시 지운다.
+func _restore_opened_chests() -> void:
+	if renderer == null:
+		return
+	for cell: Vector2i in GameState.chest_overrides_for(GameState.current_floor):
+		renderer.clear_object(cell)
 
 
 ## 저장된 상자 개봉 상태를 런타임 오버라이드에 재적용 — 세이브/로드·층전환 공용.

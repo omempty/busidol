@@ -103,8 +103,36 @@ func _capture_field() -> void:
 	await _shot("menu_quest_log", field)
 	log_panel.queue_free()
 
+	await _capture_field_interaction(field)
+
 	field.queue_free()
 	await get_tree().process_frame
+
+
+## 조사 대상 표시와 상자 개봉 연출 — 눈으로만 판단되는 것들이라 그림을 남긴다.
+## f1 (23,13) 상자 앞에 세운다(자동 주행이 실제로 여는 상자다).
+func _capture_field_interaction(field: Node2D) -> void:
+	var chest := Vector2i(23, 13)
+	var anchor := Vector2i(chest.x - 1, chest.y + 1)
+	field.player.mover.grid_pos = anchor
+	field.player.position = GridMover.block_center(anchor)
+	field.player.facing = &"up"
+	await _settle()
+	await _shot("field_chest_focus", field)
+
+	field.call("_open_chest", chest)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _shot("field_chest_open", field)
+	await _settle()
+	await _shot("field_chest_opened", field)
+
+	# 문 통과 연출 — f1의 문(ATT 9) 앞에 세우지 않고 연출만 직접 호출한다.
+	# 여기서 보고 싶은 것은 "문 그림이 제자리에 뜨는가"지 이동 판정이 아니다.
+	field.call("play_door_fx", field.player.mover.grid_pos, Vector2i.DOWN, 0.6)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	await _shot("field_door_open", field)
 
 
 func _capture_battle() -> void:

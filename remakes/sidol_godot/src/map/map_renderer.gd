@@ -16,6 +16,7 @@ const SRC_OBJECT := 1
 
 var runtime: MapRuntime
 var _warned_missing := false
+var _object_meta := {}
 var _layers: Array[TileMapLayer] = []
 
 
@@ -24,6 +25,7 @@ func build(rt: MapRuntime) -> void:
 	var def := rt.definition
 	var ground_meta := _tile_grid(load_texture_size(GROUND_ATLAS))
 	var object_meta := _load_object_meta()
+	_object_meta = object_meta
 
 	_layers.clear()
 	var shared_tileset := _build_tileset()
@@ -116,3 +118,33 @@ func _set_object(layer: TileMapLayer, meta: Dictionary, id: int, cell: Vector2i)
 	var col: int = int(entry["col"])
 	var row: int = int(entry["row"])
 	layer.set_cell(cell, SRC_OBJECT, Vector2i(col, row))
+
+
+## 이 칸의 오브젝트 그림 텍스처 — 연출(FieldFx)이 같은 그림을 복제해 띄우는 데 쓴다.
+func object_texture_at(cell: Vector2i) -> AtlasTexture:
+	if runtime == null:
+		return null
+	return object_texture(runtime.definition.object_at(cell))
+
+
+## 오브젝트 id → 아틀라스 조각. 메타에 없는 id(원작에도 빈 슬롯이 있다)면 null.
+func object_texture(id: int) -> AtlasTexture:
+	var entry: Variant = (_object_meta.get("objects", {}) as Dictionary).get(str(id))
+	if entry == null:
+		return null
+	var tex := AtlasTexture.new()
+	tex.atlas = load(OBJECT_ATLAS)
+	var px := MapDefinition.TILE_PX
+	tex.region = Rect2(int(entry["col"]) * px, int(entry["row"]) * px, px, px)
+	return tex
+
+
+## 이 칸의 오브젝트 그림을 지운다.
+##
+## 상자를 열면 ATT만 바뀌고 **그림은 그대로 남아 있었다** — 이미 연 상자가 계속
+## 상자로 보인다(2026-08-29 유저 지적). 판정은 이미 런타임 ATT로 하고 있었으므로
+## 어긋난 것은 화면뿐이다.
+func clear_object(cell: Vector2i) -> void:
+	if _layers.size() < 2:
+		return
+	_layers[1].erase_cell(cell)

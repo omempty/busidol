@@ -110,6 +110,12 @@ func _try_door(dir: Vector2i) -> bool:
 
 	active = true
 	player.mover.enabled = false
+	# **문 그림과 소리.** 원작은 3칸을 옮기기 직전에 문 그림을 그렸고(`GOODITEM.C`
+	# `move_check_gate()`의 obj 157~170), `door.voc` 호출도 있었으나 주석 처리돼
+	# 실제로는 울리지 않았다. 개선본은 둘 다 켠다 — 그전까지는 아무 연출 없이
+	# 벽을 통과하는 것처럼 보였다(2026-08-29 유저 지적).
+	if field.has_method("play_door_fx"):
+		field.call("play_door_fx", anchor, dir, DOOR_SLIDE_TIME)
 	var tween := create_tween()
 	tween.tween_property(
 		player, "position", GridMover.block_center(anchor + dir * 3), DOOR_SLIDE_TIME
