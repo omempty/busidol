@@ -8,6 +8,13 @@ const Z_OBJECT := 10
 const Z_FRONT := 20
 
 const GROUND_ATLAS := "res://assets/sprites/tiles_original_32.png"
+## 리마스터 지면 아틀라스 — **있으면 쓰고 없으면 원본으로 돌아간다.**
+## 원본 파일은 손대지 않으므로 이 두 파일(png·json)을 지우면 그대로 원복된다.
+##
+## 왜 새 파일인가 — 맵 데이터(어느 칸에 어느 타일)는 원본 F*.MAP과 바이트 단위로
+## 같아야 한다(originals_check 관문). 그래서 자동 타일링으로 다시 깔 수는 없고,
+## **같은 타일 id에 그림을 여러 벌** 두고 렌더에서 골라 32px 격자 반복을 지운다.
+const GROUND_REMASTER := "res://assets/sprites/tiles_remaster_32.png"
 const OBJECT_ATLAS := "res://assets/sprites/obj_original_32.png"
 
 ## TileSet 소스 ID — 레이어 하나가 지면/오브젝트 두 아틀라스를 동시에 참조한다.
@@ -17,13 +24,17 @@ const SRC_OBJECT := 1
 var runtime: MapRuntime
 var _warned_missing := false
 var _object_meta := {}
+var _ground_atlas := GROUND_ATLAS
+var _bank_rows := 0
+var _banks := 1
 var _layers: Array[TileMapLayer] = []
 
 
 func build(rt: MapRuntime) -> void:
 	runtime = rt
 	var def := rt.definition
-	var ground_meta := _tile_grid(load_texture_size(GROUND_ATLAS))
+	_load_ground_atlas()
+	var ground_meta := _tile_grid(load_texture_size(_ground_atlas))
 	var object_meta := _load_object_meta()
 	_object_meta = object_meta
 
@@ -75,7 +86,7 @@ func _load_object_meta() -> Dictionary:
 func _build_tileset() -> TileSet:
 	var ts := TileSet.new()
 	ts.tile_size = Vector2i(MapDefinition.TILE_PX, MapDefinition.TILE_PX)
-	ts.add_source(_atlas_source(GROUND_ATLAS), SRC_GROUND)
+	ts.add_source(_atlas_source(_ground_atlas), SRC_GROUND)
 	ts.add_source(_atlas_source(OBJECT_ATLAS), SRC_OBJECT)
 	return ts
 
@@ -100,12 +111,44 @@ func _make_layer(shared_tileset: TileSet, z_index_value: int) -> TileMapLayer:
 
 
 func _set_ground(layer: TileMapLayer, grid: Vector2i, id: int, cell: Vector2i) -> void:
-	if id < 0 or id >= grid.x * grid.y:
+	var span := _bank_rows * grid.x if _bank_rows > 0 else grid.x * grid.y
+	if id < 0 or id >= span:
 		if not _warned_missing:
 			push_warning("타일 ID 범위 밖: %d" % id)
 			_warned_missing = true
 		return
-	layer.set_cell(cell, SRC_GROUND, Vector2i(id % grid.x, id / grid.x))
+	layer.set_cell(
+		cell, SRC_GROUND, Vector2i(id % grid.x, id / grid.x + _bank_of(cell) * _bank_rows)
+	)
+
+
+## 이 칸이 어느 변종을 쓰는가. **좌표만으로 정해진다** — 층을 다시 지어도 같은 칸은
+## 같은 그림이어야 한다(난수를 쓰면 상자를 열 때마다 바닥 무늬가 바뀐다).
+func _bank_of(cell: Vector2i) -> int:
+	if _banks <= 1:
+		return 0
+	var h: int = (cell.x * 73856093) ^ (cell.y * 19349663)
+	h ^= h >> 13
+	return absi(h) % _banks
+
+
+## 리마스터 아틀라스가 있으면 그것을 쓴다. 없으면 원본 — 두 파일을 지우는 것이
+## 곧 원복이다. 메타(뱅크 수·뱅크당 행 수)는 아틀라스 옆 json이 정본이다.
+func _load_ground_atlas() -> void:
+	_ground_atlas = GROUND_ATLAS
+	_bank_rows = 0
+	_banks = 1
+	if not ResourceLoader.exists(GROUND_REMASTER):
+		return
+	var meta_path := GROUND_REMASTER.replace(".png", ".json")
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(meta_path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		push_warning("리마스터 타일 메타 없음/불량 — 원본 아틀라스로 돌아간다")
+		return
+	var meta: Dictionary = raw
+	_ground_atlas = GROUND_REMASTER
+	_bank_rows = int(meta.get("rows_per_bank", 0))
+	_banks = maxi(1, int(meta.get("banks", 1)))
 
 
 func _set_object(layer: TileMapLayer, meta: Dictionary, id: int, cell: Vector2i) -> void:
