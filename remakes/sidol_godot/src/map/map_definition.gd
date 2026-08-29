@@ -51,9 +51,16 @@ func attr_at(cell: Vector2i) -> int:
 	return attr[cell.y * width + cell.x]
 
 
+## 경계 밖은 0(깔린 것 없음). `attr_at`만 막아 두면 반쪽이다 — 감사 도구는 몸이
+## 닿는 셀을 훑다가 맵 끝 한 줄 밖을 읽고, 그때 에러가 나도 값은 조용히 0으로
+## 흘러 판정에 섞인다(2026-08-29 world_audit에서 40건).
 func ground_at(cell: Vector2i) -> int:
+	if not in_bounds(cell):
+		return 0
 	return ground[cell.y * width + cell.x]
 
 
 func object_at(cell: Vector2i) -> int:
+	if not in_bounds(cell):
+		return 0
 	return object[cell.y * width + cell.x]

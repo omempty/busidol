@@ -65,6 +65,8 @@ static func check_invisible_walls(rep: AuditReport, rt: MapRuntime, facable: Dic
 	var def := rt.definition
 	var blind: Array[Vector2i] = []
 	for cell: Vector2i in facable:
+		if not def.in_bounds(cell):
+			continue  # 맵 밖 — 막은 것은 벽 텍스처가 아니라 맵 끝이다
 		if rt.is_passable(cell):
 			continue
 		if def.attr_at(cell) != 1:

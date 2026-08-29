@@ -406,10 +406,16 @@ func _follow(path: Array) -> bool:
 		var dir := Vector2i(signi(delta.x), signi(delta.y))
 		_log.steps += 1
 		if not await _pilot.step_to(player, dir, cell, door):
-			await _pilot.still(player)
+			# **여기서 다시 확인해야 한다.** step_to 안에서 전투가 끼어들면 판이
+			# 통째로 사라지고 player 는 이미 해제된 객체다. still()의 인자 형이
+			# PlayerEntity 라 몸통의 is_instance_valid 검사에 닿기도 전에 형 검사가
+			# 터진다(2026-08-29 관문 로그 8건).
+			if is_instance_valid(player):
+				await _pilot.still(player)
 			return false
 	# 길 끝에서만 멈춰 선다 — 그 다음이 조사(방향 잡기)라 서 있어야 한다.
-	await _pilot.still(player)
+	if is_instance_valid(player):
+		await _pilot.still(player)
 	return true
 
 
