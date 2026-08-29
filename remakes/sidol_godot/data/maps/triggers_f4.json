@@ -15,10 +15,7 @@
     {
       "id": "f4_sacrifice",
       "type": "interact",
-      "pos": [
-        1,
-        0
-      ],
+      "cells": [[1, 0]],
       "done_flag": "Q_F4_SACRIFICE",
       "action": {
         "cutscene": "f4_sacrifice"

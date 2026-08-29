@@ -31,6 +31,11 @@ $gates = @(
     @{ name = "Smoke credit room";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_credit_room.tscn");                fatal = $true }
     @{ name = "Script parse check";  args = @("--headless", "--path", "@PROJ@", "--script", "res://tools/check_scripts.gd");          fatal = $true }
     @{ name = "World audit";         args = @("--headless", "--path", "@PROJ@", "res://tools/audit/world_audit.tscn");                fatal = $true }
+    # 연속 주행 — 새 게임 하나로 되돌리지 않고 걸어 본다. 앞의 관문들은 검사할 상태를
+    # 손으로 세우므로(플래그 주입·층 순간이동) "앞이 열어야 뒤가 열리는" 순서를 못 본다.
+    # 판정은 주행 자체의 퇴행만 본다: 한 걸음도 못 걷거나 층을 못 넘으면 실패.
+    # 사문화 데이터 목록은 docs/05_status/01_autoplay.md 로 나온다(관문을 빨갛게 하지 않는다).
+    @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "2", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
 $total = $gates.Count + 2   # +2 = 내보내기 포함 규칙 · 원본 대조(python)

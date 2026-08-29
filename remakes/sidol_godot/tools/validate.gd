@@ -183,8 +183,16 @@ func _validate_triggers() -> void:
 		for t: Dictionary in raw.get("triggers", []):
 			if str(t.get("id", "")) == "":
 				_err("%s 트리거 id 누락" % f)
-			if not str(t.get("type", "")) in KNOWN_TRIGGER_TYPES:
+			var kind := str(t.get("type", ""))
+			if not kind in KNOWN_TRIGGER_TYPES:
 				_err("%s/%s 알 수 없는 type" % [f, t.get("id")])
+			# 좌표 스키마는 `cells` 하나다(02_design/05 §3.1). `pos` 같은 다른 이름으로
+			# 적으면 TriggerSystem이 못 읽어 **조용히 발동하지 않는다** — 실제로 F2 포스터
+			# 퀘스트가 그렇게 죽어 F3~F5로 갈 수 없었다(2026-08-29 자동 주행 실측).
+			if kind != "auto" and (t.get("cells", []) as Array).is_empty():
+				_err("%s/%s type=%s인데 cells가 없다(발동 좌표 없음)" % [f, t.get("id"), kind])
+			if t.has("pos"):
+				_err("%s/%s 좌표 키는 cells다 — pos는 아무도 읽지 않는다" % [f, t.get("id")])
 			var action: Dictionary = t.get("action", {})
 			if action.has("cutscene"):
 				var cs_path := "%scutscenes/%s.json" % [DATA, action["cutscene"]]

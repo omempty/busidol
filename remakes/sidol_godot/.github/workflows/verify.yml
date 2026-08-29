@@ -40,7 +40,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 관문 15단계
+      - name: 관문 전 단계
         shell: pwsh
         run: |
           # 콘솔 빌드(_console.exe)를 쓴다 — stdout이 파이프로 나와야 결과를 읽을 수 있다.

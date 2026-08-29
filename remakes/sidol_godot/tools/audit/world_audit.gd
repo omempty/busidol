@@ -109,6 +109,7 @@ func _audit_floor(floor_no: int) -> void:
 	ReachProbe.check_interactables(_rep, rt, facable)
 	ReachProbe.check_npcs(_rep, facable, field.npcs)
 	ReachProbe.check_transitions(_rep, reach, floor_no)
+	ReachProbe.check_triggers(_rep, reach, facable, floor_no)
 
 	await _audit_field_ui(field, floor_no)
 	await _simulate_motion(field, rt, floor_no, enemies)

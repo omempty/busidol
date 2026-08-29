@@ -45,10 +45,7 @@
     {
       "id": "f1_blast",
       "type": "interact",
-      "pos": [
-        3,
-        0
-      ],
+      "cells": [[3, 0]],
       "action": {
         "cutscene": "f1_blast"
       },

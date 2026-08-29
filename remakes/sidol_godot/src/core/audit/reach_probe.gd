@@ -26,7 +26,7 @@ static func reachable_anchors(rt: MapRuntime, start: Vector2i) -> Dictionary:
 	var stack: Array[Vector2i] = [start]
 	while not stack.is_empty():
 		var a: Vector2i = stack.pop_back()
-		for n: Vector2i in _neighbors(rt, a):
+		for n: Vector2i in neighbors(rt, a):
 			if seen.has(n) or not Placement.body_fits(rt, n):
 				continue
 			seen[n] = true
@@ -34,7 +34,10 @@ static func reachable_anchors(rt: MapRuntime, start: Vector2i) -> Dictionary:
 	return seen
 
 
-static func _neighbors(rt: MapRuntime, a: Vector2i) -> Array[Vector2i]:
+## 한 앵커에서 갈 수 있는 이웃 앵커 — **이동 그래프의 단일 출처**다.
+## 감사(ReachProbe)와 자동 주행(tools/dev/autoplay_map.gd)이 같은 것을 쓴다.
+## 판정을 두 벌 두면 "도구는 갈 수 있다는데 게임은 못 간다"가 생긴다.
+static func neighbors(rt: MapRuntime, a: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 		out.append(a + d)
@@ -193,6 +196,41 @@ static func check_npcs(rep: AuditReport, facable: Dictionary, npcs: Array) -> vo
 
 
 ## 층 전환 앵커에 서서 아래키를 누를 수 있는가.
+## 이벤트 트리거를 **발동시킬 수 있는가.** zone은 그 칸에 올라설 수 있어야 하고,
+## interact는 전방 2셀에 들어와야 한다(TriggerSystem·field.front_cells와 같은 규약).
+##
+## 좌표가 유효하고 파일이 다 있어도 **갈 수 없으면 그 이벤트는 게임에 없는 것**이다.
+## validate는 파일만 보므로 이 부류를 원리적으로 못 잡는다 — 2026-08-29 자동 주행이
+## 「F2 포스터 퀘스트가 영영 발동하지 않아 F3~F5에 못 간다」를 실측하고서야 드러났다.
+static func check_triggers(
+	rep: AuditReport, reach: Dictionary, facable: Dictionary, floor_no: int
+) -> void:
+	var path := "res://data/maps/triggers_f%d.json" % floor_no
+	if not FileAccess.file_exists(path):
+		return
+	var checked := 0
+	for t: Dictionary in JsonUtil.load_dict(path, "ReachProbe").get("triggers", []):
+		var kind := str(t.get("type", ""))
+		if kind == "auto":
+			continue  # 층에 들어서면 저절로 돈다 — 밟을 좌표가 없다
+		var id := str(t.get("id", "?"))
+		var cells: Array = t.get("cells", [])
+		if cells.is_empty():
+			rep.fail("트리거 좌표 없음", "%s (type=%s)" % [id, kind])
+			continue
+		checked += 1
+		var ok := false
+		for c: Variant in cells:
+			var cell := Vector2i(int(c[0]), int(c[1]))
+			if reach.has(cell) if kind == "zone" else facable.has(cell):
+				ok = true
+				break
+		if not ok:
+			var first := Vector2i(int(cells[0][0]), int(cells[0][1]))
+			rep.fail("트리거 도달 불가", "%s @%s (type=%s)" % [id, first, kind])
+	rep.ok("트리거 도달", "이 층 좌표 트리거 %d개" % checked)
+
+
 static func check_transitions(rep: AuditReport, reach: Dictionary, floor_no: int) -> void:
 	var raw := JsonUtil.load_dict("res://data/maps/transitions.json", "ReachProbe")
 	var checked := 0

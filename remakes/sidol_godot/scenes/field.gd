@@ -220,9 +220,11 @@ func _is_chest(a: int) -> bool:
 	return (a >= CHEST_MIN and a <= CHEST_MAX) or a == CHEST_MEET or a == CHEST_EMPTY
 
 
+## 조사 대상 판정은 **런타임 ATT**로 한다. 원본을 읽으면 이미 연 상자가 계속 상자로
+## 보여 재개봉이 되고, 같은 줄 뒤쪽 상자를 가린다(MapRuntime.attr_at 주석 참고).
 func _chest_in_front() -> Vector2i:
 	for c in front_cells():
-		if _is_chest(runtime.definition.attr_at(c)):
+		if _is_chest(runtime.attr_at(c)):
 			return c
 	return Vector2i(-9, -9)
 
@@ -234,7 +236,7 @@ func _chest_in_front() -> Vector2i:
 ## ATT → 실제 아이템은 items.json의 legacy_ref(원작 ITEM_STRUCT 인덱스 매핑)가 정한다.
 ## 구판은 `chest_%d` 이벤트만 쏘고 **아무것도 주지 않았다** — 표는 있는데 안 썼다.
 func _open_chest(cell: Vector2i) -> void:
-	var attr := runtime.definition.attr_at(cell)
+	var attr := runtime.attr_at(cell)
 	for c in _chest_group(cell, attr):
 		runtime.set_override_attr(c, 1)  # 빈 상자 처리
 		GameState.set_chest_override(c, 1)  # 세이브 유지 대상
@@ -274,7 +276,7 @@ func _chest_group(start: Vector2i, attr: int) -> Array[Vector2i]:
 		var c: Vector2i = stack.pop_back()
 		for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
 			var n := c + d
-			if seen.has(n) or runtime.definition.attr_at(n) != attr:
+			if seen.has(n) or runtime.attr_at(n) != attr:
 				continue
 			seen[n] = true
 			out.append(n)

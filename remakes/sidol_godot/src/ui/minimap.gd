@@ -75,7 +75,7 @@ func build(def: MapDefinition) -> void:
 	var img := Image.create(def.width, def.height, false, Image.FORMAT_RGBA8)
 	for y in def.height:
 		for x in def.width:
-			img.set_pixel(x, y, _color_for(def.attr_at(Vector2i(x, y))))
+			img.set_pixel(x, y, color_for(def.attr_at(Vector2i(x, y))))
 	_image_view.texture = ImageTexture.create_from_image(img)
 	_image_view.custom_minimum_size = Vector2(def.width * SCALE, def.height * SCALE)
 	_title.text = tr("UI_MAP_TITLE") % def.map_id.to_upper()
@@ -96,7 +96,9 @@ func _process(_delta: float) -> void:
 	_dot.position = center - Vector2(DOT, DOT) * 0.5
 
 
-func _color_for(attr: int) -> Color:
+## ATT 한 칸의 색 — 미니맵과 맵 굽기 도구(tools/dev/map_shots.gd)가 같은 표를 쓴다.
+## 색이 갈라지면 도구로 고른 좌표와 게임 안에서 보이는 지형이 어긋난다.
+static func color_for(attr: int) -> Color:
 	if attr >= CHEST_MIN and attr <= CHEST_MAX:
 		return C_CHEST
 	match attr:

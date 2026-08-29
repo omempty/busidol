@@ -15,10 +15,7 @@
     {
       "id": "f2_poster",
       "type": "interact",
-      "pos": [
-        0,
-        0
-      ],
+      "cells": [[0, 0]],
       "action": {
         "cutscene": "f2_poster"
       },

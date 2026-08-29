@@ -29,7 +29,11 @@ static func compute(enemy_ids: Array[String]) -> Dictionary:
 static func apply(
 	result: StringName, rewards: Dictionary, player_hp: int, on_win_flag: String
 ) -> Dictionary:
-	GameState.player_stats["hp"] = player_hp
+	# 패배해도 **HP 0으로 필드에 돌려보내지 않는다.** 0으로 돌아가면 다음 접촉이
+	# 곧바로 다시 패배라 그 자리에서 무한 패배가 된다 — 자동 주행 한 판에 17회
+	# 관측(2026-08-29, docs/05_status/01_autoplay.md). 원작에 게임오버 처리가 없어
+	# 최소 복구("정신을 차린다")만 한다. 패널티 설계는 별도 결정 사항이다.
+	GameState.player_stats["hp"] = GameState.max_hp() if result == &"lose" else player_hp
 	var growth := {}
 	if result == &"win":
 		GameState.player_stats["money"] = (

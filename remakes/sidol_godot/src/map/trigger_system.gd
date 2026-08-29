@@ -29,20 +29,28 @@ func load_for_floor(floor_no: int) -> void:
 	_triggers = raw.get("triggers", [])
 
 
-## zone/auto 트리거 — 매물리틱에 플레이어 셀과 함께 호출
+## zone/auto 트리거 — 매물리틱에 플레이어 셀과 함께 호출.
+##
+## **한 틱에 하나만 발동한다.** 여러 개를 한 번에 쏘면 뒤엣것의 컷신 요청은
+## CutscenePlayer가 "중복 재생 무시"로 버리는데 done_flag는 이미 켜져 다시는 안 나온다.
+## 앞 트리거의 done_flag가 뒤 트리거의 requires_flag인 연쇄에서 바로 그 일이 난다 —
+## F5의 치료(Q_F5_BOSS_CURE)→보스 등장 연쇄가 통째로 사라졌다(2026-08-29 층 훑기 실측).
 func tick(player_cell: Vector2i, delta: float) -> void:
 	_elapsed += delta
+	var auto_armed := _auto_checked
+	_auto_checked = true
 	for t: Dictionary in _triggers:
 		if _consumed(t):
 			continue
 		match str(t.get("type", "")):
 			"auto":
-				if _auto_checked and _elapsed > AUTO_TICK_DELAY:
+				if auto_armed and _elapsed > AUTO_TICK_DELAY:
 					_fire(t)
+					return
 			"zone":
 				if _in_zone(t, player_cell):
 					_fire(t)
-	_auto_checked = true
+					return
 
 
 ## interact 트리거 — 전방 셀 목록과 대조. 소비했으면 true.
