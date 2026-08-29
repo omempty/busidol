@@ -2,6 +2,20 @@
   "schema_version": 1,
   "floor": 4,
   "npcs": [
-    { "id": "afterschool_student", "name": "잔류생", "pos": [14, 14], "sequence_id": "f4_afterschool_student", "tint": [0.8, 0.8, 0.8] }
+    {
+      "id": "afterschool_student",
+      "name": "잔류생",
+      "_comment": "옛 좌표 (14,14)는 벽이었다 (cell_probe f4 실측: 설 수 있고 조사도 된다). 옛 좌표 [14, 14]",
+      "pos": [
+        12,
+        14
+      ],
+      "sequence_id": "f4_afterschool_student",
+      "tint": [
+        0.8,
+        0.8,
+        0.8
+      ]
+    }
   ]
 }

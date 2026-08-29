@@ -5,9 +5,10 @@
     {
       "id": "rescue_girl",
       "name": "여학생",
+      "_comment": "옛 좌표 (10,10)은 몸이 안 들어갔다 (cell_probe f2 실측: 설 수 있고 조사도 된다). 옛 좌표 [10, 10]",
       "pos": [
         10,
-        10
+        9
       ],
       "sequence_id": "npc_girl_rescue",
       "tint": [
@@ -19,9 +20,10 @@
     {
       "id": "nothing_man",
       "name": "아무 도움 안 되는 사람",
+      "_comment": "옛 좌표 (15,10)은 몸이 안 들어갔다 (cell_probe f2 실측: 설 수 있고 조사도 된다). 옛 좌표 [15, 10]",
       "pos": [
         15,
-        10
+        8
       ],
       "sequence_id": "nothing_man",
       "tint": [
@@ -33,9 +35,10 @@
     {
       "id": "dev1",
       "name": "HP실 개발자 1",
+      "_comment": "HP실 문 앞 — 원본 HPbang(ATT 110) 블록 바로 아래 (cell_probe f2 실측: 설 수 있고 조사도 된다). 옛 좌표 [19, 14]",
       "pos": [
-        19,
-        14
+        195,
+        23
       ],
       "sequence_id": "f2_dev1",
       "tint": [
@@ -47,9 +50,10 @@
     {
       "id": "dev2",
       "name": "HP실 개발자 2",
+      "_comment": "HP실 앞 복도 (cell_probe f2 실측: 설 수 있고 조사도 된다). 옛 좌표 [21, 15]",
       "pos": [
-        21,
-        15
+        193,
+        26
       ],
       "sequence_id": "f2_dev2",
       "tint": [

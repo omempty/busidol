@@ -545,6 +545,8 @@ func _wait_for_field() -> bool:
 		# 못했다"가 무더기로 찍히던 자리다(2026-08-29 실측). 전투가 아닌 채로 안 서면
 		# 그때는 진짜 문제이므로 상한을 건다.
 		var scene := get_tree().current_scene
+		# 기다리기만 하면 안 된다 — 필드를 대신하는 씬은 눌러 줘야 돌아온다.
+		_pilot.attend(scene)
 		if not (scene is BattleSceneController):
 			idle += 1
 		total += 1

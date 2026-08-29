@@ -11,15 +11,15 @@
 
 | 항목 | 값 |
 |---|---|
-| 끝난 이유 | 예산 소진 (180초) |
-| 밟은 목표 | 124 |
+| 끝난 이유 | 예산 소진 (400초) |
+| 밟은 목표 | 127 |
 | 다시 돈 바퀴 | 1 |
 | 닿은 구역 | 3 / 6 |
-| 걸음 | 4556 |
-| 밟은 목표(누적) | 124 |
-| 전투 | 41 |
+| 걸음 | 4653 |
+| 밟은 목표(누적) | 126 |
+| 전투 | 39 |
 | 연 상자 | 105 |
-| 나눈 대화 | 8 |
+| 나눈 대화 | 7 |
 | 쓰러져 되살린 횟수 | 0 |
 
 ## 닿지 못한 구역
@@ -44,7 +44,11 @@
 
 ## 막힌 자리
 
-없음.
+갈 수 있다고 본 곳인데 실제로는 못 갔다.
+
+| 구역 | 목표 | 종류 | 증상 |
+|---|---|---|---|
+| 2 | nothing_man | NPC | 걷다가 막혔다 — (185, 32) 부근에서 한 걸음이 나가지 않았다 |
 
 ## 밟은 목표 (순서대로)
 
@@ -53,11 +57,16 @@
 | 1 | stairs_center_up_f1 | 계단 | f1 → f2 |
 | 2 | stairs_center_up_f2 | 계단 | f2 → f3  (Q_F2_POSTER 필요) |
 | 2 | stairs_east_up_f2 | 계단 | f2 → f3  (Q_F2_POSTER 필요) |
+| 2 | f2_hp_room@195,20 | 트리거(zone) | f2_hp_room |
 | 2 | f2_poster@100,63 | 트리거(interact) | f2_poster |
-| 2 | dev2 | NPC | HP실 개발자 2 |
-| 2 | nothing_man | NPC | 아무 도움 안 되는 사람 |
-| 2 | rescue_girl | NPC | 여학생 |
 | 2 | dev1 | NPC | HP실 개발자 1 |
+| 2 | dev2 | NPC | HP실 개발자 2 |
+| 2 | rescue_girl | NPC | 여학생 |
+| 2 | chest@12,45 | 상자 | ATT 198 |
+| 2 | chest@7,45 | 상자 | ATT 198 |
+| 2 | chest@1,45 | 상자 | ATT 153 |
+| 2 | chest@18,45 | 상자 | ATT 199 |
+| 2 | chest@23,45 | 상자 | ATT 199 |
 | 2 | chest@30,10 | 상자 | ATT 198 |
 | 2 | chest@30,8 | 상자 | ATT 198 |
 | 2 | chest@26,44 | 상자 | ATT 173 |
@@ -86,37 +95,14 @@
 | 2 | chest@193,47 | 상자 | ATT 198 |
 | 2 | chest@193,52 | 상자 | ATT 172 |
 | 2 | chest@193,57 | 상자 | ATT 198 |
-| 2 | chest@23,45 | 상자 | ATT 199 |
-| 2 | chest@18,45 | 상자 | ATT 199 |
-| 2 | chest@12,45 | 상자 | ATT 198 |
-| 2 | chest@7,45 | 상자 | ATT 198 |
-| 2 | chest@1,45 | 상자 | ATT 153 |
-| 2 | stairs_center_down | 계단 | f2 → f1 |
+| 2 | stairs_east_down | 계단 | f2 → f1 |
 | 1 | stairs_east_down | 계단 | f1 → f0 |
-| 0 | f0_disk@2,1 | 트리거(zone) | f0_disk |
+| 0 | f0_disk@180,53 | 트리거(zone) | f0_disk |
 | 0 | cafeteria_girl | NPC | 식당 아가씨 |
-| 0 | librarian | NPC | 지하 사서 |
 | 0 | guard_idle | NPC | 수위 아저씨 |
-| 0 | chest@27,11 | 상자 | ATT 184 |
-| 0 | chest@28,20 | 상자 | ATT 199 |
-| 0 | chest@4,20 | 상자 | ATT 150 |
-| 0 | chest@2,20 | 상자 | ATT 184 |
-| 0 | chest@6,11 | 상자 | ATT 199 |
-| 0 | chest@4,11 | 상자 | ATT 186 |
-| 0 | chest@2,11 | 상자 | ATT 150 |
-| 0 | chest@4,3 | 상자 | ATT 199 |
-| 0 | chest@2,3 | 상자 | ATT 184 |
-| 0 | chest@38,2 | 상자 | ATT 199 |
-| 0 | chest@39,11 | 상자 | ATT 184 |
-| 0 | chest@41,11 | 상자 | ATT 199 |
-| 0 | chest@39,20 | 상자 | ATT 199 |
-| 0 | chest@80,8 | 상자 | ATT 184 |
-| 0 | chest@82,8 | 상자 | ATT 150 |
-| 0 | chest@86,8 | 상자 | ATT 199 |
-| 0 | chest@111,6 | 상자 | ATT 199 |
-| 0 | chest@111,2 | 상자 | ATT 198 |
-| 0 | chest@135,21 | 상자 | ATT 198 |
+| 0 | librarian | NPC | 지하 사서 |
 | 0 | chest@143,29 | 상자 | ATT 198 |
+| 0 | chest@135,21 | 상자 | ATT 198 |
 | 0 | chest@122,3 | 상자 | ATT 184 |
 | 0 | chest@165,2 | 상자 | ATT 198 |
 | 0 | chest@184,16 | 상자 | ATT 184 |
@@ -137,6 +123,24 @@
 | 0 | chest@188,24 | 상자 | ATT 184 |
 | 0 | chest@196,60 | 상자 | ATT 198 |
 | 0 | chest@115,60 | 상자 | ATT 198 |
+| 0 | chest@111,6 | 상자 | ATT 199 |
+| 0 | chest@111,2 | 상자 | ATT 198 |
+| 0 | chest@86,8 | 상자 | ATT 199 |
+| 0 | chest@82,8 | 상자 | ATT 150 |
+| 0 | chest@80,8 | 상자 | ATT 184 |
+| 0 | chest@41,11 | 상자 | ATT 199 |
+| 0 | chest@39,11 | 상자 | ATT 184 |
+| 0 | chest@38,2 | 상자 | ATT 199 |
+| 0 | chest@27,11 | 상자 | ATT 184 |
+| 0 | chest@28,20 | 상자 | ATT 199 |
+| 0 | chest@4,20 | 상자 | ATT 150 |
+| 0 | chest@2,20 | 상자 | ATT 184 |
+| 0 | chest@6,11 | 상자 | ATT 199 |
+| 0 | chest@4,11 | 상자 | ATT 186 |
+| 0 | chest@2,11 | 상자 | ATT 150 |
+| 0 | chest@4,3 | 상자 | ATT 199 |
+| 0 | chest@2,3 | 상자 | ATT 184 |
+| 0 | chest@39,20 | 상자 | ATT 199 |
 | 0 | chest@14,60 | 상자 | ATT 186 |
 | 0 | chest@26,43 | 상자 | ATT 186 |
 | 0 | chest@28,43 | 상자 | ATT 184 |
@@ -145,8 +149,8 @@
 | 0 | stairs_east_up_f01 | 계단 | f0 → f1 |
 | 1 | f1_blast@100,63 | 트리거(interact) | f1_blast |
 | 1 | tutor_dumb | NPC | 멍청 조교 |
-| 1 | chest@23,11 | 상자 | ATT 199 |
 | 1 | chest@23,13 | 상자 | ATT 199 |
+| 1 | chest@23,11 | 상자 | ATT 199 |
 | 1 | chest@19,35 | 상자 | ATT 150 |
 | 1 | chest@19,40 | 상자 | ATT 199 |
 | 1 | chest@10,41 | 상자 | ATT 152 |
@@ -154,8 +158,16 @@
 | 1 | chest@33,45 | 상자 | ATT 156 |
 | 1 | chest@69,43 | 상자 | ATT 159 |
 | 1 | chest@69,45 | 상자 | ATT 198 |
-| 1 | chest@106,18 | 상자 | ATT 199 |
-| 1 | chest@135,58 | 상자 | ATT 172 |
+| 1 | f1_gas@12,32 | 트리거(zone) | f1_gas |
+| 1 | f1_sopo@163,18 | 트리거(zone) | f1_sopo |
+| 1 | chest@170,16 | 상자 | ATT 172 |
+| 1 | chest@177,16 | 상자 | ATT 199 |
+| 1 | chest@173,53 | 상자 | ATT 199 |
+| 1 | chest@177,53 | 상자 | ATT 151 |
+| 1 | chest@197,43 | 상자 | ATT 166 |
+| 1 | chest@197,51 | 상자 | ATT 199 |
+| 1 | chest@193,16 | 상자 | ATT 172 |
+| 1 | chest@197,16 | 상자 | ATT 199 |
 | 1 | chest@151,52 | 상자 | ATT 199 |
 | 1 | chest@155,52 | 상자 | ATT 199 |
 | 1 | chest@155,54 | 상자 | ATT 171 |
@@ -164,16 +176,10 @@
 | 1 | chest@151,58 | 상자 | ATT 199 |
 | 1 | chest@151,56 | 상자 | ATT 199 |
 | 1 | chest@151,54 | 상자 | ATT 199 |
-| 1 | chest@173,53 | 상자 | ATT 199 |
-| 1 | chest@177,53 | 상자 | ATT 151 |
-| 1 | chest@197,43 | 상자 | ATT 166 |
-| 1 | chest@197,51 | 상자 | ATT 199 |
-| 1 | chest@193,16 | 상자 | ATT 172 |
-| 1 | chest@197,16 | 상자 | ATT 199 |
-| 1 | chest@170,16 | 상자 | ATT 172 |
-| 1 | chest@177,16 | 상자 | ATT 199 |
+| 1 | chest@135,58 | 상자 | ATT 172 |
+| 1 | chest@106,18 | 상자 | ATT 199 |
 | 1 | stairs_east_up_f01 | 계단 | f1 → f2 |
-| 2 | stairs_east_down | 계단 | f2 → f1 |
+| 2 | stairs_center_down | 계단 | f2 → f1 |
 
 ## 밟았는데 아무 일도 없었다
 
@@ -184,7 +190,6 @@
 |---|---|---|---|
 | f2 | 계단 | f2 → f3  (Q_F2_POSTER 필요) | (100, 63) |
 | f2 | 계단 | f2 → f3  (Q_F2_POSTER 필요) | (169, 60) |
-| f2 | 트리거(interact) | f2_poster | (100, 63) |
 | f1 | 트리거(interact) | f1_blast | (100, 63) |
 
 ## 걸어서 닿을 수 없다
@@ -204,9 +209,6 @@
 | f0 | 상자 | ATT 199 | (4, 23) |
 | f0 | 상자 | ATT 150 | (40, 2) |
 | f0 | 상자 | ATT 199 | (42, 2) |
-| f1 | 트리거(zone) | f1_gas | (2, 0) |
-| f1 | 트리거(zone) | f1_sopo | (1, 0) |
-| f1 | NPC | 화공과 교수 | (16, 13) |
 | f2 | 상자 | ATT 157 | (158, 16) |
 | f2 | 상자 | ATT 198 | (158, 18) |
 

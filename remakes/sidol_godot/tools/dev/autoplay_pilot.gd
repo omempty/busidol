@@ -49,6 +49,11 @@ func attend(scene: Node) -> void:
 		return
 	if scene.has_method("get_runtime"):
 		_attend_field(scene as Node2D)
+		return
+	# **모르는 씬에서는 뒤로 나간다.** 크레딧룸·엔딩 콘솔처럼 필드를 통째로 대신하는
+	# 씬이 열리면 도구는 여기서 영영 기다렸다(2026-08-29: HP실에 들어간 주행이 22초에
+	# 「더 갈 곳이 없다」로 끝났다). 사람이라면 취소를 눌러 돌아왔을 자리다.
+	pulse(&"cancel")
 
 
 ## 전투 — 커맨드 1번(공격)만 반복한다. 결과 패널은 스스로 닫힌다.

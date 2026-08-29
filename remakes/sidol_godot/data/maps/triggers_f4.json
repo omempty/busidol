@@ -15,11 +15,17 @@
     {
       "id": "f4_sacrifice",
       "type": "interact",
-      "cells": [[1, 0]],
+      "cells": [
+        [
+          100,
+          63
+        ]
+      ],
       "done_flag": "Q_F4_SACRIFICE",
       "action": {
         "cutscene": "f4_sacrifice"
-      }
+      },
+      "_comment": "레버 희생 — 보상이 「5층 문 개방」이므로 F4→F5 전환 앵커다(transitions.json stairs_center_up_f3 anchor=[100,63], guard 3~4). f1_blast·f2_poster와 같은 논리. cell_probe f4 실측: 설 수 있고 조사도 된다."
     }
   ]
 }

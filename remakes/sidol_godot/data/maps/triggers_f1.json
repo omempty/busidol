@@ -17,30 +17,32 @@
       "type": "zone",
       "cells": [
         [
-          1,
-          0
+          163,
+          18
         ]
       ],
       "done_flag": "Q_F1_SOPO",
       "requires_flag": "Q_F1_START",
       "action": {
         "cutscene": "f1_sopo"
-      }
+      },
+      "_comment": "교무과 우편물실 — F1 북동 사무실 열에서 가장 큰 방(x148~178 y14~23, 250칸). cell_probe f1 실측: 설 수 있음."
     },
     {
       "id": "f1_gas",
       "type": "zone",
       "cells": [
         [
-          2,
-          0
+          12,
+          32
         ]
       ],
       "done_flag": "Q_F1_GAS",
       "requires_flag": "Q_F1_START",
       "action": {
         "cutscene": "f1_gas"
-      }
+      },
+      "_comment": "창고 — F1 서쪽 외딴 방(x1~24 y29~36). cell_probe f1 실측: 설 수 있음."
     },
     {
       "id": "f1_blast",

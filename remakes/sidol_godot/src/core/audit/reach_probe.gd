@@ -27,7 +27,7 @@ static func reachable_anchors(rt: MapRuntime, start: Vector2i) -> Dictionary:
 	while not stack.is_empty():
 		var a: Vector2i = stack.pop_back()
 		for n: Vector2i in neighbors(rt, a):
-			if seen.has(n) or not Placement.body_fits(rt, n):
+			if seen.has(n):
 				continue
 			seen[n] = true
 			stack.append(n)
@@ -37,10 +37,25 @@ static func reachable_anchors(rt: MapRuntime, start: Vector2i) -> Dictionary:
 ## 한 앵커에서 갈 수 있는 이웃 앵커 — **이동 그래프의 단일 출처**다.
 ## 감사(ReachProbe)와 자동 주행(tools/dev/autoplay_map.gd)이 같은 것을 쓴다.
 ## 판정을 두 벌 두면 "도구는 갈 수 있다는데 게임은 못 간다"가 생긴다.
+##
+## **갈 수 있는 곳만 돌려준다** — 부르는 쪽에서 다시 거르지 말 것. 걸음과 문 통과는
+## 규칙이 다르기 때문이다:
+##
+##   걸음     2×2 몸이 통째로 들어가야 한다(통행 가능 4칸)
+##   문 통과  **착지 칸을 검사하지 않는다.** 원본 move_check_gate(GOODITEM.C L1396)가
+##            문(ATT 9) 위/아래 2셀만 보고 3칸을 옮기고, 우리 TransitionGate._try_door도
+##            같다. 그래서 방 ID로 채워진 통행 불가 구역(교수실·HP방 = ATT 25·51·110…)에
+##            **들어설 수 있고**, 원본은 거기 선 것을 What_Bang()으로 읽어 이벤트를 연다.
+##            착지에 통행 판정을 걸면 그 방들이 통째로 「도달 불가」가 된다 —
+##            층마다 2,600여 앵커가 그렇게 잘려 나가고 있었다(2026-08-29).
+##
+## 통행 불가 칸에 선 뒤에는 걸어 나올 수 없다. 문으로 들어갔으면 문으로 나온다.
 static func neighbors(rt: MapRuntime, a: Vector2i) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
-	for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
-		out.append(a + d)
+	if Placement.body_fits(rt, a):
+		for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+			if Placement.body_fits(rt, a + d):
+				out.append(a + d)
 	# 발밑(몸 아래 행) 2셀이 문이면 아래로, 머리 위 행이 문이면 위로 점프한다.
 	if _door_row(rt, a.x, a.y + Placement.BODY.y):
 		out.append(a + Vector2i(0, DOOR_JUMP))

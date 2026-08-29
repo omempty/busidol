@@ -17,28 +17,30 @@
       "type": "zone",
       "cells": [
         [
-          0,
-          0
+          111,
+          19
         ]
       ],
       "done_flag": "Q_F3_DRAG",
       "action": {
         "cutscene": "f3_drag"
-      }
+      },
+      "_comment": "남앵골 교수실 — 마스터 시나리오가 DRAG 의뢰를 3층에 둔다(원본 ATT는 남 교수를 2층 130,16에 두지만 시나리오를 따른다). F3 교수실 열에서 2×2 몸이 온전히 들어가는 방(x106~116 y15~23). cell_probe f3 실측: 설 수 있음."
     },
     {
       "id": "f3_allin",
       "type": "zone",
       "cells": [
         [
-          1,
-          0
+          98,
+          18
         ]
       ],
       "done_flag": "Q_F3_ALLIN",
       "action": {
         "cutscene": "f3_allin"
-      }
+      },
+      "_comment": "F3 교수실 열 서쪽 방(x93~104 y15~23). cell_probe f3 실측: (98,19)는 몸이 안 들어가고 (98,18)이 들어간다."
     }
   ]
 }

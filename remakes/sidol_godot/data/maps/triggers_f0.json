@@ -6,14 +6,15 @@
       "type": "zone",
       "cells": [
         [
-          2,
-          1
+          180,
+          53
         ]
       ],
       "done_flag": "Q_F0_DISK",
       "action": {
         "cutscene": "f0_disk"
-      }
+      },
+      "_comment": "지하 서고 — F0에서 문으로 막힌 방은 이 하나뿐이다(x169~191 y45~61). 자리표시자 (2,1)은 맵 상단 봉인 띠 안이었다. cell_probe f0 실측: 설 수 있음."
     }
   ]
 }

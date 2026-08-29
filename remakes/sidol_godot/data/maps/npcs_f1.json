@@ -5,29 +5,16 @@
     {
       "id": "tutor_dumb",
       "name": "멍청 조교",
+      "_comment": "서쪽 사무 구역 — 옛 좌표 (13,9)는 벽이었다 (cell_probe f1 실측: 설 수 있고 조사도 된다). 옛 좌표 [13, 9]",
       "pos": [
-        13,
-        9
+        12,
+        11
       ],
       "sequence_id": "tutor_sample",
       "tint": [
         0.7,
         0.9,
         1.0
-      ]
-    },
-    {
-      "id": "prof_chem",
-      "name": "화공과 교수",
-      "pos": [
-        15,
-        11
-      ],
-      "sequence_id": "prof_chem_first",
-      "tint": [
-        1.0,
-        0.85,
-        0.6
       ]
     }
   ]

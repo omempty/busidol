@@ -53,7 +53,9 @@ func reachable_from(start: Vector2i) -> Dictionary:
 		if step >= MAX_PATH:
 			continue
 		for next: Vector2i in ReachProbe.neighbors(rt, here):
-			if distance.has(next) or not fits(next):
+			# **여기서 다시 거르지 않는다.** neighbors가 이미 걸음과 문 통과의 다른
+			# 규칙을 적용해 돌려준다 — 문 착지에 통행 판정을 걸면 방이 통째로 사라진다.
+			if distance.has(next):
 				continue
 			_parent[next] = here
 			distance[next] = step + 1

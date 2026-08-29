@@ -1,12 +1,18 @@
 {
   "schema_version": 1,
-  "_comment": "F2 트리거 — 시나리오가 q_f2_hp_gate를 세팅하면(HP실 문 앞 도달) 크레딧룸 진입.",
+  "_comment": "F2 트리거 — HP실은 그 방에 선 것으로 열린다(원본 What_Bang). 3층 계단의 완종이는 조사로.",
   "triggers": [
     {
       "id": "f2_hp_room",
-      "type": "auto",
+      "_comment": "HP실 — 원본 그대로 「그 방에 선다」가 조건이다. move_check_gate(GOODITEM.C L1396)가 문(ATT 9)에 대고 위를 누르면 착지를 검사하지 않고 3칸을 옮기므로, (195,23)에서 (195,20)의 HP방 표식(ATT 110 = GOODITEM.H HPbang) 위에 올라선다. 원본은 그 자리를 What_Bang()으로 읽어 Run_Event_HP를 열었다. 전에는 auto + requires_flag q_f2_hp_gate 였는데 **그 플래그를 세우는 곳이 아무 데도 없어** 포스터를 못 얻고 F3~F5가 잠겨 있었다(2026-08-29).",
+      "type": "zone",
       "once": true,
-      "requires_flag": "q_f2_hp_gate",
+      "cells": [
+        [
+          195,
+          20
+        ]
+      ],
       "done_flag": "Q_F2_HP",
       "action": {
         "cutscene": "hp_room_visit"
