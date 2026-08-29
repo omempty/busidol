@@ -260,3 +260,38 @@ def from_column_profile(columns, seed, grain=0.08):
         for x in range(SIZE):
             px[y][x] = shade(columns[x], 1.0 + (n[y][x] - 0.5) * grain * 2.0)
     return px
+
+
+def auto_remaster(tile, seed, grain=0.10, sat=0.30, keep=52.0):
+    """**무엇을 그린 것인지 모르는 타일**을 안전하게 손보는 길.
+
+    맵에 쓰이는 89종 중 14종이 화면의 94%다. 나머지는 장식·지하 벽 조각인데, 이게
+    무엇을 그린 것인지 코드가 알 수 없으므로 다시 그리면 뜻을 잃는다(id 9의 세로줄을
+    지웠더니 문이 사라진 것과 같은 사고). 그래서 **구조는 한 픽셀도 옮기지 않고**
+    두 가지만 한다.
+
+      * 형광색을 눌러 앉힌다 — 90년대 VGA 팔레트가 지금 화면에서 튄다. 다만 **원래
+        채도가 낮은 픽셀은 건드리지 않는다**(keep 아래는 그대로). 회색 돌을 더 회색으로
+        만들 이유가 없다.
+      * 아주 옅은 결을 얹는다 — 평평한 면이 죽어 보이는 것을 살린다. 세기는 그 타일이
+        **원래 얼마나 복잡한가**에 반비례한다: 이미 무늬가 빽빽한 타일에 결을 더하면
+        지저분해지기만 한다.
+
+    tile: 32x32 RGB 픽셀 목록의 목록.
+    """
+    lum = [0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] for row in tile for c in row]
+    mean = sum(lum) / len(lum)
+    dev = (sum((v - mean) ** 2 for v in lum) / len(lum)) ** 0.5
+    busy = min(1.0, dev / 40.0)
+    amp = grain * (1.0 - busy * 0.85)
+    n = fbm(SIZE, seed, octaves=3, period=4)
+    out = [[None] * SIZE for _ in range(SIZE)]
+    for y in range(SIZE):
+        for x in range(SIZE):
+            c = tile[y][x]
+            chroma = max(c) - min(c)
+            if chroma > keep:
+                t = min(1.0, (chroma - keep) / 120.0) * sat
+                c = desaturate(c, t)
+            out[y][x] = shade(c, 1.0 + (n[y][x] - 0.5) * amp * 2.0)
+    return out
