@@ -15,7 +15,8 @@
       "type": "auto",
       "once": true,
       "requires_flag": "q_f5_prof_won",
-      "done_flag": "Q_F5_BOSS_CURE",
+      "guard_flag": "Q_F5_BOSS_CURE",
+      "_comment_guard": "done_flag가 아니라 guard_flag다 — 이 컷신은 실패할 수 있다(해독제 3종이 없으면 craft가 중단된다). done_flag는 TriggerSystem._fire가 컷신을 돌리기 전에 세우므로, 재료 없이 밟아도 치료 완료가 돼 보스전이 열렸다(2026-08-29 자동 주행이 F5까지 걸어가 실측). 지금은 f5_cure의 craft op가 성공했을 때만 Q_F5_BOSS_CURE를 세우고, 여기서는 그것을 재발동 금지 조건으로 읽기만 한다 — 이 파일 원래 주석의 「부족 시 플래그 미세팅 — 재진입해 재판정」이 그제야 사실이 된다.",
       "action": { "cutscene": "f5_cure" }
     },
     {

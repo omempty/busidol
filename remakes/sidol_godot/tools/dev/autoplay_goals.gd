@@ -50,6 +50,15 @@ func _stairs(floor_no: int, visited: Dictionary) -> Array:
 		var label := "f%d → f%d" % [floor_no, to_floor]
 		if locked:
 			label += "  (%s 필요)" % ", ".join(reqs)
+		# 잠긴 계단은 **맨 뒤로 미룬다.** 새 층으로 나가는 계단이라 rank 0이었는데, 층에
+		# 들어서자마자 거기부터 갔다가 안 열리고 그 한 번으로 소진됐다. 정작 그 뒤에
+		# 게이트 플래그가 서도 다시는 안 갔다 — F3~F5가 걸어서 영영 안 열린 진짜
+		# 이유다(2026-08-29 주행 보고서 대조: f2에 닿자마자 stairs_center_up_f2를 밟고
+		# 실패했고, Q_F2_POSTER는 그 뒤에야 HP실→포스터로 섰다).
+		# 잠겼다는 사실 자체는 여전히 잰다 — 목표에서 빼지 않고 순서만 뒤로 놓는다.
+		var rank := RANK_NEW_FLOOR if not visited.has(to_floor) else RANK_FLOOR_SEEN
+		if locked:
+			rank = RANK_FLOOR_SEEN
 		var goal := {
 			"id": str(t["id"]),
 			"kind": "계단",
@@ -57,7 +66,7 @@ func _stairs(floor_no: int, visited: Dictionary) -> Array:
 			"cell": Vector2i(int(t["anchor"][0]), int(t["anchor"][1])),
 			"mode": "stand",
 			"passable": true,
-			"rank": RANK_NEW_FLOOR if not visited.has(to_floor) else RANK_FLOOR_SEEN,
+			"rank": rank,
 			"expect": {"floor": to_floor},
 		}
 		out.append(goal)
@@ -84,6 +93,9 @@ func _triggers(field: Node2D, floor_no: int) -> Array:
 			continue
 		var done := str(t.get("done_flag", ""))
 		if not done.is_empty() and GameState.has_flag(done):
+			continue
+		var guard := str(t.get("guard_flag", ""))
+		if not guard.is_empty() and GameState.has_flag(guard):
 			continue
 		for cell: Vector2i in _trigger_cells(t):
 			var trigger_id := str(t.get("id", ""))

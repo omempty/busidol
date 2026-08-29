@@ -64,6 +64,7 @@ var _goals: AutoplayGoals
 var _nav: AutoplayMap
 
 var _failure := ""  # 방금 travel이 실패한 사유 — 드라이버가 「막힌 자리」에 싣는다
+var _effective := true
 var _reached := 0  # 밟은 목표 누적(드라이버 쪽 수치는 바퀴마다 초기화된다)
 
 var _nav_stamp := ""
@@ -216,11 +217,17 @@ func autoplay_end() -> void:
 
 
 ## 엔딩으로 나갔으면 주행은 끝이다(더 몰 판이 없다).
+##
+## **타이틀도 끝이다.** 엔딩이 끝나면 게임은 타이틀로 돌아오는데, 여기서 그것을
+## 안 보다가 「더 갈 곳이 없다」로 접었다 — 처음으로 한 판을 완주한 주행이
+## 실패처럼 보고됐다(2026-08-29). TITLE_SCENE 상수는 선언만 돼 있고 아무도 안
+## 읽고 있었다: 이 저장소의 지배적 결함(사문화 데이터)이 도구에서 재현된 자리다.
 func autoplay_alive() -> bool:
 	var scene := get_tree().current_scene
 	if scene == null:
 		return true  # 씬 교체 중
-	return not scene.scene_file_path.ends_with("ending_console.tscn")
+	var path := scene.scene_file_path
+	return not (path.ends_with("ending_console.tscn") or path == TITLE_SCENE)
 
 
 func autoplay_region() -> Variant:
@@ -233,6 +240,13 @@ func autoplay_steps() -> int:
 
 func autoplay_last_failure() -> String:
 	return _failure
+
+
+## 마지막 목표가 **실제로 무언가를 일으켰는가.** 드라이버는 이 값이 거짓이면
+## 그 목표를 소진 처리하지 않고, 세상이 달라졌을 때 다시 데려간다 — 재료를 얻기
+## 전에 조합 트리거를 건드린 경우가 그렇다(f2_poster를 HP실보다 먼저 밟는다).
+func autoplay_effective() -> bool:
+	return _effective
 
 
 ## 세상 상태 지문. **좌표·HP·경험치·돈은 넣지 않는다** — 걸을 때마다 달라져서
@@ -311,7 +325,7 @@ func _spent(candidate: Dictionary) -> bool:
 
 
 ## 그 목표에 어떻게 붙을 것인가. stand는 그 칸에 올라서고, face는 **전방 판정이 그
-## 칸을 집는 앵커**에 선다. 전방 셀은 게임의 `GridMover.edge_cells`에 그대로 묻는다 —
+## 칸을 집는 앵커**에 선다. 조사 판정 셀은 게임의 `InteractProbe`에 그대로 묻는다 —
 ## 몸이 2×2라 "옆 칸"이 한 칸 옆이 아니다.
 func _approach(player: PlayerEntity, reach: Dictionary, candidate: Dictionary) -> Dictionary:
 	var cell: Vector2i = candidate["cell"]
@@ -331,7 +345,7 @@ func _approach(player: PlayerEntity, reach: Dictionary, candidate: Dictionary) -
 			if distance >= best_distance:
 				continue
 			for dir: Vector2i in DIRS:
-				if cell in player.mover.edge_cells(anchor, dir):
+				if cell in InteractProbe.probe_cells(player.mover, anchor, dir):
 					best = {"anchor": anchor, "dir": dir, "distance": distance}
 					best_distance = distance
 					break
@@ -347,15 +361,25 @@ func _approach(player: PlayerEntity, reach: Dictionary, candidate: Dictionary) -
 ## "갈 수 있는가"라는 질문 자체가 사라진다.
 func autoplay_travel(goal: Dictionary) -> bool:
 	_failure = ""
+	_effective = true
 	await _settle()  # 대사·컷신이 조작을 쥐고 있으면 한 걸음도 못 걷는다
 	if not await _walk_to(goal):
 		return false
 	_reached += 1
-	if not await _provoke(goal):
+	var fired := await _provoke(goal)
+	if not fired:
 		_log.mark_dead(
 			GameState.current_floor, String(goal["kind"]), String(goal["label"]), goal["cell"]
 		)
 	await _settle()
+	# **계단은 층이 바뀌어야 밟은 것이다.** 앵커까지 걸어갔다는 사실만으로 성공을
+	# 돌려주면 잠긴 계단이 한 번 만에 소진돼, 나중에 게이트 플래그가 서도 드라이버가
+	# 다시 데려가지 않았다(2026-08-29 F3~F5 미도달). 다른 목표는 종전대로 —
+	# 닿았는데 아무 일도 없었다는 것 자체가 재려는 값이라 실패로 접으면 안 된다.
+	_effective = fired
+	if not fired and Dictionary(goal["expect"]).has("floor"):
+		_failure = "계단 앵커에는 섰으나 층이 바뀌지 않았다 — %s" % String(goal["label"])
+		return false
 	return true
 
 
@@ -488,6 +512,11 @@ func _aim(player: PlayerEntity, dir: Vector2i, passable: bool) -> void:
 ## 가로챈 것이다 — 그 상태로 접으면 "갈 곳이 없다"며 한 바퀴를 헛돈다.
 func autoplay_unblock() -> bool:
 	if not await _wait_for_field():
+		# **어느 씬에 갇혔는지 적어 둔다.** 「더 갈 곳이 없다」만 남은 보고서로는
+		# 길이 끊긴 것인지 필드 밖 화면에 갇힌 것인지 가릴 수 없다.
+		var scene := get_tree().current_scene
+		var where := "(없음)" if scene == null else scene.scene_file_path
+		_failure = "필드가 아닌 씬에 갇혔다: %s" % where
 		return false
 	await _settle()
 	return not autoplay_goals().is_empty()

@@ -40,7 +40,11 @@ func setup(p_field: Node2D) -> void:
 	_field = p_field
 
 	_box = DialogueBox.new()
-	_box.auto_advance = true
+	# **컷신 대사도 사람이 넘긴다.** 전에는 auto_advance를 켜 둬서 1.1초마다 저 혼자
+	# 넘어갔다 — 읽는 속도와 무관하게 지나가 버려 이벤트 대사를 놓쳤다(2026-08-29
+	# 유저 지적). 원작도 키 입력을 기다렸고, 필드 대화(입력 중재 모드)와도 어긋나
+	# 있었다. 진행 입력은 아래 _unhandled_input이 받는다.
+	_box.auto_advance = false
 	add_child(_box)
 
 	# 키아트(일러스트) 판 — 대사창보다 **아래**에 있어야 글자를 가리지 않는다.
@@ -72,6 +76,20 @@ func play(config: Dictionary) -> void:
 	_handoff = false
 	visible = true
 	_run()
+
+
+## 컷신 진행 입력. 필드 대화는 field가 중재하지만 컷신 대사창은 **아무도 눌러 주지
+## 않아** 자동 진행에 기대고 있었다. 선택지·미니게임은 자기 _unhandled_input이 먼저
+## 받아 소비하므로(자식이 먼저다) 여기까지 오지 않는다.
+func _unhandled_input(event: InputEvent) -> void:
+	if _box == null or not _box.is_open:
+		return
+	if event.is_action_pressed(&"interact") or event.is_action_pressed(&"cancel"):
+		_box.advance()
+		# 씬 전환 중에는 뷰포트가 없다(전투 진입 프레임에 입력이 겹친다).
+		var vp := get_viewport()
+		if vp != null:
+			vp.set_input_as_handled()
 
 
 func stop() -> void:

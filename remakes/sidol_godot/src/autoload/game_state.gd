@@ -33,6 +33,15 @@ var player_stats := {
 ## 대기 중 인카운터 데이터 — BattleScene이 소비 후 클리어
 var pending_encounter := {}
 
+## 층별 필드 몬스터 명단 — 층(int) → [{species, pattern, params, cell}].
+##
+## **전투를 거쳐도 남아 있어야 한다.** 전투는 씬 전환이라 돌아오면 필드가 새로
+## 만들어지는데, 그때마다 그 층 몬스터를 통째로 새로 뽑고 있었다 — 잡은 놈이
+## 되살아나고 자리·종까지 매번 바뀌어서 「치웠다」가 남지 않고 되돌아 걷는 길이
+## 벌이 됐다(2026-08-29). 여기에 명단을 두면 전투를 다녀와도 그 층은 그대로다.
+## 세이브에는 싣지 않는다 — 불러오면 그 층은 새로 채워진다.
+var field_roster := {}
+
 var inventory := Inventory.new()
 
 
@@ -228,5 +237,6 @@ func reset() -> void:
 		"money": 5000,
 	}
 	pending_encounter = {}
+	field_roster = {}
 	inventory.clear()
 	state_changed.emit()

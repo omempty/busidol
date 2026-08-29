@@ -81,6 +81,10 @@ const DEFAULT_TIME_SCALE := 120.0
 ## 안전 예산. 넘기면 멈추지 말고 끝낸다.
 const DEFAULT_MAX_GOALS := 900
 const DEFAULT_MAX_ROUNDS := 8
+## 실패한 목표 하나를 다시 데려가 볼 횟수. **상한이 필요하다** — 지문은 상자 하나만
+## 열려도 달라지므로, 상한이 없으면 「길이 끊겨 못 가는 NPC」를 상자마다 다시 찾아가
+## 예산을 통째로 태운다. 게이트가 열리는 사건은 층당 두어 번이라 이 정도면 넉넉하다.
+const MAX_RETRIES := 3
 const DEFAULT_MAX_SECONDS := 900.0
 
 var adapter: Object
@@ -102,7 +106,10 @@ var stalls: Array[String] = []
 ## 속도를 예산으로 나누면 일찍 끝난 주행일수록 느려 보인다. 잴 때는 이 값을 쓴다.
 var elapsed: float = 0.0
 
+## 밟은 목표 → 그때의 세상 지문. 빈 문자열이면 **영구 소진**(성공했다).
+## 실패한 목표는 지문을 적어 두고, 세상이 달라지면 다시 후보로 돌려준다.
 var _consumed: Dictionary = {}
+var _retries: Dictionary = {}
 var _last_fingerprint: String = ""
 var _running := false
 var _started_at := 0.0
@@ -198,13 +205,24 @@ func _within_budget() -> bool:
 
 
 ## 아직 안 밟은 목표 중 `priority` 가 낮고 먼저 나온 것.
+##
+## **실패한 목표는 세상이 달라지면 다시 낸다.** 전에는 한 번 손댄 목표를 그 바퀴가
+## 끝날 때까지 영영 안 봤다. 그래서 앞 사건이 열어 주는 문(플래그로 잠긴 계단 같은)은
+## 「닫혔을 때 한 번 가 보고 끝」이 됐고, 정작 열린 뒤에는 아무도 다시 가지 않았다.
+## 지문이 그대로면 다시 가도 같은 결과이므로 그때만 건너뛴다 — 헛걸음은 안 는다.
 func _pick_goal() -> Dictionary:
+	var stamp := String(adapter.call("autoplay_fingerprint"))
 	var best: Dictionary = {}
 	var best_priority := 1 << 30
 	for goal_variant: Variant in adapter.call("autoplay_goals"):
 		var goal: Dictionary = goal_variant
-		if _consumed.has(_key(goal)):
-			continue
+		var key := _key(goal)
+		if _consumed.has(key):
+			var mark := String(_consumed[key])
+			if mark.is_empty() or mark == stamp or int(_retries.get(key, 0)) >= MAX_RETRIES:
+				continue
+			_retries[key] = int(_retries.get(key, 0)) + 1
+			_consumed.erase(key)
 		var priority := int(goal.get("priority", 10))
 		if priority < best_priority:
 			best = goal
@@ -214,8 +232,19 @@ func _pick_goal() -> Dictionary:
 
 func _pursue(goal: Dictionary) -> void:
 	var region_before: Variant = _region()
-	_consumed[_key(goal)] = true
+	var key := _key(goal)
+	_consumed[key] = ""
 	var reached: bool = await adapter.call("autoplay_travel", goal)
+	# 성공은 영구 소진, 실패는 「이 세상에서는 안 되더라」로만 적는다.
+	#
+	# **닿았다고 끝난 것이 아니다.** 어댑터가 `autoplay_effective` 로 「가긴 갔는데
+	# 아무 일도 없었다」를 알려 주면 그것도 미소진으로 본다. 재료를 아직 안 든 채
+	# 조합 트리거를 건드린 경우가 그렇다 — 재료를 얻은 뒤 다시 가야 열린다.
+	var spent := reached
+	if spent and adapter.has_method("autoplay_effective"):
+		spent = bool(adapter.call("autoplay_effective"))
+	if not spent:
+		_consumed[key] = String(adapter.call("autoplay_fingerprint"))
 	if reached:
 		journal.append(
 			(
@@ -268,6 +297,7 @@ func _try_to_get_unstuck() -> bool:
 	_last_fingerprint = now
 	rounds += 1
 	_consumed.clear()
+	_retries.clear()
 	if verbose:
 		print("  --- %d 바퀴째: 상태가 달라졌다, 다시 돈다 ---" % rounds)
 	return true
@@ -279,7 +309,15 @@ func _diagnose() -> String:
 	for goal_variant: Variant in goals:
 		if not _consumed.has(_key(goal_variant)):
 			left += 1
-	return "구역 %s: 목표 %d개 중 남은 것 %d개 / %d 바퀴 돌았다" % [str(_region()), goals.size(), left, rounds]
+	var detail := ""
+	if adapter.has_method("autoplay_last_failure"):
+		var said := String(adapter.call("autoplay_last_failure"))
+		if not said.is_empty():
+			detail = " / %s" % said
+	return (
+		"구역 %s: 목표 %d개 중 남은 것 %d개 / %d 바퀴 돌았다%s"
+		% [str(_region()), goals.size(), left, rounds, detail]
+	)
 
 
 # ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그. species 섹션 = 종별 약점(브레이크 시스템): 기계 계열=electric(docs/03_backlog EMP 근거), 종이·유기질=fire, 안구·무기질=physical.",
- "_floor_stats_note": "floor_stats = 층별 필드 몬스터 기본 스탯. 원작 init_enemy() 난수 테이블(docs/01_analysis/04_game_systems.md §2.1) 이관 — '11+rnd10'을 [11,21]로 편 것. 2026-08-27 이전에는 Database가 전 종에 ap15/hp[20,40]을 하드코딩해 **층별 난이도가 아예 없었다**(F5 몬스터가 F0과 같은 강도). 종별 개성은 weaknesses·pattern이, 강도는 층이 담당한다. stat_mult(선택, 기본 1.0)로 종별 미세조정 가능.",
+ "_floors_note": "floors.count = 그 층의 **정원**(동시 스폰 상한). 2026-08-29 재조정: 2/4/5/4/5/5 → 3/5/6/7/8/9. 전에는 f3(4)이 f2(5)보다 적어 깊어질수록 조여드는 곡선이 역전돼 있었다. 지금은 층마다 완만히 늘고, f0은 지하 초입이라 낮게 둔다. respawn_seconds = 정원이 빌 때 한 마리가 다시 차오르는 간격(초). 잡은 개체는 그 층 명단에서 빠지고(GameState.field_roster) 전투를 다녀와도 되살아나지 않는다 — 「치웠다」가 남아야 되돌아 걷는 길이 벌이 되지 않는다. 다만 영영 비면 층이 안전지대가 되므로 시간으로 메운다. 깊은 층일수록 짧게(60→40초) 잡아 압박을 유지한다.", "_floor_stats_note": "floor_stats = 층별 필드 몬스터 기본 스탯. 원작 init_enemy() 난수 테이블(docs/01_analysis/04_game_systems.md §2.1) 이관 — '11+rnd10'을 [11,21]로 편 것. 2026-08-27 이전에는 Database가 전 종에 ap15/hp[20,40]을 하드코딩해 **층별 난이도가 아예 없었다**(F5 몬스터가 F0과 같은 강도). 종별 개성은 weaknesses·pattern이, 강도는 층이 담당한다. stat_mult(선택, 기본 1.0)로 종별 미세조정 가능.",
  "floor_stats": {
   "f0": {
    "hp_range": [
@@ -212,7 +212,8 @@
  },
  "floors": {
   "f0": {
-   "count": 2,
+   "count": 3,
+      "respawn_seconds": 60,
    "species": [
     {
      "id": "sparker",
@@ -221,7 +222,8 @@
    ]
   },
   "f1": {
-   "count": 4,
+   "count": 5,
+      "respawn_seconds": 50,
    "species": [
     {
      "id": "dworm",
@@ -251,7 +253,8 @@
    ]
   },
   "f2": {
-   "count": 5,
+   "count": 6,
+      "respawn_seconds": 45,
    "species": [
     {
      "id": "mad_eye",
@@ -280,7 +283,8 @@
    ]
   },
   "f3": {
-   "count": 4,
+   "count": 7,
+      "respawn_seconds": 45,
    "species": [
     {
      "id": "ozzy",
@@ -297,7 +301,8 @@
    ]
   },
   "f4": {
-   "count": 5,
+   "count": 8,
+      "respawn_seconds": 40,
    "species": [
     {
      "id": "hellcop",
@@ -325,7 +330,8 @@
    ]
   },
   "f5": {
-   "count": 5,
+   "count": 9,
+      "respawn_seconds": 40,
    "species": [
     {
      "id": "hellcop",

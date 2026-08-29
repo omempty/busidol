@@ -15,6 +15,7 @@ extends Node
 ##  9) 전환 게이트 데이터 정합        — 동일 앵커 guard 범위 중복(이중 발화)·
 ##                                     requires_flag가 퀘스트 id와 불일치 조기 발견
 ## 10) 세우는 곳 없는 게이트 플래그   — 요구만 하고 아무도 세우지 않는 문(세 번 겪은 결함)
+## 11) 몬스터 명단 유지            — 전투를 다녀와도 잡은 놈이 되살아나지 않는가
 
 const FLOORS := [1, 2, 3, 0, 4, 5]  # 마스터 시나리오 진행 순서
 
@@ -38,6 +39,7 @@ func run_all() -> PackedStringArray:
 		_check_credits_flags(),
 		_check_flee_rule(),
 		_check_flag_setters(),
+		_check_enemy_roster(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -649,3 +651,55 @@ func _cutscene_paths() -> Array:
 		if name.get_extension() == "json":
 			out.append("res://data/cutscenes/" + name)
 	return out
+
+
+## 몬스터 명단이 전투를 건너 살아남는가.
+##
+## 전투는 씬 전환이라 돌아오면 필드가 새로 만들어진다. 전에는 그때마다 그 층
+## 몬스터를 통째로 새로 뽑아 **잡은 놈이 곧바로 되살아났다** — 「치웠다」가 남지
+## 않으니 되돌아 걷는 길이 벌이 됐다. 명단(GameState.field_roster)이 조용히
+## 비워지면 그 시절로 되돌아가는데, 화면으로는 티가 잘 안 난다.
+func _check_enemy_roster() -> Array:
+	var keep_roster: Dictionary = GameState.field_roster.duplicate(true)
+	var keep_floor := GameState.current_floor
+	var lines: Array = []
+	GameState.field_roster = {}
+	var floor_no := 1
+	var cap := SettingsManager.encounter_count(
+		int(Database.encounter_table(floor_no).get("count", 0))
+	)
+	if cap <= 0:
+		GameState.field_roster = keep_roster
+		GameState.current_floor = keep_floor
+		return _ok("몬스터 명단 유지 (밀도 0 — 건너뜀)")
+
+	# 첫 진입: 명단이 선다.
+	var rt := MapRuntime.new(MapDefinition.load_from_json("res://data/maps/f%d.json" % floor_no))
+	var host := Node2D.new()
+	add_child(host)
+	var mgr := EnemyManager.new()
+	host.add_child(mgr)
+	mgr.spawn_for_floor(floor_no, rt, host, Vector2i(0, 0))
+	var first: int = mgr.enemies.size()
+	if first <= 0:
+		host.queue_free()
+		GameState.field_roster = keep_roster
+		GameState.current_floor = keep_floor
+		return _fail("f%d 몬스터가 한 마리도 서지 않았다" % floor_no)
+
+	# 한 마리와 붙었다 — 명단에서 빠져야 한다.
+	mgr.remove_entity(mgr.enemies[0])
+	var after_fight: int = Array(GameState.field_roster.get(floor_no, [])).size()
+	if after_fight != first - 1:
+		lines += _fail("전투한 개체가 명단에서 빠지지 않았다: %d → %d" % [first, after_fight])
+
+	# 전투 복귀 = 필드 재생성. 남은 명단 그대로여야 한다(새로 뽑으면 안 된다).
+	mgr.spawn_for_floor(floor_no, rt, host, Vector2i(0, 0))
+	if mgr.enemies.size() != after_fight:
+		lines += _fail("전투 복귀 후 명단이 다시 뽑혔다: %d마리여야 하는데 %d마리" % [after_fight, mgr.enemies.size()])
+	host.queue_free()
+	GameState.field_roster = keep_roster
+	GameState.current_floor = keep_floor
+	if lines.is_empty():
+		return _ok("몬스터 명단 유지 (정원 %d → 전투 후 %d, 복귀 후 유지)" % [first, after_fight])
+	return lines

@@ -15,52 +15,151 @@ const SPAWN_TRIES := 12
 ## 워프 패턴이 한 번에 넘어갈 수 있는 최대 거리(셀). 브레인이 잘못 계산해도
 ## 맵 반대편에서 순간이동해 오는 사고를 막는 안전망.
 const MAX_WARP := 16
+## 리스폰이 서는 최소 거리 — 스폰보다 멀다. **화면 밖에서 차오르게** 하려는 것이다.
+## 눈앞에서 솟아나면 "치운 길"이라는 감각이 그 자리에서 깨진다.
+const RESPAWN_DIST := 16
+## 한 마리가 다시 차오르는 데 걸리는 시간(초). monsters.json의 층별
+## `respawn_seconds`가 있으면 그쪽이 이긴다.
+##
+## **왜 즉시도 영구도 아닌가.** 즉시 되살아나면 잡은 보람이 사라지고, 영영 안
+## 돌아오면 층이 텅 비어 긴장이 사라진다. 그 사이를 시간으로 메운다 — 맵 한쪽
+## 끝에서 반대편까지가 대략 30초(200칸 × 0.16초)이니, 한 번 왕복하는 동안
+## 한두 마리가 돌아오는 셈이다.
+const RESPAWN_SECONDS := 45.0
 
 var enemies: Array[EnemyEntity] = []
 var _occupied := {}  # Vector2i(몸 셀) -> EnemyEntity
 var _brains := {}  # entity -> AIBrain
 var _act_accum := {}  # entity -> float
 var _phasing := {}  # entity -> bool (벽 통과 종)
+var _entry := {}  # entity -> 명단 항목(Dictionary) — 잡히면 명단에서 뺄 때 쓴다
 var _runtime: MapRuntime
+var _parent: Node2D
+var _floor := -1
+var _cap := 0
+var _respawn_seconds := RESPAWN_SECONDS
+var _respawn_accum := 0.0
 
 
 func spawn_for_floor(floor_idx: int, rt: MapRuntime, parent: Node2D, player_cell: Vector2i) -> void:
 	despawn_all()
 	_runtime = rt
+	_parent = parent
+	_floor = floor_idx
+	_respawn_accum = 0.0
+	var table := Database.encounter_table(floor_idx)
 	# 밀도 설정(Q6) 반영 — NONE이면 0마리, 즉 몬스터 없는 탐험 모드.
-	var count := SettingsManager.encounter_count(
-		int(Database.encounter_table(floor_idx).get("count", 0))
-	)
+	_cap = SettingsManager.encounter_count(int(table.get("count", 0)))
+	_respawn_seconds = float(table.get("respawn_seconds", RESPAWN_SECONDS))
 	var species_list := Database.encounter_species(floor_idx)
-	if species_list.is_empty() or count == 0:
+	if species_list.is_empty() or _cap == 0:
+		GameState.field_roster.erase(floor_idx)
 		return
 
 	rng.randomize()
-	var spots := _collect_spawn_anchors(rt, player_cell)
-	if spots.is_empty():
-		push_warning("EnemyManager: f%d 스폰 가능 앵커 없음" % floor_idx)
-		return
+	# **명단이 이미 있으면 그것을 되세운다.** 전투를 다녀오는 것은 씬 전환이라
+	# 여기가 다시 불리는데, 그때마다 새로 뽑으면 잡은 놈이 되살아나고 자리도 바뀐다.
+	var roster: Array = GameState.field_roster.get(floor_idx, [])
+	if roster.is_empty():
+		roster = _roll_roster(rt, player_cell, species_list, _cap)
+		GameState.field_roster[floor_idx] = roster
+	_keep_landing_clear(rt, player_cell, roster)
+	for entry: Dictionary in roster:
+		_make_enemy(entry)
 
-	for i in count:
-		var cell := _pick_free_anchor(spots)
+
+## **도착하자마자 전투는 없다.** 명단을 되세우면 몬스터는 지난번에 서 있던
+## 자리에 그대로 돌아오는데, 그게 계단 앞이면 내려서는 순간 붙는다. 착지점
+## 근처에 있던 놈만 먼 자리로 옮긴다 — 층은 그대로 두고 첫 걸음만 지켜 준다.
+func _keep_landing_clear(rt: MapRuntime, player_cell: Vector2i, roster: Array) -> void:
+	var spots: Array[Vector2i] = []
+	var taken := {}
+	for entry: Dictionary in roster:
+		var cell: Vector2i = entry["cell"]
+		var d := cell - player_cell
+		if maxi(absi(d.x), absi(d.y)) >= SAFE_SPAWN_DIST:
+			for c in Placement.body_cells(cell):
+				taken[c] = true
+			continue
+		if spots.is_empty():
+			spots = _collect_spawn_anchors(rt, player_cell, SAFE_SPAWN_DIST)
+			if spots.is_empty():
+				return
+		var moved := _pick_free_anchor(spots, taken)
+		if moved.x < 0:
+			continue
+		entry["cell"] = moved
+		for c in Placement.body_cells(moved):
+			taken[c] = true
+
+
+## 새 명단을 뽑는다 — 그 층에 처음 들어섰을 때 한 번.
+func _roll_roster(rt: MapRuntime, player_cell: Vector2i, species_list: Array, count: int) -> Array:
+	var out: Array = []
+	var spots := _collect_spawn_anchors(rt, player_cell, SAFE_SPAWN_DIST)
+	if spots.is_empty():
+		push_warning("EnemyManager: f%d 스폰 가능 앵커 없음" % _floor)
+		return out
+	var taken := {}
+	for _i in count:
+		var cell := _pick_free_anchor(spots, taken)
 		if cell.x < 0:
 			break
+		for c in Placement.body_cells(cell):
+			taken[c] = true
 		var spec: Dictionary = species_list[rng.randi() % species_list.size()]
-		var e := EnemyEntity.new()
-		parent.add_child(e)
-		e.setup(StringName(str(spec["id"])), cell, Color(1, 1, 1))
-		var params: Dictionary = spec.get("params", {})
-		var kind := MovementPattern.kind_from_name(str(spec["pattern"]))
-		e.act_interval = MovementPattern.act_interval(kind, params)
-		# 몬스터도 맵 통행 규칙을 탄다. 구판은 점유 사전만 봐서 벽과 맵 밖을 자유로이 통과했다.
-		# PHASER(벽 통과 설계 종)만 지형 검사를 건너뛴다.
-		var phases := MovementPattern.ignores_walls(kind)
-		e.mover.is_passable = func(c: Vector2i) -> bool: return _cell_free_for(e, c, phases)
-		enemies.append(e)
-		_brains[e] = MovementPattern.make_brain(str(spec["pattern"]), params)
-		_phasing[e] = phases
-		_act_accum[e] = 0.0
-		_occupy(e, cell)
+		(
+			out
+			. append(
+				{
+					"id": str(spec["id"]),
+					"pattern": str(spec["pattern"]),
+					"params": spec.get("params", {}),
+					"cell": cell,
+				}
+			)
+		)
+	return out
+
+
+## 명단 항목 하나를 실제 개체로 세운다.
+func _make_enemy(entry: Dictionary) -> void:
+	if _parent == null or not _parent.is_inside_tree():
+		return
+	var cell: Vector2i = entry["cell"]
+	var e := EnemyEntity.new()
+	_parent.add_child(e)
+	e.setup(StringName(str(entry["id"])), cell, Color(1, 1, 1))
+	var params: Dictionary = entry.get("params", {})
+	var kind := MovementPattern.kind_from_name(str(entry["pattern"]))
+	e.act_interval = MovementPattern.act_interval(kind, params)
+	# 몬스터도 맵 통행 규칙을 탄다. 구판은 점유 사전만 봐서 벽과 맵 밖을 자유로이 통과했다.
+	# PHASER(벽 통과 설계 종)만 지형 검사를 건너뛴다.
+	var phases := MovementPattern.ignores_walls(kind)
+	e.mover.is_passable = func(c: Vector2i) -> bool: return _cell_free_for(e, c, phases)
+	enemies.append(e)
+	_brains[e] = MovementPattern.make_brain(str(entry["pattern"]), params)
+	_phasing[e] = phases
+	_act_accum[e] = 0.0
+	_entry[e] = entry
+	_occupy(e, cell)
+
+
+## 이 개체를 세상에서 지운다 — **명단에서도 뺀다.** 전투가 붙은 개체에 쓴다:
+## 이겼으면 잡은 것이고, 도망쳤어도 그 자리에 그대로 서 있으면 도망이 아니다.
+func remove_entity(e: EnemyEntity) -> void:
+	var entry: Variant = _entry.get(e)
+	if entry != null:
+		var roster: Array = GameState.field_roster.get(_floor, [])
+		roster.erase(entry)
+	if is_instance_valid(e):
+		_release(e, e.mover.grid_pos)
+		e.queue_free()
+	enemies.erase(e)
+	_brains.erase(e)
+	_act_accum.erase(e)
+	_phasing.erase(e)
+	_entry.erase(e)
 
 
 func despawn_all() -> void:
@@ -72,20 +171,23 @@ func despawn_all() -> void:
 	_brains.clear()
 	_act_accum.clear()
 	_phasing.clear()
+	_entry.clear()
 
 
 ## 플레이어 몸과 몬스터 몸이 겹치거나 변을 맞대면 전투. 판정은 Placement 단일 출처.
-func get_contact(player_cell: Vector2i) -> String:
+## **개체를 돌려준다** — 부르는 쪽이 그 개체를 명단에서 뺄 수 있어야 한다.
+func contact_entity(player_cell: Vector2i) -> EnemyEntity:
 	for e in enemies:
 		if not is_instance_valid(e):
 			continue
 		if Placement.bodies_touch(player_cell, e.mover.grid_pos):
-			return String(e.species_id)
-	return ""
+			return e
+	return null
 
 
 ## 종별 행동 주기마다 한 걸음. 구판은 매 물리 프레임 순간이동해 초당 60칸을 갔다.
 func tick(player_cell: Vector2i, delta: float) -> void:
+	_respawn_tick(player_cell, delta)
 	for e in enemies:
 		if not is_instance_valid(e) or e.mover.moving:
 			continue
@@ -175,27 +277,62 @@ func _anchor_free_for(e: EnemyEntity, anchor: Vector2i, phasing: bool = false) -
 
 
 ## 몸이 들어가고 플레이어에게서 충분히 떨어진 앵커만 후보로 모은다.
-func _collect_spawn_anchors(rt: MapRuntime, player_cell: Vector2i) -> Array[Vector2i]:
+func _collect_spawn_anchors(
+	rt: MapRuntime, player_cell: Vector2i, min_dist: int
+) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for y in rt.definition.height - 1:
 		for x in rt.definition.width - 1:
 			var a := Vector2i(x, y)
 			var d := a - player_cell
-			if maxi(absi(d.x), absi(d.y)) < SAFE_SPAWN_DIST:
+			if maxi(absi(d.x), absi(d.y)) < min_dist:
 				continue
 			if Placement.body_fits(rt, a):
 				out.append(a)
 	return out
 
 
-func _pick_free_anchor(spots: Array[Vector2i]) -> Vector2i:
+func _pick_free_anchor(spots: Array[Vector2i], taken: Dictionary) -> Vector2i:
 	for _try in SPAWN_TRIES:
 		var a: Vector2i = spots[rng.randi() % spots.size()]
 		var clear := true
 		for c in Placement.body_cells(a):
-			if _occupied.has(c):
+			if _occupied.has(c) or taken.has(c):
 				clear = false
 				break
 		if clear:
 			return a
 	return Vector2i(-1, -1)
+
+
+## **천천히 차오른다.** 잡은 자리가 곧바로 다시 채워지면 잡은 보람이 없고,
+## 영영 비어 있으면 층이 안전지대가 돼 긴장이 사라진다. 정원까지 시간을 두고
+## 한 마리씩, 그것도 플레이어에게서 멀리(RESPAWN_DIST) 되돌린다.
+func _respawn_tick(player_cell: Vector2i, delta: float) -> void:
+	if _runtime == null or _cap <= 0 or enemies.size() >= _cap:
+		_respawn_accum = 0.0
+		return
+	_respawn_accum += delta
+	if _respawn_accum < _respawn_seconds:
+		return
+	_respawn_accum = 0.0
+	var species_list := Database.encounter_species(_floor)
+	if species_list.is_empty():
+		return
+	var spots := _collect_spawn_anchors(_runtime, player_cell, RESPAWN_DIST)
+	if spots.is_empty():
+		return
+	var cell := _pick_free_anchor(spots, {})
+	if cell.x < 0:
+		return
+	var spec: Dictionary = species_list[rng.randi() % species_list.size()]
+	var entry := {
+		"id": str(spec["id"]),
+		"pattern": str(spec["pattern"]),
+		"params": spec.get("params", {}),
+		"cell": cell,
+	}
+	var roster: Array = GameState.field_roster.get(_floor, [])
+	roster.append(entry)
+	GameState.field_roster[_floor] = roster
+	_make_enemy(entry)

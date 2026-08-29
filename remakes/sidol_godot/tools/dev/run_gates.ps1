@@ -35,7 +35,9 @@ $gates = @(
     # 손으로 세우므로(플래그 주입·층 순간이동) "앞이 열어야 뒤가 열리는" 순서를 못 본다.
     # 판정은 주행 자체의 퇴행만 본다: 한 걸음도 못 걷거나 층을 못 넘으면 실패.
     # 사문화 데이터 목록은 docs/05_status/01_autoplay.md 로 나온다(관문을 빨갛게 하지 않는다).
-    @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "2", "--out", "user://autoplay_gate.md"); fatal = $true }
+    # 요구 층수 2 → 5(2026-08-29). 잠긴 계단의 순서·재시도를 고친 뒤 주행이 한 판을
+    # 완주한다(F1→F5→엔딩→타이틀, 실측 3회 연속 77초 안팎). 되돌아가면 여기가 빨개진다.
+    @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
 $total = $gates.Count + 2   # +2 = 내보내기 포함 규칙 · 원본 대조(python)

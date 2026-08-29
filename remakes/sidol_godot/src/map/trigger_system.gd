@@ -73,6 +73,15 @@ func _consumed(t: Dictionary) -> bool:
 	var done := str(t.get("done_flag", ""))
 	if not done.is_empty() and GameState.has_flag(done):
 		return true
+	# guard_flag — **읽기만 하는 done_flag.** 발동 결과가 실패할 수 있는 트리거는
+	# 완료 표시를 여기서 세우면 안 된다: _fire는 컷신을 돌리기 **전에** done_flag를
+	# 세우므로, 재료가 없어 중단된 컷신도 완료로 남는다(f5_cure가 그랬다 — 해독제
+	# 없이 치료가 끝난 것으로 처리돼 보스전이 열렸다, 2026-08-29 자동 주행 실측).
+	# 그런 트리거는 컷신 쪽(craft op)이 성공했을 때만 플래그를 세우고, 여기서는
+	# 그 플래그를 재발동 금지 조건으로 읽기만 한다.
+	var guard := str(t.get("guard_flag", ""))
+	if not guard.is_empty() and GameState.has_flag(guard):
+		return true
 	# requires_flag는 문자열 하나 또는 목록이다. **목록이면 전부 서 있어야 한다** —
 	# 퀴즈맨 게이트처럼 앞선 두 사건(드래그·앨린)이 모두 끝나야 열리는 문이 있다.
 	var req: Variant = t.get("requires_flag")

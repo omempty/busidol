@@ -82,7 +82,7 @@ func _attend_field(field: Node2D) -> void:
 		pulse(&"cancel")
 
 
-## 컷신 — 대사는 스스로 넘어간다(auto_advance). 선택지·미니게임만 눌러 준다.
+## 컷신 — 대사·선택지·미니게임을 눌러 준다.
 ## 미니게임은 정답을 모르므로 **커서를 돌리며 확정**을 반복한다.
 func _attend_cutscene(cutscene: CutscenePlayer) -> void:
 	for child in cutscene.get_children():
@@ -99,6 +99,10 @@ func _attend_cutscene(cutscene: CutscenePlayer) -> void:
 		if child is Control and child.has_signal("picked"):
 			pulse(&"interact")
 			return
+	# **대사는 이제 눌러야 넘어간다.** 컷신 대사창의 auto_advance를 껐으므로(사람이
+	# 읽을 시간을 주려고) 여기서 대신 눌러 주지 않으면 주행이 첫 컷신에서 영영
+	# 멈춘다 — 도구가 멈추는 것이 가장 나쁘다.
+	pulse(&"interact")
 
 
 # ---------------------------------------------------------------------------

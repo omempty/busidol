@@ -157,9 +157,13 @@ func _physics_process(_delta: float) -> void:
 		_encounter_grace -= _delta
 	if enemy_manager != null:
 		enemy_manager.tick(player.mover.grid_pos, _delta)
-		var contact := enemy_manager.get_contact(player.mover.grid_pos)
-		if contact != "" and _encounter_grace <= 0.0:
-			_trigger_encounter(contact)
+		var contact := enemy_manager.contact_entity(player.mover.grid_pos)
+		if contact != null and _encounter_grace <= 0.0:
+			# **붙은 개체는 명단에서 뺀다.** 이기면 잡은 것이고, 도망쳐도 그 자리에
+			# 그대로 서 있으면 도망이 아니다. 전투는 씬 전환이라 지금 빼 둬야 한다.
+			var species := String(contact.species_id)
+			enemy_manager.remove_entity(contact)
+			_trigger_encounter(species)
 			return
 
 	# 이벤트 트리거 판정 (zone/auto)
@@ -438,11 +442,12 @@ func get_npc(npc_id: String) -> NpcEntity:
 	return null
 
 
-## 플레이어 전방 2셀 — 이동을 막는 그 셀과 동일(GridMover.edge_cells 단일 출처).
 ## 구판은 좌/하 방향만 한 칸 더 멀리 봐서(x−2 · y+3), 왼쪽과 아래에 붙은
 ## 상자·NPC를 조사할 수 없었다. 이제 네 방향 모두 몸에 맞닿은 셀을 본다.
+## 조사 판정 셀 — 판정 모양은 InteractProbe가 정본이다(도구도 같은 것을 물어본다).
+## 이름은 그대로 둔다: 트리거·NPC·상자가 전부 이 이름으로 이 함수를 부른다.
 func front_cells() -> Array[Vector2i]:
-	return player.mover.edge_cells(player.mover.grid_pos, player.facing_vector())
+	return InteractProbe.probe_cells(player.mover, player.mover.grid_pos, player.facing_vector())
 
 
 func _npc_in_front() -> NpcEntity:

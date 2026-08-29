@@ -35,9 +35,16 @@ func _ready() -> void:
 	Engine.time_scale = SPEEDUP
 	cp.play(CutscenePlayer.load_cutscene(&"opening"))
 	var waited := 0.0
+	var beat := 0
 	while not fired.v and waited < TIMEOUT:
 		await get_tree().process_frame
 		waited += get_process_delta_time()
+		# **대사는 눌러야 넘어간다.** 컷신 대사창의 auto_advance를 껐으므로(사람이
+		# 읽을 시간을 주려고) 여기서도 사람처럼 눌러 준다 — 안 누르면 첫 대사에서
+		# 멈춘 채 시간만 흘러 "컷신 finished 미발생"으로 끝난다.
+		beat += 1
+		if beat % 6 == 0:
+			_tap(&"interact")
 	Engine.time_scale = 1.0
 
 	print("[smoke_cutscene] played=%.1fs running=%s" % [waited, cp.is_running()])
@@ -139,3 +146,18 @@ func _ready() -> void:
 	else:
 		push_error("[smoke_cutscene] FAIL: " + "; ".join(failures))
 		get_tree().quit(1)
+
+
+## 한 박자 누름 — 폴링(Input.is_action_*)과 이벤트(_unhandled_input) 두 경로를
+## 다 타야 한다. 컷신 대사창은 이벤트 쪽으로 받는다.
+func _tap(action: StringName) -> void:
+	Input.action_press(action)
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	Input.action_release(action)
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
