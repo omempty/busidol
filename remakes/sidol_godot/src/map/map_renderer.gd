@@ -154,6 +154,13 @@ func _load_ground_atlas() -> void:
 func _set_object(layer: TileMapLayer, meta: Dictionary, id: int, cell: Vector2i) -> void:
 	var entry: Variant = (meta.get("objects", {}) as Dictionary).get(str(id))
 	if entry == null:
+		# **원작에서도 비어 있는 슬롯은 조용히 넘긴다.** obj 173이 그렇다(OBJ.SPR 173프레임
+		# vs MAX_OBJ 174, 원본 대조로 확정). 맵 91칸이 그것을 가리키므로 층을 갈 때마다
+		# 경고가 떴고, 그렇게 늘 뜨는 경고는 진짜 경고를 묻는다. 목록은 아틀라스 메타가 갖는다.
+		# JSON 숫자는 실수로 들어올 수 있어 `in`으로 비교하면 놓친다 — int로 맞춘다.
+		for known: Variant in meta.get("known_empty", []):
+			if int(known) == id:
+				return
 		if not _warned_missing:
 			push_warning("오브젝트 메타 누락 id=%d" % id)
 			_warned_missing = true
