@@ -104,11 +104,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		or event.is_action_pressed(&"cancel")
 		or event.is_action_pressed(&"ui_accept")
 	):
+		# **씬을 바꾸기 전에 소비 표시를 한다.** _finish()의 change_scene_to_file이 이
+		# 노드를 지우므로, 그 뒤에 get_viewport()를 부르면 null이라 엔진이 통째로 죽는다
+		# (2026-08-29 F5 훑기에서 signal 11로 실측 — 게임을 끝까지 깬 플레이어가 맞는다).
+		get_viewport().set_input_as_handled()
 		if not _done:
 			reveal_all()
 		else:
 			_finish()
-		get_viewport().set_input_as_handled()
 
 
 func _finish() -> void:

@@ -4,9 +4,15 @@
   "triggers": [
     {
       "id": "f4_battery_gate",
-      "type": "auto",
+      "_comment": "10,000V 배리어 — 마스터 시나리오 씬 4-1이 「4층 전체를 가로막는 고전압 배리어」라 했고 씬 4-2가 그 뒤 5층 문으로 이어진다. 그래서 5층 계단(100,63)으로 내려가는 길목에 둔다. 전에는 auto + requires_flag q_f4_battery_gate 였는데 **그 플래그를 세우는 곳이 아무 데도 없어** 배터리 퍼즐이 영영 안 돌았다 — q_f2_hp_gate 와 같은 유형이다(2026-08-29). cell_probe f4 실측: 설 수 있음.",
+      "type": "zone",
       "once": true,
-      "requires_flag": "q_f4_battery_gate",
+      "cells": [
+        [
+          100,
+          58
+        ]
+      ],
       "done_flag": "Q_F4_BATTERY",
       "action": {
         "cutscene": "battery_puzzle"

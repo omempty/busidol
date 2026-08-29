@@ -90,7 +90,11 @@ func _attend_cutscene(cutscene: CutscenePlayer) -> void:
 			pulse(&"interact" if _beat % (BEAT * 2) == 0 else &"move_down")
 			return
 		if child is BatteryCircuitMinigame and (child as BatteryCircuitMinigame).is_active():
-			pulse(&"move_down" if _beat % (BEAT * 2) == 0 else &"move_right")
+			# 세 손이 다 필요하다: 칸 옮기기·전압 바꾸기·**레버 올리기**. 레버(interact)를
+			# 안 누르면 목표 전압에 닿는 조합이 아예 안 나온다 — 이 미니게임은 정답에서만
+			# 끝나고 빠져나갈 길이 없어서 도구가 영영 갇혔다(2026-08-29 f4 훑기).
+			var hands: Array[StringName] = [&"move_right", &"move_down", &"interact"]
+			pulse(hands[(_beat / BEAT) % hands.size()])
 			return
 		if child is Control and child.has_signal("picked"):
 			pulse(&"interact")

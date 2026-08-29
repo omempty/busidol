@@ -3,6 +3,13 @@ extends "res://tools/dev/autoplay.gd"
 ##
 ## 실행: godot --headless --path . res://tools/dev/autoplay_sweep.tscn --
 ##       [--seconds N] [--goals N] [--encounters 1] [--floors 3,4] [--out PATH]
+##       [--auto-gates 1]
+##
+## `--auto-gates 1` — 내용이 전부 auto 트리거인 층(F5)의 잠금까지 연다. 그래야 엔딩
+## 연쇄(교수 전투 → 치료 → 보스 → 엔딩)가 실제로 도는지 볼 수 있다. **기본은 꺼 둔다:**
+## F5는 끝까지 돌긴 하는데 엔딩이 타이틀로 나간 뒤 엔진이 signal 11로 죽는다
+## (2026-08-29 실측 — 연쇄 자체는 Q_F5_BOSS_CURE·Q_F5_AI_BATTLE까지 전부 확인됐고,
+## 죽는 자리는 그 다음이다). 원인은 아직 못 짚었다.
 ## 결과: docs/05_status/02_floor_sweep.md
 ##
 ## `autoplay.gd`와 짝이다. 두 도구는 **다른 질문**에 답한다.
@@ -21,6 +28,9 @@ extends "res://tools/dev/autoplay.gd"
 ##   방해  인카운터 밀도 NONE — 몬스터에 끌려다니면 내용에 못 닿는다(`--encounters 1`로 켬)
 ##   문    모든 requires_flag를 미리 켠다 — "열리면 그 뒤가 도는가"를 보는 것이다
 
+## 자동 트리거만 있는 층에서 지켜볼 물리·프로세스 프레임 수. 전투 두 판과 컷신 넷이
+## 지나갈 만큼은 되어야 한다.
+const AUTO_WATCH_FRAMES := 12000
 const SWEEP_OUT := "res://docs/05_status/02_floor_sweep.md"
 ## 성장 테이블 만렙을 확실히 넘기는 값(도구 센티널 — 게임 콘텐츠 수치가 아니다).
 const MAX_EXP := 9_999_999
@@ -31,6 +41,7 @@ var _floor := 1
 var _entrance_rows: Array[String] = []
 var _floor_rows: Array[String] = []
 var _entry_note := ""
+var _landing := false  # _land_at 재진입 차단 — 아래 주석 참고
 var _content_note := ""
 
 
@@ -48,6 +59,7 @@ func _run() -> void:
 		print("")
 		print("=== f%d 훑기 (예산 %.0f초) ===" % [_floor, budget])
 		await driver.run()
+		await _watch_autos()
 		var why := _entry_note if not _entry_note.is_empty() else driver.stop_reason
 		_floor_rows.append(
 			(
@@ -147,8 +159,20 @@ func _open_gates() -> void:
 		var path := "res://data/maps/triggers_f%d.json" % int(floor_variant)
 		if not FileAccess.file_exists(path):
 			continue
-		for t: Dictionary in JsonUtil.load_dict(path, "sweep").get("triggers", []):
-			if str(t.get("type", "")) == "auto":
+		var rows: Array = JsonUtil.load_dict(path, "sweep").get("triggers", [])
+		# **내용이 전부 auto인 층은 `--auto-gates 1` 로 열 수 있다.** 그런 층은 열지
+		# 않으면 아무것도 못 본다 —
+		# F5가 그렇다(교수 등장 → 전투 → 치료 → 보스 → 엔딩이 전부 auto라, 안 열면
+		# 걸음 0·전투 0으로 끝나고 「아무 일도 없었다」가 아니라 아무것도 안 본 것이 된다).
+		# 다른 층에서 auto를 안 여는 이유는 그대로다: 크레딧룸처럼 다른 씬으로 데려가는
+		# auto가 있으면 층에 발도 못 붙인다.
+		var all_auto := _arg("--auto-gates", 0.0) > 0.0
+		for t: Dictionary in rows:
+			if str(t.get("type", "")) != "auto":
+				all_auto = false
+				break
+		for t: Dictionary in rows:
+			if str(t.get("type", "")) == "auto" and not all_auto:
 				continue
 			var req: Variant = t.get("requires_flag")
 			if req != null:
@@ -195,6 +219,10 @@ func _equip_best(slot: String, stat: String) -> void:
 ## 자리에 갇히는 층이 있을 수 있다 — 스폰을 한 점으로 고정하는 world_audit은
 ## 원리적으로 못 보는 것이다. 가장 넓게 열리는 입구에서 훑는다.
 func _survey_entrances() -> void:
+	# **엔딩을 봤으면 더 잴 것이 없다.** 판이 끝나 타이틀로 나간 뒤에 입구를 다시
+	# 훑으려 들면 없는 판을 붙들고 기다리다 엔진이 죽는다(2026-08-29 f5 실측).
+	if GameState.has_flag("Q_ENDING"):
+		return
 	var field := _field()
 	if field == null:
 		return
@@ -265,7 +293,20 @@ func _entrances() -> Array[Vector2i]:
 
 
 ## 게임 자신의 착지 절차로 데려다 놓는다(막힌 앵커 보정·NPC/몬스터 재배치 포함).
+##
+## **다시 들어오면 곧바로 나간다.** 착지는 _settle을 기다리는데, 판이 아예 사라진
+## 뒤라면(F5 엔딩이 타이틀로 나간 뒤가 그렇다) _settle → _wait_for_field → 착지로
+## 도로 돌아와 서로를 무한히 부른다 — 스택이 넘쳐 엔진이 signal 11로 죽었다
+## (2026-08-29 f5 훑기 실측).
 func _land_at(field: Node2D, cell: Vector2i) -> void:
+	if _landing:
+		return
+	_landing = true
+	await _land_at_inner(field, cell)
+	_landing = false
+
+
+func _land_at_inner(field: Node2D, cell: Vector2i) -> void:
 	field.rebuild_floor(cell)
 	_nav_stamp = ""
 	_cand_stamp = ""
@@ -278,6 +319,23 @@ func _land_at(field: Node2D, cell: Vector2i) -> void:
 # ---------------------------------------------------------------------------
 # 보고서
 # ---------------------------------------------------------------------------
+
+
+## **자동 트리거만 있는 층은 서서 지켜본다.**
+##
+## 드라이버는 밟을 좌표가 없으면 곧바로 끝낸다 — 그런데 F5는 내용이 전부 auto 트리거라
+## (교수 등장 → 전투 → 치료 → 보스 → 엔딩) 도구가 그것들이 뜨기도 전에 나가 버렸다.
+## 걸음 0·전투 0으로 「아무 일도 없었다」가 아니라 **아무것도 안 본 것**이다.
+## 여기서는 판을 그대로 두고 손만 놀리며 연쇄가 도는지 지켜본다.
+func _watch_autos() -> void:
+	if _reached > 0:
+		return  # 밟을 것이 있었던 층은 주행이 이미 다 봤다
+	for _i in AUTO_WATCH_FRAMES:
+		var scene := get_tree().current_scene
+		if scene == null or GameState.has_flag("Q_ENDING"):
+			return  # 엔딩까지 갔으면 그 층은 다 본 것이다
+		_pilot.attend(scene)
+		await get_tree().process_frame
 
 
 ## 어느 층을 훑을 것인가 — `--floors 3,4`. 기본은 전부.

@@ -29,6 +29,8 @@ const AutoplayMap := preload("res://tools/dev/autoplay_map.gd")
 const AutoplayPilot := preload("res://tools/dev/autoplay_pilot.gd")
 
 const FIELD_SCENE := "res://scenes/field.tscn"
+## 타이틀 — 여기로 나왔으면 한 판이 끝난 것이다(엔딩 뒤 돌아오는 자리).
+const TITLE_SCENE := "res://scenes/main.tscn"
 const OUT_PATH := "res://docs/05_status/01_autoplay.md"
 const ALL_FLOORS := [0, 1, 2, 3, 4, 5]
 
@@ -545,6 +547,11 @@ func _wait_for_field() -> bool:
 		# 못했다"가 무더기로 찍히던 자리다(2026-08-29 실측). 전투가 아닌 채로 안 서면
 		# 그때는 진짜 문제이므로 상한을 건다.
 		var scene := get_tree().current_scene
+		# **타이틀로 돌아왔으면 판이 끝난 것이다.** 엔딩을 보면 여기로 나온다 —
+		# 여기서 계속 눌러 대면 새 판을 시작하거나 엔진을 흔든다(2026-08-29 f5 훑기가
+		# 엔딩 뒤 signal 11로 죽었다). 기다릴 판이 없으니 그냥 끝낸다.
+		if scene != null and scene.scene_file_path == TITLE_SCENE:
+			return false
 		# 기다리기만 하면 안 된다 — 필드를 대신하는 씬은 눌러 줘야 돌아온다.
 		_pilot.attend(scene)
 		if not (scene is BattleSceneController):
