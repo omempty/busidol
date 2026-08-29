@@ -80,16 +80,28 @@ func _ready() -> void:
 			print("[smoke_fx] 컷 %s 재생 · 작은 액터 숨김 OK" % cut)
 
 	# ④ 대화 초상 — 조회가 크래시하지 않고, 설치본이 있으면 셀 텍스처가 나와야 한다.
+	#
+	# **없는 화자에는 폴백이 나온다**(2026-08-29 방침 변경). 전에는 아무것도 안 나오는
+	# 것이 규약이었는데, 그러면 초상이 늦게 오는 동안 말하는 자리가 통째로 빈다.
+	# 다만 폴백이 **진짜 납품을 가리면 안 된다** — 둘을 구별해 둘 다 확인한다.
 	var n_portraits := PortraitLibrary.installed_count()
 	var missing_tex := PortraitLibrary.texture_for("있을 리 없는 화자", "normal")
-	if missing_tex != null:
-		failures.append("없는 화자에 초상이 나왔다")
+	if missing_tex == null:
+		failures.append("없는 화자에 폴백 초상이 안 나왔다")
+	elif not str(missing_tex.atlas.resource_path).ends_with(PortraitLibrary.FALLBACK_ID + ".png"):
+		failures.append("없는 화자에 폴백이 아닌 초상이 나왔다: %s" % missing_tex.atlas.resource_path)
+	if not PortraitLibrary.resolve("있을 리 없는 화자").is_empty():
+		failures.append("폴백이 화자 해석까지 삼켰다 — 미설치 신호가 사라진다")
 	print("[smoke_fx] 설치된 초상 %d종" % n_portraits)
 	if n_portraits > 0:
 		var ok := false
 		for id in _installed_portraits():
 			var tex := PortraitLibrary.texture_for(id, "")
-			if tex != null and tex.region.size.x == PortraitLibrary.CELL:
+			if tex == null or tex.region.size.x != PortraitLibrary.CELL:
+				continue
+			if not str(tex.atlas.resource_path).ends_with(id + ".png"):
+				failures.append("설치된 초상 %s인데 폴백이 나왔다" % id)
+			else:
 				ok = true
 				print("[smoke_fx] 초상 %s 셀 %dx%d" % [id, tex.region.size.x, tex.region.size.y])
 				break
@@ -127,14 +139,20 @@ func _installed_cut() -> String:
 	return ""
 
 
+## **실제로 설치된 것만** 돌려준다. 스펙이 있다는 것과 그림이 왔다는 것은 다르다 —
+## 스펙 목록을 그대로 쓰면 미설치 화자가 폴백을 받아 오고, 그걸 "설치본이 잘 나온다"로
+## 세어 검사가 통째로 거짓 통과한다(2026-08-29 폴백 도입 직후 실제로 그랬다).
 func _installed_portraits() -> Array[String]:
 	var out: Array[String] = []
 	var dir := DirAccess.open("res://assets/spec/portraits/")
 	if dir == null:
 		return out
 	for f in dir.get_files():
-		if f.ends_with(".json"):
-			out.append(f.get_basename())
+		if not f.ends_with(".json"):
+			continue
+		var id := f.get_basename()
+		if ResourceLoader.exists("res://assets/portraits/%s.png" % id):
+			out.append(id)
 	return out
 
 

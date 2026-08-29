@@ -11,6 +11,8 @@ class_name PortraitLibrary
 const DIR := "res://assets/portraits/"
 const SPEC_DIR := "res://assets/spec/portraits/"
 const CELL := 256
+## 설치된 초상이 없을 때 세우는 실루엣. 생성기: tools/dev/make_keyart_fallback.py
+const FALLBACK_ID := "_fallback"
 
 static var _name_to_id: Dictionary = {}
 static var _expressions: Dictionary = {}
@@ -66,11 +68,18 @@ static func expression_index(asset_id: String, expr: String) -> int:
 ## 초상 한 칸 텍스처. 미설치·미해석이면 null.
 static func texture_for(speaker: String, expr: String = "") -> AtlasTexture:
 	var asset_id := resolve(speaker)
-	if asset_id.is_empty():
-		return null
-	var tex: Texture2D = load(DIR + asset_id + ".png")
+	var tex: Texture2D = load(DIR + asset_id + ".png") if not asset_id.is_empty() else null
 	if tex == null:
-		return null
+		# **비면 늘 대체가 나온다**(2026-08-29 유저 방침). 초상은 대사보다 늦게 오는
+		# 것이 정상 순서라 미설치가 흔한데, 그때 말하는 자리가 통째로 비어 있었다.
+		# 얼굴을 흉내 내지 않는 실루엣이다 — 누군가 거기 있다는 것만 말한다.
+		var fallback: Texture2D = load(DIR + FALLBACK_ID + ".png")
+		if fallback == null:
+			return null
+		var plain := AtlasTexture.new()
+		plain.atlas = fallback
+		plain.region = Rect2(0, 0, fallback.get_width(), fallback.get_height())
+		return plain
 	var at := AtlasTexture.new()
 	at.atlas = tex
 	var col := expression_index(asset_id, expr)

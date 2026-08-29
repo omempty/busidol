@@ -17,6 +17,10 @@ signal finished(cutscene_id: StringName)
 const CUTSCENES_DIR := "res://data/cutscenes"
 ## 채택된 키아트가 놓이는 자리 — 스펙은 assets/spec/keyart/<id>.json.
 const KEYART_DIR := "res://assets/keyart/"
+## 폴백 키아트 — **그림이 비면 늘 무언가는 나온다**는 방침(2026-08-29 유저 확정).
+## 미납품 키아트는 컷신에 아무것도 안 띄웠고, 그러면 대사창만 뜬 채 말하는 자리가
+## 텅 빈다. 생성기: tools/dev/make_keyart_fallback.py — 진짜 납품이 오면 그쪽이 이긴다.
+const KEYART_FALLBACK_DIR := "res://assets/keyart/_fallback/"
 const SHAKE_STEP := 0.05
 
 var _steps: Array = []
@@ -377,7 +381,9 @@ func _show_illustration(args: Dictionary) -> void:
 		return
 	var path := "%s%s.png" % [KEYART_DIR, art_id]
 	if not ResourceLoader.exists(path):
-		return  # 미납품 — 대사·연출은 그대로 진행된다
+		path = "%s%s.png" % [KEYART_FALLBACK_DIR, art_id]
+	if not ResourceLoader.exists(path):
+		return  # 폴백조차 없다 — 대사·연출은 그대로 진행된다
 	_illustration.texture = load(path)
 	_illustration.visible = true
 	await _fade_illustration(1.0, fade)
