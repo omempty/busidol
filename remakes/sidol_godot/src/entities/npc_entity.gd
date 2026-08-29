@@ -11,6 +11,21 @@ var sprite := AnimatedSprite2D.new()
 var _paths: Dictionary = {}
 var _meta: Dictionary = {}
 
+## 둘러보는 주기(초). 원작 대조 결과 **대화 상대는 원작에서도 고정**이었다 —
+## 움직이는 것은 `move_eventer()`가 모는 층당 1명의 **말 걸 수 없는** 배경 보행자이고,
+## 그 둘을 잇는 `Talk_eventer()` 호출은 원작에서 주석 처리돼 있다. 그러니 대화 NPC를
+## 걸어다니게 만드는 것은 고증이 아니다.
+##
+## 다만 **완전히 얼어 있으면 인형처럼 보인다**(2026-08-29 유저 지적). 자리를 지키되
+## 가끔 고개를 돌리게 한다 — 칸을 옮기지 않으므로 통행 판정도 감사 도구도 흔들지
+## 않는다. 진짜 순찰(배경 보행자)은 경로 데이터가 필요해 백로그(§5.9)로 뒀다.
+const LOOK_MIN := 2.6
+const LOOK_MAX := 6.4
+const FACINGS: Array[StringName] = [&"down", &"left", &"right", &"up"]
+
+var _look_wait := 0.0
+var _facing := &"down"
+
 
 ## 비주얼 조립까지 여기서 끝낸다. _ready()에 두면 add_child() 시점에 먼저 돌아
 ## npc_id가 아직 빈 문자열 — 전용 시트를 못 찾고 전원이 주인공 얼굴로 나왔다.
@@ -59,6 +74,8 @@ func _build_visual() -> void:
 	sprite.animation = &"idle"
 	sprite.play()
 	add_child(sprite)
+	# 같은 순간에 전원이 고개를 돌리면 기계처럼 보인다 — 시작 시각을 흩는다.
+	_look_wait = randf_range(0.0, LOOK_MAX)
 
 
 func _build_frames() -> SpriteFrames:
@@ -81,3 +98,26 @@ func _build_frames() -> SpriteFrames:
 		at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
 		frames.add_frame(&"idle", at)
 	return frames
+
+
+## 가끔 고개를 돌린다. **칸은 옮기지 않는다** — 옮기는 순간 통행 오버라이드와
+## 감사 도구의 도달성 계산을 같이 손봐야 한다.
+func _process(delta: float) -> void:
+	_look_wait -= delta
+	if _look_wait > 0.0:
+		return
+	_look_wait = randf_range(LOOK_MIN, LOOK_MAX)
+	var next: StringName = FACINGS[randi() % FACINGS.size()]
+	if next == _facing:
+		return
+	var anim := SpriteSets.pose_anim(sprite.sprite_frames, next, false)
+	if anim.is_empty():
+		return
+	_facing = next
+	sprite.animation = anim
+	# 정지 포즈로 walk 프레임을 쓸 때는 첫 장에서 세운다(SpriteSets.pose_anim 규약).
+	if String(anim).begins_with("idle_"):
+		sprite.play()
+	else:
+		sprite.stop()
+		sprite.frame = 0

@@ -27,10 +27,18 @@ static func probe_cells(mover: GridMover, anchor: Vector2i, facing: Vector2i) ->
 	var out: Array[Vector2i] = mover.edge_cells(anchor, facing)
 	if out.is_empty():
 		return out
-	# 어깨 — 정면 줄의 양옆 한 칸씩. 바라보는 축과 직각 방향으로 벌린다.
-	var side := Vector2i(facing.y, facing.x)
-	if side == Vector2i.ZERO:
+	# 어깨 — 정면 줄을 **그 줄이 늘어선 방향으로** 한 칸씩 더 벌린다.
+	#
+	# 방향별로 부호를 따로 계산하면 안 된다. 전에 `Vector2i(facing.y, facing.x)`로
+	# 직각 벡터를 만들었는데 그 부호가 방향마다 뒤집혀서, **위·왼쪽에서는 어깨가
+	# 정면 칸과 같은 칸이 됐다** — 네 방향 중 둘만 넓어지고 둘은 그대로였다
+	# (2026-08-29 유저가 「상자를 12시 방향으로 접근하면 안 잡힌다」로 짚었다).
+	# 정면 칸이 늘어선 간격을 그대로 쓰면 방향을 따질 일이 없다.
+	if out.size() < 2:
 		return out
-	out.append(out[0] - side)
-	out.append(out[out.size() - 2] + side)
+	var step := out[1] - out[0]
+	var first := out[0]
+	var last := out[out.size() - 1]
+	out.append(first - step)
+	out.append(last + step)
 	return out

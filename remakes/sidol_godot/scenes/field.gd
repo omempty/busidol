@@ -213,8 +213,11 @@ func _physics_process(_delta: float) -> void:
 
 ## 문 통과 연출 — TransitionGate가 3칸 점프 직전에 부른다(연출만, 판정은 게이트의 몫).
 func play_door_fx(anchor: Vector2i, dir: Vector2i, hold: float) -> void:
-	if fx != null and renderer != null:
-		fx.door_open(renderer, anchor, dir, hold)
+	if fx == null or renderer == null:
+		return
+	fx.door_open(renderer, anchor, dir, hold)
+	# 문 그림 뒤로 들어갔다 반대편에서 나온다 — 이동 자체는 원작대로 3칸 점프다.
+	fx.actor_through_door(player, hold)
 
 
 ## 대사 시퀀스의 op 스텝 — shop과 set_flags. 구판은 op이 실행되지 않았다.
@@ -246,6 +249,9 @@ func _on_fast_travel_chosen(floor_no: int) -> void:
 const CHEST_MIN := 150
 const CHEST_MAX := 186
 const CHEST_MEET := 198
+## 열린 상자 오브젝트 id — 원작 `check_item()`이 넣는 값 그대로(왼쪽 153 / 오른쪽 154).
+const OPEN_CHEST_LEFT := 153
+const OPEN_CHEST_RIGHT := 154
 const CHEST_EMPTY := 199
 
 
@@ -278,8 +284,7 @@ func _open_chest(cell: Vector2i) -> void:
 	for c in group:
 		runtime.set_override_attr(c, 1)  # 빈 상자 처리
 		GameState.set_chest_override(c, 1)  # 세이브 유지 대상
-		if renderer != null:
-			renderer.clear_object(c)
+	_draw_opened_chest(group)
 	_focus.clear()
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
 
@@ -375,8 +380,37 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 func _restore_opened_chests() -> void:
 	if renderer == null:
 		return
+	# 열린 상자는 가로로 짝을 이룬다. 저장된 칸들을 y별로 모아 x순으로 늘어놓아야
+	# 왼쪽/오른쪽 그림이 제자리에 간다 — 사전 순서를 그대로 믿으면 안 된다.
+	var rows := {}
 	for cell: Vector2i in GameState.chest_overrides_for(GameState.current_floor):
-		renderer.clear_object(cell)
+		var row: Array = rows.get(cell.y, [])
+		row.append(cell)
+		rows[cell.y] = row
+	for y: Variant in rows:
+		var row: Array = rows[y]
+		row.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return a.x < b.x)
+		var run: Array = []
+		for cell: Vector2i in row:
+			if not run.is_empty() and cell.x != Vector2i(run[run.size() - 1]).x + 1:
+				_draw_opened_chest(run)
+				run = []
+			run.append(cell)
+		if not run.is_empty():
+			_draw_opened_chest(run)
+
+
+## 열린 상자 그림. **원작은 상자를 지우지 않고 열린 상자로 바꾼다** —
+## `GOODITEM.C:check_item()`이 ATT를 1로 만든 다음 `OBJ[x]=153; OBJ[x+1]=154`를
+## 넣는다. 우리는 그림을 통째로 지워서 상자가 흔적도 없이 사라졌다(2026-08-29
+## 유저 지적). 열린 상자가 남아야 "여긴 이미 열었다"가 화면에 보인다.
+func _draw_opened_chest(cells: Array) -> void:
+	if renderer == null:
+		return
+	for i in cells.size():
+		var cell: Vector2i = cells[i]
+		# 짝이 아닌 나머지 칸(세로로 붙은 덩어리 등)은 왼쪽 그림으로 채운다.
+		renderer.set_object(cell, OPEN_CHEST_RIGHT if i % 2 == 1 else OPEN_CHEST_LEFT)
 
 
 ## 저장된 상자 개봉 상태를 런타임 오버라이드에 재적용 — 세이브/로드·층전환 공용.

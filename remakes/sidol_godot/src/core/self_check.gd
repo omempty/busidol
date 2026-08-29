@@ -17,6 +17,7 @@ extends Node
 ## 10) 세우는 곳 없는 게이트 플래그   — 요구만 하고 아무도 세우지 않는 문(세 번 겪은 결함)
 ## 11) 몬스터 명단 유지            — 전투를 다녀와도 잡은 놈이 되살아나지 않는가
 ## 12) 설정 저장 왕복             — 볼륨·난이도 등이 실제로 파일에 남고 되읽히는가
+## 13) 조사 판정 네 방향 대칭      — 위·왼쪽만 좁게 잡히던 결함 회귀 방지
 
 const FLOORS := [1, 2, 3, 0, 4, 5]  # 마스터 시나리오 진행 순서
 
@@ -42,6 +43,7 @@ func run_all() -> PackedStringArray:
 		_check_flag_setters(),
 		_check_enemy_roster(),
 		_check_settings_roundtrip(),
+		_check_interact_probe(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -761,4 +763,42 @@ func _check_settings_roundtrip() -> Array:
 
 	if lines.is_empty():
 		return _ok("설정 저장 왕복 (볼륨·난이도·화면 흔들림)")
+	return lines
+
+
+## 조사 판정이 네 방향에서 같은 모양인가.
+##
+## 상자·NPC·트리거가 전부 이 한 판정(`Field.front_cells`)을 쓴다. 그래서 여기가
+## 한 방향이라도 좁으면 **세 가지가 동시에** 그 방향에서만 안 잡힌다.
+##
+## 실제로 그랬다 — 직각 벡터를 `Vector2i(facing.y, facing.x)`로 만들었더니 부호가
+## 방향마다 뒤집혀 위·왼쪽에서는 어깨 칸이 정면 칸과 같은 칸이 됐고, 넓힌 효과가
+## 절반만 났다(2026-08-29 유저 지적: 「상자를 12시 방향으로 접근하면 안 잡힌다」).
+## 눈으로는 "가끔 안 잡힌다"로만 보여서 좌표를 찍어 보기 전에는 알 수 없었다.
+func _check_interact_probe() -> Array:
+	var mover := GridMover.new()
+	var anchor := Vector2i(10, 10)
+	var lines: Array = []
+	var sizes := {}
+	for dir: Vector2i in [Vector2i.DOWN, Vector2i.UP, Vector2i.LEFT, Vector2i.RIGHT]:
+		var cells := InteractProbe.probe_cells(mover, anchor, dir)
+		var uniq := {}
+		for c: Vector2i in cells:
+			uniq[c] = true
+		if uniq.size() != cells.size():
+			lines += _fail("조사 판정 %s: 중복 칸 %d개 — 넓힌 효과가 없다" % [dir, cells.size() - uniq.size()])
+		sizes[dir] = uniq.size()
+		# 정면 두 칸은 반드시 앞쪽 두 자리를 지켜야 한다 — 부르는 쪽이 순서로 우선순위를 읽는다.
+		var front := mover.edge_cells(anchor, dir)
+		for i in front.size():
+			if cells[i] != front[i]:
+				lines += _fail("조사 판정 %s: 정면 칸이 앞에 오지 않는다" % dir)
+	var first: int = sizes.values()[0]
+	for dir: Variant in sizes:
+		if int(sizes[dir]) != first:
+			lines += _fail("조사 판정이 방향마다 다르다: %s" % str(sizes))
+			break
+	mover.free()
+	if lines.is_empty():
+		return _ok("조사 판정 네 방향 대칭 (방향당 %d칸: 정면 2 + 어깨 2)" % first)
 	return lines

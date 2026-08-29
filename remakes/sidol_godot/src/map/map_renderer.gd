@@ -191,3 +191,11 @@ func clear_object(cell: Vector2i) -> void:
 	if _layers.size() < 2:
 		return
 	_layers[1].erase_cell(cell)
+
+
+## 이 칸의 오브젝트 그림을 다른 것으로 바꾼다 — 열린 상자처럼 **사라지는 게 아니라
+## 다른 모습으로 남는** 것에 쓴다.
+func set_object(cell: Vector2i, id: int) -> void:
+	if _layers.size() < 2:
+		return
+	_set_object(_layers[1], _object_meta, id, cell)
