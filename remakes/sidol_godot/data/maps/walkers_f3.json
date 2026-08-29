@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "_comment": "배경 보행자 — 원작 `EVENT.C:move_eventer()`가 층당 1명을 `EVE_PATTERN[i][40]`의 40스텝 방향표대로 왕복시킨 것에 대응한다. **말을 걸 수 없고 길도 막지 않는다** — 원작 eventer는 ATT를 쓰지 않아 주인공이 그대로 통과했고, 보행자와 대화를 잇는 `Talk_eventer()` 호출은 원작 소스에서 주석 처리돼 있다. 대화 상대는 npcs_f*.json 쪽이다. 좌표는 그 층 **최대 연결 성분 안의 최장 직선 복도** 한가운데를 실측으로 골랐다(2026-08-29, 2×2 몸 기준 BFS). sprite는 기존 시트를 임시로 돌려 쓴다 — 전용 시트가 납품되면 그 id로 바꾸면 된다.",
+  "walkers": [
+    {
+      "id": "walker_f3",
+      "sprite": "prof_chem",
+      "pos": [
+        100,
+        34
+      ],
+      "pattern": [
+        {
+          "dir": "right",
+          "steps": 30
+        },
+        {
+          "dir": "left",
+          "steps": 30
+        }
+      ]
+    }
+  ]
+}

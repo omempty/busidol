@@ -134,6 +134,17 @@ func _capture_field_interaction(field: Node2D) -> void:
 	await get_tree().process_frame
 	await _shot("field_door_open", field)
 
+	# 배경 보행자 — 걷고 있는지는 그림 한 장으로는 못 보지만, **거기 서 있는지**는 보인다.
+	# 자리는 데이터가 정한다(walkers_f1.json). 좌표를 여기 박으면 데이터와 갈라진다.
+	if not field.walkers.is_empty():
+		var w: WalkerEntity = field.walkers[0]
+		var beside := w.cell + Vector2i(0, 2)
+		field.player.mover.grid_pos = beside
+		field.player.position = GridMover.block_center(beside)
+		field.player.facing = &"up"
+		await _settle()
+		await _shot("field_walker", field)
+
 
 func _capture_battle() -> void:
 	# 약점 보유 종을 섞는다 — 브레이크 게이지가 그려지는지 보려면 필요하다.

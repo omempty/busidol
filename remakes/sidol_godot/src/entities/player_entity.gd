@@ -34,11 +34,13 @@ func _ready() -> void:
 	_paths = SpriteSets.character_sheet(&"player")
 	z_index = 15
 	ShadowBlob.attach(self)
-	sprite.sprite_frames = _build_frames()
-	add_child(sprite)
 	# 렌더 스케일 — 메타 scale (아트 해상도와 게임 내 크기 분리)
 	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(str(_paths["meta"])))
-	if typeof(meta) == TYPE_DICTIONARY:
+	if typeof(meta) != TYPE_DICTIONARY:
+		meta = {}
+	sprite.sprite_frames = SpriteSets.build_frames(str(_paths["sheet"]), meta)
+	add_child(sprite)
+	if not meta.is_empty():
 		sprite.scale = Vector2.ONE * float(meta.get("scale", 1.0))
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(meta))
 	_play_idle()
@@ -169,25 +171,3 @@ func facing_vector() -> Vector2i:
 
 func dir_to_name(dir: Vector2i) -> StringName:
 	return GridMover.dir_name(dir)
-
-
-func _build_frames() -> SpriteFrames:
-	var meta: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(str(_paths["meta"])))
-	var tex: Texture2D = load(str(_paths["sheet"]))
-	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환 (비정형 비율 허용)
-	var cw: int = int(meta.get("cell_w", meta.get("cell", 64)))
-	var ch: int = int(meta.get("cell_h", meta.get("cell", 64)))
-	var frames := SpriteFrames.new()
-	frames.remove_animation(&"default")
-	for anim_name: String in meta["animations"]:
-		var a: Dictionary = meta["animations"][anim_name]
-		var anim: StringName = StringName(anim_name)
-		frames.add_animation(anim)
-		frames.set_animation_speed(anim, float(a.get("fps", 8)))
-		frames.set_animation_loop(anim, bool(a.get("loop", true)))
-		for f in int(a["frames"]):
-			var at := AtlasTexture.new()
-			at.atlas = tex
-			at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
-			frames.add_frame(anim, at)
-	return frames

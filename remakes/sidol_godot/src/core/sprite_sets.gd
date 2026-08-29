@@ -59,3 +59,41 @@ static func foot_offset(meta: Dictionary) -> float:
 		return 0.0
 	var ch := float(meta.get("cell_h", meta.get("cell", 64)))
 	return float(MapDefinition.TILE_PX) / s - ch / 2.0
+
+
+## 시트 + 메타 → SpriteFrames. **메타에 있는 애니메이션을 전부 만든다.**
+##
+## NpcEntity는 `idle` 하나만 만들고 있었다. 그래서 방향별 포즈를 물어보는 코드
+## (`pose_anim`)가 언제나 빈 이름을 받아 조용히 아무것도 하지 않았다 — 데이터(시트에는
+## 4방향이 다 있다)는 있는데 코드가 안 읽는, 이 저장소의 단골 결함이다(2026-08-29).
+## 플레이어·NPC·배경 보행자가 같은 것을 쓰게 한다.
+static func build_frames(sheet_path: String, meta: Dictionary) -> SpriteFrames:
+	var tex: Texture2D = load(sheet_path)
+	var frames := SpriteFrames.new()
+	frames.remove_animation(&"default")
+	if tex == null:
+		return frames
+	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환(아트 모드별 규격 차이를 흡수).
+	var cw: int = int(meta.get("cell_w", meta.get("cell", 64)))
+	var ch: int = int(meta.get("cell_h", meta.get("cell", 64)))
+	var anims: Dictionary = meta.get("animations", {})
+	for anim_name: String in anims:
+		var a: Dictionary = anims[anim_name]
+		var anim := StringName(anim_name)
+		frames.add_animation(anim)
+		frames.set_animation_speed(anim, float(a.get("fps", 8)))
+		frames.set_animation_loop(anim, bool(a.get("loop", true)))
+		for f in int(a["frames"]):
+			var at := AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
+			frames.add_frame(anim, at)
+	# `idle`은 정지 포즈의 기본 이름이다. 시트에 없으면 정면 것을 복제해 세운다.
+	if not frames.has_animation(&"idle") and not anims.is_empty():
+		var src := "idle_down" if anims.has("idle_down") else str(anims.keys()[0])
+		frames.add_animation(&"idle")
+		frames.set_animation_speed(&"idle", frames.get_animation_speed(StringName(src)))
+		frames.set_animation_loop(&"idle", true)
+		for i in frames.get_frame_count(StringName(src)):
+			frames.add_frame(&"idle", frames.get_frame_texture(StringName(src), i))
+	return frames

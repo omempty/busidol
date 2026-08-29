@@ -12,6 +12,8 @@ var gate: TransitionGate
 var minimap: MinimapLayer
 var dialogue_box: DialogueBox
 var npcs: Array[NpcEntity] = []
+## 배경 보행자 — 말 걸 수 없고 길도 막지 않는다(원작 eventer 대응). npcs와 섞지 않는다.
+var walkers: Array[WalkerEntity] = []
 var enemy_manager: EnemyManager
 var triggers: TriggerSystem
 var cutscene_player: CutscenePlayer
@@ -93,6 +95,7 @@ func _ready() -> void:
 	add_child(_focus)
 
 	_spawn_npcs()
+	_spawn_walkers()
 
 	triggers = TriggerSystem.new()
 	add_child(triggers)
@@ -364,6 +367,7 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	# 층에 매인 것들을 새 층 것으로 교체한다. 구판은 맵만 갈아끼워
 	# 이전 층의 NPC·몬스터가 그대로 서 있고 트리거도 옛 층 것이 돌았다.
 	_despawn_npcs()
+	_despawn_walkers()
 	_spawn_npcs()  # NPC 통행 오버라이드가 먼저 서야 몬스터가 그 자리를 피한다
 	if enemy_manager != null:
 		enemy_manager.spawn_for_floor(GameState.current_floor, runtime, self, new_anchor)
@@ -460,6 +464,55 @@ func _spawn_npcs() -> void:
 		for c in npc.body_cells():
 			taken[c] = true
 			runtime.set_override_attr(c, 1)
+
+
+## 배경 보행자 — 대화 상대와 **다른 종류의 존재**다(WalkerEntity 주석 참고).
+## 길을 막지 않으므로 통행 오버라이드도 건드리지 않는다: 그래서 이 함수는
+## NPC 배치와 달리 자리 다툼을 하지 않는다.
+func _spawn_walkers() -> void:
+	var path := "res://data/maps/walkers_f%d.json" % GameState.current_floor
+	if not FileAccess.file_exists(path):
+		return
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		push_warning("보행자 파일 파싱 실패: %s" % path)
+		return
+	for w: Dictionary in Dictionary(raw).get("walkers", []):
+		var legs: Array = []
+		for leg: Dictionary in w.get("pattern", []):
+			legs.append(
+				{"dir": _dir_of(str(leg.get("dir", ""))), "steps": int(leg.get("steps", 0))}
+			)
+		var walker := WalkerEntity.new()
+		add_child(walker)
+		walker.setup(
+			StringName(str(w.get("id", ""))),
+			StringName(str(w.get("sprite", ""))),
+			Vector2i(int(w["pos"][0]), int(w["pos"][1])),
+			legs,
+			runtime
+		)
+		walkers.append(walker)
+
+
+func _dir_of(name: String) -> Vector2i:
+	match name:
+		"up":
+			return Vector2i.UP
+		"down":
+			return Vector2i.DOWN
+		"left":
+			return Vector2i.LEFT
+		"right":
+			return Vector2i.RIGHT
+	return Vector2i.ZERO
+
+
+func _despawn_walkers() -> void:
+	for w in walkers:
+		if is_instance_valid(w):
+			w.queue_free()
+	walkers.clear()
 
 
 func _despawn_npcs() -> void:

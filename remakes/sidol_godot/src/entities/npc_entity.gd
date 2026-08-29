@@ -18,7 +18,7 @@ var _meta: Dictionary = {}
 ##
 ## 다만 **완전히 얼어 있으면 인형처럼 보인다**(2026-08-29 유저 지적). 자리를 지키되
 ## 가끔 고개를 돌리게 한다 — 칸을 옮기지 않으므로 통행 판정도 감사 도구도 흔들지
-## 않는다. 진짜 순찰(배경 보행자)은 경로 데이터가 필요해 백로그(§5.9)로 뒀다.
+## 않는다. 진짜 순찰은 별개의 존재가 맡는다 — `WalkerEntity`(배경 보행자).
 const LOOK_MIN := 2.6
 const LOOK_MAX := 6.4
 const FACINGS: Array[StringName] = [&"down", &"left", &"right", &"up"]
@@ -67,7 +67,7 @@ func _build_visual() -> void:
 	if typeof(raw) == TYPE_DICTIONARY:
 		_meta = raw
 	ShadowBlob.attach(self)
-	sprite.sprite_frames = _build_frames()
+	sprite.sprite_frames = SpriteSets.build_frames(str(_paths["sheet"]), _meta)
 	if not _meta.is_empty():
 		sprite.scale = Vector2.ONE * float(_meta.get("scale", 1.0))
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(_meta))
@@ -76,28 +76,6 @@ func _build_visual() -> void:
 	add_child(sprite)
 	# 같은 순간에 전원이 고개를 돌리면 기계처럼 보인다 — 시작 시각을 흩는다.
 	_look_wait = randf_range(0.0, LOOK_MAX)
-
-
-func _build_frames() -> SpriteFrames:
-	var tex: Texture2D = load(str(_paths["sheet"]))
-	# 셀 크기: cell_w/cell_h 우선, 구형 단일 cell 호환 (아트 모드별 규격 상이 흡수)
-	var cw: int = int(_meta.get("cell_w", _meta.get("cell", 64)))
-	var ch: int = int(_meta.get("cell_h", _meta.get("cell", 64)))
-	var frames := SpriteFrames.new()
-	frames.remove_animation(&"default")
-	# 정면 정지 포즈 — idle_down이 없는 시트(단일 행 NPC 시트)는 walk_down으로 폴백.
-	var anims: Dictionary = _meta.get("animations", {})
-	var src_key: String = "idle_down" if anims.has("idle_down") else str(anims.keys()[0])
-	var a: Dictionary = anims[src_key]
-	frames.add_animation(&"idle")
-	frames.set_animation_speed(&"idle", float(a.get("fps", 2)))
-	frames.set_animation_loop(&"idle", true)
-	for f in int(a["frames"]):
-		var at := AtlasTexture.new()
-		at.atlas = tex
-		at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
-		frames.add_frame(&"idle", at)
-	return frames
 
 
 ## 가끔 고개를 돌린다. **칸은 옮기지 않는다** — 옮기는 순간 통행 오버라이드와
