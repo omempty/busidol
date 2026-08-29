@@ -16,6 +16,7 @@ extends Node
 ##                                     requires_flag가 퀘스트 id와 불일치 조기 발견
 ## 10) 세우는 곳 없는 게이트 플래그   — 요구만 하고 아무도 세우지 않는 문(세 번 겪은 결함)
 ## 11) 몬스터 명단 유지            — 전투를 다녀와도 잡은 놈이 되살아나지 않는가
+## 12) 설정 저장 왕복             — 볼륨·난이도 등이 실제로 파일에 남고 되읽히는가
 
 const FLOORS := [1, 2, 3, 0, 4, 5]  # 마스터 시나리오 진행 순서
 
@@ -40,6 +41,7 @@ func run_all() -> PackedStringArray:
 		_check_flee_rule(),
 		_check_flag_setters(),
 		_check_enemy_roster(),
+		_check_settings_roundtrip(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -702,4 +704,61 @@ func _check_enemy_roster() -> Array:
 	GameState.current_floor = keep_floor
 	if lines.is_empty():
 		return _ok("몬스터 명단 유지 (정원 %d → 전투 후 %d, 복귀 후 유지)" % [first, after_fight])
+	return lines
+
+
+## 설정이 실제로 파일에 남고 되읽히는가.
+##
+## 저장 코드가 있다는 것과 왕복한다는 것은 다른 이야기다 — 이 저장소에서 「데이터는
+## 있는데 아무도 안 읽는」 결함이 반복됐다. 볼륨을 줄여 놓고 껐다 켰더니 원래대로면
+## 아무도 곧바로는 눈치채지 못하고, 눈치챈 뒤에도 어디가 끊겼는지 알기 어렵다.
+##
+## **끝나면 원래 설정으로 되돌린다.** 검사가 사용자의 설정을 바꿔 놓으면 안 된다.
+func _check_settings_roundtrip() -> Array:
+	var path: String = SettingsManager.SETTINGS_PATH
+	var had := FileAccess.file_exists(path)
+	var backup := FileAccess.get_file_as_string(path) if had else ""
+	var lines: Array = []
+
+	# 기본값과 확실히 다른 값을 세운다 — 기본값이 우연히 같으면 아무것도 증명 못 한다.
+	var bus: StringName = SettingsManager.BUSES[0]
+	var want_vol := 0.37 if absf(SettingsManager.get_volume(bus) - 0.37) > 0.01 else 0.61
+	var want_diff: Variant = SettingsManager.Difficulty.HARD
+	if SettingsManager.difficulty == want_diff:
+		want_diff = SettingsManager.Difficulty.EASY
+	SettingsManager.set_volume(bus, want_vol)
+	SettingsManager.difficulty = want_diff
+	SettingsManager.screen_shake = not SettingsManager.screen_shake
+	var want_shake: bool = SettingsManager.screen_shake
+	SettingsManager.save_settings()
+
+	if not FileAccess.file_exists(path):
+		lines += _fail("설정을 저장했는데 %s가 없다" % path)
+	else:
+		# 메모리를 흐트러뜨린 뒤 파일에서만 되읽는다 — 안 그러면 메모리 값을 보고 통과한다.
+		SettingsManager.set_volume(bus, 1.0)
+		SettingsManager.difficulty = SettingsManager.Difficulty.NORMAL
+		SettingsManager.screen_shake = not want_shake
+		SettingsManager.load_settings()
+		if absf(SettingsManager.get_volume(bus) - want_vol) > 0.005:
+			lines += _fail(
+				"볼륨이 왕복하지 않았다: %.2f로 저장했는데 %.2f로 돌아왔다" % [want_vol, SettingsManager.get_volume(bus)]
+			)
+		if SettingsManager.difficulty != want_diff:
+			lines += _fail("난이도가 왕복하지 않았다")
+		if SettingsManager.screen_shake != want_shake:
+			lines += _fail("화면 흔들림 설정이 왕복하지 않았다")
+
+	# 원상 복구 — 파일을 되돌리고 그 파일로 다시 읽는다.
+	if had:
+		var fh := FileAccess.open(path, FileAccess.WRITE)
+		if fh != null:
+			fh.store_string(backup)
+			fh.close()
+	else:
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	SettingsManager.load_settings()
+
+	if lines.is_empty():
+		return _ok("설정 저장 왕복 (볼륨·난이도·화면 흔들림)")
 	return lines
