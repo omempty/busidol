@@ -29,3 +29,7 @@ assets/gen/prompts/*.import
 
 # 현황판 — tools/dev/make_dashboard.py가 저장소 상태에서 다시 굽는다(스냅샷을 커밋하면 낡는다)
 현황판.html
+
+# 층 지도 굽기 결과 — 좌표를 눈으로 짚기 위한 것(tools/dev/map_shots.tscn이 생성)
+# 언제든 다시 굽는다. 뷰어는 tools/dev/map_viewer.html
+tools/dev/mapshots/

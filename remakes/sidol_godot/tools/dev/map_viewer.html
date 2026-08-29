@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<title>BSD 시돌이의 모험 — 층 지도 뷰어</title>
+<style>
+:root{--bg:#14131a;--panel:#1e1c26;--line:#332f42;--fg:#e8e4f0;--dim:#9a94ac;
+--acc:#7c6cff;--stairs:#73d9ff;--npc:#8cff99;--trigger:#ff5a73;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:14px/1.5 "Segoe UI","Malgun Gothic",sans-serif;
+height:100vh;display:flex;flex-direction:column}
+header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:14px;
+align-items:center;flex-wrap:wrap}
+h1{font-size:17px;color:#cfc7ff;font-weight:600}
+.hint{color:var(--dim);font-size:12px}
+nav{display:flex;gap:6px;margin-left:auto}
+nav button{background:var(--panel);border:1px solid var(--line);color:var(--dim);
+padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+nav button.on{color:#fff;background:var(--acc);border-color:var(--acc)}
+main{flex:1;overflow:auto;padding:14px 16px;display:flex;gap:16px;align-items:flex-start}
+#stage{position:relative;flex:1;min-width:0;overflow:auto;border:1px solid var(--line);
+border-radius:8px;background:#0d0c12}
+#stage img{display:block;image-rendering:pixelated;transform-origin:0 0}
+#cursor{position:absolute;border:1px solid #fff;pointer-events:none;display:none}
+aside{width:320px;flex:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px;
+margin-bottom:12px}
+.read{font:15px/1.6 ui-monospace,Consolas,monospace}
+.read b{color:#cfc7ff;font-size:19px}
+.legend span{display:inline-flex;align-items:center;gap:6px;margin-right:12px;font-size:12px}
+.dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--dim);font-weight:500}
+td.xy{font-family:ui-monospace,Consolas,monospace;color:#cfc7ff;white-space:nowrap}
+tr.hit td{background:#2a2740}
+.warn{color:#e8b64c;font-size:12px;margin-top:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>층 지도 뷰어</h1>
+  <span class="hint">칸 위에 마우스를 올리면 좌표가 나옵니다. 클릭하면 좌표가 복사됩니다.
+  확대는 <b>+ / −</b> 키.</span>
+  <nav id="tabs"></nav>
+</header>
+<main>
+  <div id="stage"><img id="map" alt="층 지도"><div id="cursor"></div></div>
+  <aside>
+    <div class="card read">
+      좌표 <b id="xy">—</b>
+      <div class="hint" id="copied">&nbsp;</div>
+    </div>
+    <div class="card legend">
+      <span><i class="dot" style="background:var(--stairs)"></i>계단</span>
+      <span><i class="dot" style="background:var(--npc)"></i>NPC</span>
+      <span><i class="dot" style="background:var(--trigger)"></i>트리거</span>
+      <div class="hint" style="margin-top:8px">지형색은 게임 미니맵과 같은 표를 씁니다
+      (<code>MinimapLayer.color_for</code>).</div>
+    </div>
+    <div class="card">
+      <table><thead><tr><th>좌표</th><th>표시</th></tr></thead><tbody id="marks"></tbody></table>
+      <div class="warn" id="huddle"></div>
+    </div>
+  </aside>
+</main>
+<script src="mapshots/overlays.js"></script>
+<script>
+const DATA = window.MAP_DATA || null;
+const img = document.getElementById('map');
+const cursor = document.getElementById('cursor');
+const xyOut = document.getElementById('xy');
+const copied = document.getElementById('copied');
+const marksBody = document.getElementById('marks');
+const huddle = document.getElementById('huddle');
+let floor = null, zoom = 1;
+
+if (!DATA) {
+  document.querySelector('main').innerHTML =
+    '<div class="card">지도를 아직 굽지 않았습니다.<br><br>' +
+    '<code>godot --headless --path . res://tools/dev/map_shots.tscn</code><br><br>' +
+    '를 돌린 뒤 이 페이지를 새로고침하세요.</div>';
+} else {
+  const tabs = document.getElementById('tabs');
+  Object.keys(DATA).forEach((key, i) => {
+    const b = document.createElement('button');
+    b.textContent = key.toUpperCase();
+    b.onclick = () => select(key);
+    tabs.appendChild(b);
+    if (i === 0) select(key);
+  });
+}
+
+function select(key) {
+  floor = key;
+  [...document.querySelectorAll('#tabs button')].forEach(
+    b => b.classList.toggle('on', b.textContent.toLowerCase() === key));
+  img.src = 'mapshots/' + key + '.png';
+  applyZoom();
+  renderMarks();
+}
+
+function meta() { return DATA[floor]; }
+
+function applyZoom() {
+  img.style.transform = 'scale(' + zoom + ')';
+  const m = meta();
+  document.getElementById('stage').style.minHeight =
+    (m.height * m.scale * zoom + 4) + 'px';
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === '+' || e.key === '=') { zoom = Math.min(zoom * 1.5, 12); applyZoom(); }
+  if (e.key === '-') { zoom = Math.max(zoom / 1.5, 1); applyZoom(); }
+});
+
+function cellAt(e) {
+  const m = meta();
+  const r = img.getBoundingClientRect();
+  const px = (e.clientX - r.left) / zoom, py = (e.clientY - r.top) / zoom;
+  return { x: Math.floor(px / m.scale), y: Math.floor(py / m.scale) };
+}
+
+img.addEventListener('mousemove', e => {
+  const m = meta(), c = cellAt(e);
+  if (c.x < 0 || c.y < 0 || c.x >= m.width || c.y >= m.height) return;
+  xyOut.textContent = '(' + c.x + ', ' + c.y + ')';
+  const r = img.getBoundingClientRect(), s = img.parentElement.getBoundingClientRect();
+  cursor.style.display = 'block';
+  cursor.style.left = (r.left - s.left + c.x * m.scale * zoom) + 'px';
+  cursor.style.top = (r.top - s.top + c.y * m.scale * zoom) + 'px';
+  cursor.style.width = cursor.style.height = (m.scale * zoom) + 'px';
+  [...marksBody.children].forEach(tr => tr.classList.toggle(
+    'hit', tr.dataset.x == c.x && tr.dataset.y == c.y));
+});
+
+img.addEventListener('mouseleave', () => { cursor.style.display = 'none'; });
+
+img.addEventListener('click', e => {
+  const c = cellAt(e), text = '[' + c.x + ', ' + c.y + ']';
+  navigator.clipboard?.writeText(text);
+  copied.textContent = text + ' 복사됨 — triggers_f*.json의 cells에 그대로 넣습니다.';
+});
+
+function renderMarks() {
+  const m = meta();
+  marksBody.innerHTML = '';
+  m.marks.forEach(k => {
+    const tr = document.createElement('tr');
+    tr.dataset.x = k.x; tr.dataset.y = k.y;
+    tr.innerHTML = '<td class="xy">(' + k.x + ', ' + k.y + ')</td><td>' +
+      k.kind + ' · ' + k.label + '</td>';
+    marksBody.appendChild(tr);
+  });
+  // 자리표시자 좌표는 왼쪽 위 구석에 몰려 있다 — 눈으로 세지 않아도 드러나게 센다.
+  const corner = m.marks.filter(k => k.x < 8 && k.y < 8);
+  huddle.textContent = corner.length
+    ? '경고: 좌표 ' + corner.length + '개가 (0,0) 구석에 몰려 있습니다 — 자리표시자입니다.'
+    : '';
+}
+</script>
+</body>
+</html>

@@ -27,7 +27,7 @@
 ## 검증 루프 (완료 조건)
 
 ```powershell
-검증실행.bat                                             # 관문 15단계 (아래는 그 일부)
+검증실행.bat                                             # 관문 전 단계 (아래는 그 일부)
 godot --headless --path . --script tools/import_all.gd   # 데이터 임포트+스키마
 godot --headless --path . --script tools/validate.gd     # 참조/플래그 검사
 godot --headless --path . res://tests/smoke.tscn         # 부팅 스모크 (exit 0)
@@ -44,6 +44,25 @@ godot --path . --resolution 960x540 res://tools/dev/ui_shots.tscn -- <출력 폴
 ```
 
 필드/전투의 각 패널을 실제로 세워 PNG로 남긴다(창 모드 필요 — 헤드리스는 렌더 결과가 없다).
+
+**"이어 붙는가"는 관문이 따로 본다** — smoke와 world_audit은 검사할 상태를 손으로 세우므로
+(플래그 주입·층 순간이동) 앞이 열어야 뒤가 열리는 순서를 못 본다. 그 층은 두 도구가 맡는다:
+
+```powershell
+godot --headless --path . res://tools/dev/autoplay.tscn       -- --seconds 600   # 걸어서 어디까지
+godot --headless --path . res://tools/dev/autoplay_sweep.tscn -- --seconds 900   # 데려다 놓으면
+```
+
+결과는 `docs/05_status/`에 실측으로 남는다. 앞의 것은 관문에 들어 있다.
+
+**좌표를 정해야 할 때는 맵을 굽는다** — 숫자로만 더듬으면 임의 배치가 된다:
+
+```powershell
+godot --headless --path . res://tools/dev/map_shots.tscn   # tools/dev/mapshots/ 에 층별 PNG
+```
+
+`tools/dev/map_viewer.html` 을 더블클릭하면 층을 넘겨 보며 칸 좌표를 읽고(마우스 올림)
+클릭으로 복사할 수 있다. 지형색은 게임 미니맵과 같은 표(`MinimapLayer.color_for`)다.
 
 - AI는 "완료" 주장 전에 위 명령의 실제 출력을 붙인다. 출력 없는 완료 보고 = 미완료.
 - 파일 규모: 스크립트 1개 = 책임 1개, 권장 ≤200행 / 상한 300행.

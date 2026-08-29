@@ -29,12 +29,19 @@ docs/
 │   ├── 04_scenario_data_buffering.md 시나리오 데이터 완충 계획
 │   ├── 05_polish_roadmap.md         ★마감 로드맵 — "만든 것이 맞물리는가"(실측 기반 18항목)
 │   └── 06_parallel_briefs.md        병렬 작업 브리프(다른 세션/에이전트 위탁 계약)
-└── 04_scenario/                     [시나리오]
-    ├── 01_scenario_inventory.md     시나리오 원본 자료 위치·상태
-    ├── 02_story_bible.md            현행(1995 원작) 스토리 바이블
-    ├── 03_remake_scenario_master.md ★권위 — 통합 리메이크 마스터 시나리오
-    │                                  (전 6구역 완결 + 스킬트리 + 플래그 명세)
-    └── bkup/03_redesign_proposal.md 개편안 이력(마스터로 대체됨)
+├── 04_scenario/                     [시나리오]
+│   ├── 01_scenario_inventory.md     시나리오 원본 자료 위치·상태
+│   ├── 02_story_bible.md            현행(1995 원작) 스토리 바이블
+│   ├── 03_remake_scenario_master.md ★권위 — 통합 리메이크 마스터 시나리오
+│   │                                  (전 6구역 완결 + 스킬트리 + 플래그 명세)
+│   └── bkup/03_redesign_proposal.md 개편안 이력(마스터로 대체됨)
+└── 05_status/                       [실측 — 도구가 굽는다. 손으로 고치지 않는다.
+    │                                  커밋된 것은 "그때 잰 값"이고, 다시 재려면 도구를 돌린다.
+    │                                  관문은 user://로 돌려 이 파일을 건드리지 않는다]
+    ├── 01_autoplay.md               자동 주행 — 새 게임에서 **걸어서** 어디까지 가는가
+    │                                  (`tools/dev/autoplay.tscn`)
+    └── 02_floor_sweep.md            층 훑기 — **데려다 놓으면** 그 층 내용이 도는가
+                                       (`tools/dev/autoplay_sweep.tscn`)
 ```
 
 ## 한눈에 보는 결정 사항
@@ -55,6 +62,8 @@ docs/
 ## 시작하기 (구현 담당 AI/개발자 공통)
 
 0. [03_plan/05_polish_roadmap.md](03_plan/05_polish_roadmap.md) — **지금 뭐가 비어 있는지** 먼저 본다
+0-1. [05_status/01_autoplay.md](05_status/01_autoplay.md) — **새 게임에서 걸어서 어디까지 가지는지** 실측
+0-2. [05_status/02_floor_sweep.md](05_status/02_floor_sweep.md) — 막힌 층의 내용은 도는지 실측
 1. [03_plan/01_roadmap.md](03_plan/01_roadmap.md)에서 현재 Phase 확인
 2. 게이트(G-ART/G-FAITH/G-SCOPE) 확정 여부 확인
 3. 해당 시스템의 design 문서 + 관련 analysis 문서 읽기
