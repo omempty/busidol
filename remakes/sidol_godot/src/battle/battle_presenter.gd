@@ -639,10 +639,13 @@ func hitstop(duration: float = 0.06) -> void:
 	if _hitstop_busy:
 		return
 	_hitstop_busy = true
-	Engine.time_scale = HITSTOP_SCALE
+	# **되돌릴 값은 1.0이 아니라 「직전 값」이다.** 밖에서 시간을 빨리 감아 둔 경우
+	# (자동 주행의 배율 30) 1.0으로 덮으면 첫 타격 이후 빨리 감기가 영영 꺼진다.
+	var previous_scale := Engine.time_scale
+	Engine.time_scale = previous_scale * HITSTOP_SCALE
 	var scaled := maxf(duration / SettingsManager.battle_speed_factor(), 0.02)
 	await get_tree().create_timer(scaled, true, false, true).timeout
-	Engine.time_scale = 1.0
+	Engine.time_scale = previous_scale
 	_hitstop_busy = false
 
 
