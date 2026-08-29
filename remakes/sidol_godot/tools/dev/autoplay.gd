@@ -47,9 +47,13 @@ const TRAVEL_ATTEMPTS := 3
 const EFFECT_FRAMES := 240
 ## 대사·컷신이 끝나기를 기다릴 상한. 넘기면 손을 대고 기록한다.
 const SETTLE_FRAMES := 3000
-## 프레임당 물리 스텝 상한 — 기본 8.
-const PHYSICS_STEPS := 64
 ## 초당 물리 틱 — 기본 60. 걸음 판정의 관측 주기라 주행 속도를 그대로 정한다.
+## `--ticks` 로 올릴 수 있다. 올릴수록 걸음이 촘촘히 관측되지만 한 프레임이
+## 삼켜야 할 스텝 수도 같이 늘어 프레임률이 떨어진다 — 그래서 실측으로 고른다.
+## 240은 실측으로 고른 값이다(2026-08-29, 배율 120에서 목표 100개까지의 벽시계 초):
+## 틱 240 → 73초, 480 → 70초, 960 → 48~83초로 요동, 1920 → 49초. 480 위쪽의 이득은
+## 재현되지 않는 데다 **동시 실행을 못 견딘다** — 층 훑기를 두 프로세스로 돌리자
+## 틱 480 설정에서 물리가 초당 172밖에 안 돌았다. 240은 같은 속도에 여유가 크다.
 const PHYSICS_TICKS := 240
 
 var _log: AutoplayLog
@@ -89,7 +93,7 @@ func _run() -> void:
 	_write_report(driver)
 	print("")
 	print("=== 자동 주행 끝: %s ===" % driver.stop_reason)
-	_print_pace(driver.max_seconds)
+	_print_pace(driver.elapsed)
 	print(
 		(
 			"걸음 %d / 층 %d / 전투 %d / 상자 %d / 대사 %d / 사망복구 %d"
@@ -109,9 +113,15 @@ func _run() -> void:
 ## 주행이 왜 그 속도인가 — 프레임을 어디서 기다렸는지 나눠 찍는다.
 ## 걸음은 물리 프레임에서 판정되므로 **초당 물리 프레임이 곧 주행 속도의 상한**이다.
 ## `Engine.time_scale`은 물리 델타만 키우고 초당 스텝 수는 안 바꾼다(실측).
+## 「물리 초당」이 설정 틱에 못 미치는 것 자체는 결함이 아니다 — 빨리 감기가 걸려
+## 있으면 한 프레임이 삼켜야 할 스텝 수가 프레임률에 달리고, 전투·컷신처럼 무거운
+## 구간에서는 당연히 내려간다(실측: 같은 관문 주행이 틱 240에서도 480에서도
+## **걸음 초당 18.7로 같았다**). 그래서 설정 대비 경고는 늑대 소년이 된다.
+## 고를 때 보는 수치는 하나다 — **경과 초와 걸음 초당.**
 func _print_pace(seconds: float) -> void:
 	var span := maxf(seconds, 0.001)
 	var steps := maxf(float(_log.steps), 1.0)
+	print("경과 %.1f초 / 걸음 초당 %.1f" % [seconds, steps / span])
 	var other := _log.physics_frames - _log.step_frames - _log.still_frames
 	print(
 		(
@@ -146,8 +156,11 @@ func _setup() -> void:
 	# 걸음은 물리 프레임에서 판정되고 도구는 그 프레임을 기다리므로, 틱을 올리지 않으면
 	# 배율을 아무리 올려도 초당 7걸음에 묶인다. 틱을 올리면 관측 지점이 그만큼 촘촘해진다.
 	# 스텝 상한도 같이 올린다 — 프레임당 필요한 스텝 수(틱/프레임률)를 넘어야 한다.
-	Engine.physics_ticks_per_second = PHYSICS_TICKS
-	Engine.max_physics_steps_per_frame = PHYSICS_STEPS
+	var ticks := int(_arg("--ticks", PHYSICS_TICKS))
+	Engine.physics_ticks_per_second = ticks
+	# 스텝 상한은 틱과 함께 올린다. 상한이 모자라면 남은 스텝을 다음 프레임으로
+	# 미루므로 틱만 올리고 여기를 두면 **초당 물리 프레임이 설정값에 못 미친다.**
+	Engine.max_physics_steps_per_frame = ticks
 	_log = AutoplayLog.new()
 	_pilot = AutoplayPilot.new(get_tree(), _log)
 	_goals = AutoplayGoals.new()
