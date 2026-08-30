@@ -49,18 +49,25 @@ static func has(attr: int) -> bool:
 	return not t.is_empty() and not _texts_now(t).is_empty()
 
 
-## 지금 상태에서 나올 대사 목록(카운터를 건드리지 않는다).
+## 지금 상태에서 고를 분기(카운터를 건드리지 않는다).
 ##
-## 조건부 대상은 원작 `v_Howa` 분기의 자리다 — 플래그가 서면 다른(또는 비로소 있는)
-## 대사가 나온다. 원작에서 조건 전 대사가 있던 대상(FELIN)은 `texts`가 그 대사이고,
-## 없던 대상(ELIN)은 `texts`가 비어 있다.
+## 원작 대화 상대들은 **말을 걸어서 켜지는 상태 변수**를 갖고 있었다 —
+## `Talk_Nam_F`가 `v_Hong = 1`을 세우면 홍교수가 모교수 이야기를 더 해 주고
+## (`@t39` "남교수한테 들어서"), `Talk_HowaJo_F` case 1이 `v_Howa = 2`를 세우면
+## 실습 조교·앨린·팰린이 비로소 힌트를 준다. **대화가 대화를 여는 사슬**이다.
+##
+## `variants`는 그 상태 머신을 그대로 옮긴 것이다 — 앞에서부터 조건이 맞는 첫 갈래를
+## 쓴다(진행이 많이 된 갈래를 앞에 둔다). 조건이 다 안 맞으면 `texts`가 기본이다.
+static func _branch(t: Dictionary) -> Dictionary:
+	for v: Dictionary in t.get("variants", []):
+		var flag := str(v.get("requires_flag", ""))
+		if flag.is_empty() or GameState.has_flag(flag):
+			return v
+	return t
+
+
 static func _texts_now(t: Dictionary) -> Array:
-	var flag := str(t.get("requires_flag", ""))
-	if not flag.is_empty() and GameState.has_flag(flag):
-		var unlocked: Array = t.get("flag_texts", [])
-		if not unlocked.is_empty():
-			return unlocked
-	return t.get("texts", [])
+	return _branch(t).get("texts", [])
 
 
 ## 이 대상에게 지금 말을 걸면 나올 대사 스텝. 반복 횟수를 여기서 센다.
@@ -71,9 +78,16 @@ static func steps_for(attr: int) -> Array:
 	var t := find(attr)
 	if t.is_empty():
 		return []
-	var texts := _texts_now(t)
+	var branch := _branch(t)
+	var texts: Array = branch.get("texts", [])
 	if texts.is_empty():
 		return []
+
+	# **이 대화가 다음 대화를 연다.** 원작 상태 변수(v_Hong·v_Howa·v_HowaJo)의 자리 —
+	# 말을 끝까지 들으면 다른 사람이 할 말이 생긴다. 플래그는 세이브에 실린다.
+	var sets := str(branch.get("sets_flag", ""))
+	if not sets.is_empty():
+		GameState.set_flag(sets, true)
 
 	var count := int(_talk_counts.get(attr, 0)) + 1
 	_talk_counts[attr] = count

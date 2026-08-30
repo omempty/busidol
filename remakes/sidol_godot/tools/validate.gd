@@ -30,7 +30,10 @@ const KNOWN_CHANNELS := ["sprite", "fx", "camera", "screen", "audio", "logic"]
 const KNOWN_TRIGGER_TYPES := ["zone", "interact", "auto"]
 
 var _errors: Array[String] = []
-var _dialogue: Dictionary = {}
+var _dialogue: Dictionary
+## 대화 마커 사슬 검사 — 요구하는 플래그 ↔ 세우는 플래그.
+var _talk_needed: Dictionary = {}
+var _talk_sets: Dictionary = {}
 var _sequences: Dictionary = {}
 var _item_ids: Dictionary = {}
 var _audio_ids: Dictionary = {}  # "bgm/xxx", "sfx/xxx", "voice/xxx"
@@ -499,16 +502,31 @@ func _validate_talk_targets() -> void:
 
 	var targets: Dictionary = (raw as Dictionary).get("targets", {})
 	var placed := 0
+	_talk_needed = {}
+	_talk_sets = {}
 	for key: String in targets:
 		var att := int(key)
 		var t: Dictionary = targets[key]
 		# 조건부 대상은 `texts`가 비어 있을 수 있다 — 원작에서 조건 전에 아무 말도
-		# 안 하던 대상이다(Talk_ELIN_F에 else가 없다). 그때는 flag_texts가 있어야 한다.
-		var texts: Array = t.get("texts", []) + t.get("repeat_texts", []) + t.get("flag_texts", [])
+		# 안 하던 대상이다(Talk_ELIN_F에 else가 없다). 그때는 variants가 있어야 한다.
+		var texts: Array = t.get("texts", []) + t.get("repeat_texts", [])
+		# 사슬 검사 — variants가 요구하는 플래그를 **누군가는 세워야 한다.**
+		# 아무도 안 세우면 그 갈래는 영영 안 나온다(마커는 살아 있는데 대사는 죽는다).
+		for v: Dictionary in t.get("variants", []):
+			texts += v.get("texts", []) as Array
+			var need := str(v.get("requires_flag", ""))
+			if not need.is_empty():
+				_talk_needed[need] = att
+			if (v.get("texts", []) as Array).is_empty():
+				_err("대화 마커 ATT %d: variants에 대사 없는 갈래가 있다" % att)
+		var sets_all: Array = [str(t.get("sets_flag", ""))]
+		for v2: Dictionary in t.get("variants", []):
+			sets_all.append(str(v2.get("sets_flag", "")))
+		for sf: String in sets_all:
+			if not sf.is_empty():
+				_talk_sets[sf] = att
 		if texts.is_empty():
 			_err("대화 마커 ATT %d: 어느 조건에서도 대사가 없다" % att)
-		if t.has("flag_texts") and not t.has("requires_flag"):
-			_err("대화 마커 ATT %d: flag_texts가 있는데 requires_flag가 없다" % att)
 		for tk: String in texts:
 			if not _dialogue.has(tk):
 				_err("대화 마커 ATT %d가 쓰는 대사 키 %s가 dialogue.json에 없음" % [att, tk])
@@ -516,7 +534,16 @@ func _validate_talk_targets() -> void:
 			_err("대화 마커 ATT %d(%s)가 어느 맵에도 없다" % [att, str(t.get("id", ""))])
 		else:
 			placed += int(used[att])
-	print("[validate] 대화 마커 %d종 · 맵에 깔린 칸 %d개" % [targets.size(), placed])
+	# 요구만 하고 아무도 안 세우는 플래그 — 그 갈래는 영영 안 나온다.
+	for need: String in _talk_needed:
+		if not _talk_sets.has(need):
+			_err("대화 마커 ATT %d가 요구하는 플래그 '%s'를 세우는 곳이 없다" % [int(_talk_needed[need]), need])
+	print(
+		(
+			"[validate] 대화 마커 %d종 · 맵에 깔린 칸 %d개 · 사슬 플래그 %d개"
+			% [targets.size(), placed, _talk_sets.size()]
+		)
+	)
 
 
 ## UI 문자열 ↔ 번역표(data/l10n/ui.csv) 양방향 대조.
