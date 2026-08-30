@@ -61,6 +61,7 @@ func _ready() -> void:
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(vbox)
 	_name_label = Label.new()
+	# 초기색일 뿐 — 실제 색은 _load_step()이 화자마다 SpeakerColors로 덮어쓴다.
 	_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
 	vbox.add_child(_name_label)
 	_body_label = Label.new()
@@ -128,7 +129,10 @@ func _load_step() -> void:
 		close()
 		op_requested.emit(op, step.get("args", {}))
 		return
-	_name_label.text = str(step.get("speaker", ""))
+	var speaker := str(step.get("speaker", ""))
+	_name_label.text = speaker
+	# 화자마다 다른 색 — 누가 말하는지 이름을 읽지 않고도 안다(04_uiux §1.2).
+	_name_label.add_theme_color_override("font_color", SpeakerColors.color_for(speaker))
 	_apply_portrait(step)
 	_body_label.text = Database.text(str(step["text"]))
 	_revealed = 0.0

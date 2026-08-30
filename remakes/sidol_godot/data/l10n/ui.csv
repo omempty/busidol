@@ -59,7 +59,7 @@ UI_OPT_SCREEN_FULL,전체 화면,Fullscreen
 UI_OPT_LANG_KO,한국어,Korean
 UI_OPT_LANG_EN,English,English
 UI_HELP_MOVE,이동,Move
-UI_HELP_MOVE_KEYS,방향키 / WASD,Arrow keys / WASD
+UI_HELP_MOVE_KEYS,방향키 / WASD / 패드 십자키·왼쪽 스틱,Arrow keys / WASD / Pad D-pad · Left stick
 UI_HELP_INTERACT,조사 · 대화 · 확인,Inspect · Talk · Confirm
 UI_HELP_CANCEL,취소 · 일시정지,Cancel · Pause
 UI_HELP_BAG,가방 열기,Open bag
@@ -154,3 +154,4 @@ UI_BATTLE_RESULT_LOSE,LOSE...,LOSE...
 UI_BATTLE_RESULT_FLEE,FLEE,FLEE
 UI_BATTLE_FLEE_FAIL,도망 실패!,Escape failed!
 UI_BATTLE_FLEE_BLOCKED,물러설 수 없다,No way out
+UI_CREDIT_CARD_LOCKED,아직 열리지 않은 후일담,Not unlocked yet

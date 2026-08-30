@@ -5,13 +5,14 @@ extends Control
 
 signal closed
 
-## [번역 키, 번역 키 또는 키 이름] — 키 이름(Esc·I·M)은 언어와 무관해 그대로 둔다.
+## [번역 키, 번역 키 또는 키 이름] — 키 이름(Esc·I·M·패드 버튼)은 언어와 무관해 그대로 둔다.
+## 패드 표기는 input_bootstrap.PAD_BUTTONS와 같은 배치(Xbox 기준)를 적는다.
 const ROWS := [
 	["UI_HELP_MOVE", "UI_HELP_MOVE_KEYS"],
-	["UI_HELP_INTERACT", "Space / Z"],
-	["UI_HELP_CANCEL", "Esc"],
-	["UI_HELP_BAG", "I"],
-	["UI_HELP_MAP", "M"],
+	["UI_HELP_INTERACT", "Space / Z / PAD A"],
+	["UI_HELP_CANCEL", "Esc / PAD B"],
+	["UI_HELP_BAG", "I / PAD Y"],
+	["UI_HELP_MAP", "M / PAD BACK"],
 	["UI_HELP_SAVE", "UI_HELP_SAVE_DESC"],
 ]
 

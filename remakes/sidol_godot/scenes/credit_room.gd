@@ -92,12 +92,17 @@ func _load_data() -> void:
 		push_error("credits.json 파싱 실패")
 		return
 	_members = raw.get("members", [])
-	var all_cards: Array = raw.get("ending_cards", [])
+	# **미달성 카드도 목록에 남긴다 — 실루엣으로.** 04_uiux §1.5가 "미달성 카드는
+	# 실루엣으로 표시(재플레이 동기)"라고 정한 자리인데, 구판은 조건 미달 카드를
+	# 아예 빼서 플레이어가 **몇 장이 더 있는지조차 몰랐다**. 겸사 결함 하나가 같이
+	# 사라진다: 전 카드가 조건부인 상태에서 하나도 안 열리면 _cards가 비어
+	# _refresh_card()가 빈 배열의 [0]을 집었다.
 	_cards = []
-	for c: Dictionary in all_cards:
-		var req = str(c.get("requires_flag", ""))
-		if req.is_empty() or GameState.has_flag(req):
-			_cards.append(c)
+	for c: Dictionary in raw.get("ending_cards", []) as Array:
+		var card: Dictionary = c.duplicate()
+		var req := str(card.get("requires_flag", ""))
+		card["_locked"] = not (req.is_empty() or GameState.has_flag(req))
+		_cards.append(card)
 	_roll_lines = raw.get("staff_roll", [])
 	_all_seen_flag = str(raw.get("all_seen_flag", ""))
 	_quiz_cfg = raw.get("meta_quiz", {}) if raw.get("meta_quiz", {}) is Dictionary else {}
@@ -152,10 +157,29 @@ func _mark_member_seen(m: Dictionary) -> void:
 
 
 func _refresh_card() -> void:
+	if _cards.is_empty():
+		_title_lbl.text = ""
+		_sub_lbl.text = ""
+		_quote_lbl.text = ""
+		return
 	var c: Dictionary = _cards[_idx]
+	if bool(c.get("_locked", false)):
+		# 실루엣 — 있다는 것과 몇 번째인지는 보여 주되 내용은 가린다.
+		_title_lbl.text = "%d. %s" % [_idx + 1, _silhouette(str(c.get("title", "")))]
+		_sub_lbl.text = tr("UI_CREDIT_CARD_LOCKED")
+		_quote_lbl.text = ""
+		return
 	_title_lbl.text = str(c["title"])
 	_sub_lbl.text = str(c.get("sub", ""))
 	_quote_lbl.text = '"%s"' % Database.text(str(c["text_key"]))
+
+
+## 제목을 글자 수만 남기고 가린다 — 공백·구분점은 살려 길이 감을 준다.
+static func _silhouette(title: String) -> String:
+	var out := ""
+	for ch in title:
+		out += ch if ch == " " or ch == "·" else "?"
+	return out
 
 
 func _refresh_quiz() -> void:

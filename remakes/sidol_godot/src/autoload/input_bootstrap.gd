@@ -1,7 +1,10 @@
 extends Node
 ## InputMap을 런타임에 등록한다(project.godot [input] 대신 코드 등록).
 ## 근거: docs/02_design/02_godot_architecture.md §6 — 게임 코드는 액션명만 사용.
-## 게임패드 매핑은 Phase 9(설정 화면)에서 추가.
+##
+## 키보드와 게임패드를 **같은 액션 이름에 겹쳐** 등록한다(04_uiux §4 "게임패드 전면 지원").
+## 게임 코드는 어느 쪽으로 들어왔는지 몰라도 되고, 04_uiux §1.3·§1.4가 전제하는
+## "패드 지원"도 이 표 하나로 성립한다. 리매핑 UI는 05_polish_roadmap §5.8 별건.
 
 const ACTIONS := {
 	&"move_up": [KEY_UP, KEY_W],
@@ -29,6 +32,34 @@ const ACTIONS := {
 	&"battle_repeat": [KEY_R],
 }
 
+## 게임패드 버튼 — 키보드와 같은 액션에 얹는다. Xbox 배치 기준(Godot 표준 매핑이
+## PS/닌텐도 패드를 같은 상수로 정규화한다). 전투 슬롯 1~9는 패드에 남는 버튼이 없어
+## 커서 이동으로 대신한다(Q/E = 숄더, R = X).
+const PAD_BUTTONS := {
+	&"move_up": [JOY_BUTTON_DPAD_UP],
+	&"move_down": [JOY_BUTTON_DPAD_DOWN],
+	&"move_left": [JOY_BUTTON_DPAD_LEFT],
+	&"move_right": [JOY_BUTTON_DPAD_RIGHT],
+	&"interact": [JOY_BUTTON_A],
+	&"cancel": [JOY_BUTTON_B],
+	&"menu": [JOY_BUTTON_START],
+	&"inventory": [JOY_BUTTON_Y],
+	&"minimap": [JOY_BUTTON_BACK],
+	&"battle_target_prev": [JOY_BUTTON_LEFT_SHOULDER],
+	&"battle_target_next": [JOY_BUTTON_RIGHT_SHOULDER],
+	&"battle_repeat": [JOY_BUTTON_X],
+}
+
+## 왼쪽 스틱 — [축, 부호]. 그리드 이동이라 세기는 안 쓰고 데드존만 넘으면 한 칸이다.
+const PAD_AXES := {
+	&"move_up": [JOY_AXIS_LEFT_Y, -1.0],
+	&"move_down": [JOY_AXIS_LEFT_Y, 1.0],
+	&"move_left": [JOY_AXIS_LEFT_X, -1.0],
+	&"move_right": [JOY_AXIS_LEFT_X, 1.0],
+}
+## 스틱을 살짝 기울인 것으로 칸이 넘어가면 안 된다 — 기본 0.5보다 둔하게 잡는다.
+const STICK_DEADZONE := 0.6
+
 
 func _ready() -> void:
 	for action: StringName in ACTIONS:
@@ -38,4 +69,21 @@ func _ready() -> void:
 			var event := InputEventKey.new()
 			event.physical_keycode = key
 			InputMap.action_add_event(action, event)
-	print("[input_bootstrap] %d actions registered" % ACTIONS.size())
+
+	var pad_events := 0
+	for action2: StringName in PAD_BUTTONS:
+		for button: JoyButton in PAD_BUTTONS[action2]:
+			var be := InputEventJoypadButton.new()
+			be.button_index = button
+			InputMap.action_add_event(action2, be)
+			pad_events += 1
+	for action3: StringName in PAD_AXES:
+		var spec: Array = PAD_AXES[action3]
+		var me := InputEventJoypadMotion.new()
+		me.axis = spec[0]
+		me.axis_value = spec[1]
+		InputMap.action_add_event(action3, me)
+		InputMap.action_set_deadzone(action3, STICK_DEADZONE)
+		pad_events += 1
+
+	print("[input_bootstrap] %d actions registered (패드 %d)" % [ACTIONS.size(), pad_events])
