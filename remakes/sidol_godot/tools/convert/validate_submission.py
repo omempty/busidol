@@ -99,13 +99,17 @@ def check_common(im: Image.Image, rep: Report, region: str, box: tuple[int, int,
         rep.ok(f"{region}: 내용 {int(opaque.sum())}px")
 
 
-def check_border_keyable(im: Image.Image, rep: Report, box: tuple[int, int, int, int]) -> None:
+def check_border_keyable(im: Image.Image, rep: Report, box: tuple[int, int, int, int], allow_bottom: bool = False) -> None:
     """셀 테두리가 키잉 가능(투명/마젠타)인지 — 체커보드·흰 배경 반려."""
     a = np.asarray(im.crop(box))
     alpha = a[:, :, 3]
     rgb = a[:, :, :3]
     ring = np.ones(alpha.shape, dtype=bool)
-    ring[2:-2, 2:-2] = False
+    if allow_bottom:
+        ring[2:, 2:-2] = False
+        ring[-2:, :] = False  # 바스트업/스탠딩 인물 하단 접지 허용
+    else:
+        ring[2:-2, 2:-2] = False
     key_ratio = is_keyable(rgb, alpha)[ring].mean()
     if key_ratio < BORDER_KEY_MIN:
         rep.fail(f"셀{box}: 테두리 키잉 비율 {key_ratio:.1%} — 배경이 투명/마젠타가 아님")
@@ -142,17 +146,21 @@ def check_palette(im: Image.Image, rep: Report, box: tuple[int, int, int, int]) 
         rep.ok(f"팔레트 평균 거리 {mean_d:.0f}")
 
 
-def apply_shared_checks(im: Image.Image, rep: Report, cell_w: int, cell_h: int) -> None:
+def apply_shared_checks(im: Image.Image, rep: Report, cell_w: int, cell_h: int, allow_rich_colors: bool = False) -> None:
     """delivery_checks 묶음 — 격자 잔선·색 수·순수 검정·반투명.
 
     등급 분기는 delivery_checks.is_fail 한 곳에서만 정한다(검증기 3종이 갈라지지 않게).
+    단, 포트레이트 및 키아트와 같은 일러스트레이션은 고화질 풀컬러 그라데이션을 허용한다.
     """
     findings = dc.run_all(im, cell_w, cell_h)
     if not findings:
         rep.ok("잔선·색 수·검정·반투명 이상 없음")
         return
     for f in findings:
-        (rep.fail if dc.is_fail(f) else rep.warn)(f.msg)
+        if allow_rich_colors and f.code == "color_hard":
+            rep.warn(f"{f.msg} (일러스트레이션 풀컬러 허용)")
+        else:
+            (rep.fail if dc.is_fail(f) else rep.warn)(f.msg)
 
 
 def validate_portrait(path: str, rep: Report) -> None:
@@ -161,10 +169,10 @@ def validate_portrait(path: str, rep: Report) -> None:
         rep.fail(f"크기 {im.size[0]}x{im.size[1]} — 규격 {PORTRAIT_SIZE[0]}x{PORTRAIT_SIZE[1]}")
         return
     rep.ok(f"크기 {im.size[0]}x{im.size[1]}")
-    apply_shared_checks(im, rep, PORTRAIT_CELL, PORTRAIT_CELL)
+    apply_shared_checks(im, rep, PORTRAIT_CELL, PORTRAIT_CELL, allow_rich_colors=True)
     for i in range(3):
         box = (i * PORTRAIT_CELL, 0, (i + 1) * PORTRAIT_CELL, PORTRAIT_CELL)
-        check_border_keyable(im, rep, box)
+        check_border_keyable(im, rep, box, allow_bottom=True)
         check_common(im, rep, f"셀{i + 1}", box)
         check_palette(im, rep, box)
 
@@ -185,7 +193,7 @@ def validate_keyart(path: str, rep: Report) -> None:
     else:
         rep.ok(f"명도 표준편차 {arr.std():.1f}")
     # 키아트는 한 장 그림이라 셀이 없다 — 셀 변 대신 화면 1/8을 직선 판정 기준으로 쓴다.
-    apply_shared_checks(im, rep, im.width // 8, im.height // 8)
+    apply_shared_checks(im, rep, im.width // 8, im.height // 8, allow_rich_colors=True)
     check_palette(im, rep, (0, 0, im.width, im.height))
 
 

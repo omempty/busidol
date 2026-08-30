@@ -67,7 +67,20 @@ def safe_path(*parts: str) -> str:
     return path
 
 
+_VALIDATION_CACHE: dict[str, tuple[float, dict]] = {}
+
+
 def run_validator(cat: str, abs_path: str) -> dict:
+    if not os.path.exists(abs_path):
+        return {"pass": False, "lines": ["파일 없음"]}
+    try:
+        mtime = os.path.getmtime(abs_path)
+    except OSError:
+        mtime = 0.0
+    cached = _VALIDATION_CACHE.get(abs_path)
+    if cached and cached[0] == mtime:
+        return cached[1]
+
     info = CATEGORIES[cat]
     if info["validator"] == "submission":
         script = os.path.join(ROOT, "tools", "convert", "validate_submission.py")
@@ -81,9 +94,11 @@ def run_validator(cat: str, abs_path: str) -> dict:
     try:
         proc = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", timeout=60)
         lines = [l for l in (proc.stdout or "").strip().splitlines() if l.strip()]
-        return {"pass": proc.returncode == 0, "lines": lines[-8:]}
+        res = {"pass": proc.returncode == 0, "lines": lines[-8:]}
     except Exception as exc:  # noqa: BLE001 — 검증기 크래시도 배지로 표시
-        return {"pass": False, "lines": [f"검증기 오류: {exc}"]}
+        res = {"pass": False, "lines": [f"검증기 오류: {exc}"]}
+    _VALIDATION_CACHE[abs_path] = (mtime, res)
+    return res
 
 
 def asset_id_of(fname: str) -> str:
@@ -154,29 +169,128 @@ def reference_paths(cat: str, asset_id: str) -> dict:
 
 
 def list_items(cat: str) -> list:
-    cat_dir = safe_path("10_submitted", cat)
-    if not os.path.isdir(cat_dir):
-        return []
     items = []
-    for fname in sorted(os.listdir(cat_dir)):
-        if not fname.lower().endswith(".png"):
-            continue
-        m = VERSION_RE.match(fname)
-        asset_id = m.group("id") if m else os.path.splitext(fname)[0]
-        abs_path = os.path.join(cat_dir, fname)
-        fb_path = safe_path("10_submitted", "_feedback", cat, fname + ".md")
-        feedback = None
-        if os.path.exists(fb_path):
-            feedback = io.open(fb_path, encoding="utf-8").read()
-        items.append({
-            "file": fname,
-            "asset_id": asset_id,
-            "validation": run_validator(cat, abs_path),
-            "feedback": feedback,
-            "prompt_md": read_prompt_md(cat, asset_id),
-            "refs": reference_paths(cat, asset_id),
-            "web": f"/assets/raw/llm/10_submitted/{cat}/{fname}",
-        })
+    seen_ids = set()
+
+    # 1. 10_submitted (납품 대기)
+    cat_dir = safe_path("10_submitted", cat)
+    if os.path.isdir(cat_dir):
+        for fname in sorted(os.listdir(cat_dir)):
+            if not fname.lower().endswith(".png"):
+                continue
+            m = VERSION_RE.match(fname)
+            asset_id = m.group("id") if m else os.path.splitext(fname)[0]
+            abs_path = os.path.join(cat_dir, fname)
+            fb_path = safe_path("10_submitted", "_feedback", cat, fname + ".md")
+            feedback = None
+            if os.path.exists(fb_path):
+                feedback = io.open(fb_path, encoding="utf-8").read()
+            items.append({
+                "file": fname,
+                "asset_id": asset_id,
+                "status": "submitted",
+                "validation": run_validator(cat, abs_path),
+                "feedback": feedback,
+                "prompt_md": read_prompt_md(cat, asset_id),
+                "refs": reference_paths(cat, asset_id),
+                "web": f"/assets/raw/llm/10_submitted/{cat}/{fname}",
+            })
+            seen_ids.add(asset_id)
+
+    # 2. 20_processed (승인 완료 / 게임 설치됨)
+    proc_dir = safe_path("20_processed", cat)
+    if os.path.isdir(proc_dir):
+        for entry in sorted(os.listdir(proc_dir)):
+            abs_entry = os.path.join(proc_dir, entry)
+            if entry.lower().endswith(".png") and os.path.isfile(abs_entry):
+                fname = entry
+                m = VERSION_RE.match(fname)
+                asset_id = m.group("id") if m else os.path.splitext(fname)[0]
+                if asset_id not in seen_ids:
+                    items.append({
+                        "file": fname,
+                        "asset_id": asset_id,
+                        "status": "approved",
+                        "validation": {"pass": True, "lines": ["승인 완료 (게임 에셋 설치됨)"]},
+                        "feedback": None,
+                        "prompt_md": read_prompt_md(cat, asset_id),
+                        "refs": reference_paths(cat, asset_id),
+                        "web": f"/assets/raw/llm/20_processed/{cat}/{fname}",
+                    })
+                    seen_ids.add(asset_id)
+            elif os.path.isdir(abs_entry):
+                asset_id = entry
+                sheet_p = os.path.join(abs_entry, f"{asset_id}_sheet.png")
+                web_p = f"/assets/raw/llm/20_processed/{cat}/{asset_id}/{asset_id}_sheet.png" if os.path.exists(sheet_p) else f"/assets/sprites/{asset_id}_remake.png"
+                if asset_id not in seen_ids:
+                    items.append({
+                        "file": f"{asset_id}_approved.png",
+                        "asset_id": asset_id,
+                        "status": "approved",
+                        "validation": {"pass": True, "lines": ["승인 완료 (스프라이트 분할 및 설치 완료)"]},
+                        "feedback": None,
+                        "prompt_md": read_prompt_md(cat, asset_id),
+                        "refs": reference_paths(cat, asset_id),
+                        "web": web_p,
+                    })
+                    seen_ids.add(asset_id)
+
+    # 3. 10_submitted/_rejected (반려됨)
+    rej_dir = safe_path("10_submitted", "_rejected", cat)
+    if os.path.isdir(rej_dir):
+        for fname in sorted(os.listdir(rej_dir)):
+            if not fname.lower().endswith(".png"):
+                continue
+            m = VERSION_RE.match(fname)
+            asset_id = m.group("id") if m else os.path.splitext(fname)[0]
+            if asset_id not in seen_ids:
+                abs_path = os.path.join(rej_dir, fname)
+                fb_path = safe_path("10_submitted", "_feedback", cat, fname + ".md")
+                feedback = None
+                if os.path.exists(fb_path):
+                    feedback = io.open(fb_path, encoding="utf-8").read()
+                items.append({
+                    "file": fname,
+                    "asset_id": asset_id,
+                    "status": "rejected",
+                    "validation": {"pass": False, "lines": ["사용자 반려됨 (수정 대기)"]},
+                    "feedback": feedback,
+                    "prompt_md": read_prompt_md(cat, asset_id),
+                    "refs": reference_paths(cat, asset_id),
+                    "web": f"/assets/raw/llm/10_submitted/_rejected/{cat}/{fname}",
+                })
+                seen_ids.add(asset_id)
+
+    # 4. Pending Targets (미납품 대기 항목)
+    batch_base = safe_path("_batch")
+    if os.path.isdir(batch_base):
+        for b_name in sorted(os.listdir(batch_base), reverse=True):
+            b_path = os.path.join(batch_base, b_name)
+            if not os.path.isdir(b_path):
+                continue
+            prefix = f"{cat}__"
+            for d in os.listdir(b_path):
+                if d.startswith(prefix):
+                    asset_id = d[len(prefix):]
+                    if asset_id not in seen_ids:
+                        d_path = os.path.join(b_path, d)
+                        src_img = None
+                        for s_name in (f"{asset_id}_source.png", "orig_frame_001.png", "orig_enemy_1.png", "style_ref.png", "grid_template.png"):
+                            if os.path.exists(os.path.join(d_path, s_name)):
+                                src_img = f"/assets/raw/llm/_batch/{b_name}/{d}/{s_name}"
+                                break
+                        items.append({
+                            "file": f"{asset_id} (미납품)",
+                            "asset_id": asset_id,
+                            "status": "pending",
+                            "validation": {"pass": False, "lines": ["미납품 (생성 및 작업 대기 중)"]},
+                            "feedback": None,
+                            "prompt_md": read_prompt_md(cat, asset_id),
+                            "refs": reference_paths(cat, asset_id),
+                            "web": src_img or "/assets/portraits/_fallback.png",
+                        })
+                        seen_ids.add(asset_id)
+
     return items
 
 
@@ -199,9 +313,36 @@ def do_review(payload: dict) -> dict:
     action = payload.get("action", "")
     if cat not in CATEGORIES:
         raise ValueError(f"알 수 없는 카테고리: {cat}")
-    if action not in ("approve", "reject"):
+    if action not in ("approve", "reject", "reset"):
         raise ValueError(f"알 수 없는 액션: {action}")
     fname = os.path.basename(payload.get("file", ""))
+    
+    if action == "reset":
+        asset_id = asset_id_of(fname)
+        sub_dir = safe_path("10_submitted", cat)
+        os.makedirs(sub_dir, exist_ok=True)
+        clean_name = fname if (fname.endswith(".png") and not "approved" in fname and not "미납품" in fname) else f"{asset_id}_v1.png"
+        dst = os.path.join(sub_dir, clean_name)
+        
+        proc_f = safe_path("20_processed", cat, fname)
+        rej_f = safe_path("10_submitted", "_rejected", cat, fname)
+        proc_dir = safe_path("20_processed", cat, asset_id)
+        
+        if os.path.isfile(proc_f):
+            shutil.copy2(proc_f, dst)
+        elif os.path.isfile(rej_f):
+            shutil.move(rej_f, dst)
+        elif os.path.isdir(proc_dir):
+            sheet = os.path.join(proc_dir, f"{asset_id}_sheet.png")
+            if os.path.exists(sheet):
+                shutil.copy2(sheet, dst)
+            else:
+                shutil.copy2(os.path.join(ROOT, "assets", "sprites", f"{asset_id}_remake.png"), dst)
+        else:
+            raise FileNotFoundError(f"복구 대상 파일 없음: {fname}")
+            
+        return {"ok": True, "detail": f"10_submitted/{cat}/{os.path.basename(dst)} (재심사 상태로 복구 완료)"}
+
     src = safe_path("10_submitted", cat, fname)
     if not os.path.exists(src):
         raise FileNotFoundError(fname)
@@ -294,11 +435,24 @@ def fixer_contract(cat: str, fname: str) -> dict:
     if not contract:
         contract = {"cell": 0, "cols": 1, "rows": 1, "size": [0, 0], "align": "none", "layout": []}
     m = VERSION_RE.match(fname)
+
+    # 실제 파일이 위치한 경로를 역추적하여 올바른 웹 서빙 경로 부여
+    web = f"/assets/raw/llm/10_submitted/{cat}/{fname}"
+    if not os.path.exists(safe_path("10_submitted", cat, fname)):
+        if os.path.exists(safe_path("10_submitted", "_rejected", cat, fname)):
+            web = f"/assets/raw/llm/10_submitted/_rejected/{cat}/{fname}"
+        elif os.path.exists(safe_path("20_processed", cat, fname)):
+            web = f"/assets/raw/llm/20_processed/{cat}/{fname}"
+        elif os.path.exists(os.path.join(ROOT, "assets", "portraits", fname)):
+            web = f"/assets/portraits/{fname}"
+        elif os.path.exists(os.path.join(ROOT, "assets", "sprites", fname)):
+            web = f"/assets/sprites/{fname}"
+
     contract.update({
         "cat": cat,
         "file": fname,
         "asset_id": asset_id,
-        "web": f"/assets/raw/llm/10_submitted/{cat}/{fname}",
+        "web": web,
         "next_file": f"{asset_id}_v{int(m.group('n')) + 1 if m else 2}.png",
         "prompt_md": read_prompt_md(cat, asset_id),
     })

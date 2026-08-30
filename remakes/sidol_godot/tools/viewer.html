@@ -2,499 +2,3763 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<title>BSD 시돌이의 모험 — 총괄 뷰어</title>
+<title>BSD 시돌이의 모험 — 총괄 맵 & 마스터 데이터 뷰어</title>
 <style>
-:root{--bg:#14131a;--panel:#1e1c26;--line:#332f42;--fg:#e8e4f0;--dim:#9a94ac;
---acc:#7c6cff;--ok:#57c98a;--warn:#e8b64c;--bad:#ef6a6a;}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--fg);font:14px/1.5 "Segoe UI","Malgun Gothic",sans-serif;height:100vh;display:flex;flex-direction:column}
-header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-h1{font-size:17px;color:#cfc7ff;font-weight:600}
-.meta{color:var(--dim);font-size:12px}
-nav{display:flex;gap:6px;margin-left:auto}
-nav button{background:var(--panel);border:1px solid var(--line);color:var(--dim);
-padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
-nav button.on{color:#fff;background:var(--acc);border-color:var(--acc)}
-main{flex:1;overflow:auto;padding:14px 16px}
-.tabs{display:none}.tabs.on{display:block}
-.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-.floorbtn,.chip{background:var(--panel);border:1px solid var(--line);color:var(--fg);
-padding:4px 12px;border-radius:5px;cursor:pointer;font-size:13px}
-.floorbtn.on{border-color:var(--acc);color:#fff;background:#2b2740}
-label.tgl{color:var(--dim);font-size:13px;display:flex;align-items:center;gap:4px}
-#mapwrap{position:relative;display:inline-block;border:1px solid var(--line)}
-canvas{display:block;image-rendering:pixelated}
-#tip{position:fixed;background:#000d;border:1px solid var(--line);padding:6px 9px;
-font-size:12px;border-radius:5px;pointer-events:none;display:none;z-index:10;max-width:320px}
-#insp{position:fixed;right:14px;top:86px;width:270px;max-height:70vh;overflow:auto;
-background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12px;display:none}
-#insp h3{font-size:13px;color:#cfc7ff;margin-bottom:6px}
-#insp .row{border-top:1px solid var(--line);padding:5px 0}
-.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-top:8px}
-.legend i{display:inline-block;width:10px;height:10px;margin-right:3px;vertical-align:-1px}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{border:1px solid var(--line);padding:5px 9px;text-align:left;vertical-align:top}
-th{background:var(--panel);color:#cfc7ff}
-tr:hover td{background:#252232}
-.badge{display:inline-block;padding:1px 7px;border-radius:9px;font-size:11px;margin-right:4px}
-.b-op{background:#2b2740;color:#cfc7ff}.b-flag{background:#4a3413;color:#ffd24a}
-.b-bad{background:#3a1515;color:#ff9d9d}.b-ok{background:#12301f;color:#8fe0b0}
-.b-warn{background:#38300f;color:#ffe08a}.b-item{background:#12303a;color:#8ad4e0}
-.step{border:1px solid var(--line);border-radius:6px;padding:7px 10px;margin-bottom:6px;background:var(--panel)}
-.step .sp{color:#ffd98a;font-weight:600;font-size:12px}
-.missing{color:var(--bad)}
-.search{background:#0f0e15;border:1px solid var(--line);color:var(--fg);padding:5px 10px;border-radius:5px;width:240px}
-.two{display:flex;gap:14px;height:calc(100vh - 150px)}
-.side{width:280px;overflow:auto;border-right:1px solid var(--line);padding-right:10px;flex-shrink:0}
-.detail{flex:1;overflow:auto}
-.side a{display:block;color:var(--dim);padding:4px 8px;border-radius:5px;cursor:pointer;font-size:13px;text-decoration:none}
-.side a.on,.side a:hover{background:#2b2740;color:#fff}
-.small{color:var(--dim);font-size:12px}
-ul.chain{list-style:none}
-ul.chain li{margin:2px 0}
-#loader{max-width:720px;margin:40px auto;text-align:center;padding:30px;border:1px dashed var(--line);border-radius:10px}
-#loader h2{margin-bottom:10px;color:#cfc7ff}
-#loader p{color:var(--dim);margin-bottom:14px}
-#drop{border:2px dashed var(--acc);border-radius:10px;padding:26px;cursor:pointer;background:#191627}
-#drop.over{background:#241f3a}
-.hrow{display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--line);padding:6px 2px;font-size:13px}
+:root {
+  --bg: #0d0c14;
+  --bg-sub: #14121f;
+  --panel: #1b1828;
+  --panel-card: #221f33;
+  --panel-hover: #29243d;
+  --line: #312c48;
+  --line-light: #484168;
+  --fg: #eae5f5;
+  --dim: #9b94b2;
+  --dim-dark: #686182;
+  --acc: #806cfc;
+  --acc-glow: rgba(128, 108, 252, 0.4);
+  --ok: #48d597;
+  --warn: #f5b041;
+  --bad: #f05d5e;
+  --info: #38bdf8;
+  --door: #f59e0b;
+  --chest: #fbbf24;
+  --npc: #34d399;
+  --monster: #ec4899;
+  --trigger: #f43f5e;
+  --stairs: #38bdf8;
+  --room: #a855f7;
+  --overhead: #60a5fa;
+  --wall: #1e1b2e;
+  --floor: #3a4664;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Header */
+header {
+  background: var(--bg-sub);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+  z-index: 100;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-icon {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--acc), #ec4899);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 0 10px var(--acc-glow);
+}
+h1 {
+  font-size: 15px;
+  color: #cfc7ff;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.meta-chip {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+/* Global Search */
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.search-input {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  padding: 5px 28px 5px 10px;
+  border-radius: 6px;
+  width: 220px;
+  font-size: 12px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+.search-input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px var(--acc-glow);
+  width: 280px;
+}
+.search-icon {
+  position: absolute;
+  right: 8px;
+  color: var(--dim);
+  font-size: 12px;
+  pointer-events: none;
+}
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 340px;
+  max-height: 420px;
+  overflow-y: auto;
+  background: var(--panel-card);
+  border: 1px solid var(--line-light);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  z-index: 1000;
+  display: none;
+}
+.search-item {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.search-item:hover, .search-item.sel {
+  background: var(--line);
+}
+
+/* Main Nav Tabs */
+nav#main-tabs {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+nav#main-tabs button {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--dim);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+nav#main-tabs button:hover {
+  background: var(--panel);
+  color: var(--fg);
+}
+nav#main-tabs button.on {
+  color: #fff;
+  background: var(--acc);
+  border-color: var(--acc);
+  box-shadow: 0 0 12px var(--acc-glow);
+}
+
+/* Main Layout */
+main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+}
+.tab-content {
+  display: none;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.tab-content.on {
+  display: flex;
+}
+
+/* Map Tab Workspace */
+#tab-map {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #09080e;
+}
+.map-toolbar {
+  background: var(--bg-sub);
+  border-bottom: 1px solid var(--line);
+  padding: 6px 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  z-index: 20;
+}
+.btn-group {
+  display: flex;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.floorbtn, .viewmode-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  color: var(--dim);
+  padding: 5px 11px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.floorbtn:last-child, .viewmode-btn:last-child { border-right: none; }
+.floorbtn:hover, .viewmode-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+.floorbtn.on, .viewmode-btn.on {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+.tool-btn {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.15s;
+}
+.tool-btn:hover {
+  border-color: var(--line-light);
+  color: var(--fg);
+}
+label.tgl {
+  color: var(--dim);
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+label.tgl:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--fg);
+}
+label.tgl input {
+  accent-color: var(--acc);
+  cursor: pointer;
+}
+
+/* Event Storyboard Strip */
+.event-storyboard-strip {
+  background: #110e1d;
+  border-bottom: 1px solid var(--line);
+  padding: 4px 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  font-size: 11.5px;
+  z-index: 15;
+}
+.storyboard-title {
+  color: #cfc7ff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.storyboard-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 3px 10px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--fg);
+  transition: all 0.15s;
+}
+.storyboard-card:hover {
+  background: #282245;
+  border-color: var(--acc);
+  transform: translateY(-1px);
+}
+.storyboard-card.active {
+  background: var(--acc);
+  color: #fff;
+  border-color: #fff;
+  box-shadow: 0 0 10px var(--acc-glow);
+}
+.storyboard-step-badge {
+  width: 17px;
+  height: 17px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 10px;
+}
+
+/* Map Area & Stage with Native Scrollbars & Panning */
+.map-workspace {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+#viewport {
+  flex: 1;
+  position: relative;
+  overflow: auto;
+  cursor: grab;
+  background: radial-gradient(circle at center, #110f1c 0%, #08070d 100%);
+  user-select: none;
+  scroll-behavior: auto;
+}
+#viewport.panning {
+  cursor: grabbing !important;
+}
+
+/* Custom Styled Scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #0d0c14;
+  border-left: 1px solid var(--line);
+  border-top: 1px solid var(--line);
+}
+::-webkit-scrollbar-thumb {
+  background: #2b2742;
+  border-radius: 5px;
+  border: 2px solid #0d0c14;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--acc);
+}
+
+#scrollContainer {
+  position: relative;
+  display: inline-block;
+  padding: 40px;
+  min-width: 100%;
+  min-height: 100%;
+}
+
+#map-canvas-container {
+  position: relative;
+  display: block;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+canvas#mapCanvas {
+  display: block;
+  image-rendering: pixelated;
+}
+svg#linkOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+}
+#bubbleContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* On-Map Floating Speech Bubbles & Event Markers */
+.map-bubble {
+  position: absolute;
+  pointer-events: auto;
+  cursor: pointer;
+  transform: translate(-50%, -100%) translateY(-8px);
+  background: rgba(20, 18, 32, 0.94);
+  border: 1px solid var(--line-light);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.map-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px 5px 0 5px;
+  border-style: solid;
+  border-color: rgba(20, 18, 32, 0.94) transparent transparent transparent;
+}
+.map-bubble:hover {
+  transform: translate(-50%, -100%) translateY(-12px) scale(1.05);
+  border-color: var(--acc);
+  box-shadow: 0 6px 18px var(--acc-glow);
+  z-index: 50;
+}
+.bubble-avatar {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+.bubble-speaker { font-weight: 700; color: #ffd98a; font-size: 11px; }
+.bubble-text { color: #eae5f5; font-size: 10.5px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+
+/* Viewport HUD Overlay */
+.hud-coords {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  background: rgba(13, 12, 20, 0.9);
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--dim);
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  z-index: 30;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.hud-coords b {
+  color: #cfc7ff;
+  font-size: 13px;
+}
+.zoom-controls {
+  position: absolute;
+  right: 360px;
+  bottom: 14px;
+  background: rgba(13, 12, 20, 0.9);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: flex;
+  backdrop-filter: blur(8px);
+  z-index: 30;
+  overflow: hidden;
+}
+.zoom-controls button {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--line);
+  color: var(--fg);
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+.zoom-controls button:last-child { border-right: none; }
+.zoom-controls button:hover { background: var(--line); }
+.zoom-level {
+  padding: 6px 9px;
+  font-size: 11px;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* Tooltip & Toasts */
+#tileTooltip {
+  position: fixed;
+  background: rgba(15, 14, 24, 0.96);
+  border: 1px solid var(--line-light);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  pointer-events: none;
+  display: none;
+  z-index: 1000;
+  max-width: 360px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.75);
+  backdrop-filter: blur(10px);
+}
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--acc);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.25s ease;
+  z-index: 2000;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* Sidebar Dock */
+#sidebar {
+  width: 350px;
+  background: var(--bg-sub);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 25;
+  flex-shrink: 0;
+}
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+.sidebar-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--dim);
+  padding: 8px 4px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.sidebar-tab-btn:hover { color: var(--fg); }
+.sidebar-tab-btn.on {
+  color: #cfc7ff;
+  border-bottom-color: var(--acc);
+  background: rgba(128, 108, 252, 0.08);
+}
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+}
+.sidebar-panel { display: none; }
+.sidebar-panel.on { display: block; }
+
+/* Inspector Visual Cards */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cfc7ff;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.card-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 11.5px;
+}
+.card-row:last-child { border-bottom: none; }
+.card-row .k { color: var(--dim); }
+.card-row .v { color: var(--fg); text-align: right; word-break: break-all; }
+.semantic-box {
+  background: #231f38;
+  border-left: 3px solid var(--acc);
+  padding: 8px 10px;
+  border-radius: 0 6px 6px 0;
+  margin: 6px 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #dcd6ff;
+}
+.visual-preview-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #12101d;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin: 8px 0;
+}
+.visual-avatar {
+  width: 56px;
+  height: 56px;
+  background: #1a172a;
+  border: 1px solid var(--line-light);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.visual-avatar img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+
+.action-link-btn {
+  background: #28233f;
+  border: 1px solid var(--line-light);
+  color: #dcd6ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  transition: all 0.15s;
+}
+.action-link-btn:hover {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* Floor Object List Item */
+.obj-item {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.obj-item:hover {
+  border-color: var(--acc);
+  background: #231f36;
+}
+.obj-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #1a1829;
+}
+.obj-icon img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+.obj-info { flex: 1; min-width: 0; }
+.obj-name { font-weight: 600; font-size: 12px; color: var(--fg); }
+.obj-desc { font-size: 11px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Attribute Dictionary Cards */
+.attr-filter-bar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.attr-cat-btn {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.attr-cat-btn:hover { color: var(--fg); border-color: var(--line-light); }
+.attr-cat-btn.on { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+.attr-item-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 7px;
+  transition: all 0.15s;
+}
+.attr-item-card:hover {
+  border-color: var(--line-light);
+  background: var(--panel-card);
+}
+.attr-item-card.highlighted {
+  border-color: #00ffcc;
+  box-shadow: 0 0 10px rgba(0,255,204,0.25);
+  background: #182e33;
+}
+.attr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.attr-badge {
+  font-family: ui-monospace, Consolas, monospace;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #2b2740;
+  color: #cfc7ff;
+  border: 1px solid #433c64;
+}
+.attr-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--fg);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.attr-desc-text {
+  font-size: 11px;
+  color: var(--dim);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.attr-behavior-text {
+  background: #13111f;
+  border: 1px solid var(--line);
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #cfc7ff;
+  margin-bottom: 6px;
+}
+.attr-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  padding-top: 5px;
+  font-size: 11px;
+}
+.attr-coord-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+}
+.coord-chip {
+  background: #221f33;
+  border: 1px solid var(--line-light);
+  color: #cfc7ff;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.coord-chip:hover {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+
+/* Legend Drawer / Bar */
+.legend-bar {
+  background: var(--bg-sub);
+  border-top: 1px solid var(--line);
+  padding: 6px 14px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow-x: auto;
+  font-size: 11px;
+  color: var(--dim);
+  z-index: 20;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.legend-item:hover {
+  border-color: var(--line-light);
+  color: var(--fg);
+}
+.legend-item.active {
+  background: #2e284a;
+  border-color: var(--acc);
+  color: #fff;
+}
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Fullscreen Attribute Modal */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(6px);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-backdrop.on { display: flex; }
+.modal-window {
+  width: 92%;
+  max-width: 1050px;
+  max-height: 85vh;
+  background: var(--panel);
+  border: 1px solid var(--line-light);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  padding: 14px 20px;
+  background: var(--bg-sub);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #cfc7ff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.modal-close-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+
+/* Common Two-Panel Layout */
+.two-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+.two-side {
+  width: 300px;
+  background: var(--bg-sub);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  padding: 12px;
+  flex-shrink: 0;
+}
+.two-detail {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 24px;
+}
+.side-item {
+  display: block;
+  color: var(--dim);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+  transition: all 0.15s;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.side-item:hover {
+  background: var(--panel-hover);
+  color: var(--fg);
+  border-color: var(--line-light);
+}
+.side-item.on {
+  background: #2b2646;
+  color: #fff;
+  font-weight: 600;
+  border-color: var(--acc);
+  box-shadow: inset 3px 0 0 var(--acc);
+}
+
+/* Badges & Tables */
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  margin-right: 4px;
+}
+.b-op { background: #2b2740; color: #cfc7ff; border: 1px solid #433c64; }
+.b-flag { background: #4a3413; color: #ffd24a; border: 1px solid #75551f; }
+.b-bad { background: #3a1515; color: #ff9d9d; border: 1px solid #6b2828; }
+.b-ok { background: #12301f; color: #8fe0b0; border: 1px solid #205c38; }
+.b-warn { background: #38300f; color: #ffe08a; border: 1px solid #685718; }
+.b-item { background: #12303a; color: #8ad4e0; border: 1px solid #1c5264; }
+.b-mon { background: #381329; color: #f472b6; border: 1px solid #831843; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+th, td {
+  border: 1px solid var(--line);
+  padding: 8px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+th {
+  background: var(--panel);
+  color: #cfc7ff;
+  font-weight: 600;
+}
+tr:hover td {
+  background: var(--panel-card);
+}
+.step-bubble {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  background: var(--panel);
+}
+.step-bubble .sp {
+  color: #ffd98a;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+/* In-Game RPG Dialogue Box Simulator */
+.dialogue-simulator-frame {
+  background: #141122;
+  border: 2px solid #5a4b81;
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.dialogue-sim-avatar {
+  width: 64px;
+  height: 64px;
+  background: #1f1b33;
+  border: 2px solid #7c68b0;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dialogue-sim-avatar img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+.dialogue-sim-body {
+  flex: 1;
+}
+.dialogue-sim-speaker {
+  color: #ffd98a;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 6px;
+  display: inline-block;
+  background: rgba(0,0,0,0.4);
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255,217,138,0.3);
+}
+.dialogue-sim-text {
+  color: #f1edfa;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Item & Monster Card Grids */
+.encyclopedia-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.encyclopedia-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.encyclopedia-card:hover {
+  background: var(--panel-hover);
+  border-color: var(--acc);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+}
+.encyclopedia-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.encyclopedia-thumb {
+  width: 48px;
+  height: 48px;
+  background: #141224;
+  border: 1px solid var(--line-light);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.encyclopedia-thumb img {
+  max-width: 80%;
+  max-height: 80%;
+  image-rendering: pixelated;
+}
+
+/* Loader Screen */
+#loader {
+  max-width: 600px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 40px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  background: var(--bg-sub);
+}
+#drop {
+  border: 2px dashed var(--acc);
+  border-radius: 10px;
+  padding: 30px;
+  cursor: pointer;
+  background: #191627;
+  transition: all 0.2s;
+}
+#drop:hover, #drop.over {
+  background: #241f3a;
+  border-color: #a798ff;
+}
+
+/* Pulse animation */
+@keyframes mapPulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(2.2); opacity: 0.3; }
+  100% { transform: scale(3); opacity: 0; }
+}
+.pulse-ring {
+  position: absolute;
+  border: 2px solid #ff4444;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: mapPulse 1.2s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* Global Loading Overlay (Hourglass & Spinner) */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(13, 12, 20, 0.92);
+  backdrop-filter: blur(12px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+.loading-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.loading-box {
+  background: #1b1828;
+  border: 1px solid #484168;
+  border-radius: 16px;
+  padding: 36px 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+  text-align: center;
+}
+.hourglass-icon {
+  font-size: 42px;
+  animation: hourglassFlip 1.6s ease-in-out infinite;
+}
+@keyframes hourglassFlip {
+  0% { transform: rotate(0deg) scale(1); }
+  45% { transform: rotate(180deg) scale(1.1); }
+  55% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.spinner-ring {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(128, 108, 252, 0.2);
+  border-top-color: #806cfc;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #cfc7ff;
+}
+.loading-sub {
+  font-size: 12px;
+  color: #9b94b2;
+}
+
 </style>
 </head>
 <body>
+
+<!-- Global Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="hourglass-icon">⏳</div>
+    <div class="spinner-ring"></div>
+    <div class="loading-title" id="loadingTitle">BSD 시돌이의 모험 마스터 데이터 로딩 중...</div>
+    <div class="loading-sub" id="loadingSub">맵 지형, NPC, 몬스터, 퀘스트 데이터를 분석하고 있습니다</div>
+  </div>
+</div>
+
+
 <header>
-  <h1>BSD 시돌이의 모험 · 총괄 뷰어</h1>
-  <span class="meta" id="genmeta"></span>
-  <nav id="tabs" style="display:none">
-    <button data-tab="map" class="on">맵</button>
-    <button data-tab="quest">퀘스트 체인</button>
-    <button data-tab="seq">시퀀스·대사</button>
-    <button data-tab="cut">컷신</button>
-    <button data-tab="health">정합성</button>
+  <div class="brand">
+    <div class="brand-icon">S</div>
+    <h1>시돌이의 모험 · 맵 & 마스터 뷰어</h1>
+  </div>
+  <span class="meta-chip" id="genmeta">데이터 준비 중…</span>
+  
+  <div class="search-box">
+    <input type="text" class="search-input" id="globalSearch" placeholder="NPC, 몬스터, 아이템, 퀘스트, 속성 검색… [/]">
+    <span class="search-icon">🔍</span>
+    <div class="search-dropdown" id="searchDrop"></div>
+  </div>
+
+  <nav id="main-tabs" style="display:none">
+    <button data-tab="map" class="on">🗺️ 맵 뷰어</button>
+    <button data-tab="quest">📜 퀘스트 체인</button>
+    <button data-tab="seq">💬 시퀀스·대사</button>
+    <button data-tab="cut">🎬 컷신</button>
+    <button data-tab="item">📦 아이템 도감</button>
+    <button data-tab="bestiary">👾 몬스터 도감</button>
+    <button data-tab="health">🛡️ 정합성 감사</button>
   </nav>
 </header>
+
 <main>
+  <!-- Loader Screen -->
   <div id="loader">
-    <h2>데이터 로딩</h2>
-    <div id="loadState" class="small">data/ 자동 탐색 중…</div>
-    <div id="pickZone" style="display:none;margin-top:18px">
-      <p>HTTP 서버 없이 파일로 열었으므로 폴더를 한 번 지정해야 한다.<br>
-         (브라우저 정책 — 파일은 읽기만 하며 어디에도 전송되지 않는다)</p>
+    <h2 style="color:#cfc7ff;margin-bottom:10px">데이터 로딩</h2>
+    <div id="loadState" class="dim" style="font-size:13px">data/ 자동 탐색 중…</div>
+    <div id="pickZone" style="display:none;margin-top:20px">
+      <p style="color:var(--dim);margin-bottom:14px;font-size:12px">HTTP 서버 없이 브라우저로 직접 열었으므로 data 폴더를 지정해야 합니다.</p>
       <div id="drop">📂 <b>remakes/sidol_godot/data</b> 폴더를 여기에 끌어다 놓거나 클릭해 선택</div>
       <input type="file" id="dirPick" webkitdirectory multiple style="display:none">
-      <p class="small" style="margin-top:12px">매번 선택이 번거로우면 <code>뷰어실행.bat</code> 사용 —
-      자동으로 최신 데이터를 읽는 HTTP 모드로 열린다.</p>
+      <p style="color:var(--dim);margin-top:12px;font-size:11px">권장: <code>뷰어실행.bat</code>을 실행하면 서버 모드로 자동 로딩됩니다.</p>
     </div>
   </div>
 
-  <section class="tabs" id="tab-map">
-    <div class="toolbar">
-      <span id="floorbtns"></span>
-      <label class="tgl"><input type="checkbox" id="tgNpc" checked>NPC</label>
-      <label class="tgl"><input type="checkbox" id="tgTrg" checked>트리거</label>
-      <label class="tgl"><input type="checkbox" id="tgTrn" checked>계단/전환</label>
-      <label class="tgl"><input type="checkbox" id="tgGrid">격자</label>
-      <span class="small">셀 클릭 → 우측 인스펙터 · 호버 → 툴팁</span>
+  <!-- Tab 1: Map View -->
+  <section class="tab-content on" id="tab-map" style="display:none">
+    <div class="map-toolbar">
+      <div class="btn-group" id="floorbtns"></div>
+
+      <!-- 렌더링 뷰 모드 3단계 선택기 -->
+      <div class="btn-group">
+        <button class="viewmode-btn on" data-vmode="graphic" title="실제 인게임 렌더 그래픽 타일 출력">🖼️ 그래픽 맵</button>
+        <button class="viewmode-btn" data-vmode="hybrid" title="실제 그래픽 위에 속성 영역을 반투명 오버레이">🌓 하이브리드</button>
+        <button class="viewmode-btn" data-vmode="attr" title="속성값 진단 분석 색상 모드 (줌인 시 ATTR 번호 표시)">📊 속성 분석</button>
+      </div>
+      
+      <label class="tgl"><input type="checkbox" id="tgBubbles" checked>💬 말풍선</label>
+      <label class="tgl"><input type="checkbox" id="tgNpc" checked>👤 NPC</label>
+      <label class="tgl"><input type="checkbox" id="tgMonster" checked>👾 몬스터</label>
+      <label class="tgl"><input type="checkbox" id="tgTrg" checked>⚡ 트리거</label>
+      <label class="tgl"><input type="checkbox" id="tgTrn" checked>🚪 계단</label>
+      <label class="tgl"><input type="checkbox" id="tgChest" checked>🎁 상자</label>
+      <label class="tgl"><input type="checkbox" id="tgLinks" checked>🔗 연결선</label>
+      <label class="tgl"><input type="checkbox" id="tgGrid">📐 격자</label>
+      
+      <button class="tool-btn" id="btnFit">화면 맞춤 (F)</button>
+      <button class="tool-btn" id="btnResetZoom">100%</button>
+      <button class="tool-btn" id="btnOpenModalAttr" style="margin-left:auto;background:#28233f;color:#cfc7ff;border-color:var(--acc)">📖 속성(ATTR) 전체 명세표</button>
     </div>
-    <div id="mapwrap"><canvas id="cv"></canvas><div id="tip"></div></div>
-    <div id="insp"></div>
-    <div class="legend">
-      <span><i style="background:#d8c9a3"></i>통행</span>
-      <span><i style="background:#3a3630"></i>벽</span>
-      <span><i style="background:#7a8aa0"></i>오버헤드</span>
-      <span><i style="background:#ff9d3b"></i>문(ATT9)</span>
-      <span><i style="background:#ffd24a"></i>상자</span>
-      <span><i style="background:#35d07f"></i>NPC</span>
-      <span><i style="background:#ff5fa2"></i>zone</span>
-      <span><i style="background:#4cc9ff"></i>interact</span>
-      <span><i style="background:#b06ad4"></i>auto</span>
-      <span><i style="background:#ff4444"></i>계단 앵커</span>
+
+    <div class="event-storyboard-strip" id="storyboardStrip"></div>
+
+    <div class="map-workspace">
+      <div id="viewport">
+        <div id="scrollContainer">
+          <div id="map-canvas-container">
+            <canvas id="mapCanvas"></canvas>
+            <svg id="linkOverlay"></svg>
+            <div id="bubbleContainer"></div>
+            <div id="pulseContainer"></div>
+          </div>
+        </div>
+
+        <div class="hud-coords" id="hudCoords">
+          <span>모드 <b id="hudMode" style="color:var(--info)">🖼️ 그래픽 맵</b></span>
+          <span>좌표 <b id="hudXY">0, 0</b></span>
+          <span>속성 <span id="hudAttr">0 (통행)</span></span>
+          <span style="color:var(--dim-dark)">| 드래그: 맵 패닝 / 스크롤바 이동 / 휠: 줌</span>
+        </div>
+
+        <div class="zoom-controls">
+          <button id="btnZoomOut">−</button>
+          <div class="zoom-level" id="zoomLevel">100%</div>
+          <button id="btnZoomIn">+</button>
+        </div>
+      </div>
+
+      <aside id="sidebar">
+        <div class="sidebar-tabs">
+          <button class="sidebar-tab-btn on" data-side="insp">인스펙터</button>
+          <button class="sidebar-tab-btn" data-side="browser">층 객체 (<span id="floorObjCount">0</span>)</button>
+          <button class="sidebar-tab-btn" data-side="attrdict">속성 사전 (<span id="attrDictCount">0</span>)</button>
+        </div>
+        <div class="sidebar-content">
+          <div class="sidebar-panel on" id="side-insp">
+            <div id="inspContent">
+              <div class="card" style="text-align:center;padding:24px 12px;color:var(--dim)">
+                맵의 셀을 클릭하거나<br>객체/몬스터/속성 목록에서 항목을 선택하세요.
+              </div>
+            </div>
+          </div>
+
+          <div class="sidebar-panel" id="side-browser">
+            <input type="text" id="browserSearch" class="search-input" placeholder="이 층의 객체 / 몬스터 필터링…" style="width:100%;margin-bottom:10px">
+            <div id="browserList"></div>
+          </div>
+
+          <div class="sidebar-panel" id="side-attrdict">
+            <div class="attr-filter-bar" id="attrCatFilters">
+              <button class="attr-cat-btn on" data-cat="all">전체</button>
+              <button class="attr-cat-btn" data-cat="walk">통행/벽</button>
+              <button class="attr-cat-btn" data-cat="prof">교수실</button>
+              <button class="attr-cat-btn" data-cat="npc_room">방/조교실</button>
+              <button class="attr-cat-btn" data-cat="chest">상자</button>
+              <button class="attr-cat-btn" data-cat="special">특수/기타</button>
+            </div>
+            <input type="text" id="attrSearch" class="search-input" placeholder="속성 번호 / 이름 / 설명 검색…" style="width:100%;margin-bottom:10px">
+            <div id="attrDictList"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="legend-bar" id="legendBar"></div>
+  </section>
+
+  <!-- Tab 2: Quest Chain (고도화: 플로우보드 + 맵 위치 연동) -->
+  <section class="tab-content" id="tab-quest">
+    <div style="flex:1;overflow:auto;padding:20px 24px" id="qBody"></div>
+  </section>
+
+  <!-- Tab 3: Sequence / Dialogue (고도화: RPG 대화창 시뮬레이터) -->
+  <section class="tab-content" id="tab-seq">
+    <div class="two-panel">
+      <div class="two-side">
+        <input class="search-input" id="seqSearch" placeholder="대사 시퀀스 검색…" style="width:100%;margin-bottom:10px">
+        <div id="seqList"></div>
+      </div>
+      <div class="two-detail" id="seqDetail"></div>
     </div>
   </section>
 
-  <section class="tabs" id="tab-quest"><div id="qBody"></div></section>
-  <section class="tabs" id="tab-seq">
-    <div class="two">
-      <div class="side">
-        <input class="search" id="seqSearch" placeholder="시퀀스 검색…" style="width:100%;margin-bottom:8px">
-        <div id="seqList"></div>
+  <!-- Tab 4: Cutscenes (고도화: 비주얼 블록 다이어그램) -->
+  <section class="tab-content" id="tab-cut">
+    <div class="two-panel">
+      <div class="two-side">
+        <input class="search-input" id="cutSearch" placeholder="컷신 검색…" style="width:100%;margin-bottom:10px">
+        <div id="cutList"></div>
       </div>
-      <div class="detail" id="seqDetail"></div>
+      <div class="two-detail" id="cutDetail"></div>
     </div>
   </section>
-  <section class="tabs" id="tab-cut">
-    <div class="two"><div class="side" id="cutList"></div><div class="detail" id="cutDetail"></div></div>
+
+  <!-- Tab 5: Item Encyclopedia (신규 아이템 도감) -->
+  <section class="tab-content" id="tab-item">
+    <div style="flex:1;overflow:auto;padding:20px 24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <h2 style="color:#cfc7ff;font-size:16px;font-weight:700">📦 아이템 & 장비 백과도감</h2>
+          <p style="color:var(--dim);font-size:12px">게임에 등장하는 모든 무기, 방어구, 소비품 및 보물 상자 출현 위치</p>
+        </div>
+        <div style="display:flex;gap:8px">
+          <div class="btn-group" id="itemCatFilters">
+            <button class="viewmode-btn on" data-icat="all">전체</button>
+            <button class="viewmode-btn" data-icat="weapon">무기</button>
+            <button class="viewmode-btn" data-icat="armor">방어구</button>
+            <button class="viewmode-btn" data-icat="consumable">소비품</button>
+            <button class="viewmode-btn" data-icat="quest">퀘스트/기타</button>
+          </div>
+          <input type="text" id="itemSearch" class="search-input" placeholder="아이템 이름 / ID 검색…" style="width:200px">
+        </div>
+      </div>
+      <div class="encyclopedia-grid" id="itemGrid"></div>
+    </div>
   </section>
-  <section class="tabs" id="tab-health">
-    <div class="toolbar"><button class="chip" onclick="renderHealth()">다시 검사</button>
-      <span class="small">SelfCheck 프루브의 브라우저판 — 저장 전 눈으로 확인</span></div>
-    <div id="healthOut"></div>
+
+  <!-- Tab 6: Monster Bestiary (신규 몬스터 도감) -->
+  <section class="tab-content" id="tab-bestiary">
+    <div style="flex:1;overflow:auto;padding:20px 24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <h2 style="color:#f472b6;font-size:16px;font-weight:700">👾 몬스터 생태 & 인카운터 도감</h2>
+          <p style="color:var(--dim);font-size:12px">층별 출현 몬스터 생태, AI 이동 패턴, 약점 브레이크 시스템 및 스탯 명세</p>
+        </div>
+        <input type="text" id="bestiarySearch" class="search-input" placeholder="몬스터 이름 / 종 ID 검색…" style="width:220px">
+      </div>
+      <div class="encyclopedia-grid" id="bestiaryGrid"></div>
+    </div>
+  </section>
+
+  <!-- Tab 7: Health Check (고도화: 카테고리별 대시보드) -->
+  <section class="tab-content" id="tab-health">
+    <div style="flex:1;overflow:auto;padding:20px 24px">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+        <button class="tool-btn" onclick="renderHealth()">🔄 다시 검사</button>
+        <span style="color:var(--dim);font-size:12px">SelfCheck 무결성 자동 검증기 (맵, NPC, 트리거, 시퀀스, 컷신, 아이템)</span>
+      </div>
+      <div id="healthOut"></div>
+    </div>
   </section>
 </main>
-<div id="insp2"></div>
-<div id="tip"></div>
+
+<!-- Fullscreen Attribute Modal -->
+<div class="modal-backdrop" id="attrModal">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div class="modal-title">📖 전체 맵 속성(ATTR) 종합 명세표</div>
+      <button class="modal-close-btn" onclick="toggleAttrModal(false)">✕</button>
+    </div>
+    <div class="modal-body" id="attrModalBody"></div>
+  </div>
+</div>
+
+<div id="tileTooltip"></div>
+<div class="toast" id="toast"></div>
 
 <script>
 "use strict";
-const $=s=>document.querySelector(s);
-const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const INTERNAL_FLAGS=["q_f2_hp_gate","q_f3_quiz_gate","q_f4_battery_gate","q_f5_boss_gate","q_f5_ai_battle_won"];
-const FLOOR_ORDER=["f1","f2","f3","f0","f4","f5"];
-const FLOOR_LABEL={f0:"지하",f1:"F1",f2:"F2",f3:"F3",f4:"F4",f5:"F5"};
-const CELL=8;
-let P=null,curFloor="f1",selCell=null;
-const npcByFloor={},trigByFloor={};
 
-/* ===== 로더: ①HTTP fetch ②폴더 지정 ===== */
-async function loadAll(base){
-  const get=async p=>{const r=await fetch(base+p);if(!r.ok)throw 0;return r.json();};
-  const out={maps:{},npcs:[],triggers:[],cutscenes:{},sequences:null,
-    dialogue:null,quests:null,items:[],monsters:{species:[],bosses:{}},
-    transitions:null};
-  out.dialogue=await get("dialogue.json");
-  const sq=await get("dialogue_sequences.json");out.sequences=sq.sequences||{};
-  out.quests=await get("quests_v2.json");
-  out.transitions=await get("maps/transitions.json");
-  out.items=(await get("items.json")).items;
-  const mon=await get("monsters.json");
-  out.monsters.species=Object.values(mon.floors||{}).flatMap(f=>(f.species||[])
-    .map(s=>s.id?s.id:String(s)));
-  out.monsters.bosses=Object.keys(mon.bosses||{});
-  for(const n of [1,2,3,4,5,0]){
-    try{
-      const def=await get(`maps/f${n}.json`);
-      out.maps["f"+n]={w:def.width,h:def.height,attr:def.layers.attr};
-      const np=await get(`maps/npcs_f${n}.json`);
-      out.npcs.push({floor:n,npcs:np.npcs});
-      const tg=await get(`maps/triggers_f${n}.json`);
-      out.triggers.push({floor:n,triggers:tg.triggers});
-    }catch(_){}
-  }
-  const known=["opening","hp_room_visit","quiz_paline","battery_puzzle",
-    "boss_sys_builder","epilogue","f1_sopo","f1_gas","f1_blast","f2_poster",
-    "f3_drag","f3_allin","f0_disk","f4_sacrifice"];
-  for(const k of known){
-    try{out.cutscenes[k]=await get(`cutscenes/${k}.json`);}catch(_){}
-  }
-  try{
-    const r=await fetch(base+"cutscenes/");
-    const txt=await r.text();
-    for(const m of txt.matchAll(/href="([^"]+\.json)"/g)){
-      const k=m[1].replace(".json","");
-      if(!out.cutscenes[k]){try{out.cutscenes[k]=await get(`cutscenes/${k}.json`);}catch(_){}}
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ===== 기본 상수 및 메타데이터 ===== */
+const FLOOR_ORDER = ["f1", "f2", "f3", "f0", "f4", "f5"];
+const FLOOR_LABEL = { f0: "지하 (B1)", f1: "1층 (F1)", f2: "2층 (F2)", f3: "3층 (F3)", f4: "4층 (F4)", f5: "5층 (F5)" };
+const BASE_CELL = 16;
+
+/* ===== 속성값(ATT) 전체 명세 & 게임 내 실제 동작 원리 사전 ===== */
+const ATT_DEFS = {
+  0: { name: "통행 가능 바닥", desc: "플레이어가 이동 가능한 기본 복도 및 방 바닥", behavior: "주인공 시돌이와 NPC가 자유롭게 보행 가능하며 통행 저항이 없습니다.", cat: "walk", color: "#3a4664" },
+  1: { name: "벽 / 장애물", desc: "이동 불가 장애물 또는 개봉 완료된 빈 상자", behavior: "물리 충돌 판정 발생. 통과할 수 없으며 시돌이가 부딪히면 멈춥니다. 상자를 열었을 때도 이 속성으로 바뀝니다.", cat: "walk", color: "#14161f" },
+  2: { name: "오버헤드 (천장/아치)", desc: "통행 가능하며 캐릭터 위를 덮어 렌더링되는 아치/기둥 상단", behavior: "통행은 가능하지만 렌더 순서상 캐릭터의 머리 위로 그려져 입체적인 문틀/천장 밑을 지나는 연출을 만듭니다.", cat: "walk", color: "#2d374d" },
+  9: { name: "문 / 포탈", desc: "방 출입문 — 통과 시 mapy±3 점프 또는 실내외 진입", behavior: "시돌이가 이 타일을 밟고 전진하면 자동 워프(y±3 이동)되어 방 내부로 진입하거나 복도로 퇴장합니다.", cat: "special", color: "#f59e0b" },
+  10: { name: "학회장실 A", desc: "학회장실 특별 구역", behavior: "학회장실 내부 구역. 상호작용 및 이벤트 플래그 체크에 사용됩니다.", cat: "npc_room", color: "#8b5cf6" },
+  11: { name: "학회장실 B", desc: "학회장실 특별 구역", behavior: "학회장실 내부 구역. 상호작용 및 이벤트 플래그 체크에 사용됩니다.", cat: "npc_room", color: "#8b5cf6" },
+  12: { name: "학회장실 C", desc: "학회장실 특별 구역", behavior: "학회장실 내부 구역. 상호작용 및 이벤트 플래그 체크에 사용됩니다.", cat: "npc_room", color: "#8b5cf6" },
+  13: { name: "학회장실 D", desc: "학회장실 특별 구역", behavior: "학회장실 내부 구역. 상호작용 및 이벤트 플래그 체크에 사용됩니다.", cat: "npc_room", color: "#8b5cf6" },
+  14: { name: "학회장실 E", desc: "학회장실 특별 구역", behavior: "학회장실 내부 구역. 상호작용 및 이벤트 플래그 체크에 사용됩니다.", cat: "npc_room", color: "#8b5cf6" },
+  15: { name: "식당 아가씨 방", desc: "식당 아가씨 NPC 상주 및 이벤트 구역", behavior: "식당 아가씨 NPC와 조우하여 식사/치료 및 퀘스트 대사가 발동됩니다.", cat: "npc_room", color: "#ec4899" },
+  16: { name: "홍춘발 교수실", desc: "신경질적인 홍춘발 교수 연구실 (F1)", behavior: "1층 메인 퀘스트 진행 구역. 홍춘발 교수와 대화하여 단서를 얻습니다.", cat: "prof", color: "#f43f5e" },
+  20: { name: "황박사 연구실 A", desc: "황박사 연구 구역", behavior: "5층 황박사 연구실 진입로 구역.", cat: "prof", color: "#f43f5e" },
+  21: { name: "황박사 연구실 B", desc: "위엄 있는 황박사 연구실 (F5)", behavior: "5층 황박사 본거지. 최종 보스 시스빌더 격돌 전 주요 이벤트 발동.", cat: "prof", color: "#f43f5e" },
+  25: { name: "남앵골 교수실 A", desc: "남앵골 교수 연구 구역", behavior: "4층 남앵골 교수실 진입 구역.", cat: "prof", color: "#f43f5e" },
+  26: { name: "남앵골 교수실 B", desc: "술병 든 남앵골 교수 연구실 (F4)", behavior: "4층 남앵골 교수 상주. 술에 취한 교수와의 퀘스트 대사 진행.", cat: "prof", color: "#f43f5e" },
+  30: { name: "권영칠 교수실 A", desc: "권영칠 교수 연구 구역", behavior: "3층 권영칠 교수실 진입 구역.", cat: "prof", color: "#f43f5e" },
+  31: { name: "권영칠 교수실 B", desc: "소심한 권영칠 교수 연구실 (F3)", behavior: "3층 권영칠 교수 상주. 연구 관련 퀘스트 플래그 처리.", cat: "prof", color: "#f43f5e" },
+  35: { name: "김경선 교수실 A", desc: "김경선 교수 연구 구역", behavior: "2층 김경선 교수실 진입 구역.", cat: "prof", color: "#f43f5e" },
+  36: { name: "김경선 교수실 B", desc: "바쁜 김경선 교수 연구실 (F2)", behavior: "2층 김경선 교수 상주. 바쁜 연구 대사 및 퀘스트 단서 제공.", cat: "prof", color: "#f43f5e" },
+  40: { name: "나교수실 A", desc: "은퇴 나교수 연구 구역", behavior: "1층 나교수실 진입 구역.", cat: "prof", color: "#f43f5e" },
+  41: { name: "나교수실 B", desc: "은퇴 나교수 연구실 (F1)", behavior: "1층 나교수 상주. 과거 전설 및 부싯돌 관련 옛이야기 전달.", cat: "prof", color: "#f43f5e" },
+  44: { name: "퀴즈맨 방", desc: "공대생 생존 퀴즈맨 출현 구역 (F3)", behavior: "3층 퀴즈맨 조우 구역. 진입 시 퀴즈 대사 및 정답 판정 이벤트 진행.", cat: "npc_room", color: "#06b6d4" },
+  46: { name: "행정 조교실 A", desc: "행정 조교 NPC 상주 구역", behavior: "행정 조교 상주. 서류 및 학사 일정 관련 단서 획득.", cat: "npc_room", color: "#06b6d4" },
+  47: { name: "행정 조교실 B", desc: "행정 조교 NPC 상주 구역", behavior: "행정 조교 상주 구역.", cat: "npc_room", color: "#06b6d4" },
+  51: { name: "조교실", desc: "조교 NPC 상주 구역", behavior: "조교 NPC와 대화하여 실험실 열쇠 등 단서 획득.", cat: "npc_room", color: "#06b6d4" },
+  56: { name: "정보원 방", desc: "캠퍼스 정보원 NPC 구역", behavior: "캠퍼스 뒷소문과 힌트를 제공하는 정보원 상주.", cat: "npc_room", color: "#06b6d4" },
+  61: { name: "실습 조교실", desc: "실습 조교 NPC 상주 구역", behavior: "실습 장비 및 배터리 관련 단서 제공 구역.", cat: "npc_room", color: "#06b6d4" },
+  66: { name: "연구원실", desc: "연구원 NPC 상주 구역", behavior: "선임 연구원 상주 구역.", cat: "npc_room", color: "#06b6d4" },
+  71: { name: "학생회실", desc: "학생회 임원 NPC 상주 구역", behavior: "학생회 축제 및 포스터 관련 서브 퀘스트 발동.", cat: "npc_room", color: "#06b6d4" },
+  77: { name: "경비실", desc: "경비원 노인 상주 구역", behavior: "경비원 상주. 야간 순찰 및 건물 잠금 해제 단서 제공.", cat: "npc_room", color: "#06b6d4" },
+  78: { name: "펠린/식당 구역", desc: "식당 및 학생 휴게 구역", behavior: "학생 휴게 구역. NPC들과 자유로운 대화 진행.", cat: "npc_room", color: "#06b6d4" },
+  97: { name: "좌측 장식 인물", desc: "배경 장식 인물 (좌측)", behavior: "상호작용 없는 배경 학생/인물 장식 그래픽.", cat: "special", color: "#10b981" },
+  98: { name: "우측 장식 인물", desc: "배경 장식 인물 (우측)", behavior: "상호작용 없는 배경 학생/인물 장식 그래픽.", cat: "special", color: "#10b981" },
+  110: { name: "HP방 (크레딧룸)", desc: "부싯돌 개발진 이스터에그 크레딧 룸", behavior: "2층 숨겨진 방. 진입 시 1995 부싯돌 오리지널 개발진(dev1, dev2) 대사 출력.", cat: "special", color: "#e11d48" },
+  198: { name: "MEET 기습 상자", desc: "개봉 시 몬스터가 기습 출현하는 함정 상자", behavior: "상자를 열면 아이템 대신 몬스터가 기습 출현하여 즉시 턴제 전투가 발생합니다.", cat: "chest", color: "#ef4444" },
+  199: { name: "EMPTY 빈 상자", desc: "아무것도 들어있지 않은 빈 상자", behavior: "상자를 열어도 아무런 아이템을 얻지 못하며 '아무것도 들어있지 않다' 메시지가 출력됩니다.", cat: "chest", color: "#64748b" }
+};
+
+/* ===== NPC 및 몬스터 비주얼 에셋 맵핑 ===== */
+const NPC_VISUALS = {
+  guard_idle: { sprite: "../assets/sprites/guard_idle_original.png", portrait: "../assets/portraits/npc_guard.png" },
+  cafeteria_girl: { sprite: "../assets/sprites/cafeteria_girl_original.png", portrait: "../assets/portraits/_fallback.png" },
+  librarian: { sprite: "../assets/sprites/librarian_original.png", portrait: "../assets/portraits/_fallback.png" },
+  prof_chem: { sprite: "../assets/sprites/prof_chem_original.png", portrait: "../assets/portraits/_fallback.png" },
+  rescue_girl: { sprite: "../assets/sprites/rescue_girl_original.png", portrait: "../assets/portraits/_fallback.png" },
+  tutor_dumb: { sprite: "../assets/sprites/tutor_dumb_original.png", portrait: "../assets/portraits/_fallback.png" },
+  nothing_man: { sprite: "../assets/sprites/nothing_man_original.png", portrait: "../assets/portraits/_fallback.png" },
+  dev1: { sprite: "../assets/sprites/player_original.png", portrait: "../assets/portraits/_fallback.png" },
+  dev2: { sprite: "../assets/sprites/player_original.png", portrait: "../assets/portraits/_fallback.png" },
+  lab_student: { sprite: "../assets/sprites/player_original.png", portrait: "../assets/portraits/_fallback.png" },
+  afterschool_student: { sprite: "../assets/sprites/player_original.png", portrait: "../assets/portraits/_fallback.png" }
+};
+
+const MONSTER_SPRITES = {
+  sparker: "../assets/sprites/sparker_original.png",
+  mad_eye: "../assets/sprites/mad_eye_original.png",
+  vulgar: "../assets/sprites/vulgar_original.png",
+  dworm: "../assets/sprites/dworm_original.png",
+  ozzy: "../assets/sprites/ozzy_original.png",
+  iron_voc: "../assets/sprites/iron_voc_original.png",
+  hellcop: "../assets/sprites/hellcop_original.png",
+  o_ray: "../assets/sprites/o_ray_original.png",
+  c_bug: "../assets/sprites/c_bug_original.png",
+  flying_thesis: "../assets/sprites/flying_thesis_original.png",
+  rogue_vending: "../assets/sprites/rogue_vending_original.png",
+  null_pointer: "../assets/sprites/null_pointer_original.png",
+  sewer_king: "../assets/sprites/dworm_original.png",
+  hall_mother: "../assets/sprites/mad_eye_original.png",
+  crt_overseer: "../assets/sprites/null_pointer_original.png",
+  flask_titan: "../assets/sprites/vulgar_original.png",
+  volt_wyrm: "../assets/sprites/sparker_original.png",
+  professor_monster: "../assets/sprites/iron_voc_original.png",
+  sys_builder: "../assets/sprites/c_bug_original.png",
+  boss_sys_builder: "../assets/sprites/c_bug_original.png"
+};
+
+/* ===== 층별 주요 메인 이벤트 스토리보드 정의 ===== */
+const FLOOR_STORYBOARDS = {
+  f1: [
+    { step: 1, name: "📦 소포 수령", desc: "경비실 앞에서 배달된 의문의 소포 획득", x: 163, y: 18, trigId: "f1_sopo", cutId: "f1_sopo", flag: "Q_F1_SOPO" },
+    { step: 2, name: "⛽ 휘발유 획득", desc: "창고 안쪽에서 폭발물 제조용 휘발유 입수", x: 12, y: 32, trigId: "f1_gas", cutId: "f1_gas", flag: "Q_F1_GAS" },
+    { step: 3, name: "💥 공사장 폭파", desc: "2층 계단을 막고 있는 공사장 잔해를 폭파", x: 100, y: 63, trigId: "f1_blast", cutId: "f1_blast", flag: "Q_F1_BLAST" }
+  ],
+  f2: [
+    { step: 1, name: "🕹️ HP방 방문", desc: "1995 부싯돌 오리지널 개발진 크레딧 룸", x: 195, y: 20, trigId: "hp_room_enter", cutId: "hp_room_visit", flag: "Q_F2_HPROOM" },
+    { step: 2, name: "🎨 완종 포스터", desc: "학생회 구역 포스터 제작 및 3층 열쇠 획득", x: 100, y: 63, trigId: "f2_poster", cutId: "f2_poster", flag: "Q_F2_POSTER" }
+  ],
+  f3: [
+    { step: 1, name: "🧪 드래그 실험", desc: "화학 실험실 드래그 존 활성화", x: 111, y: 19, trigId: "f3_drag", cutId: "f3_drag", flag: "Q_F3_DRAG" },
+    { step: 2, name: "🃏 앨린 구역", desc: "조교실 안쪽 연구원 구출 및 데이터 확보", x: 98, y: 18, trigId: "f3_allin", cutId: "f3_allin", flag: "Q_F3_ALLIN" },
+    { step: 3, name: "❓ 퀴즈맨 대결", desc: "공대생 생존 퀴즈맨의 질문 통과", x: 125, y: 21, trigId: "f3_quiz_gate", cutId: "quiz_paline", flag: "Q_F3_PALIN" }
+  ],
+  f0: [
+    { step: 1, name: "💾 비밀 디스켓", desc: "지하 도서관 보관소에서 시스템 디스켓 회수", x: 180, y: 53, trigId: "f0_disk", cutId: "f0_disk", flag: "Q_F0_DISK" }
+  ],
+  f4: [
+    { step: 1, name: "🔋 배터리 퍼즐", desc: "4층 중앙 전원 게이트에 대용량 배터리 장착", x: 100, y: 58, trigId: "f4_battery_gate", cutId: "battery_puzzle", flag: "Q_F4_BATTERY" },
+    { step: 2, name: "🕯️ 4층 희생 컷신", desc: "5층 진입을 위한 동료의 감동적인 희생 연출", x: 100, y: 63, trigId: "f4_sacrifice", cutId: "f4_sacrifice", flag: "Q_F4_SACRIFICE" }
+  ],
+  f5: [
+    { step: 1, name: "👨‍🏫 황박사 대면", desc: "5층 최심부 연구실에서 황박사와 조우", x: 100, y: 40, trigId: "f5_professor", cutId: "f5_professor", flag: "Q_F5_PROF" },
+    { step: 2, name: "🤖 최종보스 시스빌더", desc: "폭주하는 시스템 빌더와의 최종 결전", x: 100, y: 20, trigId: "f5_cure", cutId: "boss_sys_builder", flag: "Q_EPILOGUE" }
+  ]
+};
+
+/* ===== 층별 몬스터 서식 스폰/패트롤 핫스팟 (Enemy Hotspots) ===== */
+const FLOOR_MONSTER_HOTSPOTS = {
+  f0: [
+    { id: "sewer_king", name: "👑 보스: 하수구 킹", x: 100, y: 30, pattern: "chase", weak: "electric", isBoss: true },
+    { id: "sparker", name: "스파커", x: 45, y: 20, pattern: "teleport", weak: "physical" },
+    { id: "sparker", name: "스파커", x: 110, y: 35, pattern: "teleport", weak: "physical" },
+    { id: "sparker", name: "스파커", x: 165, y: 18, pattern: "teleport", weak: "physical" }
+  ],
+  f1: [
+    { id: "hall_mother", name: "👑 보스: 홀 머더", x: 100, y: 15, pattern: "chase", weak: "fire", isBoss: true },
+    { id: "dworm", name: "디웜", x: 35, y: 22, pattern: "burrow", weak: "electric" },
+    { id: "vulgar", name: "불거", x: 75, y: 45, pattern: "wander", weak: "fire" },
+    { id: "mad_eye", name: "매드 아이", x: 120, y: 25, pattern: "dash", weak: "fire" },
+    { id: "c_bug", name: "씨버그", x: 155, y: 50, pattern: "zigzag", weak: "electric" },
+    { id: "rogue_vending", name: "로그 벤딩", x: 185, y: 30, pattern: "wander", weak: "electric" }
+  ],
+  f2: [
+    { id: "crt_overseer", name: "👑 보스: CRT 오버시어", x: 100, y: 30, pattern: "ambusher", weak: "electric", isBoss: true },
+    { id: "vulgar", name: "불거", x: 40, y: 30, pattern: "wander", weak: "fire" },
+    { id: "ozzy", name: "오지", x: 80, y: 15, pattern: "wander", weak: "fire" },
+    { id: "iron_voc", name: "아이언 보크", x: 115, y: 40, pattern: "patrol", weak: "electric" },
+    { id: "dworm", name: "디웜", x: 145, y: 20, pattern: "burrow", weak: "electric" },
+    { id: "flying_thesis", name: "플라잉 논문", x: 175, y: 45, pattern: "wander", weak: "fire" },
+    { id: "ozzy", name: "오지", x: 190, y: 15, pattern: "wander", weak: "fire" }
+  ],
+  f3: [
+    { id: "flask_titan", name: "👑 보스: 플라스크 타이탄", x: 100, y: 30, pattern: "chase", weak: "fire", isBoss: true },
+    { id: "iron_voc", name: "아이언 보크", x: 30, y: 25, pattern: "patrol", weak: "electric" },
+    { id: "hellcop", name: "헬캅", x: 65, y: 48, pattern: "patrol", weak: "electric" },
+    { id: "mad_eye", name: "매드 아이", x: 105, y: 30, pattern: "dash", weak: "fire" },
+    { id: "c_bug", name: "씨버그", x: 140, y: 15, pattern: "zigzag", weak: "electric" },
+    { id: "null_pointer", name: "널 포인터", x: 170, y: 35, pattern: "wander", weak: "electric" },
+    { id: "hellcop", name: "헬캅", x: 190, y: 52, pattern: "patrol", weak: "electric" }
+  ],
+  f4: [
+    { id: "volt_wyrm", name: "👑 보스: 볼트 와이럼", x: 100, y: 30, pattern: "chase", weak: "physical", isBoss: true },
+    { id: "hellcop", name: "헬캅", x: 25, y: 35, pattern: "patrol", weak: "electric" },
+    { id: "o_ray", name: "오레이", x: 60, y: 20, pattern: "wander", weak: "physical" },
+    { id: "sparker", name: "스파커", x: 95, y: 45, pattern: "teleport", weak: "physical" },
+    { id: "flying_thesis", name: "플라잉 논문", x: 130, y: 25, pattern: "wander", weak: "fire" },
+    { id: "rogue_vending", name: "로그 벤딩", x: 160, y: 50, pattern: "wander", weak: "electric" },
+    { id: "o_ray", name: "오레이", x: 185, y: 20, pattern: "wander", weak: "physical" }
+  ],
+  f5: [
+    { id: "boss_sys_builder", name: "👑 보스: 시스템 빌더", x: 100, y: 20, pattern: "boss", weak: "electric", isBoss: true },
+    { id: "o_ray", name: "오레이", x: 35, y: 30, pattern: "wander", weak: "physical" },
+    { id: "c_bug", name: "씨버그", x: 70, y: 45, pattern: "zigzag", weak: "electric" },
+    { id: "null_pointer", name: "널 포인터", x: 130, y: 40, pattern: "wander", weak: "electric" },
+    { id: "sparker", name: "스파커", x: 165, y: 25, pattern: "teleport", weak: "physical" },
+    { id: "hellcop", name: "헬캅", x: 185, y: 50, pattern: "patrol", weak: "electric" }
+  ]
+};
+
+/* ===== 글로벌 상태 ===== */
+let P = null;
+let curFloor = "f1";
+let viewMode = "graphic"; // 'graphic' | 'hybrid' | 'attr'
+let selCell = null;
+let activeHighlightAttr = null;
+let curAttrCat = "all";
+let curItemCat = "all";
+
+// Zoom & Panning State
+let scale = 1.0;
+
+// Data indexes & Asset Caches
+const npcByFloor = {}, trigByFloor = {}, itemById = {}, legacyItemMap = {};
+let allAttrStats = [];
+const mapshotImgs = {};
+const spriteImgs = {};
+const monsterImgs = {};
+
+/* ===== 1. 데이터 로더 ===== */
+async function loadAll(base) {
+  const get = async p => { const r = await fetch(base + p); if (!r.ok) throw 0; return r.json(); };
+  const out = {
+    maps: {}, npcs: [], triggers: [], cutscenes: {}, sequences: {},
+    dialogue: {}, quests: null, items: [], legacy_ref: {}, transitions: null,
+    monsters: { species: {}, floors: {}, floor_stats: {}, bosses: {} }
+  };
+  out.dialogue = await get("dialogue.json");
+  const sq = await get("dialogue_sequences.json"); out.sequences = sq.sequences || {};
+  out.quests = await get("quests_v2.json");
+  out.transitions = await get("maps/transitions.json");
+  const it = await get("items.json");
+  out.items = it.items || [];
+  out.legacy_ref = it.legacy_ref || {};
+  const mon = await get("monsters.json");
+  out.monsters = mon;
+  try {
+    const anim = await get("monster_anim_specs.json");
+    out.anim_specs = anim;
+    if (anim && Array.isArray(anim.species)) {
+      anim.species.forEach(sp => {
+        if (!out.monsters.species[sp.id]) {
+          out.monsters.species[sp.id] = {
+            display_name: sp.name_ko || sp.id,
+            weaknesses: sp.weaknesses || (sp.is_boss ? ["electric", "fire"] : ["physical"]),
+            isBoss: !!sp.is_boss,
+            token: sp.token || "",
+            pattern: sp.pattern || "wander",
+            body_type: sp.body_type || "creature"
+          };
+        } else {
+          out.monsters.species[sp.id].token = sp.token || "";
+          out.monsters.species[sp.id].body_type = sp.body_type || "creature";
+          if (sp.is_boss) out.monsters.species[sp.id].isBoss = true;
+        }
+      });
     }
-  }catch(_){}
+  } catch (_) {}
+
+  for (const n of [1, 2, 3, 4, 5, 0]) {
+    try {
+      const def = await get(`maps/f${n}.json`);
+      out.maps["f" + n] = { w: def.width, h: def.height, attr: def.layers.attr, ground: def.layers.ground, object: def.layers.object };
+      const np = await get(`maps/npcs_f${n}.json`);
+      out.npcs.push({ floor: n, npcs: np.npcs || [] });
+      const tg = await get(`maps/triggers_f${n}.json`);
+      out.triggers.push({ floor: n, triggers: tg.triggers || [] });
+    } catch (_) {}
+  }
+
+  const known = ["opening", "hp_room_visit", "quiz_paline", "battery_puzzle",
+    "boss_sys_builder", "epilogue", "f1_sopo", "f1_gas", "f1_blast", "f2_poster",
+    "f3_drag", "f3_allin", "f0_disk", "f4_sacrifice", "f5_professor", "f5_cure"];
+  for (const k of known) {
+    try { out.cutscenes[k] = await get(`cutscenes/${k}.json`); } catch (_) {}
+  }
   return out;
 }
-async function tryHttp(){
-  for(const base of ["../data/","data/"]){
-    try{
-      await fetch(base+"quests_v2.json");
+
+async function tryHttp() {
+  for (const base of ["../data/", "data/"]) {
+    try {
+      await fetch(base + "quests_v2.json");
       return await loadAll(base);
-    }catch(_){}
+    } catch (_) {}
   }
   throw new Error("http 불가");
 }
-function fromFiles(files){
-  const byPath={};
-  for(const f of files){
-    const rel=(f.webkitRelativePath||f.name).replace(/\\/g,"/");
-    byPath[rel.split("/").slice(-2).join("/")]=f;   // "maps/f1.json" 형태 키
+
+function fromFiles(files) {
+  const byPath = {};
+  for (const f of files) {
+    const rel = (f.webkitRelativePath || f.name).replace(/\\/g, "/");
+    byPath[rel.split("/").slice(-2).join("/")] = f;
   }
-  const read=async key=>JSON.parse(await byPath[key].text());
-  return (async()=>{
-    const out={maps:{},npcs:[],triggers:[],cutscenes:{},sequences:null,
-      dialogue:null,quests:null,items:[],monsters:{species:[],bosses:{}},
-      transitions:null};
-    out.dialogue=await read("dialogue.json");
-    out.sequences=(await read("dialogue_sequences.json")).sequences||{};
-    out.quests=await read("quests_v2.json");
-    out.transitions=await read("maps/transitions.json");
-    out.items=(await read("items.json")).items;
-    const mon=await read("monsters.json");
-    out.monsters.species=Object.values(mon.floors||{}).flatMap(f=>(f.species||[])
-      .map(s=>s.id?s.id:String(s)));
-    out.monsters.bosses=Object.keys(mon.bosses||{});
-    for(const [key,f] of Object.entries(byPath)){
-      if(!key.startsWith("maps/"))continue;
+  const read = async key => JSON.parse(await byPath[key].text());
+  return (async () => {
+    const out = {
+      maps: {}, npcs: [], triggers: [], cutscenes: {}, sequences: {},
+      dialogue: {}, quests: null, items: [], legacy_ref: {}, transitions: null,
+      monsters: { species: {}, floors: {}, floor_stats: {}, bosses: {} }
+    };
+    out.dialogue = await read("dialogue.json");
+    out.sequences = (await read("dialogue_sequences.json")).sequences || {};
+    out.quests = await read("quests_v2.json");
+    out.transitions = await read("maps/transitions.json");
+    const it = await read("items.json");
+    out.items = it.items || [];
+    out.legacy_ref = it.legacy_ref || {};
+    const mon = await read("monsters.json");
+    out.monsters = mon;
+
+    for (const [key, f] of Object.entries(byPath)) {
+      if (!key.startsWith("maps/")) continue;
       let m;
-      if(m=key.match(/^maps\/f(\d)\.json$/))
-        {const d=await read(key);out.maps["f"+m[1]]={w:d.width,h:d.height,attr:d.layers.attr};}
-      else if(m=key.match(/^maps\/npcs_f(\d)\.json$/))
-        {const d=await read(key);out.npcs.push({floor:+m[1],npcs:d.npcs});}
-      else if(m=key.match(/^maps\/triggers_f(\d)\.json$/))
-        {const d=await read(key);out.triggers.push({floor:+m[1],triggers:d.triggers});}
+      if (m = key.match(/^maps\/f(\d)\.json$/)) {
+        const d = await read(key);
+        out.maps["f" + m[1]] = { w: d.width, h: d.height, attr: d.layers.attr, ground: d.layers.ground, object: d.layers.object };
+      } else if (m = key.match(/^maps\/npcs_f(\d)\.json$/)) {
+        const d = await read(key);
+        out.npcs.push({ floor: +m[1], npcs: d.npcs || [] });
+      } else if (m = key.match(/^maps\/triggers_f(\d)\.json$/)) {
+        const d = await read(key);
+        out.triggers.push({ floor: +m[1], triggers: d.triggers || [] });
+      }
     }
-    for(const [key,f] of Object.entries(byPath)){
+    for (const [key, f] of Object.entries(byPath)) {
       let m;
-      if(m=key.match(/^cutscenes\/(.+)\.json$/)){
-        try{out.cutscenes[m[1]]=JSON.parse(await f.text());}catch(e){}
+      if (m = key.match(/^cutscenes\/(.+)\.json$/)) {
+        try { out.cutscenes[m[1]] = JSON.parse(await f.text()); } catch (_) {}
       }
     }
     return out;
   })();
 }
 
-async function boot(){
-  let data=null;
-  try{data=await tryHttp();$("#loadState").textContent="HTTP 모드로 로드 완료";}
-  catch(e){$("#loadState").textContent="직접 열기 모드 — data 폴더 지정 필요";
-    $("#pickZone").style.display="block";}
-  if(data)return start(data);
-  const dz=$("#drop"),inp=$("#dirPick");
-  dz.onclick=()=>inp.click();
-  inp.onchange=async()=>{if(inp.files.length)start(await fromFiles([...inp.files]));};
-  dz.addEventListener("dragover",e=>{e.preventDefault();dz.classList.add("over");});
-  dz.addEventListener("dragleave",()=>dz.classList.remove("over"));
-  dz.addEventListener("drop",async e=>{
-    e.preventDefault();dz.classList.remove("over");
-    if(e.dataTransfer.files.length)start(await fromFiles([...e.dataTransfer.files]));
+function preloadAssets() {
+  FLOOR_ORDER.forEach(f => {
+    const img = new Image();
+    img.src = `dev/mapshots/${f}.png`;
+    img.onload = () => { mapshotImgs[f] = img; if (f === curFloor) drawMap(); };
+  });
+
+  Object.entries(NPC_VISUALS).forEach(([k, v]) => {
+    const img = new Image();
+    img.src = v.sprite;
+    img.onload = () => { spriteImgs[k] = img; if (curFloor) drawMap(); };
+  });
+
+  Object.entries(MONSTER_SPRITES).forEach(([k, v]) => {
+    const img = new Image();
+    img.src = v;
+    img.onload = () => { monsterImgs[k] = img; if (curFloor) drawMap(); };
   });
 }
 
-function start(data){
-  P=data;
-  P.npcs.forEach(f=>npcByFloor["f"+f.floor]=f.npcs.map(n=>({...n})));
-  P.triggers.forEach(f=>trigByFloor["f"+f.floor]=f.triggers);
-  $("#loader").style.display="none";
-  $("#tabs").style.display="flex";
-  $("#genmeta").textContent=`NPC ${P.npcs.reduce((a,f)=>a+f.npcs.length,0)} · 트리거 `
-    +P.triggers.reduce((a,f)=>a+f.triggers.length,0)+" · 컷신 "
-    +Object.keys(P.cutscenes).length+" · 시퀀스 "+Object.keys(P.sequences).length
-    +" · 퀘스트 "+P.quests.quests.length;
-  document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{
-    document.querySelectorAll("#tabs button").forEach(x=>x.classList.remove("on"));
-    document.querySelectorAll(".tabs").forEach(x=>x.classList.remove("on"));
-    b.classList.add("on");$("#tab-"+b.dataset.tab).classList.add("on");
+async function boot() {
+  preloadAssets();
+  let data = null;
+  try {
+    data = await tryHttp();
+    $("#loadState").textContent = "HTTP 모드로 로드 완료";
+  } catch (e) {
+    $("#loadState").textContent = "직접 열기 모드 — data 폴더 지정 필요";
+    $("#pickZone").style.display = "block";
+  }
+  if (data) return start(data);
+
+  const dz = $("#drop"), inp = $("#dirPick");
+  dz.onclick = () => inp.click();
+  inp.onchange = async () => { if (inp.files.length) start(await fromFiles([...inp.files])); };
+  dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over"); });
+  dz.addEventListener("dragleave", () => dz.classList.remove("over"));
+  dz.addEventListener("drop", async e => {
+    e.preventDefault(); dz.classList.remove("over");
+    if (e.dataTransfer.files.length) start(await fromFiles([...e.dataTransfer.files]));
   });
-  buildFloorBtns();drawMap();renderQuests();renderSeqList();renderCutList();
+}
+
+/* ===== 2. 앱 구동 및 UI 초기화 ===== */
+function start(data) {
+  P = data;
+  P.npcs.forEach(f => npcByFloor["f" + f.floor] = f.npcs.map(n => ({ ...n })));
+  P.triggers.forEach(f => trigByFloor["f" + f.floor] = f.triggers || []);
+  (P.items || []).forEach(it => itemById[it.id] = it);
+  Object.assign(legacyItemMap, P.legacy_ref || {});
+
+  buildAttrStats();
+
+  $("#loader").style.display = "none";
+  $("#tab-map").style.display = "flex";
+  $("#main-tabs").style.display = "flex";
+
+  const totalNpcs = P.npcs.reduce((a, f) => a + f.npcs.length, 0);
+  const totalTrigs = P.triggers.reduce((a, f) => a + f.triggers.length, 0);
+  $("#genmeta").textContent = `NPC ${totalNpcs} · 몬스터 ${Object.keys(P.monsters.species || {}).length}종 · 아이템 ${P.items.length}종 · 퀘스트 ${P.quests.quests.length}`;
+
+  initTabs();
+  initViewportInteraction();
+  initSearch();
+  buildFloorBtns();
+  buildStoryboardStrip();
+  buildLegendBar();
+  fitMapToScreen();
+  drawMap();
+  updateSidebar();
+  renderAttrDict();
+  renderQuests();
+  renderSeqList();
+  renderCutList();
+  renderItemEncyclopedia();
+  renderMonsterBestiary();
   renderHealth();
-  const s=Object.keys(P.sequences)[0];if(s)showSeq(s);
-  const c=Object.keys(P.cutscenes)[0];if(c)showCut(c);
+  const ov = document.getElementById("loadingOverlay"); if (ov) ov.classList.add("hidden");
 }
 
-/* ===== 맵 ===== */
-const ATTR_COLOR=v=>v===0?"#d8c9a3":v===1?"#3a3630":v===2?"#7a8aa0":v===9?"#ff9d3b":
-  (v>=150&&v<=184)?"#ffd24a":(v>=185&&v<=199)?"#b06ad4":"#9a4a4a";
-function buildFloorBtns(){
-  const el=$("#floorbtns");el.innerHTML="";
-  FLOOR_ORDER.filter(f=>P.maps[f]).forEach(f=>{
-    const b=document.createElement("button");
-    b.className="floorbtn"+(f===curFloor?" on":"");
-    b.textContent=FLOOR_LABEL[f];
-    b.onclick=()=>{curFloor=f;buildFloorBtns();drawMap();};
+function initTabs() {
+  $$("#main-tabs button").forEach(b => b.onclick = () => {
+    $$("#main-tabs button").forEach(x => x.classList.remove("on"));
+    $$(".tab-content").forEach(x => { x.classList.remove("on"); x.style.display = "none"; });
+    b.classList.add("on");
+    const target = $("#tab-" + b.dataset.tab);
+    target.classList.add("on");
+    target.style.display = "flex";
+    if (b.dataset.tab === "map") {
+      drawMap();
+    }
+  });
+
+  $$(".sidebar-tab-btn").forEach(b => b.onclick = () => {
+    $$(".sidebar-tab-btn").forEach(x => x.classList.remove("on"));
+    $$(".sidebar-panel").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    $("#side-" + b.dataset.side).classList.add("on");
+    if (b.dataset.side === "attrdict") {
+      renderAttrDict();
+    }
+  });
+
+  $$(".viewmode-btn").forEach(b => b.onclick = () => {
+    $$(".viewmode-btn").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    viewMode = b.dataset.vmode;
+    const modeLabel = b.textContent;
+    $("#hudMode").textContent = modeLabel;
+    drawMap();
+    showToast(`뷰 모드: ${modeLabel} 전환`);
+  });
+
+  $$(".attr-cat-btn").forEach(b => b.onclick = () => {
+    $$(".attr-cat-btn").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    curAttrCat = b.dataset.cat;
+    renderAttrDict();
+  });
+
+  $$("#itemCatFilters button").forEach(b => b.onclick = () => {
+    $$("#itemCatFilters button").forEach(x => x.classList.remove("on"));
+    b.classList.add("on");
+    curItemCat = b.dataset.icat;
+    renderItemEncyclopedia();
+  });
+
+  $("#attrSearch").oninput = () => renderAttrDict();
+  $("#itemSearch").oninput = () => renderItemEncyclopedia();
+  $("#bestiarySearch").oninput = () => renderMonsterBestiary();
+  $("#btnOpenModalAttr").onclick = () => toggleAttrModal(true);
+}
+
+function showToast(msg) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+/* ===== 3. 속성 정보 해석기 & 통계 빌더 ===== */
+function resolveAttrInfo(attr) {
+  if (attr >= 150 && attr <= 184) {
+    const itemId = legacyItemMap[String(attr)] || "";
+    const item = itemById[itemId] || null;
+    const itemName = item ? (item.name_ko || item.name || itemId) : (itemId || "아이템");
+    const kind = item ? (item.kind || "item") : "상자";
+    return {
+      name: `보물 상자: ${itemName}`,
+      desc: item ? `[${kind}] ${item.element || ""} AP+${item.ap || 0} DP+${item.dp || 0} ${item.description || ""}`.trim() : `원작 ITEM_STRUCT 인덱스 ${attr}`,
+      behavior: `조사(Interact) 시 ${itemName}(${itemId}) 아이템을 인벤토리에 획득하고, 타일 속성이 1(벽/개봉완료)로 영구 전환됩니다.`,
+      cat: "chest",
+      color: "#ffd24a",
+      itemId: itemId,
+      item: item
+    };
+  }
+  return ATT_DEFS[attr] || { 
+    name: `특수 속성 (${attr})`, 
+    desc: "기타 맵 속성값", 
+    behavior: "원작 맵에 정의된 특수 시스템 속성값입니다.",
+    cat: "special", 
+    color: "#9a4a4a" 
+  };
+}
+
+function getAttrColor(attr) {
+  if (activeHighlightAttr !== null) {
+    if (attr === activeHighlightAttr) return "#00ffcc";
+    return "#1a1829";
+  }
+  if (attr >= 150 && attr <= 184) return "#ffd24a";
+  const def = ATT_DEFS[attr];
+  return def ? def.color : "#9a4a4a";
+}
+
+function buildAttrStats() {
+  const attrMap = new Map();
+
+  Object.entries(ATT_DEFS).forEach(([k, def]) => {
+    const attr = parseInt(k);
+    attrMap.set(attr, {
+      attr,
+      name: def.name,
+      desc: def.desc,
+      behavior: def.behavior,
+      cat: def.cat,
+      color: def.color,
+      floorCounts: {},
+      floorCoords: {},
+      totalCount: 0
+    });
+  });
+
+  for (let attr = 150; attr <= 184; attr++) {
+    const info = resolveAttrInfo(attr);
+    attrMap.set(attr, {
+      attr,
+      name: info.name,
+      desc: info.desc,
+      behavior: info.behavior,
+      cat: "chest",
+      color: info.color,
+      itemId: info.itemId,
+      item: info.item,
+      floorCounts: {},
+      floorCoords: {},
+      totalCount: 0
+    });
+  }
+
+  FLOOR_ORDER.forEach(f => {
+    const mapDef = P.maps[f];
+    if (!mapDef) return;
+    for (let y = 0; y < mapDef.h; y++) {
+      for (let x = 0; x < mapDef.w; x++) {
+        const a = mapDef.attr[y][x];
+        if (!attrMap.has(a)) {
+          attrMap.set(a, {
+            attr: a,
+            name: `미등록 속성 (${a})`,
+            desc: "원작 맵 미분류 속성값",
+            behavior: "원작 맵 엔진 속성값",
+            cat: "special",
+            color: "#9a4a4a",
+            floorCounts: {},
+            floorCoords: {},
+            totalCount: 0
+          });
+        }
+        const item = attrMap.get(a);
+        item.floorCounts[f] = (item.floorCounts[f] || 0) + 1;
+        item.totalCount++;
+        if (!item.floorCoords[f]) item.floorCoords[f] = [];
+        item.floorCoords[f].push([x, y]);
+      }
+    }
+  });
+
+  allAttrStats = Array.from(attrMap.values()).sort((a, b) => a.attr - b.attr);
+  $("#attrDictCount").textContent = allAttrStats.length;
+}
+
+/* ===== 4. 맵 뷰포트 인터랙션 ===== */
+let isMouseDown = false;
+let startMouseX = 0, startMouseY = 0;
+let scrollStartLeft = 0, scrollStartTop = 0;
+let draggedDist = 0;
+
+function initViewportInteraction() {
+  const vp = $("#viewport");
+  
+  vp.addEventListener("wheel", e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.2 : 0.8333;
+      zoomAtPoint(zoomFactor, e.clientX, e.clientY);
+    }
+  }, { passive: false });
+
+  vp.addEventListener("mousedown", e => {
+    isMouseDown = true;
+    draggedDist = 0;
+    startMouseX = e.clientX;
+    startMouseY = e.clientY;
+    scrollStartLeft = vp.scrollLeft;
+    scrollStartTop = vp.scrollTop;
+    vp.classList.add("panning");
+  });
+
+  window.addEventListener("mousemove", e => {
+    if (!isMouseDown) return;
+    const dx = e.clientX - startMouseX;
+    const dy = e.clientY - startMouseY;
+    draggedDist = Math.hypot(dx, dy);
+    vp.scrollLeft = scrollStartLeft - dx;
+    vp.scrollTop = scrollStartTop - dy;
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (isMouseDown) {
+      isMouseDown = false;
+      vp.classList.remove("panning");
+    }
+  });
+
+  $("#btnZoomIn").onclick = () => zoomAtPoint(1.3);
+  $("#btnZoomOut").onclick = () => zoomAtPoint(0.75);
+  $("#btnResetZoom").onclick = () => setZoomScale(1.0);
+  $("#btnFit").onclick = () => fitMapToScreen();
+
+  window.addEventListener("keydown", e => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.key === "f" || e.key === "F") fitMapToScreen();
+    if (e.key === "+" || e.key === "=") zoomAtPoint(1.3);
+    if (e.key === "-" || e.key === "_") zoomAtPoint(0.75);
+    if (e.key === "0") setZoomScale(1.0);
+    if (e.key >= "1" && e.key <= "6") {
+      const f = FLOOR_ORDER[parseInt(e.key) - 1];
+      if (f && P.maps[f]) switchFloor(f);
+    }
+    if (e.key === "/") {
+      e.preventDefault();
+      $("#globalSearch").focus();
+    }
+    if (e.key === "Escape") {
+      toggleAttrModal(false);
+      $("#searchDrop").style.display = "none";
+    }
+  });
+}
+
+function zoomAtPoint(factor, clientX = null, clientY = null) {
+  const vp = $("#viewport");
+  const rect = vp.getBoundingClientRect();
+  const mouseX = (clientX != null ? clientX : rect.left + rect.width / 2) - rect.left;
+  const mouseY = (clientY != null ? clientY : rect.top + rect.height / 2) - rect.top;
+
+  const contentX = vp.scrollLeft + mouseX;
+  const contentY = vp.scrollTop + mouseY;
+
+  const oldScale = scale;
+  const newScale = Math.max(0.25, Math.min(scale * factor, 6.0));
+  if (oldScale === newScale) return;
+  scale = newScale;
+
+  updateCanvasSize();
+  drawMap();
+
+  const ratio = scale / oldScale;
+  vp.scrollLeft = contentX * ratio - mouseX;
+  vp.scrollTop = contentY * ratio - mouseY;
+}
+
+function setZoomScale(newScale) {
+  scale = Math.max(0.25, Math.min(newScale, 6.0));
+  updateCanvasSize();
+  drawMap();
+}
+
+function updateCanvasSize() {
+  const def = P.maps[curFloor];
+  if (!def) return;
+  const w = def.w * BASE_CELL * scale;
+  const h = def.h * BASE_CELL * scale;
+
+  const container = $("#map-canvas-container");
+  container.style.width = w + "px";
+  container.style.height = h + "px";
+
+  const cv = $("#mapCanvas");
+  cv.style.width = w + "px";
+  cv.style.height = h + "px";
+
+  $("#zoomLevel").textContent = Math.round(scale * 100) + "%";
+}
+
+function fitMapToScreen() {
+  const def = P.maps[curFloor];
+  if (!def) return;
+  const vp = $("#viewport");
+  const rect = vp.getBoundingClientRect();
+  const mapW = def.w * BASE_CELL;
+  const mapH = def.h * BASE_CELL;
+
+  const scaleX = (rect.width - 90) / mapW;
+  const scaleY = (rect.height - 90) / mapH;
+  scale = Math.max(0.25, Math.min(scaleX, scaleY, 2.0));
+
+  updateCanvasSize();
+  drawMap();
+
+  setTimeout(() => {
+    vp.scrollLeft = Math.max(0, ($("#scrollContainer").scrollWidth - rect.width) / 2);
+    vp.scrollTop = Math.max(0, ($("#scrollContainer").scrollHeight - rect.height) / 2);
+  }, 10);
+}
+
+function centerOnCell(x, y, zoomTo = 1.5) {
+  const def = P.maps[curFloor];
+  if (!def) return;
+  const vp = $("#viewport");
+  const rect = vp.getBoundingClientRect();
+  scale = zoomTo;
+  updateCanvasSize();
+
+  const targetX = 40 + (x * BASE_CELL + BASE_CELL / 2) * scale;
+  const targetY = 40 + (y * BASE_CELL + BASE_CELL / 2) * scale;
+
+  vp.scrollLeft = targetX - rect.width / 2;
+  vp.scrollTop = targetY - rect.height / 2;
+
+  selCell = { x, y };
+  triggerPulseRing(x, y);
+  drawMap();
+  inspectCell(x, y);
+}
+
+function triggerPulseRing(x, y) {
+  const cont = $("#pulseContainer");
+  cont.innerHTML = "";
+  const ring = document.createElement("div");
+  ring.className = "pulse-ring";
+  ring.style.left = (x * BASE_CELL * scale - 12) + "px";
+  ring.style.top = (y * BASE_CELL * scale - 12) + "px";
+  ring.style.width = (BASE_CELL * scale + 24) + "px";
+  ring.style.height = (BASE_CELL * scale + 24) + "px";
+  cont.appendChild(ring);
+  setTimeout(() => ring.remove(), 2500);
+}
+
+/* ===== 5. 3단계 뷰 모드 맵 렌더링 엔진 ===== */
+function buildFloorBtns() {
+  const el = $("#floorbtns"); el.innerHTML = "";
+  FLOOR_ORDER.filter(f => P.maps[f]).forEach(f => {
+    const b = document.createElement("button");
+    b.className = "floorbtn" + (f === curFloor ? " on" : "");
+    const npcsN = (npcByFloor[f] || []).length;
+    const trigsN = (trigByFloor[f] || []).length;
+    b.innerHTML = `${FLOOR_LABEL[f]} <span style="font-size:10px;opacity:0.75">(${npcsN}/${trigsN})</span>`;
+    b.onclick = () => switchFloor(f);
     el.appendChild(b);
   });
 }
-function drawMap(){
-  const cv=$("#cv"),def=P.maps[curFloor];if(!def)return;
-  cv.width=def.w*CELL;cv.height=def.h*CELL;
-  const g=cv.getContext("2d");
-  for(let y=0;y<def.h;y++)for(let x=0;x<def.w;x++){
-    g.fillStyle=ATTR_COLOR(def.attr[y][x]);g.fillRect(x*CELL,y*CELL,CELL,CELL);}
-  if($("#tgGrid").checked){g.strokeStyle="#ffffff10";
-    for(let x=0;x<=def.w;x++){g.beginPath();g.moveTo(x*CELL,0);g.lineTo(x*CELL,cv.height);g.stroke();}
-    for(let y=0;y<=def.h;y++){g.beginPath();g.moveTo(0,y*CELL);g.lineTo(cv.width,y*CELL);g.stroke();}}
-  const label=(t,x,y,c)=>{g.font="9px sans-serif";g.fillStyle=c;
-    g.strokeStyle="#000";g.lineWidth=2;g.strokeText(t,x,y);g.fillText(t,x,y);};
-  if($("#tgTrn").checked)P.transitions.transitions.forEach(t=>{
-    const[ax,ay]=t.anchor;
-    g.fillStyle="#ff4444";g.fillRect(ax*CELL-1,ay*CELL-1,CELL+2,CELL+2);
-    const[ox,oy]=t.spawn_offset||[0,0],lx=ax+ox,ly=ay+oy;
-    g.strokeStyle="#ff8888";g.setLineDash([3,2]);
-    g.strokeRect(lx*CELL,ly*CELL,CELL,CELL);g.setLineDash([]);
-    label((t.floor_delta>0?"▲":"▼")+t.id,ax*CELL-14,ay*CELL-4,"#ffb3b3");});
-  if($("#tgTrg").checked)(trigByFloor[curFloor]||[]).forEach((t,i)=>{
-    const col=t.type==="zone"?"rgba(255,95,162,.45)":
-      t.type==="interact"?"rgba(76,201,255,.45)":"rgba(176,106,212,.45)";
-    ((t.type==="zone"&&t.cells)||[]).forEach(c=>{const[x,y]=c;
-      g.fillStyle=col;g.fillRect(x*CELL,y*CELL,CELL,CELL);});
-    if(t.cells&&t.cells.length){const[x,y]=t.cells[0];label("T:"+t.id,x*CELL,y*CELL+8,"#ffc4de");}
-    if(t.type==="auto")label("AUTO:"+t.id,6,14+i*11,"#d9b8ff");});
-  if($("#tgNpc").checked)(npcByFloor[curFloor]||[]).forEach(n=>{
-    const x=n.pos[0]*CELL+CELL/2,y=n.pos[1]*CELL+CELL/2;
-    g.fillStyle="#35d07f";g.beginPath();g.arc(x,y,4,0,7);g.fill();
-    g.strokeStyle="#0a3d28";g.stroke();
-    label(n.name,x-n.name.length*4,y-7,"#b8ffd9");});
-  if(selCell){g.strokeStyle="#fff";g.lineWidth=2;
-    g.strokeRect(selCell.x*CELL,selCell.y*CELL,CELL,CELL);g.lineWidth=1;}
-}
-function cellAt(e){const r=e.target.getBoundingClientRect();
-  return{x:Math.floor((e.clientX-r.left)/CELL),y:Math.floor((e.clientY-r.top)/CELL)};}
-$("#cv").addEventListener("mousemove",e=>{
-  const{x,y}=cellAt(e),tip=$("#tip");
-  tip.style.display="block";tip.style.left=e.clientX+14+"px";tip.style.top=e.clientY+14+"px";
-  const npcs=(npcByFloor[curFloor]||[]).filter(n=>n.pos[0]===x&&n.pos[1]===y);
-  const trigs=(trigByFloor[curFloor]||[]).filter(t=>(t.cells||[]).some(c=>c[0]===x&&c[1]===y));
-  const a=P.maps[curFloor].attr[y]?P.maps[curFloor].attr[y][x]:null;
-  tip.innerHTML=`<b>${FLOOR_LABEL[curFloor]} ${x},${y}</b> attr=${a?? "-"}`
-    +(npcs.length?`<br>👤 ${npcs.map(n=>esc(n.name)).join(", ")}`:"")
-    +(trigs.length?`<br>⚡ ${trigs.map(t=>esc(t.id)).join(", ")}`:"");
-});
-$("#cv").addEventListener("mouseleave",()=>$("#tip").style.display="none");
-$("#cv").addEventListener("click",e=>{
-  selCell=cellAt(e);drawMap();
-  const insp=$("#insp");insp.style.display="block";
-  const npcs=(npcByFloor[curFloor]||[]).filter(n=>n.pos[0]===selCell.x&&n.pos[1]===selCell.y);
-  const trigs=(trigByFloor[curFloor]||[]).filter(t=>(t.cells||[]).some(c=>c[0]===selCell.x&&c[1]===selCell.y));
-  insp.innerHTML=`<h3>${FLOOR_LABEL[curFloor]} ${selCell.x},${selCell.y}</h3>
-    <div class="row"><b>attr</b> ${P.maps[curFloor].attr[selCell.y]?.[selCell.x]??"-"}</div>`
-    +npcs.map(n=>{const sq=P.sequences[n.sequence_id];
-      const steps=sq?(sq.steps||sq):[];
-      return `<div class="row">👤 <b>${esc(n.name)}</b> (${esc(n.id)})<br>`+
-        steps.slice(0,3).map(s=>typeof s==="object"
-          ?`${esc(s.speaker||"")}·${resolveText(s.text)}`:resolveText(s)).join("<br>")+"</div>";}).join("")
-    +trigs.map(t=>`<div class="row">⚡ <b>${esc(t.id)}</b> (${esc(t.type)}) done=${esc(t.done_flag||"-")}
-      req=${esc(t.requires_flag||"-")}<br>${esc(JSON.stringify(t.action))}</div>`).join("");
-});
-["tgNpc","tgTrg","tgTrn","tgGrid"].forEach(id=>$("#"+id).onchange=drawMap);
 
-/* ===== 텍스트/퀘스트/시퀀스/컷신 ===== */
-function resolveText(t){
-  if(typeof t!=="string")return "";
-  if(t.startsWith("@"))return Object.prototype.hasOwnProperty.call(P.dialogue,t)
-    ?esc(P.dialogue[t]):`<span class="missing">[미등록 ${esc(t)}]</span>`;
-  return `<span class="small">(직접)</span> ${esc(t)}`;
-}
-const questMap=()=>Object.fromEntries(P.quests.quests.map(q=>[q.id,q]));
-function renderQuests(){
-  const qm=questMap(),qs=P.quests.quests,kids={},roots=[];
-  qs.forEach(q=>{
-    let r=q.requires||[];r=Array.isArray(r)?r:(r?[r]:[]);
-    if(!r.length){roots.push(q.id);return;}
-    r.forEach(x=>{(kids[x]=kids[x]||[]).push(q.id);});
+function buildStoryboardStrip() {
+  const strip = $("#storyboardStrip");
+  const events = FLOOR_STORYBOARDS[curFloor] || [];
+  if (!events.length) {
+    strip.style.display = "none";
+    return;
+  }
+  strip.style.display = "flex";
+
+  let html = `<div class="storyboard-title">🎬 <b>${FLOOR_LABEL[curFloor].split(" ")[0]} 스토리 라인:</b></div>`;
+  events.forEach((ev, i) => {
+    html += `
+      <div class="storyboard-card" onclick="centerOnCell(${ev.x}, ${ev.y})">
+        <div class="storyboard-step-badge">${ev.step}</div>
+        <span><b>${esc(ev.name)}</b> <span style="color:var(--dim);font-size:11px">(${ev.x}, ${ev.y})</span></span>
+      </div>
+      ${i < events.length - 1 ? '<span style="color:var(--dim-dark)">➔</span>' : ''}
+    `;
   });
-  const seen=new Set();let html="";
-  const walk=(id,d)=>{
-    if(seen.has(id))return;seen.add(id);
-    const q=qm[id];if(!q)return;
-    html+=`<li style="margin-left:${d*20}px"><b>${esc(q.name)}</b>
-      <span class="small">${esc(q.id)} · ${esc(q.zone)}${q.reward?" · 🎁 "+esc(q.reward):""}</span></li>`;
-    (kids[id]||[]).forEach(k=>walk(k,d+1));};
-  roots.forEach(r=>walk(r,0));qs.forEach(q=>walk(q.id,0));
-  $("#qBody").innerHTML=`<h3 style="margin-bottom:8px">체인 트리(requires)</h3><ul class="chain">${html}</ul>
-    <h3 style="margin:14px 0 8px">전체 목록</h3><table>
-    <tr><th>id</th><th>구역</th><th>이름</th><th>목표</th><th>보상</th><th>선행</th></tr>`
-    +qs.map(q=>`<tr><td>${esc(q.id)}</td><td>${esc(q.zone)}</td><td>${esc(q.name)}</td>
-      <td>${esc(q.description||"")}</td><td>${esc(q.reward||"")}</td>
-      <td>${esc(Array.isArray(q.requires)?q.requires.join(", "):(q.requires||""))}</td></tr>`).join("")+"</table>";
+  strip.innerHTML = html;
 }
-function renderSeqList(filter=""){
-  const el=$("#seqList");el.innerHTML="";
-  Object.keys(P.sequences).sort().filter(k=>k.includes(filter)).forEach(k=>{
-    const a=document.createElement("a");
-    const sq=P.sequences[k];const n=(sq.steps||sq||[]).length;
-    a.textContent=`${k} (${n})`;
-    a.onclick=()=>{el.querySelectorAll("a").forEach(x=>x.classList.remove("on"));
-      a.classList.add("on");showSeq(k);};
-    el.appendChild(a);});
-}
-function showSeq(k){
-  const sq=P.sequences[k];const steps=sq.steps||sq||[];
-  $("#seqDetail").innerHTML=`<h3 style="margin-bottom:8px">${esc(k)}</h3>`
-    +(sq._comment?`<p class="small" style="margin-bottom:8px">${esc(sq._comment)}</p>`:"")
-    +steps.map((s,i)=>typeof s==="object"
-      ?`<div class="step"><span class="sp">${i+1}. ${esc(s.speaker||"")}</span><br>${resolveText(s.text)}</div>`
-      :`<div class="step">${i+1}. ${resolveText(s)}</div>`).join("");
-}
-$("#seqSearch").oninput=e=>renderSeqList(e.target.value);
-function chip(c,t){return `<span class="badge ${c}">${esc(t)}</span>`;}
-function renderCutList(){
-  const el=$("#cutList");el.innerHTML="";
-  Object.keys(P.cutscenes).sort().forEach(k=>{
-    const a=document.createElement("a");
-    a.textContent=`${k} (${(P.cutscenes[k].steps||[]).length})`;
-    a.onclick=()=>{el.querySelectorAll("a").forEach(x=>x.classList.remove("on"));
-      a.classList.add("on");showCut(k);};
-    el.appendChild(a);});
-}
-function showCut(k){
-  const c=P.cutscenes[k];
-  $("#cutDetail").innerHTML=`<h3 style="margin-bottom:8px">${esc(k)}</h3>`
-    +(c.steps||[]).map((s,i)=>{
-      let body="";
-      if(s.op==="choice"&&s.args)
-        body=(s.args.options||[]).map((o,i)=>`<div class="step" style="margin:4px 0">
-          ${chip("b-flag",(i+1)+". "+o.text)} <span class="small">→ ${(o.steps||[]).length}스텝</span></div>`).join("")
-          +`<span class="small">수렴형 선택 — 선택 후 다음 스텝 진행</span>`;
-      else if(s.op==="dialogue")
-        body=(s.steps||[]).map(d=>`<div class="step" style="margin:4px 0">
-          <span class="sp">${esc(d.speaker||"")}</span><br>${resolveText(d.text)}</div>`).join("");
-      else{
-        const parts=[];
-        if(s.flag)parts.push(chip("b-flag","flag="+s.flag));
-        if(s.args)Object.entries(s.args).forEach(([kk,v])=>
-          parts.push(chip("b-op",kk+"="+JSON.stringify(v))));
-        if(s.enemies)parts.push(chip("b-op","enemies="+s.enemies.join(",")));
-        if(s.on_win_flag)parts.push(chip("b-flag","on_win="+s.on_win_flag));
-        if(s.item)parts.push(chip("b-item",s.item+"×"+(s.count||1)));
-        if(s.seconds!=null)parts.push(chip("b-op",s.seconds+"s"));
-        if(s.id&&!s.args)parts.push(chip("b-op",s.id));
-        if(s.path)parts.push(chip("b-op",s.path));
-        body=parts.join(" ")||"<span class='small'>-</span>";}
-      return `<div class="step"><span class="badge b-op">${i+1}. ${esc(s.op)}</span>${body}</div>`;}).join("");
-}
-/* ===== 정합성 ===== */
-function row(tier,msg,out){out.push({tier,msg});}
-function renderHealth(){
-  const out=[];
-  P.npcs.forEach(f=>f.npcs.forEach(n=>{
-    const m=P.maps["f"+f.floor];const a=m.attr[n.pos[1]]?m.attr[n.pos[1]][n.pos[0]]:null;
-    if(a!==0&&a!==2)row("FAIL",`NPC ${n.id}(f${f.floor}) 좌표 ${n.pos} 불통행 attr=${a}`,out);
-    if(!P.sequences[n.sequence_id])row("FAIL",`NPC ${n.id} 시퀀스 없음: ${n.sequence_id}`,out);}));
-  if(!out.some(o=>o.msg.startsWith("NPC ")))row("PASS","NPC 배치 통행·시퀀스 연결 정상",out);
-  let refBad=0;
-  Object.entries(P.sequences).forEach(([sid,sq])=>(sq.steps||sq||[]).forEach(s=>{
-    const t=typeof s==="object"?String(s.text||""):String(s);
-    if(t.startsWith("@")&&!Object.prototype.hasOwnProperty.call(P.dialogue,t)){
-      row("FAIL",`시퀀스 ${sid} 미등록 대사: ${t}`,out);refBad++;}}));
-  if(refBad===0)row("PASS","시퀀스→dialogue 참조 전부 유효",out);
-  const qm=questMap();
-  P.triggers.forEach(f=>f.triggers.forEach(t=>{
-    const a=t.action||{};
-    if(a.cutscene&&!P.cutscenes[a.cutscene])row("FAIL",`트리거 ${t.id} 컷신 없음: ${a.cutscene}`,out);
-    if(a.sequence&&!P.sequences[a.sequence])row("FAIL",`트리거 ${t.id} 시퀀스 없음: ${a.sequence}`,out);
-    [t.done_flag,t.requires_flag].forEach(v=>{
-      if(v&&!qm[v]&&!INTERNAL_FLAGS.includes(v))
-        row("warn",`트리거 ${t.id} 플래그가 quests_v2에 없음: ${v}`,out);});}));
-  Object.values(qm).forEach(q=>{
-    let r=q.requires||[];r=Array.isArray(r)?r:[r];
-    r.forEach(x=>{if(!qm[x])row("FAIL",`퀘스트 ${q.id} 선행 누락: ${x}`,out);});});
-  Object.entries(P.cutscenes).forEach(([cid,c])=>(c.steps||[]).forEach((s,i)=>{
-    (s.enemies||[]).forEach(e=>{
-      if(!P.monsters.species.includes(e)&&!P.monsters.bosses.includes(e))
-        row("FAIL",`컷신 ${cid}#${i} 미지 적: ${e}`);});
-    ["minigame_quiz","minigame_battery"].forEach(mk=>{
-      if(s[mk]&&!["quiz_man","battery_circuit"].includes(s[mk]))
-        row("FAIL",`컷신 ${cid}#${i} 미니게임 미확인: ${s[mk]}`);});
-    const gi=(s.args&&s.args.grant)||(s.op==="grant_item"?{[(s.args&&s.args.item)||s.item]:1}:null);
-    if(gi)Object.keys(gi).forEach(it=>{
-      if(it.startsWith("ITEM_")&&!P.items.some(x=>x.id===it))
-        row("FAIL",`컷신 ${cid}#${i} items.json에 없는 아이템: ${it}`);});
-    if(s.op==="craft"){const rq=(s.args&&s.args.requires)||s.requires||{};
-      Object.keys(rq).concat(Object.keys(s.grant||{})).forEach(it=>{
-        if(!P.items.some(x=>x.id===it)&&!it.startsWith("reagent_"))
-          row("warn",`컷신 ${cid}#${i} 아이템 미확인: ${it}`);});}
-  }));
-  const used=new Set();
-  Object.values(P.sequences).forEach(sq=>(sq.steps||sq||[]).forEach(s=>{
-    const t=typeof s==="object"?String(s.text||""):String(s);
-    if(t.startsWith("@"))used.add(t);}));
-  Object.values(P.cutscenes).forEach(c=>(c.steps||[]).forEach(s=>
-    ((s.op==="dialogue"&&s.steps)||[]).forEach(d=>{
-      if(String(d.text||"").startsWith("@"))used.add(d.text);})));
-  const unused=Object.keys(P.dialogue).filter(k=>k.startsWith("@c")&&!used.has(k));
-  if(unused.length)row("warn",`미사용 @c ${unused.length}: ${unused.join(", ")}`,out);
 
-  const g={PASS:[],FAIL:[],warn:[]};
-  out.forEach(o=>g[o.tier].push(o.msg));
-  $("#healthOut").innerHTML=
-    `<p style="margin-bottom:10px">${chip("b-ok","PASS "+g.PASS.length)}
-     ${chip("b-warn","warn "+g.warn.length)}${chip("b-bad","FAIL "+g.FAIL.length)}</p>`
-    +["FAIL","warn","PASS"].map(t=>g[t].map(m=>
-      `<div class="hrow">${chip(t==="PASS"?"b-ok":t==="warn"?"b-warn":"b-bad",t)}
-       <span>${esc(m)}</span></div>`).join("")).join("");
+function switchFloor(f) {
+  if (curFloor === f) return;
+  curFloor = f;
+  selCell = null;
+  buildFloorBtns();
+  buildStoryboardStrip();
+  updateCanvasSize();
+  drawMap();
+  updateSidebar();
+  renderAttrDict();
 }
+
+function drawMap() {
+  const cv = $("#mapCanvas"), def = P.maps[curFloor];
+  if (!def) return;
+  cv.width = def.w * BASE_CELL;
+  cv.height = def.h * BASE_CELL;
+  const g = cv.getContext("2d");
+  g.imageSmoothingEnabled = false;
+
+  const mapshot = mapshotImgs[curFloor];
+
+  if (viewMode === "graphic") {
+    if (mapshot && mapshot.complete && mapshot.naturalWidth > 0) {
+      g.drawImage(mapshot, 0, 0, cv.width, cv.height);
+    } else {
+      for (let y = 0; y < def.h; y++) {
+        for (let x = 0; x < def.w; x++) {
+          const a = def.attr[y][x];
+          g.fillStyle = getAttrColor(a);
+          g.fillRect(x * BASE_CELL, y * BASE_CELL, BASE_CELL, BASE_CELL);
+        }
+      }
+    }
+  } else if (viewMode === "hybrid") {
+    if (mapshot && mapshot.complete && mapshot.naturalWidth > 0) {
+      g.drawImage(mapshot, 0, 0, cv.width, cv.height);
+    } else {
+      g.fillStyle = "#110f1c";
+      g.fillRect(0, 0, cv.width, cv.height);
+    }
+
+    for (let y = 0; y < def.h; y++) {
+      for (let x = 0; x < def.w; x++) {
+        const a = def.attr[y][x];
+        if (a === 0) continue;
+
+        const color = getAttrColor(a);
+        g.save();
+        g.globalAlpha = 0.45;
+        g.fillStyle = color;
+        g.fillRect(x * BASE_CELL, y * BASE_CELL, BASE_CELL, BASE_CELL);
+        g.restore();
+
+        if (a === 9 || (a >= 10 && a <= 110) || (a >= 150 && a <= 184)) {
+          g.strokeStyle = color;
+          g.lineWidth = 1;
+          g.strokeRect(x * BASE_CELL + 0.5, y * BASE_CELL + 0.5, BASE_CELL - 1, BASE_CELL - 1);
+        }
+      }
+    }
+  } else if (viewMode === "attr") {
+    for (let y = 0; y < def.h; y++) {
+      for (let x = 0; x < def.w; x++) {
+        const a = def.attr[y][x];
+        g.fillStyle = getAttrColor(a);
+        g.fillRect(x * BASE_CELL, y * BASE_CELL, BASE_CELL, BASE_CELL);
+      }
+    }
+
+    if (scale >= 1.2) {
+      g.font = "bold 7.5px monospace";
+      g.textAlign = "center";
+      g.textBaseline = "middle";
+      for (let y = 0; y < def.h; y++) {
+        for (let x = 0; x < def.w; x++) {
+          const a = def.attr[y][x];
+          if (a === 0 || a === 1) continue;
+          g.fillStyle = "rgba(255,255,255,0.9)";
+          g.fillText(String(a), x * BASE_CELL + BASE_CELL / 2, y * BASE_CELL + BASE_CELL / 2);
+        }
+      }
+      g.textAlign = "start";
+      g.textBaseline = "alphabetic";
+    }
+  }
+
+  if (activeHighlightAttr !== null) {
+    for (let y = 0; y < def.h; y++) {
+      for (let x = 0; x < def.w; x++) {
+        if (def.attr[y][x] === activeHighlightAttr) {
+          g.fillStyle = "rgba(0, 255, 204, 0.45)";
+          g.fillRect(x * BASE_CELL, y * BASE_CELL, BASE_CELL, BASE_CELL);
+          g.strokeStyle = "#00ffcc";
+          g.lineWidth = 1.5;
+          g.strokeRect(x * BASE_CELL + 0.5, y * BASE_CELL + 0.5, BASE_CELL - 1, BASE_CELL - 1);
+        }
+      }
+    }
+  }
+
+  if ($("#tgGrid").checked) {
+    g.strokeStyle = "rgba(255,255,255,0.12)";
+    g.lineWidth = 1;
+    for (let x = 0; x <= def.w; x++) {
+      g.beginPath(); g.moveTo(x * BASE_CELL, 0); g.lineTo(x * BASE_CELL, cv.height); g.stroke();
+    }
+    for (let y = 0; y <= def.h; y++) {
+      g.beginPath(); g.moveTo(0, y * BASE_CELL); g.lineTo(cv.width, y * BASE_CELL); g.stroke();
+    }
+  }
+
+  if ($("#tgChest").checked) {
+    for (let y = 0; y < def.h; y++) {
+      for (let x = 0; x < def.w; x++) {
+        const a = def.attr[y][x];
+        if (a >= 150 && a <= 184) {
+          g.fillStyle = "#fbbf24";
+          g.fillRect(x * BASE_CELL + 3, y * BASE_CELL + 3, BASE_CELL - 6, BASE_CELL - 6);
+          g.strokeStyle = "#78350f";
+          g.lineWidth = 1;
+          g.strokeRect(x * BASE_CELL + 3, y * BASE_CELL + 3, BASE_CELL - 6, BASE_CELL - 6);
+        }
+      }
+    }
+  }
+
+  if ($("#tgTrn").checked) {
+    const curNum = curFloor === "f0" ? 0 : parseInt(curFloor.replace("f", ""));
+    (P.transitions.transitions || []).forEach(t => {
+      if (t.guard_min_floor != null && (curNum < t.guard_min_floor || curNum > t.guard_max_floor)) return;
+      const [ax, ay] = t.anchor;
+      g.fillStyle = "#38bdf8";
+      g.fillRect(ax * BASE_CELL, ay * BASE_CELL, BASE_CELL, BASE_CELL);
+      g.strokeStyle = "#0284c7";
+      g.lineWidth = 1.5;
+      g.strokeRect(ax * BASE_CELL, ay * BASE_CELL, BASE_CELL, BASE_CELL);
+
+      const [ox, oy] = t.spawn_offset || [0, 0];
+      const lx = ax + ox, ly = ay + oy;
+      g.strokeStyle = "rgba(56, 189, 248, 0.6)";
+      g.setLineDash([2, 2]);
+      g.strokeRect(lx * BASE_CELL + 1, ly * BASE_CELL + 1, BASE_CELL - 2, BASE_CELL - 2);
+      g.setLineDash([]);
+
+      drawLabel(g, (t.floor_delta > 0 ? "▲ " : "▼ ") + t.id, ax * BASE_CELL, ay * BASE_CELL - 3, "#7dd3fc");
+    });
+  }
+
+  if ($("#tgTrg").checked) {
+    (trigByFloor[curFloor] || []).forEach((t, i) => {
+      const isZone = t.type === "zone";
+      const isInteract = t.type === "interact";
+      const color = isZone ? "rgba(244,63,94,0.45)" : isInteract ? "rgba(56,189,248,0.45)" : "rgba(168,85,247,0.45)";
+      const border = isZone ? "#f43f5e" : isInteract ? "#38bdf8" : "#a855f7";
+
+      (t.cells || []).forEach(c => {
+        const [x, y] = c;
+        g.fillStyle = color;
+        g.fillRect(x * BASE_CELL, y * BASE_CELL, BASE_CELL, BASE_CELL);
+        g.strokeStyle = border;
+        g.lineWidth = 1;
+        g.strokeRect(x * BASE_CELL, y * BASE_CELL, BASE_CELL, BASE_CELL);
+      });
+
+      if (t.cells && t.cells.length) {
+        const [x, y] = t.cells[0];
+        drawLabel(g, "⚡ " + t.id, x * BASE_CELL, y * BASE_CELL + BASE_CELL + 9, "#fda4af");
+      }
+      if (t.type === "auto") {
+        drawLabel(g, "⚡ AUTO: " + t.id, 8, 16 + i * 14, "#d8b4fe");
+      }
+    });
+  }
+
+  if ($("#tgMonster").checked) {
+    const monsters = FLOOR_MONSTER_HOTSPOTS[curFloor] || [];
+    monsters.forEach(m => {
+      const px = m.x * BASE_CELL;
+      const py = m.y * BASE_CELL;
+      const sprImg = monsterImgs[m.id];
+
+      g.fillStyle = m.isBoss ? "rgba(239, 68, 68, 0.35)" : "rgba(236, 72, 153, 0.25)";
+      g.beginPath();
+      g.arc(px + BASE_CELL / 2, py + BASE_CELL / 2, BASE_CELL * (m.isBoss ? 1.4 : 0.9), 0, Math.PI * 2);
+      g.fill();
+      g.strokeStyle = m.isBoss ? "#ef4444" : "#ec4899";
+      g.lineWidth = 1.5;
+      g.stroke();
+
+      if (sprImg && sprImg.complete && sprImg.naturalWidth > 0) {
+        const fw = sprImg.naturalWidth / 2;
+        const fh = sprImg.naturalHeight / 5;
+        g.drawImage(sprImg, 0, 0, fw, fh, px - 2, py - 4, BASE_CELL + 4, BASE_CELL + 6);
+      }
+
+      drawLabel(g, (m.isBoss ? "👑 " : "👾 ") + m.name, px - m.name.length * 3, py - 5, m.isBoss ? "#fca5a5" : "#f472b6");
+    });
+  }
+
+  if ($("#tgNpc").checked) {
+    (npcByFloor[curFloor] || []).forEach(n => {
+      const px = n.pos[0] * BASE_CELL;
+      const py = n.pos[1] * BASE_CELL;
+      const sprImg = spriteImgs[n.id] || spriteImgs["guard_idle"];
+
+      if (sprImg && sprImg.complete && sprImg.naturalWidth > 0) {
+        const fw = sprImg.naturalWidth / 2;
+        const fh = sprImg.naturalHeight / 5;
+        g.drawImage(sprImg, 0, 0, fw, fh, px - 2, py - 6, BASE_CELL + 4, BASE_CELL + 8);
+      } else {
+        const cx = px + BASE_CELL / 2;
+        const cy = py + BASE_CELL / 2;
+        g.fillStyle = "#34d399";
+        g.beginPath();
+        g.arc(cx, cy, BASE_CELL * 0.45, 0, Math.PI * 2);
+        g.fill();
+        g.strokeStyle = "#064e3b";
+        g.lineWidth = 1.5;
+        g.stroke();
+      }
+
+      drawLabel(g, "👤 " + n.name, px - n.name.length * 3, py - 6, "#6ee7b7");
+    });
+  }
+
+  if (selCell) {
+    g.strokeStyle = "#ffffff";
+    g.lineWidth = 2;
+    g.strokeRect(selCell.x * BASE_CELL - 1, selCell.y * BASE_CELL - 1, BASE_CELL + 2, BASE_CELL + 2);
+  }
+
+  drawLinkOverlays();
+  renderOnMapBubbles();
+}
+
+function drawLabel(g, text, x, y, color) {
+  g.font = "bold 10px 'Pretendard', sans-serif";
+  g.fillStyle = color;
+  g.strokeStyle = "rgba(0,0,0,0.85)";
+  g.lineWidth = 2.5;
+  g.strokeText(text, x, y);
+  g.fillText(text, x, y);
+}
+
+/* ===== 6. 맵 상의 실시간 말풍선 & 이벤트 뱃지 렌더러 ===== */
+function renderOnMapBubbles() {
+  const container = $("#bubbleContainer");
+  container.innerHTML = "";
+  if (!$("#tgBubbles").checked) return;
+
+  (npcByFloor[curFloor] || []).forEach(n => {
+    const sq = P.sequences[n.sequence_id];
+    const steps = sq ? (sq.steps || sq || []) : [];
+    let previewText = "대화 가능";
+    if (steps.length > 0) {
+      const firstStep = steps[0];
+      const rawText = typeof firstStep === "object" ? firstStep.text : firstStep;
+      previewText = resolveText(rawText).replace(/<[^>]*>/g, "");
+    }
+
+    const vis = NPC_VISUALS[n.id] || NPC_VISUALS["guard_idle"];
+    const bubble = document.createElement("div");
+    bubble.className = "map-bubble";
+    bubble.style.left = (n.pos[0] * BASE_CELL * scale + (BASE_CELL * scale) / 2) + "px";
+    bubble.style.top = (n.pos[1] * BASE_CELL * scale - 4) + "px";
+    bubble.innerHTML = `
+      <img src="${vis.portrait}" onerror="this.src='../assets/portraits/_fallback.png'" class="bubble-avatar" alt="초상화">
+      <div style="display:flex;flex-direction:column">
+        <span class="bubble-speaker">${esc(n.name)}</span>
+        <span class="bubble-text">${esc(previewText)}</span>
+      </div>
+    `;
+    bubble.onclick = e => {
+      e.stopPropagation();
+      centerOnCell(n.pos[0], n.pos[1]);
+    };
+    container.appendChild(bubble);
+  });
+
+  const storyEvents = FLOOR_STORYBOARDS[curFloor] || [];
+  storyEvents.forEach(ev => {
+    const bubble = document.createElement("div");
+    bubble.className = "map-bubble";
+    bubble.style.left = (ev.x * BASE_CELL * scale + (BASE_CELL * scale) / 2) + "px";
+    bubble.style.top = (ev.y * BASE_CELL * scale - 4) + "px";
+    bubble.style.borderColor = "var(--acc)";
+    bubble.innerHTML = `
+      <span class="badge b-flag" style="margin:0">${ev.step}</span>
+      <div style="display:flex;flex-direction:column">
+        <span style="font-weight:700;color:#cfc7ff">${esc(ev.name)}</span>
+        <span class="bubble-text" style="color:var(--dim)">${esc(ev.desc)}</span>
+      </div>
+    `;
+    bubble.onclick = e => {
+      e.stopPropagation();
+      centerOnCell(ev.x, ev.y);
+    };
+    container.appendChild(bubble);
+  });
+}
+
+/* ===== 7. 이벤트 & 퀘스트 연결선 ===== */
+function drawLinkOverlays() {
+  const svg = $("#linkOverlay");
+  svg.innerHTML = "";
+  if (!$("#tgLinks").checked) return;
+
+  const def = P.maps[curFloor];
+  if (!def) return;
+  const svgW = def.w * BASE_CELL * scale;
+  const svgH = def.h * BASE_CELL * scale;
+  svg.setAttribute("viewBox", `0 0 ${svgW} ${svgH}`);
+
+  const storyEvents = FLOOR_STORYBOARDS[curFloor] || [];
+  if (storyEvents.length >= 2) {
+    let pathD = `M ${(storyEvents[0].x * BASE_CELL + BASE_CELL/2) * scale} ${(storyEvents[0].y * BASE_CELL + BASE_CELL/2) * scale}`;
+    for (let i = 1; i < storyEvents.length; i++) {
+      const prev = storyEvents[i - 1];
+      const cur = storyEvents[i];
+      const pX = (prev.x * BASE_CELL + BASE_CELL/2) * scale, pY = (prev.y * BASE_CELL + BASE_CELL/2) * scale;
+      const cX = (cur.x * BASE_CELL + BASE_CELL/2) * scale, cY = (cur.y * BASE_CELL + BASE_CELL/2) * scale;
+      const midX = (pX + cX) / 2;
+      const midY = (pY + cY) / 2 - 25 * scale;
+      pathD += ` Q ${midX} ${midY} ${cX} ${cY}`;
+    }
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathD);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "rgba(128, 108, 252, 0.55)");
+    path.setAttribute("stroke-width", String(3 * scale));
+    path.setAttribute("stroke-dasharray", `${6 * scale}, ${4 * scale}`);
+    path.setAttribute("stroke-linecap", "round");
+    svg.appendChild(path);
+  }
+
+  if (selCell) {
+    const trigs = (trigByFloor[curFloor] || []).filter(t => (t.cells || []).some(c => c[0] === selCell.x && c[1] === selCell.y));
+    trigs.forEach(t => {
+      if (t.requires_flag) {
+        const reqFlags = Array.isArray(t.requires_flag) ? t.requires_flag : [t.requires_flag];
+        reqFlags.forEach(rf => {
+          const srcTrig = (trigByFloor[curFloor] || []).find(x => x.done_flag === rf);
+          if (srcTrig && srcTrig.cells && srcTrig.cells[0]) {
+            drawArrow(svg, (srcTrig.cells[0][0] * BASE_CELL + BASE_CELL / 2) * scale, (srcTrig.cells[0][1] * BASE_CELL + BASE_CELL / 2) * scale,
+                      (selCell.x * BASE_CELL + BASE_CELL / 2) * scale, (selCell.y * BASE_CELL + BASE_CELL / 2) * scale, "#f59e0b");
+          }
+        });
+      }
+    });
+  }
+}
+
+function drawArrow(svg, x1, y1, x2, y2, color) {
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  line.setAttribute("x1", x1);
+  line.setAttribute("y1", y1);
+  line.setAttribute("x2", x2);
+  line.setAttribute("y2", y2);
+  line.setAttribute("stroke", color);
+  line.setAttribute("stroke-width", String(2.5 * scale));
+  line.setAttribute("stroke-dasharray", "4, 3");
+  svg.appendChild(line);
+}
+
+/* ===== 8. 맵 호버 & 클릭 인스펙터 ===== */
+function cellFromEvent(e) {
+  const cv = $("#mapCanvas");
+  const rect = cv.getBoundingClientRect();
+  const x = Math.floor((e.clientX - rect.left) / (BASE_CELL * scale));
+  const y = Math.floor((e.clientY - rect.top) / (BASE_CELL * scale));
+  return { x, y };
+}
+
+$("#viewport").addEventListener("mousemove", e => {
+  const def = P.maps[curFloor];
+  if (!def) return;
+  const { x, y } = cellFromEvent(e);
+  const hudXY = $("#hudXY"), hudAttr = $("#hudAttr");
+  const tip = $("#tileTooltip");
+
+  if (x >= 0 && y >= 0 && x < def.w && y < def.h) {
+    const a = def.attr[y][x];
+    const info = resolveAttrInfo(a);
+    hudXY.textContent = `${x}, ${y}`;
+    hudAttr.textContent = `${a} (${info.name})`;
+
+    tip.style.display = "block";
+    tip.style.left = (e.clientX + 16) + "px";
+    tip.style.top = (e.clientY + 16) + "px";
+
+    const npcs = (npcByFloor[curFloor] || []).filter(n => n.pos[0] === x && n.pos[1] === y);
+    const monsters = (FLOOR_MONSTER_HOTSPOTS[curFloor] || []).filter(m => Math.abs(m.x - x) <= 1 && Math.abs(m.y - y) <= 1);
+    const trigs = (trigByFloor[curFloor] || []).filter(t => (t.cells || []).some(c => c[0] === x && c[1] === y));
+    const trans = (P.transitions.transitions || []).filter(t => t.anchor[0] === x && t.anchor[1] === y);
+
+    let html = `<div style="font-weight:700;color:#cfc7ff;margin-bottom:4px;font-size:13px">${FLOOR_LABEL[curFloor]} (${x}, ${y})</div>`;
+    html += `<div style="color:${info.color};font-size:12px">● <b>attr ${a}</b>: ${esc(info.name)}</div>`;
+    if (info.desc) html += `<div style="color:var(--dim);font-size:11px;margin-top:2px">${esc(info.desc)}</div>`;
+
+    if (monsters.length) {
+      const m = monsters[0];
+      html += `
+        <div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);color:#ec4899">
+          👾 <b>몬스터: ${esc(m.name)}</b> (${esc(m.pattern)} AI)<br>
+          <span style="color:var(--dim);font-size:11px">약점 속성: <b style="color:#ffd24a">${esc(m.weak)}</b></span>
+        </div>
+      `;
+    }
+
+    if (npcs.length) {
+      const n = npcs[0];
+      const sq = P.sequences[n.sequence_id];
+      const steps = sq ? (sq.steps || sq || []) : [];
+      let preview = "";
+      if (steps.length > 0) {
+        const raw = typeof steps[0] === "object" ? steps[0].text : steps[0];
+        preview = resolveText(raw).replace(/<[^>]*>/g, "");
+      }
+      html += `
+        <div style="margin-top:8px;padding-top:6px;border-top:1px dashed var(--line);color:#34d399">
+          👤 <b>NPC: ${esc(n.name)}</b><br>
+          <span style="color:#dcd6ff;font-size:11.5px">"${esc(preview)}"</span>
+        </div>
+      `;
+    }
+
+    if (trigs.length) {
+      const t = trigs[0];
+      html += `
+        <div style="margin-top:6px;color:#f43f5e">
+          ⚡ <b>이벤트 트리거: ${esc(t.id)}</b> (${esc(t.type)})<br>
+          ${t.done_flag ? `<span style="color:var(--dim);font-size:10.5px">완료 플래그: ${esc(t.done_flag)}</span>` : ""}
+        </div>
+      `;
+    }
+
+    if (trans.length) {
+      html += `<div style="margin-top:6px;color:#38bdf8">🚪 <b>계단/포탈</b>: ${trans.map(t => (t.floor_delta > 0 ? "▲ " : "▼ ") + esc(t.id)).join(", ")}</div>`;
+    }
+
+    tip.innerHTML = html;
+  } else {
+    tip.style.display = "none";
+  }
+});
+
+$("#viewport").addEventListener("mouseleave", () => {
+  $("#tileTooltip").style.display = "none";
+});
+
+$("#mapCanvas").addEventListener("click", e => {
+  if (draggedDist > 6) return;
+  const def = P.maps[curFloor];
+  if (!def) return;
+  const { x, y } = cellFromEvent(e);
+  if (x < 0 || y < 0 || x >= def.w || y >= def.h) return;
+
+  selCell = { x, y };
+  triggerPulseRing(x, y);
+  drawMap();
+  inspectCell(x, y);
+
+  const coordText = `[${x}, ${y}]`;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(coordText);
+    showToast(`좌표 ${coordText} 복사 완료`);
+  }
+});
+
+function inspectCell(x, y) {
+  const def = P.maps[curFloor];
+  if (!def || y >= def.h || x >= def.w) return;
+  const a = def.attr[y][x];
+  const info = resolveAttrInfo(a);
+  const npcs = (npcByFloor[curFloor] || []).filter(n => n.pos[0] === x && n.pos[1] === y);
+  const monsters = (FLOOR_MONSTER_HOTSPOTS[curFloor] || []).filter(m => Math.abs(m.x - x) <= 1 && Math.abs(m.y - y) <= 1);
+  const trigs = (trigByFloor[curFloor] || []).filter(t => (t.cells || []).some(c => c[0] === x && c[1] === y));
+  const curNum = curFloor === "f0" ? 0 : parseInt(curFloor.replace("f", ""));
+  const trans = (P.transitions.transitions || []).filter(t => t.anchor[0] === x && t.anchor[1] === y &&
+    (t.guard_min_floor == null || (curNum >= t.guard_min_floor && curNum <= t.guard_max_floor)));
+
+  let html = `
+    <div class="card">
+      <div class="card-title">
+        <span>📍 타일 속성 정보 (${x}, ${y})</span>
+        <button class="action-link-btn" onclick="copyCoord(${x}, ${y})">📋 복사</button>
+      </div>
+      <div class="card-row"><span class="k">속성 (ATTR)</span><span class="v" style="color:${info.color}"><b>${a}</b> (${esc(info.name)})</span></div>
+      <div class="card-row"><span class="k">속성 분류</span><span class="v"><span class="badge b-op">${esc(info.cat)}</span></span></div>
+      <div class="card-row"><span class="k">한글 명칭</span><span class="v"><b>${esc(info.name)}</b></span></div>
+      
+      <div style="margin-top:8px;font-size:11px;font-weight:700;color:#cfc7ff">🎮 게임 내 동작 원리 & 의미:</div>
+      <div class="semantic-box">${esc(info.behavior || info.desc)}</div>
+
+      <div class="card-row"><span class="k">지면 타일 ID</span><span class="v"><code>${def.ground ? def.ground[y][x] : "-"}</code></span></div>
+      <div class="card-row"><span class="k">오브젝트 ID</span><span class="v"><code>${def.object ? def.object[y][x] : "-"}</code></span></div>
+      
+      <div style="margin-top:6px;display:flex;gap:6px">
+        <button class="action-link-btn" onclick="toggleAttrHighlight(${a})">✨ 이 속성 하이라이트</button>
+        <button class="action-link-btn" onclick="jumpToAttrDict(${a})">📖 속성 사전 보기</button>
+      </div>
+    </div>
+  `;
+
+  monsters.forEach(m => {
+    const sprUrl = MONSTER_SPRITES[m.id] || "../assets/sprites/player_original.png";
+    const stat = P.monsters.floor_stats ? (P.monsters.floor_stats[curFloor] || {}) : {};
+    html += `
+      <div class="card" style="border-color:#ec4899">
+        <div class="card-title" style="color:#ec4899">
+          <span>👾 ${m.isBoss ? "보스" : "필드 몬스터"}: ${esc(m.name)}</span>
+          <span class="badge b-mon">${esc(m.pattern)} AI</span>
+        </div>
+        <div class="visual-preview-box">
+          <div class="visual-avatar" style="background:#200f1c">
+            <img src="${sprUrl}" alt="몬스터">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;color:#f472b6">${esc(m.name)}</div>
+            <div style="font-size:11px;color:var(--dim)">종 ID: <code>${esc(m.id)}</code></div>
+            <div style="font-size:11px;color:#ffd24a;margin-top:2px">약점 속성: <b>${esc(m.weak)}</b></div>
+          </div>
+        </div>
+        ${stat.hp_range ? `<div class="card-row"><span class="k">체력 (HP)</span><span class="v">${stat.hp_range[0]} ~ ${stat.hp_range[1]}</span></div>` : ""}
+        ${stat.ap_range ? `<div class="card-row"><span class="k">공격력 (AP)</span><span class="v">${stat.ap_range[0]} ~ ${stat.ap_range[1]}</span></div>` : ""}
+        ${stat.exp ? `<div class="card-row"><span class="k">처치 경험치</span><span class="v">+${stat.exp[0]} ~ ${stat.exp[1]} EXP</span></div>` : ""}
+      </div>
+    `;
+  });
+
+  if (info.item) {
+    const it = info.item;
+    const iconUrl = `../assets/icons/${it.id}.png`;
+    html += `
+      <div class="card" style="border-color:#fbbf24">
+        <div class="card-title" style="color:#fbbf24">🎁 보물 상자 아이템</div>
+        <div class="visual-preview-box">
+          <div class="visual-avatar">
+            <img src="${iconUrl}" onerror="this.src='../assets/icons/ITEM_BOOK.png'" alt="아이콘">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;color:#fff">${esc(it.name_ko || it.name)}</div>
+            <div style="font-size:11px;color:var(--dim)"><code>${esc(it.id)}</code></div>
+            <div style="font-size:11px;color:#8ad4e0;margin-top:2px">[${esc(it.kind || "item")}] ${it.element ? `속성: ${it.element}` : ""}</div>
+          </div>
+        </div>
+        ${it.ap ? `<div class="card-row"><span class="k">공격력 (AP)</span><span class="v" style="color:#48d597">+${it.ap}</span></div>` : ""}
+        ${it.dp ? `<div class="card-row"><span class="k">방어력 (DP)</span><span class="v" style="color:#38bdf8">+${it.dp}</span></div>` : ""}
+        ${it.description ? `<div class="card-row"><span class="k">상세 설명</span><span class="v">${esc(it.description)}</span></div>` : ""}
+      </div>
+    `;
+  }
+
+  npcs.forEach(n => {
+    const sq = P.sequences[n.sequence_id];
+    const steps = sq ? (sq.steps || sq || []) : [];
+    const vis = NPC_VISUALS[n.id] || NPC_VISUALS["guard_idle"];
+    const portraitUrl = vis.portrait;
+    const spriteUrl = vis.sprite;
+
+    html += `
+      <div class="card" style="border-color:#34d399">
+        <div class="card-title" style="color:#34d399">
+          <span>👤 캐릭터: ${esc(n.name)}</span>
+          <button class="action-link-btn" onclick="jumpToSeq('${esc(n.sequence_id)}')">💬 시퀀스 열기</button>
+        </div>
+
+        <div class="visual-preview-box">
+          <div class="visual-avatar" title="프로필 초상화">
+            <img src="${portraitUrl}" onerror="this.src='../assets/portraits/_fallback.png'" alt="초상화">
+          </div>
+          <div class="visual-avatar" title="필드 도트 스프라이트" style="background:#131122">
+            <img src="${spriteUrl}" onerror="this.src='../assets/sprites/player_original.png'" style="transform:scale(1.5)" alt="스프라이트">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;color:#6ee7b7">${esc(n.name)}</div>
+            <div style="font-size:11px;color:var(--dim)">ID: <code>${esc(n.id)}</code></div>
+            <div style="font-size:11px;color:#cfc7ff">위치: (${n.pos[0]}, ${n.pos[1]})</div>
+          </div>
+        </div>
+
+        <div class="card-row"><span class="k">연결 시퀀스</span><span class="v"><code>${esc(n.sequence_id)}</code></span></div>
+        <div style="margin-top:8px;font-size:11px;color:var(--dim)">대사 미리보기:</div>
+        <div style="margin-top:4px">
+          ${steps.slice(0, 3).map(s => typeof s === "object"
+            ? `<div class="step-bubble" style="padding:6px 8px;margin-bottom:4px"><span class="sp">${esc(s.speaker || n.name)}</span>${resolveText(s.text)}</div>`
+            : `<div class="step-bubble" style="padding:6px 8px;margin-bottom:4px">${resolveText(s)}</div>`
+          ).join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  trigs.forEach(t => {
+    const act = t.action || {};
+    html += `
+      <div class="card" style="border-color:#f43f5e">
+        <div class="card-title" style="color:#f43f5e">
+          <span>⚡ 이벤트 트리거: ${esc(t.id)}</span>
+          ${act.cutscene ? `<button class="action-link-btn" onclick="jumpToCut('${esc(act.cutscene)}')">🎬 컷신 열기</button>` : ""}
+        </div>
+        <div class="card-row"><span class="k">발동 방식</span><span class="v"><span class="badge b-op">${esc(t.type)}</span> ${t.once ? "(1회성)" : ""}</span></div>
+        <div class="card-row"><span class="k">선행 조건</span><span class="v">${t.requires_flag ? `<span class="badge b-flag">${esc(JSON.stringify(t.requires_flag))}</span>` : "없음"}</span></div>
+        <div class="card-row"><span class="k">완료 플래그</span><span class="v">${t.done_flag ? `<span class="badge b-ok">${esc(t.done_flag)}</span>` : "없음"}</span></div>
+        ${t._comment ? `<div class="card-row"><span class="k">해설</span><span class="v" style="font-size:11px;color:var(--dim)">${esc(t._comment)}</span></div>` : ""}
+      </div>
+    `;
+  });
+
+  trans.forEach(t => {
+    const targetFloor = "f" + (curNum + t.floor_delta);
+    html += `
+      <div class="card" style="border-color:#38bdf8">
+        <div class="card-title" style="color:#38bdf8">
+          <span>🚪 층 전환: ${t.floor_delta > 0 ? "▲ 상행 계단" : "▼ 하행 계단"}</span>
+          <button class="action-link-btn" onclick="jumpToFloor('${targetFloor}', ${t.anchor[0] + (t.spawn_offset ? t.spawn_offset[0] : 0)}, ${t.anchor[1] + (t.spawn_offset ? t.spawn_offset[1] : 0)})">층 이동 (${FLOOR_LABEL[targetFloor]})</button>
+        </div>
+        <div class="card-row"><span class="k">계단 ID</span><span class="v"><code>${esc(t.id)}</code></span></div>
+        <div class="card-row"><span class="k">목적지 층</span><span class="v"><b>${FLOOR_LABEL[targetFloor]}</b></span></div>
+        <div class="card-row"><span class="k">착지 오프셋</span><span class="v">${esc(JSON.stringify(t.spawn_offset || [0, 0]))}</span></div>
+        <div class="card-row"><span class="k">개방 플래그</span><span class="v">${t.requires_flag ? `<span class="badge b-flag">${esc(t.requires_flag)}</span>` : "무조건 개방"}</span></div>
+      </div>
+    `;
+  });
+
+  $("#inspContent").innerHTML = html;
+}
+
+window.copyCoord = (x, y) => {
+  navigator.clipboard.writeText(`[${x}, ${y}]`);
+  showToast(`좌표 [${x}, ${y}] 복사 완료`);
+};
+
+/* ===== 9. 사이드바 객체 브라우저 & 범례 바 ===== */
+function updateSidebar() {
+  const npcs = npcByFloor[curFloor] || [];
+  const monsters = FLOOR_MONSTER_HOTSPOTS[curFloor] || [];
+  const trigs = trigByFloor[curFloor] || [];
+  const curNum = curFloor === "f0" ? 0 : parseInt(curFloor.replace("f", ""));
+  const trans = (P.transitions.transitions || []).filter(t => 
+    t.guard_min_floor == null || (curNum >= t.guard_min_floor && curNum <= t.guard_max_floor));
+  
+  const def = P.maps[curFloor];
+  const chests = [];
+  const rooms = [];
+  if (def) {
+    for (let y = 0; y < def.h; y++) {
+      for (let x = 0; x < def.w; x++) {
+        const a = def.attr[y][x];
+        if (a >= 150 && a <= 184) {
+          const info = resolveAttrInfo(a);
+          chests.push({ x, y, attr: a, name: info.name, desc: info.desc, itemId: info.itemId });
+        } else if (a >= 10 && a <= 110 && ATT_DEFS[a]) {
+          rooms.push({ x, y, attr: a, name: ATT_DEFS[a].name, desc: ATT_DEFS[a].desc });
+        }
+      }
+    }
+  }
+
+  const total = npcs.length + monsters.length + trigs.length + trans.length + chests.length + rooms.length;
+  $("#floorObjCount").textContent = total;
+
+  let html = "";
+
+  if (monsters.length) {
+    const fData = P.monsters.floors ? (P.monsters.floors[curFloor] || {}) : {};
+    html += `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 4px">
+        <span style="font-weight:700;color:#ec4899;font-size:11px">👾 출현 몬스터 (${monsters.length})</span>
+        <span style="font-size:10px;color:var(--dim)">정원 ${fData.count || monsters.length}마리 · 리스폰 ${fData.respawn_seconds || 45}s</span>
+      </div>
+    `;
+    monsters.forEach(m => {
+      const sprUrl = MONSTER_SPRITES[m.id] || "../assets/sprites/player_original.png";
+      html += `
+        <div class="obj-item" onclick="centerOnCell(${m.x}, ${m.y})">
+          <div class="obj-icon" style="background:#240e1f">
+            <img src="${sprUrl}" alt="몬스터">
+          </div>
+          <div class="obj-info">
+            <div class="obj-name" style="color:${m.isBoss ? '#fca5a5' : '#f472b6'}">${esc(m.name)} <span style="font-weight:normal;color:var(--dim)">(${m.x}, ${m.y})</span></div>
+            <div class="obj-desc">AI: ${esc(m.pattern)} · 약점: <b>${esc(m.weak)}</b></div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (npcs.length) {
+    html += `<div style="font-weight:700;color:#34d399;font-size:11px;margin:12px 0 4px">👤 NPC (${npcs.length})</div>`;
+    npcs.forEach(n => {
+      const vis = NPC_VISUALS[n.id] || NPC_VISUALS["guard_idle"];
+      html += `
+        <div class="obj-item" onclick="centerOnCell(${n.pos[0]}, ${n.pos[1]})">
+          <div class="obj-icon">
+            <img src="${vis.portrait}" onerror="this.src='../assets/portraits/_fallback.png'" alt="NPC">
+          </div>
+          <div class="obj-info">
+            <div class="obj-name">${esc(n.name)} <span style="font-weight:normal;color:var(--dim)">(${n.pos[0]}, ${n.pos[1]})</span></div>
+            <div class="obj-desc">시퀀스: ${esc(n.sequence_id)}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (trigs.length) {
+    html += `<div style="font-weight:700;color:#f43f5e;font-size:11px;margin:12px 0 4px">⚡ 트리거 (${trigs.length})</div>`;
+    trigs.forEach(t => {
+      const pos = t.cells && t.cells[0] ? `(${t.cells[0][0]}, ${t.cells[0][1]})` : "(자동)";
+      html += `
+        <div class="obj-item" onclick="${t.cells && t.cells[0] ? `centerOnCell(${t.cells[0][0]}, ${t.cells[0][1]})` : ''}">
+          <div class="obj-icon" style="background:#4c0519;color:#f43f5e">⚡</div>
+          <div class="obj-info">
+            <div class="obj-name">${esc(t.id)} <span style="font-weight:normal;color:var(--dim)">${pos}</span></div>
+            <div class="obj-desc">${esc(t.type)} ${t.done_flag ? `· done=${t.done_flag}` : ""}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (trans.length) {
+    html += `<div style="font-weight:700;color:#38bdf8;font-size:11px;margin:12px 0 4px">🚪 계단/층전환 (${trans.length})</div>`;
+    trans.forEach(t => {
+      const targetFloor = "f" + (curNum + t.floor_delta);
+      html += `
+        <div class="obj-item" onclick="centerOnCell(${t.anchor[0]}, ${t.anchor[1]})">
+          <div class="obj-icon" style="background:#082f49;color:#38bdf8">${t.floor_delta > 0 ? "▲" : "▼"}</div>
+          <div class="obj-info">
+            <div class="obj-name">${esc(t.id)} <span style="font-weight:normal;color:var(--dim)">(${t.anchor[0]}, ${t.anchor[1]})</span></div>
+            <div class="obj-desc">→ ${FLOOR_LABEL[targetFloor]} 이동</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (chests.length) {
+    html += `<div style="font-weight:700;color:#ffd24a;font-size:11px;margin:12px 0 4px">🎁 보물 상자 (${chests.length})</div>`;
+    chests.forEach(c => {
+      const iconUrl = c.itemId ? `../assets/icons/${c.itemId}.png` : "../assets/icons/ITEM_BOOK.png";
+      html += `
+        <div class="obj-item" onclick="centerOnCell(${c.x}, ${c.y})">
+          <div class="obj-icon">
+            <img src="${iconUrl}" onerror="this.src='../assets/icons/ITEM_BOOK.png'" alt="상자">
+          </div>
+          <div class="obj-info">
+            <div class="obj-name">${esc(c.name)} <span style="font-weight:normal;color:var(--dim)">(${c.x}, ${c.y})</span></div>
+            <div class="obj-desc">${esc(c.desc)}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  if (rooms.length) {
+    html += `<div style="font-weight:700;color:#c084fc;font-size:11px;margin:12px 0 4px">🏛️ 주요 방/교수실 (${rooms.length})</div>`;
+    rooms.forEach(r => {
+      html += `
+        <div class="obj-item" onclick="centerOnCell(${r.x}, ${r.y})">
+          <div class="obj-icon" style="background:#3b0764;color:#c084fc">🏛️</div>
+          <div class="obj-info">
+            <div class="obj-name">${esc(r.name)} <span style="font-weight:normal;color:var(--dim)">(${r.x}, ${r.y})</span></div>
+            <div class="obj-desc">${esc(r.desc)}</div>
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  $("#browserList").innerHTML = html;
+}
+
+$("#browserSearch").oninput = e => {
+  const query = e.target.value.toLowerCase();
+  $$("#browserList .obj-item").forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(query) ? "flex" : "none";
+  });
+};
+
+function buildLegendBar() {
+  const el = $("#legendBar");
+  el.innerHTML = `<span style="font-weight:700;color:#cfc7ff">속성 범례 (클릭 시 하이라이트):</span>`;
+
+  const legendList = [
+    { attr: 0, label: "통행(0)", color: "#3a4664" },
+    { attr: 1, label: "벽(1)", color: "#14161f" },
+    { attr: 2, label: "오버헤드(2)", color: "#2d374d" },
+    { attr: 9, label: "문(9)", color: "#f59e0b" },
+    { attr: 150, label: "상자(150+)", color: "#ffd24a" },
+    { attr: 16, label: "홍교수(16)", color: "#f43f5e" },
+    { attr: 21, label: "황박사(21)", color: "#f43f5e" },
+    { attr: 26, label: "남교수(26)", color: "#f43f5e" },
+    { attr: 31, label: "권교수(31)", color: "#f43f5e" },
+    { attr: 36, label: "김교수(36)", color: "#f43f5e" },
+    { attr: 41, label: "나교수(41)", color: "#f43f5e" },
+    { attr: 44, label: "퀴즈맨(44)", color: "#06b6d4" },
+    { attr: 110, label: "HP방(110)", color: "#e11d48" }
+  ];
+
+  legendList.forEach(item => {
+    const chip = document.createElement("span");
+    chip.className = "legend-item";
+    chip.innerHTML = `<i class="legend-dot" style="background:${item.color}"></i>${item.label}`;
+    chip.onclick = () => toggleAttrHighlight(item.attr, chip);
+    el.appendChild(chip);
+  });
+
+  const openDictBtn = document.createElement("button");
+  openDictBtn.className = "tool-btn";
+  openDictBtn.style.marginLeft = "auto";
+  openDictBtn.innerHTML = "📖 속성 사전 펼치기";
+  openDictBtn.onclick = () => switchToSideTab("attrdict");
+  el.appendChild(openDictBtn);
+}
+
+window.toggleAttrHighlight = (attr, chipEl = null) => {
+  if (activeHighlightAttr === attr) {
+    activeHighlightAttr = null;
+    $$(".legend-item").forEach(x => x.classList.remove("active"));
+    showToast(`속성 ${attr} 하이라이트 해제`);
+  } else {
+    $$(".legend-item").forEach(x => x.classList.remove("active"));
+    activeHighlightAttr = attr;
+    if (chipEl) chipEl.classList.add("active");
+    const count = (P.maps[curFloor] ? P.maps[curFloor].attr.flat().filter(a => a === attr).length : 0);
+    showToast(`속성 ${attr} 하이라이트 활성화 (현재 층 ${count}개 타일)`);
+  }
+  drawMap();
+  renderAttrDict();
+};
+
+/* ===== 10. 속성(ATTR) 상세 사전 렌더러 ===== */
+function renderAttrDict() {
+  const query = ($("#attrSearch").value || "").trim().toLowerCase();
+  const listEl = $("#attrDictList");
+  if (!listEl) return;
+
+  const filtered = allAttrStats.filter(it => {
+    if (curAttrCat !== "all" && it.cat !== curAttrCat) return false;
+    if (!query) return true;
+    const matchAttr = String(it.attr).includes(query);
+    const matchName = it.name.toLowerCase().includes(query);
+    const matchDesc = it.desc.toLowerCase().includes(query);
+    const matchId = it.itemId ? it.itemId.toLowerCase().includes(query) : false;
+    return matchAttr || matchName || matchDesc || matchId;
+  });
+
+  if (!filtered.length) {
+    listEl.innerHTML = `<div style="text-align:center;padding:20px;color:var(--dim);font-size:12px">일치하는 속성이 없습니다.</div>`;
+    return;
+  }
+
+  let html = "";
+  filtered.forEach(it => {
+    const curFloorCount = it.floorCounts[curFloor] || 0;
+    const isCurHighlighted = activeHighlightAttr === it.attr;
+    const coords = it.floorCoords[curFloor] || [];
+
+    html += `
+      <div class="attr-item-card ${isCurHighlighted ? 'highlighted' : ''}" id="attr-card-${it.attr}">
+        <div class="attr-header">
+          <span class="attr-badge" style="border-color:${it.color};color:${it.color}">ATTR ${it.attr}</span>
+          <span class="attr-name" title="${esc(it.name)}">${esc(it.name)}</span>
+          <span style="font-size:10.5px;color:${curFloorCount > 0 ? '#48d597' : 'var(--dim-dark)'};font-weight:600">
+            ${curFloorCount > 0 ? `현재층 ${curFloorCount}개` : '현재층 0개'}
+          </span>
+        </div>
+        <div class="attr-desc-text">${esc(it.desc)}</div>
+        <div class="attr-behavior-text"><b>🎮 동작 원리:</b> ${esc(it.behavior || it.desc)}</div>
+        <div class="attr-footer-actions">
+          <span style="color:var(--dim);font-size:10.5px">전체 맵: ${it.totalCount}개</span>
+          <div style="display:flex;gap:4px">
+            <button class="action-link-btn" style="margin-top:0" onclick="toggleAttrHighlight(${it.attr})">
+              ${isCurHighlighted ? '✨ 하이라이트 해제' : '✨ 하이라이트'}
+            </button>
+            ${coords.length > 0 ? `
+              <button class="action-link-btn" style="margin-top:0" onclick="toggleAttrCoords(${it.attr})">
+                📍 좌표 (${coords.length})
+              </button>
+            ` : ''}
+          </div>
+        </div>
+        <div class="attr-coord-list" id="attr-coords-${it.attr}" style="display:none">
+          ${coords.slice(0, 15).map(([cx, cy]) => `
+            <span class="coord-chip" onclick="centerOnCell(${cx}, ${cy})">[${cx}, ${cy}]</span>
+          `).join("")}
+          ${coords.length > 15 ? `<span style="color:var(--dim);font-size:10px">외 ${coords.length - 15}개…</span>` : ''}
+        </div>
+      </div>
+    `;
+  });
+
+  listEl.innerHTML = html;
+}
+
+window.toggleAttrCoords = attr => {
+  const el = $(`#attr-coords-${attr}`);
+  if (el) {
+    el.style.display = el.style.display === "none" ? "flex" : "none";
+  }
+};
+
+window.switchToSideTab = sideName => {
+  $$(".sidebar-tab-btn").forEach(x => x.classList.remove("on"));
+  $$(".sidebar-panel").forEach(x => x.classList.remove("on"));
+  const btn = $(`.sidebar-tab-btn[data-side='${sideName}']`);
+  const panel = $(`#side-${sideName}`);
+  if (btn) btn.classList.add("on");
+  if (panel) panel.classList.add("on");
+  if (sideName === "attrdict") renderAttrDict();
+};
+
+window.jumpToAttrDict = attr => {
+  switchToSideTab("attrdict");
+  $("#attrSearch").value = String(attr);
+  curAttrCat = "all";
+  $$(".attr-cat-btn").forEach(x => x.classList.toggle("on", x.dataset.cat === "all"));
+  renderAttrDict();
+  const card = $(`#attr-card-${attr}`);
+  if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+};
+
+window.toggleAttrModal = show => {
+  const m = $("#attrModal");
+  if (show) {
+    let html = `
+      <div style="margin-bottom:14px;color:var(--dim);font-size:12px">
+        시돌이의 모험 맵 파일(f0~f5.json)에 사용된 모든 속성값(ATTR) 코드, 게임 내 실제 역할 및 물리/이벤트 동작 원리 목록입니다.
+      </div>
+      <table>
+        <tr>
+          <th style="width:65px">ATTR 번호</th>
+          <th style="width:140px">명칭</th>
+          <th style="width:75px">분류</th>
+          <th>게임 내 실제 의미 및 동작 원리</th>
+          <th style="width:100px">출현 층 (개수)</th>
+          <th style="width:85px">조작</th>
+        </tr>
+        ${allAttrStats.map(it => `
+          <tr>
+            <td><b class="attr-badge" style="border-color:${it.color};color:${it.color}">${it.attr}</b></td>
+            <td><b>${esc(it.name)}</b></td>
+            <td><span class="badge b-op">${esc(it.cat)}</span></td>
+            <td>
+              <div><b>${esc(it.desc)}</b></div>
+              <div style="color:#dcd6ff;font-size:11px;margin-top:3px">🎮 ${esc(it.behavior || it.desc)}</div>
+              ${it.itemId ? `<div style="margin-top:3px;color:#8ad4e0;font-size:11px">아이템 ID: <code>${esc(it.itemId)}</code></div>` : ''}
+            </td>
+            <td style="font-size:11px">
+              ${Object.entries(it.floorCounts).map(([f, c]) => `${FLOOR_LABEL[f].split(' ')[0]}: <b>${c}</b>`).join("<br>") || "-"}
+            </td>
+            <td>
+              <button class="action-link-btn" style="margin-top:0" onclick="toggleAttrModal(false); jumpToAttrDict(${it.attr}); toggleAttrHighlight(${it.attr})">📍 맵에서 보기</button>
+            </td>
+          </tr>
+        `).join("")}
+      </table>
+    `;
+    $("#attrModalBody").innerHTML = html;
+    m.classList.add("on");
+  } else {
+    m.classList.remove("on");
+  }
+};
+
+["tgBubbles", "tgNpc", "tgMonster", "tgTrg", "tgTrn", "tgChest", "tgLinks", "tgGrid"].forEach(id => {
+  $("#" + id).onchange = drawMap;
+});
+
+/* ===== 11. 스마트 검색 & 점프 ===== */
+function initSearch() {
+  const inp = $("#globalSearch"), drop = $("#searchDrop");
+  
+  inp.addEventListener("input", () => {
+    const q = inp.value.trim().toLowerCase();
+    if (!q) { drop.style.display = "none"; return; }
+
+    const results = [];
+
+    const coordMatch = q.match(/(\d+)\s*,\s*(\d+)/);
+    if (coordMatch) {
+      const x = parseInt(coordMatch[1]), y = parseInt(coordMatch[2]);
+      results.push({ type: "coord", label: `좌표 [${x}, ${y}] 이동`, floor: curFloor, x, y, badge: "b-op" });
+    }
+
+    Object.entries(FLOOR_MONSTER_HOTSPOTS).forEach(([fl, list]) => {
+      list.forEach(m => {
+        if (m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)) {
+          results.push({ type: "mon", label: `👾 몬스터: ${m.name} (${FLOOR_LABEL[fl]})`, floor: fl, x: m.x, y: m.y, badge: "b-mon" });
+        }
+      });
+    });
+
+    (P.items || []).forEach(it => {
+      if ((it.name_ko && it.name_ko.toLowerCase().includes(q)) || it.id.toLowerCase().includes(q)) {
+        results.push({ type: "item", label: `📦 아이템: ${it.name_ko || it.id}`, itemId: it.id, badge: "b-item" });
+      }
+    });
+
+    allAttrStats.forEach(it => {
+      if (String(it.attr) === q || `attr ${it.attr}`.includes(q) || it.name.toLowerCase().includes(q) || (it.itemId && it.itemId.toLowerCase().includes(q))) {
+        results.push({ type: "attr", label: `속성 ${it.attr}: ${it.name}`, attr: it.attr, badge: "b-item" });
+      }
+    });
+
+    P.npcs.forEach(f => f.npcs.forEach(n => {
+      if (n.name.toLowerCase().includes(q) || n.id.toLowerCase().includes(q)) {
+        results.push({ type: "npc", label: `👤 ${n.name} (${n.id})`, floor: "f" + f.floor, x: n.pos[0], y: n.pos[1], badge: "b-ok" });
+      }
+    }));
+
+    P.triggers.forEach(f => f.triggers.forEach(t => {
+      if (t.id.toLowerCase().includes(q) || (t.done_flag && t.done_flag.toLowerCase().includes(q))) {
+        const x = t.cells && t.cells[0] ? t.cells[0][0] : 0;
+        const y = t.cells && t.cells[0] ? t.cells[0][1] : 0;
+        results.push({ type: "trig", label: `⚡ 트리거: ${t.id}`, floor: "f" + f.floor, x, y, badge: "b-bad" });
+      }
+    }));
+
+    (P.quests.quests || []).forEach(qst => {
+      if (qst.name.toLowerCase().includes(q) || qst.id.toLowerCase().includes(q) || (qst.description && qst.description.toLowerCase().includes(q))) {
+        results.push({ type: "quest", label: `📜 퀘스트: ${qst.name}`, questId: qst.id, badge: "b-flag" });
+      }
+    });
+
+    Object.entries(P.sequences).forEach(([sid, sq]) => {
+      if (sid.toLowerCase().includes(q)) {
+        results.push({ type: "seq", label: `💬 시퀀스: ${sid}`, seqId: sid, badge: "b-op" });
+      }
+    });
+
+    if (!results.length) {
+      drop.innerHTML = `<div style="padding:10px;color:var(--dim);text-align:center">검색 결과가 없습니다.</div>`;
+      drop.style.display = "block";
+      return;
+    }
+
+    drop.innerHTML = results.slice(0, 12).map(r => `
+      <div class="search-item" onclick="executeSearchResult(${JSON.stringify(r).replace(/"/g, '&quot;')})">
+        <span class="badge ${r.badge}">${r.type.toUpperCase()}</span>
+        <span style="color:var(--fg);font-weight:500">${esc(r.label)}</span>
+        ${r.floor ? `<span style="margin-left:auto;color:var(--dim);font-size:11px">${FLOOR_LABEL[r.floor]}</span>` : ""}
+      </div>
+    `).join("");
+    drop.style.display = "block";
+  });
+
+  window.addEventListener("click", e => {
+    if (!inp.contains(e.target) && !drop.contains(e.target)) {
+      drop.style.display = "none";
+    }
+  });
+}
+
+window.executeSearchResult = r => {
+  $("#searchDrop").style.display = "none";
+  $("#globalSearch").value = "";
+
+  if (r.type === "coord" || r.type === "npc" || r.type === "trig" || r.type === "mon") {
+    switchToTab("map");
+    if (r.floor && r.floor !== curFloor) switchFloor(r.floor);
+    centerOnCell(r.x, r.y);
+  } else if (r.type === "attr") {
+    switchToTab("map");
+    jumpToAttrDict(r.attr);
+    toggleAttrHighlight(r.attr);
+  } else if (r.type === "item") {
+    switchToTab("item");
+    $("#itemSearch").value = r.itemId;
+    renderItemEncyclopedia();
+  } else if (r.type === "quest") {
+    jumpToQuest(r.questId);
+  } else if (r.type === "seq") {
+    jumpToSeq(r.seqId);
+  } else if (r.type === "cut") {
+    jumpToCut(r.cutId);
+  }
+};
+
+function switchToTab(tabName) {
+  $$("#main-tabs button").forEach(x => x.classList.remove("on"));
+  $$(".tab-content").forEach(x => { x.classList.remove("on"); x.style.display = "none"; });
+  const btn = $(`#main-tabs button[data-tab='${tabName}']`);
+  const target = $(`#tab-${tabName}`);
+  if (btn) btn.classList.add("on");
+  if (target) { target.classList.add("on"); target.style.display = "flex"; }
+}
+
+window.jumpToFloor = (floor, x, y) => {
+  switchToTab("map");
+  if (P.maps[floor]) {
+    switchFloor(floor);
+    centerOnCell(x, y);
+  }
+};
+
+window.jumpToSeq = sid => {
+  switchToTab("seq");
+  showSeq(sid);
+};
+
+window.jumpToCut = cid => {
+  switchToTab("cut");
+  showCut(cid);
+};
+
+window.jumpToQuest = qid => {
+  switchToTab("quest");
+  const el = $(`#quest-card-${qid}`);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+};
+
+/* ===== 12. 퀘스트 체인 탭 (고도화: 타임라인 플로우보드) ===== */
+function resolveText(t) {
+  if (typeof t !== "string") return "";
+  if (t.startsWith("@")) {
+    return Object.prototype.hasOwnProperty.call(P.dialogue, t)
+      ? esc(P.dialogue[t])
+      : `<span style="color:var(--bad)">[미등록 대사 ${esc(t)}]</span>`;
+  }
+  return `<span style="color:var(--dim)">(직접)</span> ${esc(t)}`;
+}
+
+const questMap = () => Object.fromEntries(P.quests.quests.map(q => [q.id, q]));
+
+function renderQuests() {
+  const qs = P.quests.quests;
+
+  let html = `
+    <div style="margin-bottom:20px">
+      <h3 style="color:#cfc7ff;font-size:16px;margin-bottom:4px;font-weight:700">📜 퀘스트 시나리오 타임라인 체인</h3>
+      <p style="color:var(--dim);font-size:12px">메인 스토리 퀘스트의 선행 흐름, 발생 구역, 보상 및 맵 연동 지점</p>
+    </div>
+
+    <div class="encyclopedia-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));gap:14px;margin-bottom:30px">
+      ${qs.map((q, idx) => {
+        let flKey = "f1";
+        if (q.zone.includes("지하") || q.zone.includes("B1")) flKey = "f0";
+        else if (q.zone.includes("2층")) flKey = "f2";
+        else if (q.zone.includes("3층")) flKey = "f3";
+        else if (q.zone.includes("4층")) flKey = "f4";
+        else if (q.zone.includes("5층")) flKey = "f5";
+
+        const storyEv = (FLOOR_STORYBOARDS[flKey] || []).find(e => e.flag === q.id || e.name.includes(q.name.slice(0, 2)));
+        const coords = storyEv ? [storyEv.x, storyEv.y] : [100, 30];
+
+        return `
+          <div class="encyclopedia-card" id="quest-card-${q.id}" style="border-left:4px solid var(--acc)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span class="badge b-flag">${esc(q.id)}</span>
+              <span class="badge b-op">${esc(q.zone)}</span>
+            </div>
+            <div style="font-weight:700;font-size:14px;color:#fff">${idx + 1}. ${esc(q.name)}</div>
+            <div style="font-size:12px;color:#dcd6ff;line-height:1.5">${esc(q.description || "-")}</div>
+            
+            ${q.reward ? `<div style="font-size:11.5px;color:#8fe0b0;margin-top:2px">🎁 보상: <b>${esc(q.reward)}</b></div>` : ""}
+            ${q.requires ? `<div style="font-size:11px;color:var(--dim)">선행: <code>${esc(Array.isArray(q.requires) ? q.requires.join(", ") : q.requires)}</code></div>` : ""}
+            
+            <div style="display:flex;gap:6px;margin-top:6px">
+              <button class="action-link-btn" onclick="jumpToFloor('${flKey}', ${coords[0]}, ${coords[1]})">🗺️ 맵에서 구역 보기 (${FLOOR_LABEL[flKey]})</button>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+
+    <h3 style="color:#cfc7ff;font-size:14px;margin-bottom:10px">📋 전체 퀘스트 데이터 표</h3>
+    <table>
+      <tr><th>ID</th><th>구역</th><th>퀘스트명</th><th>목표 및 설명</th><th>보상</th><th>선행 조건</th></tr>
+      ${qs.map(q => `
+        <tr>
+          <td><span class="badge b-flag">${esc(q.id)}</span></td>
+          <td>${esc(q.zone)}</td>
+          <td><b>${esc(q.name)}</b></td>
+          <td>${esc(q.description || "-")}</td>
+          <td>${esc(q.reward || "-")}</td>
+          <td>${esc(Array.isArray(q.requires) ? q.requires.join(", ") : (q.requires || "없음"))}</td>
+        </tr>
+      `).join("")}
+    </table>
+  `;
+
+  $("#qBody").innerHTML = html;
+}
+
+/* ===== 13. 시퀀스 대사 탭 (고도화: RPG 대화창 시뮬레이터) ===== */
+function renderSeqList(filter = "") {
+  const el = $("#seqList"); el.innerHTML = "";
+  Object.keys(P.sequences).sort().filter(k => k.toLowerCase().includes(filter.toLowerCase())).forEach(k => {
+    const a = document.createElement("a");
+    const sq = P.sequences[k];
+    const n = (sq.steps || sq || []).length;
+    a.className = "side-item";
+    a.innerHTML = `<b>${k}</b> <span style="color:var(--dim);font-size:11px">(${n}컷)</span>`;
+    a.onclick = () => {
+      el.querySelectorAll(".side-item").forEach(x => x.classList.remove("on"));
+      a.classList.add("on");
+      showSeq(k);
+    };
+    el.appendChild(a);
+  });
+}
+
+function showSeq(k) {
+  const sq = P.sequences[k];
+  const steps = sq.steps || sq || [];
+
+  let html = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <h3 style="color:#cfc7ff;font-size:16px;font-weight:700">${esc(k)}</h3>
+        <span style="font-size:12px;color:var(--dim)">대화 총 ${steps.length}개 스텝</span>
+      </div>
+    </div>
+    ${sq._comment ? `<p style="color:var(--dim);font-size:12px;margin-bottom:14px;background:var(--panel);padding:8px 12px;border-radius:6px;border:1px solid var(--line)">${esc(sq._comment)}</p>` : ""}
+  `;
+
+  // RPG 대화창 시뮬레이터 렌더링
+  steps.forEach((s, idx) => {
+    const speaker = typeof s === "object" ? (s.speaker || "시돌") : "시돌";
+    const textRaw = typeof s === "object" ? s.text : s;
+    const isPlayer = speaker === "시돌" || speaker.includes("시돌");
+
+    // 화자 초상화 맵핑
+    let avatarUrl = "../assets/portraits/_fallback.png";
+    if (isPlayer) avatarUrl = "../assets/sprites/player_original.png";
+    else if (speaker.includes("경비")) avatarUrl = "../assets/portraits/npc_guard.png";
+
+    html += `
+      <div class="dialogue-simulator-frame">
+        <div class="dialogue-sim-avatar">
+          <img src="${avatarUrl}" onerror="this.src='../assets/portraits/_fallback.png'" alt="초상화">
+        </div>
+        <div class="dialogue-sim-body">
+          <div class="dialogue-sim-speaker">${idx + 1}. ${esc(speaker)}</div>
+          <div class="dialogue-sim-text">${resolveText(textRaw)}</div>
+          ${String(textRaw).startsWith("@") ? `<div style="font-size:10.5px;color:var(--dim);margin-top:4px">키: <code>${esc(textRaw)}</code></div>` : ""}
+        </div>
+      </div>
+    `;
+  });
+
+  $("#seqDetail").innerHTML = html;
+}
+
+$("#seqSearch").oninput = e => renderSeqList(e.target.value);
+
+/* ===== 14. 컷신 탭 (고도화: 비주얼 블록 스토리보드) ===== */
+function renderCutList(filter = "") {
+  const el = $("#cutList"); el.innerHTML = "";
+  Object.keys(P.cutscenes).sort().filter(k => k.toLowerCase().includes(filter.toLowerCase())).forEach(k => {
+    const a = document.createElement("a");
+    a.className = "side-item";
+    a.innerHTML = `<b>🎬 ${k}</b> <span style="color:var(--dim);font-size:11px">(${(P.cutscenes[k].steps || []).length} 스텝)</span>`;
+    a.onclick = () => {
+      el.querySelectorAll(".side-item").forEach(x => x.classList.remove("on"));
+      a.classList.add("on");
+      showCut(k);
+    };
+    el.appendChild(a);
+  });
+}
+
+function showCut(k) {
+  const c = P.cutscenes[k];
+  const steps = c.steps || [];
+
+  $("#cutDetail").innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div>
+        <h3 style="color:#cfc7ff;font-size:16px;font-weight:700">🎬 컷신 연출 스토리보드: ${esc(k)}</h3>
+        <span style="font-size:12px;color:var(--dim)">총 ${steps.length}개 연출 스텝</span>
+      </div>
+    </div>
+    ${steps.map((s, i) => {
+      let body = "";
+      if (s.op === "choice" && s.args) {
+        body = (s.args.options || []).map((o, idx) => `
+          <div style="background:var(--panel-card);padding:8px 12px;border-radius:6px;margin:6px 0;border-left:3px solid var(--acc)">
+            <span class="badge b-flag">${idx + 1}. ${esc(o.text)}</span> <span style="color:var(--dim)">➔ ${(o.steps || []).length}스텝 진행</span>
+          </div>
+        `).join("") + `<div style="font-size:11px;color:var(--dim);margin-top:4px">수렴형 선택지 — 분기 후 다음 스텝으로 정상 진행</div>`;
+      } else if (s.op === "dialogue") {
+        body = (s.steps || []).map(d => `
+          <div style="background:#131120;border:1px solid var(--line);border-radius:6px;padding:8px 12px;margin:4px 0">
+            <span style="color:#ffd98a;font-weight:700;font-size:12px">🗣️ ${esc(d.speaker || "시돌")}</span>
+            <div style="font-size:13px;color:#f1edfa;margin-top:2px">${resolveText(d.text)}</div>
+          </div>
+        `).join("");
+      } else {
+        const parts = [];
+        if (s.flag) parts.push(`<span class="badge b-flag">🚩 플래그 설정: ${esc(s.flag)}</span>`);
+        if (s.enemies) parts.push(`<span class="badge b-bad">⚔️ 전투 발생 (적: ${esc(s.enemies.join(", "))})</span>`);
+        if (s.on_win_flag) parts.push(`<span class="badge b-ok">승리 플래그: ${esc(s.on_win_flag)}</span>`);
+        if (s.item) parts.push(`<span class="badge b-item">🎁 아이템 획득: ${esc(s.item)} × ${s.count || 1}</span>`);
+        if (s.seconds != null) parts.push(`<span class="badge b-op">⏳ ${s.seconds}초 대기</span>`);
+        if (s.path) parts.push(`<span class="badge b-op">🎵 BGM 재생: ${esc(s.path)}</span>`);
+        if (s.args) Object.entries(s.args).forEach(([kk, v]) => parts.push(`<span class="badge b-op">${esc(kk)}=${esc(JSON.stringify(v))}</span>`));
+        body = parts.join(" ") || "<span style='color:var(--dim)'>-</span>";
+      }
+      return `
+        <div class="step-bubble">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span class="badge b-op">STEP ${i + 1}</span>
+            <b style="color:#cfc7ff;font-size:13px">${esc(s.op.toUpperCase())}</b>
+          </div>
+          ${body}
+        </div>
+      `;
+    }).join("")}
+  `;
+}
+
+$("#cutSearch").oninput = e => renderCutList(e.target.value);
+
+/* ===== 15. 신규 탭: 아이템 & 장비 백과도감 ===== */
+function renderItemEncyclopedia() {
+  const query = ($("#itemSearch").value || "").trim().toLowerCase();
+  const grid = $("#itemGrid");
+  if (!grid) return;
+
+  const items = P.items || [];
+  const filtered = items.filter(it => {
+    if (curItemCat === "weapon" && it.kind !== "weapon") return false;
+    if (curItemCat === "armor" && it.kind !== "armor") return false;
+    if (curItemCat === "consumable" && it.kind !== "consumable" && it.kind !== "medicine") return false;
+    if (curItemCat === "quest" && (it.kind === "weapon" || it.kind === "armor" || it.kind === "consumable")) return false;
+    if (!query) return true;
+    return it.id.toLowerCase().includes(query) || (it.name_ko && it.name_ko.toLowerCase().includes(query)) || (it.description && it.description.toLowerCase().includes(query));
+  });
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim)">일치하는 아이템이 없습니다.</div>`;
+    return;
+  }
+
+  // 역방향 맵핑: itemId -> ATTR 번호 및 스폰 층/좌표
+  const itemToChests = {};
+  Object.entries(legacyItemMap).forEach(([attrStr, itemId]) => {
+    const attrNum = parseInt(attrStr);
+    FLOOR_ORDER.forEach(f => {
+      const def = P.maps[f];
+      if (!def) return;
+      for (let y = 0; y < def.h; y++) {
+        for (let x = 0; x < def.w; x++) {
+          if (def.attr[y][x] === attrNum) {
+            if (!itemToChests[itemId]) itemToChests[itemId] = [];
+            itemToChests[itemId].push({ floor: f, x, y, attr: attrNum });
+          }
+        }
+      }
+    });
+  });
+
+  grid.innerHTML = filtered.map(it => {
+    const iconUrl = `../assets/icons/${it.id}.png`;
+    const chestLocations = itemToChests[it.id] || [];
+
+    return `
+      <div class="encyclopedia-card">
+        <div class="encyclopedia-card-header">
+          <div class="encyclopedia-thumb">
+            <img src="${iconUrl}" onerror="this.src='../assets/icons/ITEM_BOOK.png'" alt="아이템">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px;color:#fff">${esc(it.name_ko || it.name || it.id)}</div>
+            <div style="font-size:11px;color:var(--dim)"><code>${esc(it.id)}</code></div>
+            <span class="badge b-item" style="margin-top:3px">${esc(it.kind || "item")}</span>
+          </div>
+        </div>
+
+        <div style="font-size:11.5px;color:#dcd6ff;line-height:1.4">${esc(it.description || "상세 설명이 없는 아이템입니다.")}</div>
+
+        <div style="display:flex;gap:10px;font-size:11px;color:var(--dim);border-top:1px solid rgba(255,255,255,0.05);padding-top:6px">
+          ${it.ap ? `<span style="color:#48d597">AP: <b>+${it.ap}</b></span>` : ""}
+          ${it.dp ? `<span style="color:#38bdf8">DP: <b>+${it.dp}</b></span>` : ""}
+          ${it.element ? `<span>속성: <b style="color:#ffd24a">${esc(it.element)}</b></span>` : ""}
+        </div>
+
+        ${chestLocations.length > 0 ? `
+          <div style="margin-top:auto;border-top:1px dashed var(--line);padding-top:6px">
+            <div style="font-size:10.5px;color:#ffd24a;font-weight:600;margin-bottom:4px">🎁 보물 상자 출현 위치 (${chestLocations.length}곳):</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px">
+              ${chestLocations.slice(0, 3).map(loc => `
+                <button class="action-link-btn" style="margin:0" onclick="jumpToFloor('${loc.floor}', ${loc.x}, ${loc.y})">
+                  ${FLOOR_LABEL[loc.floor].split(" ")[0]} [${loc.x}, ${loc.y}]
+                </button>
+              `).join("")}
+            </div>
+          </div>
+        ` : `<div style="font-size:10.5px;color:var(--dim);margin-top:auto">이벤트 또는 퀘스트 지급 아이템</div>`}
+      </div>
+    `;
+  }).join("");
+}
+
+/* ===== 16. 신규 탭: 몬스터 생태 & 인카운터 도감 ===== */
+function renderMonsterBestiary() {
+  const query = ($("#bestiarySearch").value || "").trim().toLowerCase();
+  const grid = $("#bestiaryGrid");
+  if (!grid) return;
+
+  const species = P.monsters.species || {};
+  const entries = Object.entries(species).filter(([id, spec]) => {
+    if (!query) return true;
+    return id.toLowerCase().includes(query) || (spec.display_name && spec.display_name.toLowerCase().includes(query));
+  });
+
+  // 보스 몬스터 추가
+  const bosses = P.monsters.bosses || {};
+  Object.entries(bosses).forEach(([bid, bdef]) => {
+    if (!query || bid.toLowerCase().includes(query) || (bdef.name && bdef.name.toLowerCase().includes(query))) {
+      entries.push([bid, { display_name: bdef.name || "시스템 빌더", weaknesses: ["electric"], isBoss: true }]);
+    }
+  });
+
+  if (!entries.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--dim)">일치하는 몬스터가 없습니다.</div>`;
+    return;
+  }
+
+  // 층별 출현 종 매핑
+  const speciesFloors = {};
+  Object.entries(P.monsters.floors || {}).forEach(([fl, fdef]) => {
+    (fdef.species || []).forEach(s => {
+      const sid = s.id || String(s);
+      if (!speciesFloors[sid]) speciesFloors[sid] = [];
+      speciesFloors[sid].push({ floor: fl, pattern: s.pattern || "wander", first_win_flag: s.first_win_flag });
+    });
+  });
+
+  grid.innerHTML = entries.map(([id, spec]) => {
+    const sprUrl = MONSTER_SPRITES[id] || "../assets/sprites/player_original.png";
+    const weakList = spec.weaknesses || [];
+    const flList = speciesFloors[id] || (spec.isBoss ? [{ floor: id === 'sewer_king' ? 'f0' : id === 'hall_mother' ? 'f1' : id === 'crt_overseer' ? 'f2' : id === 'flask_titan' ? 'f3' : id === 'volt_wyrm' ? 'f4' : 'f5', pattern: 'boss' }] : []);
+
+    return `
+      <div class="encyclopedia-card" style="border-left:4px solid ${spec.isBoss ? '#ef4444' : '#ec4899'}">
+        <div class="encyclopedia-card-header">
+          <div class="encyclopedia-thumb" style="background:#230e20">
+            <img src="${sprUrl}" alt="몬스터">
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px">
+              <span class="badge ${spec.isBoss ? 'b-bad' : 'b-monster'}">${spec.isBoss ? '👑 보스' : '👾 일반'}</span>
+              <div style="font-weight:700;font-size:14px;color:${spec.isBoss ? '#fca5a5' : '#f472b6'}">
+                ${esc(spec.display_name || id)}
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--dim);margin-top:2px">종 ID: <code>${esc(id)}</code></div>
+          </div>
+        </div>
+
+        ${spec.token ? `
+          <div style="font-size:11.5px;color:#fce7f3;line-height:1.4;background:rgba(236,72,153,0.08);padding:6px 8px;border-radius:6px;border-left:3px solid ${spec.isBoss ? '#ef4444' : '#ec4899'}">
+            <b>생태 & 컨셉:</b> ${esc(spec.token)}
+          </div>
+        ` : ''}
+
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <span style="font-size:11px;color:var(--dim)">약점 속성:</span>
+          ${weakList.map(w => `<span class="badge b-flag">${w === 'fire' ? '🔥 불' : w === 'electric' ? '⚡ 전격' : '🗡️ 물리'}</span>`).join("")}
+        </div>
+
+        <div style="border-top:1px solid rgba(255,255,255,0.05);padding-top:6px">
+          <div style="font-size:11px;color:#cfc7ff;font-weight:600;margin-bottom:4px">서식 층 및 AI 이동 패턴:</div>
+          ${flList.map(f => {
+            const hspot = (FLOOR_MONSTER_HOTSPOTS[f.floor] || []).find(h => h.id === id) || { x: 100, y: 30 };
+            return `
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;font-size:11px">
+                <span><b>${FLOOR_LABEL[f.floor]}</b> (AI: <code>${f.pattern}</code>)</span>
+                <button class="action-link-btn" style="margin:0;padding:2px 6px" onclick="jumpToFloor('${f.floor}', ${hspot.x}, ${hspot.y})">📍 서식지 이동</button>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* ===== 17. 정합성 감사 대시보드 ===== */
+function renderHealth() {
+  const out = [];
+  const add = (tier, cat, msg) => out.push({ tier, cat, msg });
+
+  P.npcs.forEach(f => f.npcs.forEach(n => {
+    const m = P.maps["f" + f.floor];
+    const a = m && m.attr[n.pos[1]] ? m.attr[n.pos[1]][n.pos[0]] : null;
+    if (a !== 0 && a !== 2) add("FAIL", "NPC", `NPC ${n.id}(f${f.floor}) 좌표 ${n.pos} 불통행 attr=${a}`);
+    if (!P.sequences[n.sequence_id]) add("FAIL", "NPC", `NPC ${n.id} 시퀀스 없음: ${n.sequence_id}`);
+  }));
+  if (!out.some(o => o.cat === "NPC")) add("PASS", "NPC", "전체 층 NPC 배치 좌표 통행성 및 대사 시퀀스 연결 정상");
+
+  let refBad = 0;
+  Object.entries(P.sequences).forEach(([sid, sq]) => (sq.steps || sq || []).forEach(s => {
+    const t = typeof s === "object" ? String(s.text || "") : String(s);
+    if (t.startsWith("@") && !Object.prototype.hasOwnProperty.call(P.dialogue, t)) {
+      add("FAIL", "Dialogue", `시퀀스 ${sid} 미등록 대사 키: ${t}`);
+      refBad++;
+    }
+  }));
+  if (refBad === 0) add("PASS", "Dialogue", "시퀀스 ➔ dialogue.json 참조 키 전 항목 유효");
+
+  const qm = questMap();
+  P.triggers.forEach(f => f.triggers.forEach(t => {
+    const a = t.action || {};
+    if (a.cutscene && !P.cutscenes[a.cutscene]) add("FAIL", "Trigger", `트리거 ${t.id} 컷신 없음: ${a.cutscene}`);
+    if (a.sequence && !P.sequences[a.sequence]) add("FAIL", "Trigger", `트리거 ${t.id} 시퀀스 없음: ${a.sequence}`);
+  }));
+  if (!out.some(o => o.cat === "Trigger")) add("PASS", "Trigger", "모든 맵 트리거 액션(컷신, 시퀀스) 대상 100% 존재");
+
+  Object.entries(legacyItemMap).forEach(([attr, itemId]) => {
+    if (!itemById[itemId]) add("FAIL", "Item", `레거시 상자 속성 ${attr}의 대상 아이템 없음: ${itemId}`);
+  });
+  if (!out.some(o => o.cat === "Item")) add("PASS", "Item", "150~184 보물 상자 레거시 아이템 매핑 100% 유효");
+
+  const g = { PASS: [], FAIL: [], warn: [] };
+  out.forEach(o => g[o.tier].push(o));
+
+  $("#healthOut").innerHTML = `
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <span class="badge b-ok" style="font-size:12px;padding:4px 12px">PASS ${g.PASS.length}</span>
+      <span class="badge b-warn" style="font-size:12px;padding:4px 12px">WARN ${g.warn.length}</span>
+      <span class="badge b-bad" style="font-size:12px;padding:4px 12px">FAIL ${g.FAIL.length}</span>
+    </div>
+    ${["FAIL", "warn", "PASS"].map(t => g[t].map(o => `
+      <div style="display:flex;gap:10px;align-items:center;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:6px">
+        <span class="badge ${t === 'PASS' ? 'b-ok' : t === 'warn' ? 'b-warn' : 'b-bad'}">${t}</span>
+        <span class="badge b-op">${esc(o.cat)}</span>
+        <span style="font-size:12.5px;color:var(--fg)">${esc(o.msg)}</span>
+      </div>
+    `).join("")).join("")}
+  `;
+}
+
 boot();
 </script>
 </body>

@@ -2,181 +2,1237 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:,">
-<title>BSD 시돌이의 모험 — LLM 납품 심사</title>
+<title>BSD 시돌이의 모험 — LLM 납품 심사 보드</title>
 <style>
-:root{--bg:#14131a;--panel:#1e1c26;--line:#332f42;--fg:#e8e4f0;--dim:#9a94ac;
---acc:#7c6cff;--ok:#57c98a;--warn:#e8b64c;--bad:#ef6a6a;}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--fg);font:14px/1.5 "Segoe UI","Malgun Gothic",sans-serif;height:100vh;display:flex;flex-direction:column}
-header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-h1{font-size:17px;color:#cfc7ff;font-weight:600}
-.meta{color:var(--dim);font-size:12px}
-nav{display:flex;gap:6px;margin-left:auto}
-nav button{background:var(--panel);border:1px solid var(--line);color:var(--dim);
-padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px}
-nav button.on{color:#fff;background:var(--acc);border-color:var(--acc)}
-nav button.act{color:#ffd24a;border-color:#4a3413}
-main{flex:1;overflow:auto;padding:14px 16px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
-.card h3{font-size:14px;color:#cfc7ff;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.badge{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11px}
-.b-ok{background:#12301f;color:#8fe0b0}.b-bad{background:#3a1515;color:#ff9d9d}
-.imgs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0}
-.imgs figure{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#0f0e15}
-.imgs figcaption{font-size:10px;color:var(--dim);padding:2px 5px}
-.imgs img{width:100%;height:150px;object-fit:contain;display:block;background:
-repeating-conic-gradient(#1b1926 0 25%,#211e2e 0 50%) 0 0/16px 16px}
-.imgs a{display:block}
-.vlines{font-size:11px;color:var(--dim);background:#0f0e15;border:1px solid var(--line);
-border-radius:5px;padding:5px 8px;margin-bottom:8px;white-space:pre-wrap;max-height:88px;overflow:auto}
-details{margin-bottom:8px}
-details summary{font-size:12px;color:var(--dim);cursor:pointer}
-details pre{font-size:11px;color:var(--dim);background:#0f0e15;border:1px solid var(--line);
-border-radius:5px;padding:8px;white-space:pre-wrap;max-height:180px;overflow:auto;margin-top:5px}
-textarea{width:100%;min-height:64px;background:#0f0e15;border:1px solid var(--line);color:var(--fg);
-border-radius:6px;padding:7px;font:12px/1.5 inherit;resize:vertical}
-.row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
-button.b{padding:6px 14px;border-radius:6px;cursor:pointer;font-size:13px;border:1px solid var(--line);
-background:#0f0e15;color:var(--fg)}
-button.b.ok{border-color:var(--ok);color:var(--ok)}
-button.b.bad{border-color:var(--bad);color:var(--bad)}
-button.b:disabled{opacity:.4;cursor:default}
-.empty{color:var(--dim);text-align:center;padding:60px 0}
-.mdout{background:#0f0e15;border:1px solid var(--acc);border-radius:6px;padding:8px;
-font-size:11px;white-space:pre-wrap;max-height:200px;overflow:auto;margin-top:8px;color:#cfc7ff}
-#toast{position:fixed;bottom:18px;right:18px;background:#12301f;border:1px solid var(--ok);
-color:#8fe0b0;padding:9px 16px;border-radius:8px;font-size:13px;display:none;z-index:50}
+:root {
+  --bg: #0d0c14;
+  --bg-sub: #14121f;
+  --panel: #1b1828;
+  --panel-card: #221f33;
+  --panel-hover: #29243d;
+  --line: #312c48;
+  --line-light: #484168;
+  --fg: #eae5f5;
+  --dim: #9b94b2;
+  --dim-dark: #686182;
+  --acc: #806cfc;
+  --acc-glow: rgba(128, 108, 252, 0.4);
+  --ok: #48d597;
+  --ok-bg: #12301f;
+  --warn: #f5b041;
+  --warn-bg: #382d12;
+  --bad: #f05d5e;
+  --bad-bg: #3a1515;
+  --info: #38bdf8;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 13px/1.5 "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* Header */
+header {
+  background: var(--bg-sub);
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  z-index: 100;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brand-icon {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--acc), #f05d5e);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #fff;
+  box-shadow: 0 0 10px var(--acc-glow);
+}
+h1 {
+  font-size: 15px;
+  color: #cfc7ff;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.meta-chip {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+/* Navigation Categories */
+nav#cats {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+nav#cats button {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 5px 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+nav#cats button:hover {
+  background: var(--panel-hover);
+  color: var(--fg);
+  border-color: var(--line-light);
+}
+nav#cats button.on {
+  color: #fff;
+  background: var(--acc);
+  border-color: var(--acc);
+  box-shadow: 0 0 12px var(--acc-glow);
+}
+
+/* Action Controls in Header */
+.header-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  align-items: center;
+}
+.tool-btn {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--dim);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.tool-btn:hover {
+  border-color: var(--line-light);
+  color: var(--fg);
+}
+.tool-btn.primary {
+  background: #342868;
+  border-color: var(--acc);
+  color: #cfc7ff;
+}
+.tool-btn.primary:hover {
+  background: var(--acc);
+  color: #fff;
+}
+.tool-btn.success {
+  background: #153824;
+  border-color: var(--ok);
+  color: #8fe0b0;
+}
+.tool-btn.danger {
+  background: #3d1717;
+  border-color: var(--bad);
+  color: #ff9d9d;
+}
+
+/* Sub Toolbar / Summary Bar */
+.sub-bar {
+  background: #110f1c;
+  border-bottom: 1px solid var(--line);
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+.stat-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.filter-group {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.search-input {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  padding: 4px 10px;
+  border-radius: 6px;
+  width: 180px;
+  font-size: 11.5px;
+  outline: none;
+}
+.search-input:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px var(--acc-glow);
+}
+
+/* Main Workspace Grid */
+main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background: radial-gradient(circle at center top, #131022 0%, #09080e 100%);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+  gap: 16px;
+}
+
+/* Review Card */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+.card:hover {
+  border-color: var(--line-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+}
+.card.selected {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 2px var(--acc-glow);
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.card-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #cfc7ff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.card-title .asset-id {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-title .file-ver {
+  font-size: 11px;
+  color: var(--dim);
+  font-weight: normal;
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.b-ok { background: var(--ok-bg); color: #8fe0b0; border: 1px solid #205c38; }
+.b-bad { background: var(--bad-bg); color: #ff9d9d; border: 1px solid #6b2828; }
+.b-warn { background: var(--warn-bg); color: #ffe08a; border: 1px solid #685718; }
+.b-op { background: #2b2740; color: #cfc7ff; border: 1px solid #433c64; }
+
+/* Image Comparison Area (3 Columns) */
+.imgs-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.img-figure {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #0f0e16;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.img-caption {
+  font-size: 10.5px;
+  color: var(--dim);
+  padding: 3px 6px;
+  background: #141220;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.img-box {
+  position: relative;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: zoom-in;
+}
+
+/* Background Checkerboard Patterns */
+.bg-check-dark {
+  background: repeating-conic-gradient(#161520 0 25%, #1e1b2e 0 50%) 0 0/16px 16px;
+}
+.bg-check-light {
+  background: repeating-conic-gradient(#cccccc 0 25%, #ffffff 0 50%) 0 0/16px 16px;
+}
+.bg-magenta {
+  background: #ff00ff;
+}
+.bg-black {
+  background: #000000;
+}
+.bg-white {
+  background: #ffffff;
+}
+
+.img-box img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  display: block;
+}
+
+/* Sheet Grid Overlay & Mini Canvas Player */
+.grid-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  background-size: 50% 20%;
+  background-image: 
+    linear-gradient(to right, rgba(128, 108, 252, 0.4) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(128, 108, 252, 0.4) 1px, transparent 1px);
+  display: none;
+}
+.grid-overlay.show { display: block; }
+
+.mini-anim-canvas {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 42px;
+  height: 42px;
+  background: rgba(15, 14, 22, 0.9);
+  border: 1px solid var(--acc);
+  border-radius: 4px;
+  image-rendering: pixelated;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+  z-index: 5;
+}
+
+/* Validation Log Console */
+.vlines-console {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  color: #cfc7ff;
+  background: #0d0c15;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 6px 10px;
+  max-height: 80px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+.vlines-console.fail {
+  border-color: #6b2828;
+  color: #ff9d9d;
+  background: #170d10;
+}
+
+/* Prompt Details Accordion */
+details.prompt-accordion {
+  background: #141220;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+details.prompt-accordion summary {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--dim);
+  padding: 5px 10px;
+  cursor: pointer;
+}
+details.prompt-accordion summary:hover {
+  color: var(--fg);
+  background: rgba(255,255,255,0.03);
+}
+details.prompt-accordion pre {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
+  color: #cfc7ff;
+  background: #0d0c15;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line);
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+/* Quick Feedback Tags & Input */
+.feedback-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #161324;
+  border: 1px solid var(--bad);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.quick-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.q-tag {
+  background: #251c33;
+  border: 1px solid var(--line-light);
+  color: #ffd98a;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.q-tag:hover {
+  background: var(--acc);
+  color: #fff;
+  border-color: var(--acc);
+}
+textarea.feedback-input {
+  width: 100%;
+  min-height: 60px;
+  background: #0d0c15;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font: 12px/1.4 inherit;
+  resize: vertical;
+  outline: none;
+}
+textarea.feedback-input:focus {
+  border-color: var(--bad);
+}
+
+/* Action Button Row */
+.card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: auto;
+  border-top: 1px solid rgba(255,255,255,0.04);
+  padding-top: 8px;
+}
+.btn-act {
+  padding: 5px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: #161424;
+  color: var(--fg);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.btn-act:hover {
+  border-color: var(--line-light);
+  background: #201c33;
+}
+.btn-act.ok {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: #11281a;
+}
+.btn-act.ok:hover {
+  background: var(--ok);
+  color: #000;
+}
+.btn-act.bad {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: #2b1315;
+}
+.btn-act.bad:hover {
+  background: var(--bad);
+  color: #fff;
+}
+.btn-act.fix {
+  border-color: var(--acc);
+  color: #cfc7ff;
+  background: #241c42;
+}
+.btn-act.fix:hover {
+  background: var(--acc);
+  color: #fff;
+}
+
+/* Empty State */
+.empty-box {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 80px 0;
+  color: var(--dim);
+}
+.empty-box .icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: 0.6;
+}
+
+/* Lightbox Modal (정밀 확대 및 슬라이더 비교) */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+.modal-backdrop.on { display: flex; }
+.modal-window {
+  width: 90%;
+  max-width: 1100px;
+  height: 85vh;
+  background: var(--panel);
+  border: 1px solid var(--line-light);
+  border-radius: 12px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.modal-header {
+  padding: 12px 18px;
+  background: var(--bg-sub);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-body {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+.lightbox-stage {
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.lightbox-img-box {
+  max-height: 60vh;
+  border: 1px solid var(--line-light);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox-img-box img {
+  max-height: 58vh;
+  image-rendering: pixelated;
+}
+
+/* Toast */
+#toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: #141220;
+  border: 1px solid var(--ok);
+  color: #8fe0b0;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+  display: none;
+  z-index: 3000;
+}
+
+/* Loading Overlay (Hourglass & Spinner) */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(13, 12, 20, 0.88);
+  backdrop-filter: blur(10px);
+  z-index: 9999;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+.loading-overlay.on { display: flex; }
+.loading-box {
+  background: var(--panel-card);
+  border: 1px solid var(--line-light);
+  border-radius: 16px;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}
+.hourglass-icon {
+  font-size: 38px;
+  animation: hourglassFlip 1.6s ease-in-out infinite;
+}
+@keyframes hourglassFlip {
+  0% { transform: rotate(0deg) scale(1); }
+  45% { transform: rotate(180deg) scale(1.1); }
+  55% { transform: rotate(180deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+.spinner-ring {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(128, 108, 252, 0.2);
+  border-top-color: var(--acc);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.loading-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #cfc7ff;
+}
+.loading-sub {
+  font-size: 12px;
+  color: var(--dim);
+}
+
+/* Status Badges */
+.status-pill {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-pill.submitted { background: rgba(72, 213, 151, 0.15); color: #48d597; border: 1px solid #48d597; }
+.status-pill.approved { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid #38bdf8; }
+.status-pill.rejected { background: rgba(240, 93, 94, 0.15); color: #f05d5e; border: 1px solid #f05d5e; }
+.status-pill.pending { background: rgba(155, 148, 178, 0.15); color: #9b94b2; border: 1px solid #686182; }
+
+.btn-act.reset {
+  border-color: #38bdf8;
+  color: #38bdf8;
+  background: #0f2738;
+}
+.btn-act.reset:hover {
+  background: #38bdf8;
+  color: #000;
+}
+
 </style>
 </head>
 <body>
+
+<!-- Global Loading Overlay -->
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-box">
+    <div class="hourglass-icon">⏳</div>
+    <div class="spinner-ring"></div>
+    <div class="loading-title" id="loadingTitle">에셋 데이터 로딩 및 검증 중...</div>
+    <div class="loading-sub" id="loadingSub">잠시만 기다려 주세요</div>
+  </div>
+</div>
+
+
 <header>
-  <h1>LLM 납품 심사</h1><a class="meta" href="/현황판.html" target="_blank" style="margin-left:8px">현황판</a><span class="meta">10_submitted → 20_processed / _rejected + 재요청 패키지</span>
+  <div class="brand">
+    <div class="brand-icon">⚖️</div>
+    <h1>LLM 에셋 납품 심사 보드</h1>
+  </div>
+  <a class="meta-chip" href="/현황판.html" target="_blank" style="text-decoration:none">📊 전체 에셋 현황판</a>
+  <span class="meta-chip" id="curFolderMeta">10_submitted → 20_processed / _rejected</span>
+
   <nav id="cats"></nav>
-  <nav>
-    <button class="act" id="batch-ok">전체 승인</button>
-    <button class="act" id="batch-bad">전체 반려</button>
-    <button onclick="load()">새로고침</button>
-  </nav>
+
+  <div class="header-actions">
+    <button class="tool-btn success" id="batch-ok-pass">✅ PASS 일괄 승인</button>
+    <button class="tool-btn primary" id="batch-ok">전체 승인</button>
+    <button class="tool-btn danger" id="batch-bad">전체 반려</button>
+    <button class="tool-btn" onclick="load()">🔄 새로고침</button>
+  </div>
 </header>
-<main><div id="cards" class="grid"></div><div id="empty" class="empty" style="display:none">납품 대기 없음</div></main>
+
+<div class="sub-bar">
+  <div class="stat-summary" id="statSummary">
+    <span>대기 <b>0</b>건</span>
+  </div>
+
+  <div class="filter-group">
+    <label style="color:var(--dim);font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">
+      배경 테마:
+      <select id="bgCheckTheme" class="search-input" style="width:110px;padding:2px 6px">
+        <option value="bg-check-dark">어두운 체커</option>
+        <option value="bg-check-light">밝은 체커</option>
+        <option value="bg-magenta">마젠타(#FF00FF)</option>
+        <option value="bg-black">블랙</option>
+        <option value="bg-white">화이트</option>
+      </select>
+    </label>
+
+    <label style="color:var(--dim);font-size:11px;display:flex;align-items:center;gap:4px;cursor:pointer">
+      <input type="checkbox" id="tgSheetGrid" checked> 📐 시트 격자선
+    </label>
+
+    <select id="statusFilter" class="search-input" style="width:140px;padding:2px 6px">
+      <option value="all">전체 상태 보기</option>
+      <option value="submitted">🟢 납품 대기</option>
+      <option value="approved">🔵 승인 완료</option>
+      <option value="rejected">🟠 반려됨</option>
+      <option value="pending">⚪ 미납품</option>
+      <option value="pass">✅ 검증 PASS만</option>
+      <option value="fail">❌ 검증 FAIL만</option>
+    </select>
+
+    <input type="text" id="searchFilter" class="search-input" placeholder="에셋 ID / 파일명 검색…">
+  </div>
+</div>
+
+<main>
+  <div id="cards" class="grid"></div>
+  <div id="empty" class="empty-box" style="display:none">
+    <div class="icon">✨</div>
+    <h3 style="color:#cfc7ff;font-size:16px;margin-bottom:6px">심사 대기 중인 납품이 없습니다</h3>
+    <p style="font-size:12px">선택된 카테고리의 <code>assets/raw/llm/10_submitted/</code> 폴더가 비어 있습니다.</p>
+  </div>
+</main>
+
+<!-- Lightbox Modal (정밀 확대 및 비교) -->
+<div class="modal-backdrop" id="lightboxModal">
+  <div class="modal-window">
+    <div class="modal-header">
+      <div style="display:flex;align-items:center;gap:8px">
+        <b style="color:#cfc7ff;font-size:14px" id="lightboxTitle">에셋 정밀 확대 비교</b>
+        <span class="badge b-op" id="lightboxBadge">4X ZOOM</span>
+      </div>
+      <button class="tool-btn" onclick="toggleLightbox(false)">✕ 닫기</button>
+    </div>
+    <div class="modal-body" id="lightboxBody">
+      <div class="lightbox-stage" id="lightboxStage"></div>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
+
 <script>
+"use strict";
+
 let CUR = 'portraits';
-let PENDING = [];
+let PENDING_ITEMS = [];
+let curBgClass = 'bg-check-dark';
+let animIntervals = [];
 
 const $ = s => document.querySelector(s);
-function toast(msg){ const t=$('#toast'); t.textContent=msg; t.style.display='block';
-  setTimeout(()=>t.style.display='none', 2600); }
+const $$ = s => document.querySelectorAll(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
-async function api(path, body){
-  const opt = body ? {method:'POST', headers:{'Content-Type':'application/json'},
-                      body: JSON.stringify(body)} : {};
+function toast(msg, isBad = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.borderColor = isBad ? 'var(--bad)' : 'var(--ok)';
+  t.style.color = isBad ? '#ff9d9d' : '#8fe0b0';
+  t.style.display = 'block';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.display = 'none', 2600);
+}
+
+async function api(path, body) {
+  const opt = body ? {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  } : {};
   const r = await fetch(path, opt);
   const j = await r.json();
   if (j.error) throw new Error(j.error);
   return j;
 }
 
-async function initCats(){
-  const {categories} = await api('/api/categories');
-  const nav = $('#cats'); nav.innerHTML='';
-  const labels = {portraits:'포트레이트', keyart:'키아트', monsters:'몬스터', sprites:'스프라이트', npcs:'NPC', items:'아이템', effects:'전투 이펙트'};
-  for (const [cat, n] of Object.entries(categories)){
+async function initCats() {
+  const { categories } = await api('/api/categories');
+  const nav = $('#cats');
+  nav.innerHTML = '';
+  const labels = {
+    portraits: '👤 포트레이트',
+    keyart: '🎨 키아트',
+    monsters: '👾 몬스터 시트',
+    npcs: '👥 NPC 시트',
+    sprites: '🏃 캐릭터 시트',
+    items: '📦 아이템 아이콘',
+    effects: '⚡ 전투 이펙트',
+    battle_cuts: '💥 전투 대형컷',
+    battle_actors: '⚔️ 전투 SD'
+  };
+
+  for (const [cat, n] of Object.entries(categories)) {
     const b = document.createElement('button');
-    b.textContent = `${labels[cat]||cat} (${n})`;
+    b.innerHTML = `${labels[cat] || cat} <span class="badge ${n > 0 ? 'b-ok' : 'b-op'}">${n}</span>`;
     b.dataset.cat = cat;
     if (cat === CUR) b.classList.add('on');
-    b.onclick = () => { CUR = cat; nav.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-                        b.classList.add('on'); load(); };
-    nav.prepend(b);
+    b.onclick = () => {
+      CUR = cat;
+      nav.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      load();
+    };
+    nav.appendChild(b);
   }
 }
 
-async function load(){
-  await initCats();
-  const {items} = await api('/api/list?cat=' + CUR);
-  PENDING = items.map(i => i.file);
-  const grid = $('#cards'); grid.innerHTML='';
-  $('#empty').style.display = items.length ? 'none' : 'block';
-  for (const it of items) grid.appendChild(card(it));
+
+function showLoading(title = "에셋 데이터 로딩 및 검증 중...", sub = "잠시만 기다려 주세요") {
+  const ov = $("#loadingOverlay");
+  if (!ov) return;
+  $("#loadingTitle").textContent = title;
+  $("#loadingSub").textContent = sub;
+  ov.classList.add("on");
 }
 
-function card(it){
-  const el = document.createElement('div'); el.className='card';
-  const v = it.validation;
-  const badge = v.pass ? '<span class="badge b-ok">검증 PASS</span>'
-                       : '<span class="badge b-bad">검증 FAIL</span>';
+function hideLoading() {
+  const ov = $("#loadingOverlay");
+  if (ov) ov.classList.remove("on");
+}
+
+async function load() {
+  showLoading(`[${CUR}] 에셋 동기화 및 검증 검사 중...`);
+  animIntervals.forEach(clearInterval);
+  animIntervals = [];
+
+  try {
+    await initCats();
+    const { items } = await api('/api/list?cat=' + CUR);
+    PENDING_ITEMS = items;
+
+    updateSummary(items);
+    renderCards();
+  } catch (err) {
+    toast("로딩 오류: " + err.message, true);
+  } finally {
+    hideLoading();
+  }
+}
+
+function updateSummary(items) {
+  const submitted = items.filter(i => i.status === 'submitted');
+  const approved = items.filter(i => i.status === 'approved');
+  const rejected = items.filter(i => i.status === 'rejected');
+  const pending = items.filter(i => i.status === 'pending');
+  const passCount = submitted.filter(i => i.validation && i.validation.pass).length;
+
+  $('#statSummary').innerHTML = `
+    <span>전체 <b>${items.length}</b>종</span>
+    <span class="badge b-ok">🟢 납품대기 ${submitted.length} (PASS ${passCount})</span>
+    <span class="badge b-op" style="background:#0f2738;color:#38bdf8;border-color:#38bdf8">🔵 승인완료 ${approved.length}</span>
+    <span class="badge b-bad">🟠 반려 ${rejected.length}</span>
+    <span class="badge b-op" style="background:#1b1828;color:#9b94b2">⚪ 미납품 ${pending.length}</span>
+  `;
+}
+
+function renderCards() {
+  const statusF = $('#statusFilter').value;
+  const query = ($('#searchFilter').value || '').trim().toLowerCase();
+
+  const filtered = PENDING_ITEMS.filter(it => {
+    const st = it.status || 'submitted';
+    const isPass = it.validation && it.validation.pass;
+    
+    if (statusF === 'submitted' && st !== 'submitted') return false;
+    if (statusF === 'approved' && st !== 'approved') return false;
+    if (statusF === 'rejected' && st !== 'rejected') return false;
+    if (statusF === 'pending' && st !== 'pending') return false;
+    if (statusF === 'pass' && (st !== 'submitted' || !isPass)) return false;
+    if (statusF === 'fail' && (st !== 'submitted' || isPass)) return false;
+    
+    if (!query) return true;
+    return it.asset_id.toLowerCase().includes(query) || it.file.toLowerCase().includes(query);
+  });
+
+  const grid = $('#cards');
+  grid.innerHTML = '';
+  $('#empty').style.display = filtered.length ? 'none' : 'block';
+
+  filtered.forEach(it => grid.appendChild(createCard(it)));
+}
+
+function createCard(it) {
+  const el = document.createElement('div');
+  el.className = 'card';
+  const st = it.status || 'submitted';
+  const v = it.validation || { pass: false, lines: [] };
+  const isSheet = CUR === 'monsters' || CUR === 'npcs' || CUR === 'sprites' || CUR === 'effects' || CUR === 'battle_actors';
+
+  let statusBadge = `<span class="badge b-ok">납품 대기</span>`;
+  if (st === 'approved') statusBadge = `<span class="badge" style="background:#0f2738;color:#38bdf8;border:1px solid #38bdf8">🔵 승인 완료</span>`;
+  else if (st === 'rejected') statusBadge = `<span class="badge b-bad">🟠 반려됨</span>`;
+  else if (st === 'pending') statusBadge = `<span class="badge b-op">⚪ 미납품 (작업 대기)</span>`;
+  else if (v.pass) statusBadge = `<span class="badge b-ok">✅ 검증 PASS</span>`;
+  else statusBadge = `<span class="badge b-bad">❌ 검증 FAIL</span>`;
+
+  let actionButtons = '';
+  if (st === 'submitted') {
+    actionButtons = `
+      <button class="btn-act ok" onclick="act('${esc(it.file)}', 'approve')">✅ 승인 및 설치</button>
+      <button class="btn-act bad" onclick="toggleFeedback('${esc(it.file)}', true)">❌ 반려</button>
+      <button class="btn-act fix" onclick="openFixer('${esc(it.file)}')">🛠️ 셀 편집기</button>
+    `;
+  } else if (st === 'approved') {
+    actionButtons = `
+      <button class="btn-act" style="background:#12301f;color:#48d597;cursor:default">✅ 게임 설치 완료</button>
+      <button class="btn-act reset" onclick="resetItem('${esc(it.file)}')">🔄 재심사로 되돌리기</button>
+      <button class="btn-act fix" onclick="openFixer('${esc(it.file)}')">🛠️ 셀 편집기</button>
+    `;
+  } else if (st === 'rejected') {
+    actionButtons = `
+      <button class="btn-act bad" style="cursor:default">반려 상태</button>
+      <button class="btn-act reset" onclick="resetItem('${esc(it.file)}')">🔄 재심사로 복구</button>
+      <button class="btn-act fix" onclick="openFixer('${esc(it.file)}')">🛠️ 셀 편집기</button>
+    `;
+  } else {
+    actionButtons = `
+      <button class="btn-act" style="color:var(--dim);border-color:var(--line)" onclick="openPromptModal('${esc(it.asset_id)}')">📄 의뢰서 확인</button>
+    `;
+  }
+
   el.innerHTML = `
-    <h3>${it.asset_id} <span class="meta">${it.file}</span> ${badge}</h3>
-    <div class="imgs">
-      <figure><a href="${it.refs.reference||''}" target="_blank">${img(it.refs.reference)}</a>
-        <figcaption>원본 참조</figcaption></figure>
-      <figure><a href="${it.web}" target="_blank">${img(it.web)}</a>
-        <figcaption>납품 (클릭 원본)</figcaption></figure>
-      <figure>${img(it.refs.anchor)}<figcaption>스타일 앵커</figcaption></figure>
+    <div class="card-header">
+      <div class="card-title">
+        <span class="asset-id">${esc(it.asset_id)}</span>
+        <span class="file-ver">${esc(it.file)}</span>
+      </div>
+      ${statusBadge}
     </div>
-    <div class="vlines">${(v.lines||[]).join('\n') || '검증 출력 없음'}</div>
-    <details><summary>원본 의뢰문</summary><pre>${esc(it.prompt_md)}</pre></details>
-    <div class="fb" style="display:none">
-      <textarea placeholder="반려 사유 / 수정 지시를 적으면 재요청 프롬프트에 자동 포함됩니다"></textarea>
+
+    <div class="imgs-comparison">
+      <div class="img-figure">
+        <div class="img-caption"><span>원본 참조</span> <button class="tool-btn" style="padding:1px 4px;font-size:10px" onclick="openLightbox('${it.asset_id}', '${it.refs.reference||''}', '${it.web}')">🔍 확대</button></div>
+        <div class="img-box ${curBgClass}" onclick="openLightbox('${it.asset_id}', '${it.refs.reference||''}', '${it.web}')">
+          ${it.refs.reference ? `<img src="${it.refs.reference}?t=${Date.now()}" loading="lazy" alt="원본">` : `<span style="color:var(--dim);font-size:11px">참조 없음</span>`}
+        </div>
+      </div>
+
+      <div class="img-figure" style="border-color:${st === 'approved' ? '#38bdf8' : st === 'rejected' ? '#f05d5e' : st === 'pending' ? 'var(--line)' : 'var(--acc)'}">
+        <div class="img-caption" style="background:#211c38;color:#cfc7ff">
+          <span>${st === 'approved' ? '★ 승인본' : st === 'pending' ? '★ 콘셉트/참조' : '★ 납품'}</span>
+          <button class="tool-btn" style="padding:1px 4px;font-size:10px" onclick="openLightbox('${it.asset_id}', '${it.refs.reference||''}', '${it.web}')">🔍 확대</button>
+        </div>
+        <div class="img-box ${curBgClass}" onclick="openLightbox('${it.asset_id}', '${it.refs.reference||''}', '${it.web}')">
+          <img src="${it.web}?t=${Date.now()}" id="deliver-img-${esc(it.file)}" loading="lazy" alt="이미지">
+          <div class="grid-overlay ${$('#tgSheetGrid').checked && isSheet ? 'show' : ''}"></div>
+          ${isSheet && st !== 'pending' ? `<canvas class="mini-anim-canvas" id="canvas-${esc(it.file)}" width="32" height="32" title="실시간 보행 애니메이션"></canvas>` : ''}
+        </div>
+      </div>
+
+      <div class="img-figure">
+        <div class="img-caption"><span>스타일 앵커</span></div>
+        <div class="img-box ${curBgClass}">
+          ${it.refs.anchor ? `<img src="${it.refs.anchor}?t=${Date.now()}" loading="lazy" alt="앵커">` : `<span style="color:var(--dim);font-size:11px">앵커 없음</span>`}
+        </div>
+      </div>
     </div>
-    <div class="mdout" style="display:none"></div>
-    <div class="row">
-      <button class="b ok" data-a="approve">승인</button>
-      <button class="b bad" data-a="reject">반려</button>
-      <button class="b" data-a="fix">셀 편집</button>
-      <button class="b" data-a="reject-confirm" style="display:none">반려 확정</button>
-      <button class="b" data-a="cancel" style="display:none">취소</button>
-    </div>`;
-  const fb = el.querySelector('.fb'), mdout = el.querySelector('.mdout');
-  const btns = Object.fromEntries([...el.querySelectorAll('button')].map(b=>[b.dataset.a,b]));
-  btns.approve.onclick = () => act(it.file, 'approve', '');
-  // 규약을 못 맞춘 납품을 통째로 다시 그리게 하는 대신, 셀 단위로 고쳐 다음 버전으로 낸다.
-  btns.fix.onclick = () => window.open(
-    `/tools/review/sprite_fixer.html?cat=${encodeURIComponent(CUR)}&file=${encodeURIComponent(it.file)}`,
-    '_blank');
-  btns.reject.onclick = () => { fb.style.display='block';
-    btns.reject.style.display=btns.approve.style.display='none';
-    btns['reject-confirm'].style.display=btns.cancel.style.display='inline-block'; };
-  btns.cancel.onclick = () => { fb.style.display='none';
-    btns.reject.style.display=btns.approve.style.display='inline-block';
-    btns['reject-confirm'].style.display=btns.cancel.style.display='none'; };
-  btns['reject-confirm'].onclick = async () => {
-    const r = await api('/api/review', {cat:CUR, file:it.file, action:'reject',
-                                        feedback: fb.querySelector('textarea').value});
-    mdout.textContent = r.revise_md || ''; mdout.style.display='block';
-    btns['reject-confirm'].disabled = btns.cancel.disabled = true;
-    toast('반려 + 재요청 패키지 생성: _feedback/' + CUR + '/' + it.file + '.md');
-    setTimeout(load, 1800);
-  };
+
+    <div class="vlines-console ${v.pass ? '' : 'fail'}">${(v.lines || []).join('\n') || '검증 출력 없음'}</div>
+
+    <details class="prompt-accordion">
+      <summary>📝 의뢰 프롬프트 & 스펙 전문 (prompt.md)</summary>
+      <pre>${esc(it.prompt_md || '(프롬프트 본문 없음)')}</pre>
+    </details>
+
+    <div class="feedback-box" style="display:none" id="fb-${esc(it.file)}">
+      <div style="font-size:11px;font-weight:700;color:#ff9d9d">반려 사유 및 수정 지시 작성 (재요청 프롬프트에 자동 반영):</div>
+      <div class="quick-tags">
+        <span class="q-tag" onclick="insertTag('${esc(it.file)}', '격자 안내선 잔선 제거 요망')">📐 격자 잔선</span>
+        <span class="q-tag" onclick="insertTag('${esc(it.file)}', '배경 알파 투명화 누락 (#FF00FF 키잉)')">🟪 배경 투명화</span>
+        <span class="q-tag" onclick="insertTag('${esc(it.file)}', '원작 실루엣/비율 유지 필요')">🎭 실루엣 왜곡</span>
+        <span class="q-tag" onclick="insertTag('${esc(it.file)}', '고유색 수 과다 (팔레트 양자화 필요)')">🎨 팔레트 초과</span>
+        <span class="q-tag" onclick="insertTag('${esc(it.file)}', '발바닥 기준선 정렬 이탈')">👣 발바닥 정렬</span>
+        <span class="q-tag" onclick="insertTag('${esc(it.file)}', '캔버스 해상도 규격 불일치')">📏 규격 불일치</span>
+      </div>
+      <textarea class="feedback-input" placeholder="수정 지시사항을 입력하세요 (예: 얼굴 비율을 원작과 동일하게 유지하고 격자선을 지워주세요)..."></textarea>
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <button class="btn-act" onclick="toggleFeedback('${esc(it.file)}', false)">취소</button>
+        <button class="btn-act bad" onclick="confirmReject('${esc(it.file)}')">❌ 반려 확정 및 재요청 생성</button>
+      </div>
+    </div>
+
+    <div class="card-actions" id="actions-${esc(it.file)}">
+      ${actionButtons}
+    </div>
+  `;
+
+  if (isSheet && st !== 'pending') {
+    setTimeout(() => initMiniAnimation(it.file, it.web), 100);
+  }
+
   return el;
 }
 
-function img(src){ return src ? `<img src="${src}?t=${Date.now()}" loading="lazy">`
-                              : `<img alt="" style="visibility:hidden">`; }
-function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
 
-async function act(file, action, feedback){
-  try{
-    const r = await api('/api/review', {cat:CUR, file, action, feedback});
-    toast(action==='approve' ? `승인: ${r.detail}` : `반려: ${r.detail}`);
-    load();
-  }catch(e){ toast('오류: ' + e.message); }
+
+function initMiniAnimation(file, imgUrl) {
+  const canvas = $(`#canvas-${file}`);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.src = imgUrl;
+  img.onload = () => {
+    const fw = img.naturalWidth / 2;
+    const fh = img.naturalHeight / 5;
+    let frame = 0;
+    const timer = setInterval(() => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // 첫 행 2프레임 루프
+      const sx = (frame % 2) * fw;
+      const sy = 0;
+      ctx.drawImage(img, sx, sy, fw, fh, 0, 0, canvas.width, canvas.height);
+      frame++;
+    }, 250);
+    animIntervals.push(timer);
+  };
 }
 
+window.insertTag = (file, tagText) => {
+  const fb = $(`#fb-${file}`);
+  if (!fb) return;
+  const ta = fb.querySelector('textarea');
+  ta.value = (ta.value ? ta.value + '\n- ' : '- ') + tagText;
+  ta.focus();
+};
+
+window.toggleFeedback = (file, show) => {
+  const fb = $(`#fb-${file}`);
+  const acts = $(`#actions-${file}`);
+  if (fb) fb.style.display = show ? 'flex' : 'none';
+  if (acts) acts.style.display = show ? 'none' : 'flex';
+};
+
+window.confirmReject = async file => {
+  const fb = $(`#fb-${file}`);
+  const feedback = fb ? fb.querySelector('textarea').value : '';
+  try {
+    const r = await api('/api/review', { cat: CUR, file, action: 'reject', feedback });
+    toast(`반려 완료: _feedback/${CUR}/${file}.md`, true);
+    const it = PENDING_ITEMS.find(x => x.file === file);
+    if (it) {
+      it.status = 'rejected';
+    }
+    updateSummary(PENDING_ITEMS);
+    renderCards();
+  } catch (e) {
+    toast('오류: ' + e.message, true);
+  }
+};
+
+window.act = async (file, action, feedback = '') => {
+  const actBox = $(`#actions-${file}`);
+  if (actBox) {
+    actBox.querySelectorAll('button').forEach(b => {
+      b.disabled = true;
+      b.style.opacity = '0.6';
+    });
+  }
+  try {
+    const r = await api('/api/review', { cat: CUR, file, action, feedback });
+    toast(action === 'approve' ? `✅ 승인 및 게임 설치 완료!` : `❌ 반려 처리되었습니다.`);
+    
+    // In-place instant status update without full-page modal reload!
+    const it = PENDING_ITEMS.find(x => x.file === file);
+    if (it) {
+      it.status = action === 'approve' ? 'approved' : 'rejected';
+      if (action === 'approve') {
+        it.validation = { pass: true, lines: ["승인 완료 (게임 설치됨)"] };
+      }
+    }
+    updateSummary(PENDING_ITEMS);
+    renderCards();
+  } catch (e) {
+    toast('오류: ' + e.message, true);
+    if (actBox) {
+      actBox.querySelectorAll('button').forEach(b => {
+        b.disabled = false;
+        b.style.opacity = '1.0';
+      });
+    }
+  }
+};
+
+window.resetItem = async file => {
+  try {
+    const r = await api('/api/review', { cat: CUR, file, action: 'reset' });
+    toast(`🔄 재심사 복구 완료!`);
+    const it = PENDING_ITEMS.find(x => x.file === file);
+    if (it) {
+      it.status = 'submitted';
+    }
+    updateSummary(PENDING_ITEMS);
+    renderCards();
+  } catch (e) {
+    toast('복구 오류: ' + e.message, true);
+  }
+};
+
+window.openFixer = file => {
+  window.open(`/tools/review/sprite_fixer.html?cat=${encodeURIComponent(CUR)}&file=${encodeURIComponent(file)}`, '_blank');
+};
+
+/* ===== 라이트박스 정밀 줌 모달 ===== */
+window.openLightbox = (assetId, refUrl, webUrl) => {
+  const stage = $('#lightboxStage');
+  $('#lightboxTitle').textContent = `[${assetId}] 정밀 비교 검사`;
+  stage.innerHTML = `
+    ${refUrl ? `
+      <div class="lightbox-frame">
+        <span style="font-weight:700;color:var(--dim)">원본 참조 (Reference)</span>
+        <div class="lightbox-img-box ${curBgClass}">
+          <img src="${refUrl}?t=${Date.now()}" alt="원본">
+        </div>
+      </div>
+    ` : ''}
+    <div class="lightbox-frame">
+      <span style="font-weight:700;color:#cfc7ff">★ 신규 납품본 (Delivery)</span>
+      <div class="lightbox-img-box ${curBgClass}">
+        <img src="${webUrl}?t=${Date.now()}" alt="납품본">
+      </div>
+    </div>
+  `;
+  toggleLightbox(true);
+};
+
+window.toggleLightbox = show => {
+  const modal = $('#lightboxModal');
+  modal.classList.toggle('on', show);
+};
+
+/* ===== 상단 툴바 이벤트 ===== */
+$('#bgCheckTheme').onchange = e => {
+  curBgClass = e.target.value;
+  $$('.img-box, .lightbox-img-box').forEach(box => {
+    box.className = box.className.replace(/bg-[\w-]+/g, '') + ' ' + curBgClass;
+  });
+};
+
+$('#tgSheetGrid').onchange = e => {
+  const show = e.target.checked;
+  $$('.grid-overlay').forEach(ov => ov.classList.toggle('show', show));
+};
+
+$('#statusFilter').onchange = renderCards;
+$('#searchFilter').oninput = renderCards;
+
+$('#batch-ok-pass').onclick = async () => {
+  const passItems = PENDING_ITEMS.filter(i => i.validation && i.validation.pass);
+  if (!passItems.length) return toast('검증 PASS 항목이 없습니다', true);
+  if (!confirm(`검증을 통과한 ${passItems.length}건을 일괄 승인하고 게임에 설치하시겠습니까?`)) return;
+
+  for (const item of passItems) {
+    await api('/api/review', { cat: CUR, file: item.file, action: 'approve' });
+  }
+  toast(`PASS ${passItems.length}건 일괄 승인 및 설치 완료`);
+  load();
+};
+
 $('#batch-ok').onclick = async () => {
-  if (!PENDING.length) return toast('대기 없음');
-  await api('/api/batch', {cat:CUR, action:'approve'}); toast(`전체 승인 ${PENDING.length}건`); load();
+  if (!PENDING_ITEMS.length) return toast('대기 중인 항목이 없습니다', true);
+  if (!confirm(`현재 카테고리의 전체 ${PENDING_ITEMS.length}건을 일괄 승인하시겠습니까?`)) return;
+  await api('/api/batch', { cat: CUR, action: 'approve' });
+  toast(`전체 승인 ${PENDING_ITEMS.length}건 완료`);
+  load();
 };
+
 $('#batch-bad').onclick = async () => {
-  if (!PENDING.length) return toast('대기 없음');
-  const fb = prompt('전체 반려 사유(재요청 프롬프트에 포함):');
+  if (!PENDING_ITEMS.length) return toast('대기 중인 항목이 없습니다', true);
+  const fb = prompt('전체 반려 사유(재요청 프롬프트에 자동 포함됩니다):');
   if (fb === null) return;
-  await api('/api/batch', {cat:CUR, action:'reject', feedback:fb});
-  toast(`전체 반려 ${PENDING.length}건 + 재요청 패키지 생성`); load();
+  await api('/api/batch', { cat: CUR, action: 'reject', feedback: fb });
+  toast(`전체 반려 ${PENDING_ITEMS.length}건 + 재요청 패키지 생성 완료`, true);
+  load();
 };
+
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'Escape') toggleLightbox(false);
+  if (e.key === 'r' || e.key === 'R') load();
+});
 
 load();
 </script>
