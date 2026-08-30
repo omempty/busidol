@@ -110,8 +110,14 @@ func _load_skills() -> void:
 func _setup_combatants(def: Dictionary) -> void:
 	var stats: Dictionary = GameState.player_stats
 	# 공격력은 장착 무기를 더한 값 — GameState가 단일 출처.
+	# 주인공 이름은 **번역표가 단일 출처**다(UI_BATTLE_PLAYER_NAME). 여기 문자열로
+	# 박아 두면 이름을 바꿀 때 한 곳이 빠지고, 영어 로케일에서도 한글이 나온다
+	# (2026-08-30 「부싯돌 → 시돌」 개명 때 실제로 이 자리가 걸렸다).
 	player_combatant = Combatant.new(
-		"부싯돌", int(stats["hp"]), GameState.attack_power(), GameState.defense_power()
+		tr("UI_BATTLE_PLAYER_NAME"),
+		int(stats["hp"]),
+		GameState.attack_power(),
+		GameState.defense_power()
 	)
 	# 보유 스킬은 GameState가 단일 출처 — 구판은 여기 5종이 하드코딩돼 있었고
 	# 아무도 읽지 않았으며 이름도 틀렸다(flame_beaker ≠ flame_beaker_throw).

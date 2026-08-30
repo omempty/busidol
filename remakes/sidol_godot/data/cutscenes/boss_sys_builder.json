@@ -27,7 +27,7 @@
           "text": "@c507"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c508"
         },
         {
@@ -47,11 +47,11 @@
           "text": "@c512"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c513"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c514"
         },
         {
@@ -64,7 +64,7 @@
       "op": "dialogue",
       "steps": [
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c516"
         },
         {
@@ -72,7 +72,7 @@
           "text": "@c517"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c518"
         },
         {
@@ -92,7 +92,7 @@
                 "op": "dialogue",
                 "steps": [
                   {
-                    "speaker": "부싯돌",
+                    "speaker": "시돌",
                     "text": "@c520"
                   }
                 ]
@@ -106,7 +106,7 @@
                 "op": "dialogue",
                 "steps": [
                   {
-                    "speaker": "부싯돌",
+                    "speaker": "시돌",
                     "text": "@c531"
                   }
                 ]
@@ -124,11 +124,11 @@
           "text": "@c521"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c522"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c523"
         },
         {

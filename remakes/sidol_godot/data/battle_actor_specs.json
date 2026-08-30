@@ -5,13 +5,13 @@
   "species": [
     {
       "id": "player_battle",
-      "name_ko": "부싯돌 시돌이 (전투 시트)",
+      "name_ko": "시돌 (전투 시트)",
       "cell": { "w": 64, "h": 64 },
       "source": "placeholder",
       "body_type": "humanoid",
       "pattern": "전투 전용",
       "telegraph_visual": "",
-      "token": "1995년 공대생 주인공 '부싯돌'. 흰 셔츠 소매를 걷고 청바지, 헝클어진 검은 머리. 필드 도트(player_original.png)와 **같은 인물·같은 SD 등신**이며 전투 동작만 새로 그린다. 손에는 부싯돌(작은 라이터형 물건)",
+      "token": "1995년 공대생 주인공 '시돌'. 흰 셔츠 소매를 걷고 청바지, 헝클어진 검은 머리. 필드 도트(player_original.png)와 **같은 인물·같은 SD 등신**이며 전투 동작만 새로 그린다. 손에는 부싯돌(작은 라이터형 물건)",
       "animations": {
         "idle_battle": { "row": 0, "frames": 2, "fps": 3, "loop": true, "_desc": "전투 대기 — 파이팅 포즈로 무게중심 이동" },
         "attack": { "row": 1, "frames": 4, "fps": 12, "loop": false, "_desc": "앞으로 파고들며 주먹 — 3프레임에서 팔이 가장 뻗는다" },

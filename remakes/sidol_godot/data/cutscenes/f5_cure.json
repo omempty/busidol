@@ -13,7 +13,7 @@
     { "op": "dialogue", "steps": [
       { "speaker": "모교수", "text": "@c503" },
       { "speaker": "모교수", "text": "@c504" },
-      { "speaker": "부싯돌", "text": "@c505" },
+      { "speaker": "시돌", "text": "@c505" },
       { "speaker": "모교수", "text": "@c506" }
     ] }
   ]

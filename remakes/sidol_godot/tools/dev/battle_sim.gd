@@ -99,7 +99,10 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 func _simulate(enemy_id: String, level: int) -> Dictionary:
 	var built_player := _player_at(level)
 	var player := Combatant.new(
-		"부싯돌", int(built_player["hp"]), int(built_player["ap"]), int(built_player["dp"])
+		tr("UI_BATTLE_PLAYER_NAME"),  # 이름은 번역표가 단일 출처 — 게임과 같은 것을 쓴다
+		int(built_player["hp"]),
+		int(built_player["ap"]),
+		int(built_player["dp"])
 	)
 	var built := BattleSetup.build_enemies({"enemies": [enemy_id]})
 	var enemies: Array[Combatant] = []

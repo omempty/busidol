@@ -276,6 +276,23 @@ QUIT 분기, `d1`은 `AttackAni2()`의 공격 기합(`WARMODE.C:321`), `door`는
 `size.y`를 직접 건드려 필드 진입마다 "non-equal opposite anchors" 경고가 찍히고 있었다.
 높이는 offset으로만 정한다.
 
+### 주인공 개명 — 부싯돌 → 시돌 (2026-08-30 유저 지시)
+
+부싯돌은 **주인공 이름이면서 동시에 실제 개발 동아리 이름**이다
+(대구대학교 전산과 게임동아리 부싯돌). 그래서 일괄 치환하면 안 된다 — 갈라서 바꿨었다.
+
+| 바꿨다(주인공) | 남겼다(동아리·물건·기술·원작 대사) |
+|---|---|
+| 컷신·시퀀스 `speaker` 33곳 | 게임동아리 부싯돌(credits·ending_report·@c510·items `_hint`) |
+| `UI_BATTLE_PLAYER_NAME` ko (en은 이미 Sidol이었다) | `UI_CREDIT_MODE_TEAM` 부싯돌 개발팀 |
+| `speakers.json` 화자색 키 | 암·수 부싯돌(items) · 부싯돌 치기·불꽃(skills) |
+| `battle_actor_specs` 인물 설명 | `@t139·170·173·175·@c613` — **@t는 원문 불변 참조**라 절대 손대지 않는다 |
+| 시나리오 마스터의 대사 화자 43곳 | 부싯돌 조각·퀴즈·다음 부싯돌로(quests) |
+
+겸사 **하드코딩 두 곳을 잡았다** — `battle_scene_controller.gd`와 `battle_sim.gd`가
+이름을 문자열로 박아 두고 있었다(AGENTS.md 위반). 이제 `tr("UI_BATTLE_PLAYER_NAME")`을
+쓴다 — 번역표가 단일 출처다. 그대로 두었으면 영어 로케일에서도 한글 이름이 나왔다.
+
 ### 일부러 남긴 것
 
 * **컷신 가려짐 감사 도구** — 위 참조. 이번 결함의 재발을 막으려면 결국 필요하다.

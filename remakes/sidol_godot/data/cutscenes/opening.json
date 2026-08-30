@@ -30,7 +30,7 @@
       "op": "dialogue",
       "steps": [
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c101"
         },
         {
@@ -38,7 +38,7 @@
           "text": "@c102"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c103"
         },
         {
@@ -46,7 +46,7 @@
           "text": "@c104"
         },
         {
-          "speaker": "부싯돌",
+          "speaker": "시돌",
           "text": "@c105"
         },
         {

@@ -4,9 +4,9 @@
   "_comment": "F4 고전압 배리어 — 회로 퍼즐 해결 시 Q_F4_BATTERY (씬 4-1).",
   "steps": [
     { "op": "dialogue", "steps": [
-      { "speaker": "부싯돌", "text": "@c401" },
+      { "speaker": "시돌", "text": "@c401" },
       { "speaker": "전자과 조교", "text": "@c402" },
-      { "speaker": "부싯돌", "text": "@c403" }
+      { "speaker": "시돌", "text": "@c403" }
     ] },
     { "op": "minigame_battery", "id": "battery_circuit" },
     { "op": "dialogue", "steps": [

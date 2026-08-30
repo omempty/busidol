@@ -7,7 +7,7 @@
     { "op": "sfx", "id": "sfx_encounter" },
     { "op": "dialogue", "steps": [
       { "speaker": "모교수(괴물)", "text": "@c501" },
-      { "speaker": "부싯돌", "text": "@c502" }
+      { "speaker": "시돌", "text": "@c502" }
     ] },
     { "op": "start_battle", "enemies": ["professor_monster"], "on_win_flag": "q_f5_prof_won" }
   ]
