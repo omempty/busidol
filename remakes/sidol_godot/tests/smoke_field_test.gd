@@ -94,6 +94,37 @@ func _ready() -> void:
 		if not missing.is_empty():
 			failures.append("차단 셀이 전방 목록에 없음 %s: %s" % [d, missing])
 
+	# --- 12시 방향 상자: 아래에서 위를 보고 열 수 있는가 ---
+	#
+	# 상자는 2칸 높이이고 **마커가 윗칸**이라, 아래에서 접근하면 몸 바로 위는 상자
+	# 아랫칸(막힘)이다. 원작 check_item()은 한 칸 더 읽어 이 자리를 살렸는데 우리는
+	# 그러지 않아 **아래에서는 어떤 상자도 열리지 않았다**(2026-08-30 유저 신고,
+	# f1 실측 12곳 중 0곳). 규칙을 다시 좁히면 여기서 걸린다.
+	#
+	# 판정은 게임이 쓰는 field.chest_cells()를 그대로 부른다 — 두 벌로 만들면
+	# "도구는 된다는데 게임은 아니라고 한다"가 생긴다.
+	var tried := 0
+	var opened := 0
+	var first_fail := ""
+	for cy in range(2, rt.definition.height - 4):
+		for cx in range(2, rt.definition.width - 3):
+			var marker := Vector2i(cx, cy)
+			if not field._is_chest(rt.attr_at(marker)):
+				continue
+			var anchor := marker + Vector2i(0, 2)  # 상자 아랫칸(막힘) 바로 아래에 선다
+			if not Placement.body_fits(rt, anchor):
+				continue
+			tried += 1
+			player.mover.grid_pos = anchor
+			player.facing = &"up"
+			if field._chest_in_front().x >= 0:
+				opened += 1
+			elif first_fail.is_empty():
+				first_fail = "상자%s 서는자리%s" % [marker, anchor]
+	print("[smoke_field] 12시 상자 %d자리 중 %d 성공" % [tried, opened])
+	if tried > 0 and opened < tried:
+		failures.append("아래에서 못 여는 상자 %d곳(예: %s)" % [tried - opened, first_fail])
+
 	_finish(failures)
 
 

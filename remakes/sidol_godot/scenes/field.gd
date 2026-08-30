@@ -274,8 +274,10 @@ func _is_chest(a: int) -> bool:
 
 ## 조사 대상 판정은 **런타임 ATT**로 한다. 원본을 읽으면 이미 연 상자가 계속 상자로
 ## 보여 재개봉이 되고, 같은 줄 뒤쪽 상자를 가린다(MapRuntime.attr_at 주석 참고).
+## 상자는 정면보다 **한 칸 더** 본다 — 아이템 마커가 상자 윗칸에 있어서다.
+## 근거와 사거리는 InteractProbe.chest_cells에 적었다(원작 check_item 비대칭).
 func _chest_in_front() -> Vector2i:
-	for c in front_cells():
+	for c in chest_cells():
 		if _is_chest(runtime.attr_at(c)):
 			return c
 	return Vector2i(-9, -9)
@@ -546,6 +548,11 @@ func get_npc(npc_id: String) -> NpcEntity:
 ## 이름은 그대로 둔다: 트리거·NPC·상자가 전부 이 이름으로 이 함수를 부른다.
 func front_cells() -> Array[Vector2i]:
 	return InteractProbe.probe_cells(player.mover, player.mover.grid_pos, player.facing_vector())
+
+
+## 상자 조사 사거리 — 정면 + (위를 볼 때) 한 칸 더. 근거는 InteractProbe.chest_cells.
+func chest_cells() -> Array[Vector2i]:
+	return InteractProbe.chest_cells(player.mover, player.mover.grid_pos, player.facing_vector())
 
 
 func _npc_in_front() -> NpcEntity:

@@ -42,3 +42,27 @@ static func probe_cells(mover: GridMover, anchor: Vector2i, facing: Vector2i) ->
 	out.append(first - step)
 	out.append(last + step)
 	return out
+
+
+## 상자 전용 사거리 — 정면 판정에 **한 칸 더 위**를 얹는다(위를 볼 때만).
+##
+## 원작 `check_item()`은 방향마다 사거리가 다르다(GOODITEM.C:132~156):
+##   아래 조사 `ATT[(y+2)…]`  = 몸 바로 아래 칸
+##   위   조사 `ATT[(y-2)…]`  = 몸 바로 위가 **아니라 그 한 칸 더 위**
+##
+## 비대칭인 이유는 상자 모양이다. 상자는 2칸 높이인데 **아이템 마커(ATT 150~199)가
+## 윗칸에 있고 아랫칸은 몸통(ATT 1, 막힘)** 이다(f1 실측: obj 149/150 위 · 151/152 아래).
+## 그래서 아래에서 접근해 위를 보면 몸 바로 위는 상자 **아랫칸**이라 마커가 없다 —
+## 원작은 한 칸 더 읽어 그 자리를 살렸고, 우리는 그러지 않아 **아래에서는 어떤 상자도
+## 열리지 않았다**(2026-08-30 실측: 그런 자리 12곳 중 성공 0곳. 유저가 「12시 방향으로
+## 접근하면 반응이 없다」로 짚은 것이 이것이다).
+##
+## 아래·좌·우는 넓히지 않는다. 아래는 원작도 인접 한 칸만 보고, 좌우는 상자가 2칸
+## 폭이라 인접 칸에서 이미 마커가 잡힌다 — 넓히면 한 칸 떨어져서도 열리게 된다.
+static func chest_cells(mover: GridMover, anchor: Vector2i, facing: Vector2i) -> Array[Vector2i]:
+	var out := probe_cells(mover, anchor, facing)
+	if facing != Vector2i.UP:
+		return out
+	for cell in mover.edge_cells(anchor, facing):
+		out.append(cell + facing)
+	return out
