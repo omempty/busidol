@@ -4,6 +4,9 @@ extends Control
 ## 진입: 크레딧룸 종료 시(Q_ENDING 설정 상태) / 종료: 아무 키 → 타이틀.
 
 const REPORT_PATH := "res://data/ending_report.json"
+## CRT 셰이더 — 이 저장소의 첫 .gdshader(04_uiux §1.5). 화면 전체를 덮는 판에 물려
+## 아래 콘솔 화면을 다시 읽어 휘어 그린다. 파일이 없으면 조용히 평면으로 간다.
+const CRT_SHADER := "res://assets/shaders/crt.gdshader"
 const NEXT_SCENE := "res://scenes/main.tscn"
 const CHARS_PER_SEC := 60.0  # 설정 '대사 속도' 배율 전 기준값(04_uiux §1.5)
 const LINE_PAUSE := 0.12
@@ -58,6 +61,23 @@ func _build_ui() -> void:
 	_hint_label.offset_bottom = -24
 	_hint_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	add_child(_hint_label)
+
+	_build_crt()
+
+
+## CRT 판 — **맨 위에, 입력은 통과시킨다.** 아무 키로 나가는 화면이라 판이 입력을
+## 먹으면 못 빠져나온다. 셰이더가 없으면(파일 제거 시) 아무것도 얹지 않는다.
+func _build_crt() -> void:
+	if not ResourceLoader.exists(CRT_SHADER):
+		push_warning("CRT 셰이더 없음 — 평면으로 진행: %s" % CRT_SHADER)
+		return
+	var glass := ColorRect.new()
+	glass.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat := ShaderMaterial.new()
+	mat.shader = load(CRT_SHADER)
+	glass.material = mat
+	add_child(glass)
 
 
 func _compose_text() -> String:

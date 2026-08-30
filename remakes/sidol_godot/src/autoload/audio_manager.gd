@@ -61,12 +61,16 @@ func stop_bgm() -> void:
 	_bgm_player.stop()
 
 
-func play_voice(voice_id: StringName) -> void:
+## 원작 보이스 재생. **성공 여부를 돌려준다** — 미설치일 때 호출부가 AI 효과음으로
+## 폴백할 수 있어야 한다(원본 VOC는 저장소 밖에서 변환해 넣는 것이라 없을 수 있다).
+## 변환: tools/convert/voc_convert.py
+func play_voice(voice_id: StringName) -> bool:
 	var stream := _load_stream("voice", voice_id)
 	if stream == null:
-		return
+		return false
 	_voice_player.stream = stream
 	_voice_player.play()
+	return true
 
 
 func set_bus_volume(bus_name: StringName, linear: float) -> void:

@@ -7,6 +7,15 @@ signal battle_ended(result: StringName, rewards: Dictionary)
 
 ## 결과 id → 번역 키. **문자열을 이어 붙여 키를 만들지 않는다** — validate가
 ## ui.csv와 양방향 대조하는데 동적 키는 대조가 안 된다(2026-08-30 관문이 잡았다).
+## 결과 id → 원작 보이스. 근거: WARMODE.C:1204~1206 —
+##   case 0: domang.voc / case 1: win.voc / case -1: dead.voc
+## **셋은 바이트 단위로 같은 파일이다**(sha256 c4f6afcc…) — 원작에서 승리·패배·도망이
+## 한 소리였다. 고증이므로 그대로 둔다(obj 173과 같은 처리).
+const RESULT_VOICES := {
+	&"win": &"win",
+	&"lose": &"dead",
+	&"flee": &"domang",
+}
 const RESULT_KEYS := {
 	&"win": "UI_BATTLE_RESULT_WIN",
 	&"lose": "UI_BATTLE_RESULT_LOSE",
@@ -247,6 +256,9 @@ func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
 	_pending_pops.assign(command.get("damages", []))
 	var skill: Dictionary = command.get("skill", {})
 	_pending_element = StringName(str(skill.get("element", "physical")))
+	# 공격 기합 — 원작 `AttackAni2()`가 애니 시작에 d1.voc를 냈다(WARMODE.C:321).
+	# 방어·도구는 그 자리가 아니므로 여기(공격 개시)에만 둔다.
+	AudioManager.play_voice(&"d1")
 	_play_move(move_id)
 
 
@@ -397,6 +409,7 @@ func _tick_effects() -> void:
 
 func _show_result(result: StringName) -> void:
 	_busy = true
+	AudioManager.play_voice(StringName(str(RESULT_VOICES.get(result, ""))))
 	_log(
 		tr("UI_BLOG_RESULT") % tr(str(RESULT_KEYS.get(result, "UI_BATTLE_RESULT_WIN"))),
 		BattleLog.Kind.RESULT

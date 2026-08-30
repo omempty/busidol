@@ -26,11 +26,15 @@ const CHEST_TIME := 0.28
 
 ## 문이 열린다 — 원작 그림을 그 자리에 띄우고 효과음을 낸다.
 ##
-## 원작에는 `door.voc` 호출이 있었으나 **주석 처리**되어 실제로는 소리가 없었다.
-## 연출 층은 켜는 쪽이 기본값이라는 방침에 따라 되살린다(에셋 `sfx_door_open.wav`는
-## 진작 납품돼 있었는데 어디서도 재생하지 않고 있었다).
+## 원작에는 `door.voc` 호출이 있었으나 **주석 처리**되어 실제로는 소리가 없었다
+## (`GOODITEM.C:1402` · 위·아래 문 두 곳 다 `/* */` 안에 있다). 연출 층은 켜는 쪽이
+## 기본값이라는 방침(04_uiux §0)에 따라 되살린다.
+##
+## 2026-08-30: **원작 door.voc를 실제로 변환해 넣었으므로 그것을 먼저 쓴다**(04_uiux §5 —
+## 원작 보이스는 재생성이 아니라 변환해 그대로). 미설치 PC에서는 AI 효과음으로 내려간다.
 func door_open(renderer: MapRenderer, anchor: Vector2i, dir: Vector2i, hold: float) -> void:
-	AudioManager.play_sfx(&"sfx_door_open")
+	if not AudioManager.play_voice(&"door"):
+		AudioManager.play_sfx(&"sfx_door_open")
 	var ids: Array = DOOR_DOWN if dir == Vector2i.DOWN else DOOR_UP
 	var top := anchor.y + 1 if dir == Vector2i.DOWN else anchor.y - 2
 	var sprites: Array[Sprite2D] = []
