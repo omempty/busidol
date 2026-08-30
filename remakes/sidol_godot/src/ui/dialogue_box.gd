@@ -46,6 +46,13 @@ func _ready() -> void:
 	_panel.offset_left = 12
 	_panel.offset_right = -12
 	_panel.offset_bottom = -12
+	# 대사창을 클릭해도 넘어간다 — 키보드·패드와 같은 진행 수단(04_uiux §1.3).
+	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				advance()
+	)
 	add_child(_panel)
 
 	var row := HBoxContainer.new()

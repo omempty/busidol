@@ -5,6 +5,14 @@ extends Node2D
 
 signal battle_ended(result: StringName, rewards: Dictionary)
 
+## 결과 id → 번역 키. **문자열을 이어 붙여 키를 만들지 않는다** — validate가
+## ui.csv와 양방향 대조하는데 동적 키는 대조가 안 된다(2026-08-30 관문이 잡았다).
+const RESULT_KEYS := {
+	&"win": "UI_BATTLE_RESULT_WIN",
+	&"lose": "UI_BATTLE_RESULT_LOSE",
+	&"flee": "UI_BATTLE_RESULT_FLEE",
+}
+
 var controller := BattleController.new()
 var player_combatant: Combatant
 var enemies: Array[Combatant] = []
@@ -39,6 +47,9 @@ func _ready() -> void:
 	_setup_presentation()
 	controller.start(player_combatant, enemies)
 	AudioManager.play_bgm(&"bgm_boss" if _is_boss_fight() else &"bgm_battle")
+	BattleLog.clear()  # 이전 판의 줄이 남으면 첫 화면부터 거짓말이 된다
+	BattleLog.push(tr("UI_BLOG_START"), BattleLog.Kind.TURN)
+	_ui.refresh_log()
 	_ui.show_command_menu()
 
 
@@ -138,6 +149,7 @@ func _on_command(cmd_id: StringName) -> void:
 		return
 	if cmd_id != &"skill" and cmd_id != &"item":
 		_last_action = {"kind": &"command", "id": cmd_id}
+		_log(tr("UI_BLOG_ACTION") % _ui.command_label(cmd_id))
 	match cmd_id:
 		&"attack":
 			_begin_player_action(
@@ -187,6 +199,7 @@ func _try_flee() -> void:
 
 func _on_skill_selected(skill: Dictionary) -> void:
 	_last_action = {"kind": &"skill", "skill": skill}
+	_log(tr("UI_BLOG_ACTION") % str(skill.get("name_ko", skill.get("id", ""))))
 	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
 	_begin_player_action(
 		{
@@ -204,6 +217,7 @@ func _on_item_selected(item_def: Dictionary) -> void:
 	if _busy:
 		return
 	_last_action = {"kind": &"item", "item": item_def}
+	_log(tr("UI_BLOG_ACTION") % str(item_def.get("name_ko", item_def.get("id", ""))))
 	_busy = true
 	_ui.hide_menu()
 	var results := ItemEffects.use_in_battle(item_def, player_combatant)
@@ -264,10 +278,14 @@ func _on_choreo_damage_frame() -> void:
 	var pop: Dictionary = _pending_pops.pop_front()
 	var idx := int(pop.get("enemy_index", 0))
 	_presenter.show_damage_number(int(pop["amount"]), false, _pending_element, idx)
+	var who := enemies[idx].display_name if idx < enemies.size() else "?"
+	_log(tr("UI_BLOG_HIT") % [who, int(pop["amount"])], BattleLog.Kind.DAMAGE)
 	if bool(pop.get("weak", false)):
 		_presenter.show_flag_pop("WEAK!", Color(1.0, 0.92, 0.35), idx)
+		_log(tr("UI_BLOG_WEAK") % who, BattleLog.Kind.ACCENT)
 	if bool(pop.get("break", false)):
 		_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
+		_log(tr("UI_BLOG_BREAK") % who, BattleLog.Kind.ACCENT)
 	if idx < _presenter.enemy_sprites.size():
 		_presenter.hurt_flash(_presenter.enemy_sprites[idx])
 	_presenter.hitstop()
@@ -346,6 +364,7 @@ func _resolve_turn() -> void:
 	# 이걸 빼먹으면 창은 열리는데 명령이 무시된다(2026-08-28 실측 버그).
 	controller.begin_player_phase()
 	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
+	_log(tr("UI_BLOG_TURN") % (controller.turn_count + 1), BattleLog.Kind.TURN)
 	_ui.show_command_menu()
 
 
@@ -364,6 +383,13 @@ func _end_player_defend() -> void:
 	_ui.show_command_menu()
 
 
+## 로그 한 줄 — 적립과 화면 갱신을 한 창구로 묶는다(둘로 나누면 한쪽만 부르는 자리가 생긴다).
+func _log(text: String, kind: BattleLog.Kind = BattleLog.Kind.ACTION) -> void:
+	BattleLog.push(text, kind)
+	if _ui != null:
+		_ui.refresh_log()
+
+
 func _tick_effects() -> void:
 	for c: Combatant in ([player_combatant] as Array[Combatant]) + enemies:
 		c.tick_effects()
@@ -371,6 +397,10 @@ func _tick_effects() -> void:
 
 func _show_result(result: StringName) -> void:
 	_busy = true
+	_log(
+		tr("UI_BLOG_RESULT") % tr(str(RESULT_KEYS.get(result, "UI_BATTLE_RESULT_WIN"))),
+		BattleLog.Kind.RESULT
+	)
 	_ui.show_result(result)
 	await get_tree().create_timer(0.9).timeout
 	var rewards := BattleRewards.compute(_enemy_ids)

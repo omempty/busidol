@@ -34,6 +34,10 @@ const MENU_WIDTH := 168.0
 const ENEMY_CARD_WIDTH := 94.0
 const ENEMY_SLOT_X := 600.0  # BattlePresenter의 적 스프라이트 x 기준
 const ENEMY_SLOT_STEP := 100.0
+## 배틀 로그 사이드패널(04_uiux §1.4) — 좌하단, 커맨드 메뉴(우하단)와 겹치지 않는다.
+const LOG_WIDTH := 250.0
+const LOG_ROWS := 7
+const LOG_MARGIN := 12.0
 const PLAYER_CARD := Vector2(220, 0)
 
 var _hp_gauges := {}  # Combatant | &"player" -> HudGauge
@@ -54,6 +58,8 @@ var _skills: Array[Dictionary] = []
 var _player: Combatant
 var _enemies: Array[Combatant] = []
 var _enemy_cards: Array[PanelContainer] = []  # 대상 강조용
+var _log_panel: PanelContainer
+var _log_box: VBoxContainer
 var _target_index := 0
 
 
@@ -66,10 +72,22 @@ func build(p_player: Combatant, p_enemies: Array[Combatant], skills: Array[Dicti
 	_build_enemy_status()
 	_build_player_status()
 	_build_labels()
+	_build_log()
 	refresh_bars()
 
 
+## 커맨드 id → 표시 이름(로그가 쓴다). 번역 불변 id로 오가므로 여기서만 문자열이 된다.
+func command_label(cmd_id: StringName) -> String:
+	for cmd: Dictionary in COMMANDS:
+		if StringName(str(cmd["id"])) == cmd_id:
+			return tr(str(cmd["key"]))
+	return String(cmd_id)
+
+
 func refresh_bars() -> void:
+	# 적 턴은 컨트롤러 밖(BattleEnemyPhase)에서 로그를 적는다 — 게이지를 새로 그리는
+	# 이 자리에서 함께 갱신하면 적는 쪽이 화면 갱신을 몰라도 된다.
+	refresh_log()
 	for e in _enemies:
 		if _hp_gauges.has(e):
 			_set_gauge(_hp_gauges[e], e.hp, e.max_hp)
@@ -239,8 +257,35 @@ func _open_menu(kind: StringName, entries: Array[Dictionary]) -> void:
 	_refresh_menu()
 
 
+## 마우스 — 항목에 올리면 선택, 누르면 결정(04_uiux §1.3 삼중 내비).
+## 전투 UI는 2026-08-28에 마우스 전용에서 키보드로 되돌린 이력이 있다 —
+## **되돌리는 게 아니라 얹는다.** 키보드·패드 경로는 그대로 둔다.
+func _bind_menu_mouse(shell: Control, index: int) -> void:
+	shell.mouse_filter = Control.MOUSE_FILTER_STOP
+	shell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	shell.mouse_entered.connect(
+		func() -> void:
+			if index == _menu_index or index >= _menu_entries.size():
+				return
+			if bool(_menu_entries[index].get("disabled", false)):
+				return
+			_menu_index = index
+			_refresh_menu()
+	)
+	shell.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if not (e is InputEventMouseButton and e.pressed):
+				return
+			if e.button_index != MOUSE_BUTTON_LEFT or index >= _menu_entries.size():
+				return
+			_menu_index = index
+			_confirm_menu()
+	)
+
+
 func _make_menu_row(index: int, entry: Dictionary) -> Control:
 	var shell := PanelContainer.new()
+	_bind_menu_mouse(shell, index)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	shell.add_child(row)
@@ -366,6 +411,47 @@ func _element_note(skill: Dictionary) -> String:
 	if el.is_empty() or el == "physical":
 		return ""
 	return tr(str(InventoryPanel.ELEMENT_KEYS.get(el, el)))
+
+
+## 배틀 로그 — 지나간 턴을 읽는 자리. 데미지 팝은 그 순간에만 뜨고, 연출 ×2·스킵에서는
+## 읽을 새가 없다. 갱신은 BattleLog.push를 부른 쪽이 refresh_log()로 알린다.
+func _build_log() -> void:
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_theme_stylebox_override("panel", HudTheme.panel(8, 8))
+	panel.custom_minimum_size = Vector2(LOG_WIDTH, 0)
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	panel.offset_left = LOG_MARGIN
+	panel.offset_bottom = -LOG_MARGIN
+	add_child(panel)
+	_log_box = VBoxContainer.new()
+	_log_box.add_theme_constant_override("separation", 2)
+	panel.add_child(_log_box)
+	_log_panel = panel
+	refresh_log()
+
+
+## 최근 LOG_ROWS줄만 다시 그린다 — 전투 중 갱신이 잦아 통째로 다시 만드는 편이 싸다.
+func refresh_log() -> void:
+	if _log_box == null:
+		return
+	for child in _log_box.get_children():
+		child.queue_free()
+	var rows := BattleLog.tail(LOG_ROWS)
+	if rows.is_empty():
+		_log_panel.visible = false
+		return
+	_log_panel.visible = true
+	for row: Dictionary in rows:
+		var kind := int(row.get("kind", 0))
+		var lbl := HudTheme.label(
+			"%s %s" % [BattleLog.mark_of(kind), str(row.get("text", ""))],
+			11,
+			BattleLog.color_of(kind)
+		)
+		lbl.clip_text = true
+		_log_box.add_child(lbl)
 
 
 func _build_background() -> void:

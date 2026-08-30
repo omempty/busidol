@@ -108,10 +108,14 @@ func _ready() -> void:
 	cutscene_player.setup(self)
 	cutscene_player.finished.connect(_on_cutscene_finished)
 
+	# 시스템 탭은 기능을 다시 만들지 않고 신호만 보낸다 — 세이브/로드가 두 벌이 되면
+	# 한쪽만 고쳐져 갈라진다(04_uiux §1.3 주석 참조).
 	inventory_panel = InventoryPanel.new()
 	add_child(inventory_panel)  # PauseMenu보다 먼저 — cancel 입력 우선권
 
-	add_child(PauseMenu.new())
+	var pause_menu := PauseMenu.new()
+	add_child(pause_menu)
+	inventory_panel.system_requested.connect(pause_menu.open_action)
 	add_child(DebugPanel.new())  # F10 — 디버그 빌드 한정(패널 내부 가드)
 
 	AudioManager.play_bgm(&"bgm_field")

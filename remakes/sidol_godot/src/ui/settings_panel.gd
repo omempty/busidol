@@ -83,6 +83,7 @@ func _build() -> void:
 
 		_rows.append(name_lbl)
 		_values.append(val_lbl)
+		_bind_mouse(row, i)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -109,6 +110,32 @@ func _unhandled_input(event: InputEvent) -> void:
 func _move(dir: int) -> void:
 	_index = wrapi(_index + dir, 0, _rows.size())
 	_refresh()
+
+
+## 마우스 — 행에 올리면 선택, 좌클릭/휠↑은 값 +1, 우클릭/휠↓은 −1.
+## 값이 순환형(←→)이라 클릭 한 번에 한 칸씩 도는 것이 키보드와 같은 뜻이 된다.
+func _bind_mouse(row: Control, idx: int) -> void:
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	row.mouse_entered.connect(
+		func() -> void:
+			_index = idx
+			_refresh()
+	)
+	row.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if not (e is InputEventMouseButton and e.pressed):
+				return
+			_index = idx
+			# 람다 안의 다중 패턴 match는 gdformat 파서가 못 읽는다(관문이 잡았다).
+			var b: int = e.button_index
+			if b == MOUSE_BUTTON_LEFT or b == MOUSE_BUTTON_WHEEL_UP:
+				_adjust(1)
+			elif b == MOUSE_BUTTON_RIGHT or b == MOUSE_BUTTON_WHEEL_DOWN:
+				_adjust(-1)
+			else:
+				_refresh()
+	)
 
 
 func _adjust(dir: int) -> void:

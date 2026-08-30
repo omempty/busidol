@@ -30,6 +30,10 @@ const ACTIONS := {
 	&"battle_target_prev": [KEY_Q],
 	&"battle_target_next": [KEY_E],
 	&"battle_repeat": [KEY_R],
+	# 탭 전환 — 캐릭터 메뉴 4탭(04_uiux §1.3). 전투 대상 전환과 같은 키(Q·E)지만
+	# 두 화면은 동시에 뜨지 않는다. 액션을 나눠 두면 각 화면이 제 뜻으로 읽는다.
+	&"tab_prev": [KEY_Q],
+	&"tab_next": [KEY_E],
 }
 
 ## 게임패드 버튼 — 키보드와 같은 액션에 얹는다. Xbox 배치 기준(Godot 표준 매핑이
@@ -48,6 +52,8 @@ const PAD_BUTTONS := {
 	&"battle_target_prev": [JOY_BUTTON_LEFT_SHOULDER],
 	&"battle_target_next": [JOY_BUTTON_RIGHT_SHOULDER],
 	&"battle_repeat": [JOY_BUTTON_X],
+	&"tab_prev": [JOY_BUTTON_LEFT_SHOULDER],
+	&"tab_next": [JOY_BUTTON_RIGHT_SHOULDER],
 }
 
 ## 왼쪽 스틱 — [축, 부호]. 그리드 이동이라 세기는 안 쓰고 데드존만 넘으면 한 칸이다.

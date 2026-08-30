@@ -62,10 +62,11 @@ func _build_root() -> void:
 	add_child(frame)
 	_root_box = frame
 
-	for item_key in ROOT_ITEM_KEYS:
-		var row := ModalFrame.row(tr(item_key), 17)
+	for i in ROOT_ITEM_KEYS.size():
+		var row := ModalFrame.row(tr(str(ROOT_ITEM_KEYS[i])), 17)
 		frame.body.add_child(row)
 		_root_labels.append(row)
+		_bind_mouse(row, i)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -117,6 +118,47 @@ func _confirm() -> void:
 			_switch(Screen.SETTINGS)
 		6:
 			_to_title()
+
+
+## 바깥(캐릭터 메뉴 시스템 탭)에서 특정 기능을 바로 연다. **기능은 여기 하나뿐이고**
+## 부르는 쪽은 어느 화면인지만 고른다 — 세이브/로드가 두 벌이 되지 않게.
+func open_action(action: StringName) -> void:
+	visible = true
+	match action:
+		&"save":
+			_slot_list.mode = SaveSlotList.Mode.SAVE
+			_switch(Screen.SAVE)
+		&"load":
+			_slot_list.mode = SaveSlotList.Mode.LOAD
+			_switch(Screen.LOAD)
+		&"questlog":
+			_switch(Screen.LOG)
+		&"help":
+			_switch(Screen.HELP)
+		&"settings":
+			_switch(Screen.SETTINGS)
+		_:
+			_switch(Screen.ROOT)
+
+
+## 마우스 — 항목에 올리면 선택, 누르면 확정(04_uiux §1.3 삼중 내비).
+func _bind_mouse(row: Control, idx: int) -> void:
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	row.mouse_entered.connect(
+		func() -> void:
+			if visible and _screen == Screen.ROOT:
+				_index = idx
+				_refresh()
+	)
+	row.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if not visible or _screen != Screen.ROOT:
+				return
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				_index = idx
+				_confirm()
+	)
 
 
 func _switch(to: Screen) -> void:

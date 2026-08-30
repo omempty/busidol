@@ -67,8 +67,6 @@ UI_HELP_MAP,미니맵 토글,Toggle minimap
 UI_HELP_SAVE,세이브,Save
 UI_HELP_SAVE_DESC,층 이동 · 전투 승리 시 자동 기록 (일시정지에서 수동 가능),Auto-saved on floor change and battle win (manual save from pause)
 UI_CLOSE_ESC,Esc — 닫기,Esc — Close
-UI_BAG_TITLE,— 가방 —,— Bag —
-UI_BAG_HINT,↑↓ 선택    I / ESC 닫기,↑↓ Select    I / ESC Close
 UI_BAG_EMPTY,가방이 비어 있다.,The bag is empty.
 UI_BAG_ATK,공격력,Attack
 UI_BAG_ELEMENT,속성,Element
@@ -166,3 +164,26 @@ UI_DLGLOG_TITLE,대화 로그,Dialogue log
 UI_DLGLOG_HINT,↑ ↓ 넘기기 | Enter·ESC 닫기,Up/Down scroll | Enter/ESC close
 UI_DLGLOG_EMPTY,아직 오간 말이 없다.,Nothing has been said yet.
 UI_HELP_DLGLOG,대화 로그(대화 중),Dialogue log (while talking)
+UI_BLOG_START,전투 시작,Battle start
+UI_BLOG_TURN,TURN %d,TURN %d
+UI_BLOG_ACTION,%s,%s
+UI_BLOG_HIT,%s에게 %d,%s takes %d
+UI_BLOG_WEAK,%s 약점!,%s weak point!
+UI_BLOG_BREAK,%s 브레이크!,%s break!
+UI_BLOG_ENEMY_HIT,%s의 공격 %d,%s attacks for %d
+UI_BLOG_DODGE_HIT,피격 %d회 %d,%d hits taken for %d
+UI_BLOG_RESULT,%s,%s
+UI_MENU_TAB_ITEMS,아이템,Items
+UI_MENU_TAB_GEAR,장비,Gear
+UI_MENU_TAB_STATUS,상태,Status
+UI_MENU_TAB_SYSTEM,시스템,System
+UI_GEAR_EMPTY,비어 있음,Empty
+UI_GEAR_HINT,확인 키로 해제 · Q/E 탭 이동,Confirm to unequip · Q/E switch tab
+UI_STAT_LEVEL,레벨,Level
+UI_STAT_HP,체력,HP
+UI_STAT_AP,공격력,Attack
+UI_STAT_DP,방어력,Defense
+UI_STAT_EXP,경험치,EXP
+UI_STAT_MONEY,소지금,Money
+UI_CHAR_MENU_TITLE,캐릭터 메뉴,Character menu
+UI_CHAR_MENU_HINT,↑ ↓ ← → 선택 | Q/E 탭 | 클릭도 됨 | I·ESC 닫기,Arrows select | Q/E tabs | click works | I/ESC close

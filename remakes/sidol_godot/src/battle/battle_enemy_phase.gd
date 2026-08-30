@@ -13,6 +13,10 @@ static func regular_attack(
 	# 적 시트에 attack 행이 있으면 그 동작으로 때린다(없으면 기존 연출 그대로).
 	presenter.play_enemy_anim(presenter.target_index, "attack")
 	presenter.show_damage_number(actual, true)
+	BattleLog.push(
+		TranslationServer.translate("UI_BLOG_ENEMY_HIT") % [attacker.display_name, actual],
+		BattleLog.Kind.DAMAGE
+	)
 	presenter.hurt_flash(presenter.player_sprite)
 	# 원작은 피격도 대형 컷이었다(DEF 시퀀스) — 시트가 없으면 조용히 건너뛴다.
 	presenter.play_cut("player_hurt")
@@ -40,6 +44,9 @@ static func dodge_sequence(
 	var actual: int = player.take_damage(hits * per_hit)
 	if actual > 0:
 		presenter.show_damage_number(actual, true)
+		BattleLog.push(
+			TranslationServer.translate("UI_BLOG_DODGE_HIT") % [hits, actual], BattleLog.Kind.DAMAGE
+		)
 		presenter.hurt_flash(presenter.player_sprite)
 		presenter.play_screen_kf({"shake": 3, "flash": "#ff3333", "a": 0.25})
 	if hits == 0:
