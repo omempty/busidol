@@ -59,6 +59,7 @@ func _initialize() -> void:
 	_validate_story_bonus()
 	_validate_battle_rules()
 	_validate_keyart()
+	_validate_talk_targets()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -468,6 +469,50 @@ func _load_json(path: String) -> Variant:
 	if raw == null:
 		_err("JSON 파싱 실패: " + path)
 	return raw
+
+
+## 원작 ATT 대화 마커 표 검사 — 대사 키가 실재하는가, 맵에 실제로 그 ATT가 있는가.
+##
+## 이 표는 **맵의 ATT 값에 기대어 산다.** 키를 잘못 적으면 말은 걸리는데 빈 창이 뜨고,
+## 맵에 없는 ATT를 적으면 영영 안 불린다 — 둘 다 화면에서는 조용해서 안 드러난다.
+func _validate_talk_targets() -> void:
+	var path := "res://data/maps/talk_targets.json"
+	if not FileAccess.file_exists(path):
+		_err("대화 마커 표 없음: %s" % path)
+		return
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		_err("대화 마커 표 파싱 실패: %s" % path)
+		return
+	# 맵에 실제로 깔린 ATT 값 모으기
+	var used: Dictionary = {}
+	for floor_idx in range(0, 6):
+		var mp := "res://data/maps/f%d.json" % floor_idx
+		if not FileAccess.file_exists(mp):
+			continue
+		var mraw: Variant = JSON.parse_string(FileAccess.get_file_as_string(mp))
+		if typeof(mraw) != TYPE_DICTIONARY:
+			continue
+		for row: Array in (mraw as Dictionary)["layers"]["attr"]:
+			for v: int in row:
+				used[v] = int(used.get(v, 0)) + 1
+
+	var targets: Dictionary = (raw as Dictionary).get("targets", {})
+	var placed := 0
+	for key: String in targets:
+		var att := int(key)
+		var t: Dictionary = targets[key]
+		var texts: Array = t.get("texts", []) + t.get("repeat_texts", [])
+		if texts.is_empty():
+			_err("대화 마커 ATT %d: 대사가 비어 있다" % att)
+		for tk: String in texts:
+			if not _dialogue.has(tk):
+				_err("대화 마커 ATT %d가 쓰는 대사 키 %s가 dialogue.json에 없음" % [att, tk])
+		if not used.has(att):
+			_err("대화 마커 ATT %d(%s)가 어느 맵에도 없다" % [att, str(t.get("id", ""))])
+		else:
+			placed += int(used[att])
+	print("[validate] 대화 마커 %d종 · 맵에 깔린 칸 %d개" % [targets.size(), placed])
 
 
 ## UI 문자열 ↔ 번역표(data/l10n/ui.csv) 양방향 대조.

@@ -206,6 +206,21 @@ func _physics_process(_delta: float) -> void:
 			_start_dialogue(npc)
 		return
 
+	# 원작 ATT 대화 마커 — 맵 그림에 붙은 말 걸 수 있는 자리(TalkTargets 참조).
+	# NPC 다음, 상자 앞이다: NPC는 우리가 세운 액터라 더 구체적이고, 상자는
+	# 사거리가 한 칸 더 넓어(chest_cells) 뒤에 두어야 가까운 것이 먼저 잡힌다.
+	var talk_cell := _talk_in_front()
+	if talk_cell.x >= 0:
+		var talk_attr := runtime.attr_at(talk_cell)
+		_prompt.show_at(
+			"%s   SPACE" % TalkTargets.display_name(talk_attr),
+			Vector2(talk_cell.x + 0.5, talk_cell.y) * MapDefinition.TILE_PX - Vector2(0, 26)
+		)
+		_focus.show_cells([talk_cell])
+		if interact_edge:
+			_start_talk(talk_attr)
+		return
+
 	# 상자 상호작용
 	var chest := _chest_in_front()
 	if chest.x >= 0:
@@ -274,6 +289,26 @@ func _is_chest(a: int) -> bool:
 
 ## 조사 대상 판정은 **런타임 ATT**로 한다. 원본을 읽으면 이미 연 상자가 계속 상자로
 ## 보여 재개봉이 되고, 같은 줄 뒤쪽 상자를 가린다(MapRuntime.attr_at 주석 참고).
+## 앞에 말 걸 수 있는 원작 마커가 있는가. 사거리는 정면 판정 그대로 —
+## 원작 Talk()도 몸 바로 앞 한 줄만 봤다(상자만 한 칸 더 본다).
+func _talk_in_front() -> Vector2i:
+	for c in front_cells():
+		if TalkTargets.has(runtime.attr_at(c)):
+			return c
+	return Vector2i(-9, -9)
+
+
+## 원작 마커 대화 시작 — 대사는 @t 원문 그대로(TalkTargets가 반복 횟수를 센다).
+func _start_talk(attr: int) -> void:
+	var steps: Array = TalkTargets.steps_for(attr)
+	if steps.is_empty():
+		return
+	player.mover.enabled = false
+	_trigger_seq_active = true
+	_prompt.visible = false
+	dialogue_box.start(StringName("talk_%d" % attr), steps)
+
+
 ## 상자는 정면보다 **한 칸 더** 본다 — 아이템 마커가 상자 윗칸에 있어서다.
 ## 근거와 사거리는 InteractProbe.chest_cells에 적었다(원작 check_item 비대칭).
 func _chest_in_front() -> Vector2i:

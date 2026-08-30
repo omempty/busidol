@@ -114,7 +114,8 @@ func _confirm() -> void:
 	match _index:
 		0:
 			GameState.reset()
-			DialogueLog.clear()  # 새 이야기 — 지난 판의 대사가 남으면 안 된다
+			DialogueLog.clear()
+			TalkTargets.reset_counts()  # 새 이야기 — 지난 판의 대사가 남으면 안 된다
 			get_tree().change_scene_to_file(FIELD_SCENE)
 		1:
 			if SaveManager.has_any_save():
