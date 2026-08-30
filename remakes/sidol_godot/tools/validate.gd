@@ -502,9 +502,13 @@ func _validate_talk_targets() -> void:
 	for key: String in targets:
 		var att := int(key)
 		var t: Dictionary = targets[key]
-		var texts: Array = t.get("texts", []) + t.get("repeat_texts", [])
+		# 조건부 대상은 `texts`가 비어 있을 수 있다 — 원작에서 조건 전에 아무 말도
+		# 안 하던 대상이다(Talk_ELIN_F에 else가 없다). 그때는 flag_texts가 있어야 한다.
+		var texts: Array = t.get("texts", []) + t.get("repeat_texts", []) + t.get("flag_texts", [])
 		if texts.is_empty():
-			_err("대화 마커 ATT %d: 대사가 비어 있다" % att)
+			_err("대화 마커 ATT %d: 어느 조건에서도 대사가 없다" % att)
+		if t.has("flag_texts") and not t.has("requires_flag"):
+			_err("대화 마커 ATT %d: flag_texts가 있는데 requires_flag가 없다" % att)
 		for tk: String in texts:
 			if not _dialogue.has(tk):
 				_err("대화 마커 ATT %d가 쓰는 대사 키 %s가 dialogue.json에 없음" % [att, tk])

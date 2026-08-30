@@ -41,8 +41,26 @@ static func find(attr: int) -> Dictionary:
 	return _targets.get(attr, {})
 
 
+## 지금 이 ATT에 말을 걸 수 있는가. **표에 있다는 것만으로는 부족하다** —
+## 조건 전에는 아예 말이 없는 대상이 있어서(원작 `Talk_ELIN_F`에 else가 없다),
+## 그때 프롬프트만 뜨고 눌러도 아무 일이 없으면 고장으로 읽힌다.
 static func has(attr: int) -> bool:
-	return not find(attr).is_empty()
+	var t := find(attr)
+	return not t.is_empty() and not _texts_now(t).is_empty()
+
+
+## 지금 상태에서 나올 대사 목록(카운터를 건드리지 않는다).
+##
+## 조건부 대상은 원작 `v_Howa` 분기의 자리다 — 플래그가 서면 다른(또는 비로소 있는)
+## 대사가 나온다. 원작에서 조건 전 대사가 있던 대상(FELIN)은 `texts`가 그 대사이고,
+## 없던 대상(ELIN)은 `texts`가 비어 있다.
+static func _texts_now(t: Dictionary) -> Array:
+	var flag := str(t.get("requires_flag", ""))
+	if not flag.is_empty() and GameState.has_flag(flag):
+		var unlocked: Array = t.get("flag_texts", [])
+		if not unlocked.is_empty():
+			return unlocked
+	return t.get("texts", [])
 
 
 ## 이 대상에게 지금 말을 걸면 나올 대사 스텝. 반복 횟수를 여기서 센다.
@@ -53,9 +71,12 @@ static func steps_for(attr: int) -> Array:
 	var t := find(attr)
 	if t.is_empty():
 		return []
+	var texts := _texts_now(t)
+	if texts.is_empty():
+		return []
+
 	var count := int(_talk_counts.get(attr, 0)) + 1
 	_talk_counts[attr] = count
-	var texts: Array = t.get("texts", [])
 	var after := int(t.get("repeat_after", 0))
 	if after > 0 and count % after == 0:
 		var alt: Array = t.get("repeat_texts", [])
