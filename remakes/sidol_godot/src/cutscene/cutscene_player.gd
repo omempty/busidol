@@ -50,6 +50,17 @@ func setup(p_field: Node2D) -> void:
 	# 있었다. 진행 입력은 아래 _unhandled_input이 받는다.
 	_box.auto_advance = false
 	add_child(_box)
+	# **대사창은 키아트보다 위에 그린다.** DialogueBox는 제 CanvasLayer(30)를 쓰는데
+	# 컷신은 40이라, 화면을 꽉 채우는 불투명 키아트가 대사창을 통째로 덮었다 —
+	# 오프닝(번개 치는 비 그림)에서 대사·진행 표시가 하나도 안 보여 멈춘 것처럼
+	# 보였다(2026-08-30 유저 신고, 실측 스크린샷으로 확인). move_child는 같은
+	# 레이어 안에서만 순서를 바꾸므로 레이어 번호 자체를 올려야 한다.
+	#
+	# 그리는 순서 계약: 키아트 < 암전막 < 선택지  (모두 이 노드의 레이어 40)
+	#                  < 대사창 41 < 미니게임 45.
+	# 암전막이 대사창을 못 덮지만 둘은 동시에 뜨지 않는다 — op은 순차 실행이고
+	# 대사 op은 _box.finished까지 await 한다.
+	_box.layer = layer + 1
 
 	# 키아트(일러스트) 판 — 대사창보다 **아래**에 있어야 글자를 가리지 않는다.
 	_illustration = TextureRect.new()
@@ -62,6 +73,10 @@ func setup(p_field: Node2D) -> void:
 	add_child(_illustration)
 	move_child(_illustration, 0)
 
+	# 암전 막 — **이 레이어 안에서** 키아트 뒤 자식이라 그림 위, 선택지(실행 중 마지막
+	# 자식으로 붙는다) 아래다. 별도 CanvasLayer로 빼지 말 것: 그러면 컷신이 끝나며
+	# 거는 visible=false가 안 먹어 중단 경로(craft 재료 부족 등)에서 검은 화면이
+	# 그대로 남고, 암전 중 선택지도 막 뒤로 숨는다.
 	_overlay = ColorRect.new()
 	_overlay.color = Color(0, 0, 0, 0)
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
