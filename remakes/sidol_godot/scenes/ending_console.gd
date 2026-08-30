@@ -5,7 +5,7 @@ extends Control
 
 const REPORT_PATH := "res://data/ending_report.json"
 const NEXT_SCENE := "res://scenes/main.tscn"
-const CHARS_PER_SEC := 60.0
+const CHARS_PER_SEC := 60.0  # 설정 '대사 속도' 배율 전 기준값(04_uiux §1.5)
 const LINE_PAUSE := 0.12
 
 var _report := {}
@@ -75,7 +75,13 @@ func _str(v: Variant) -> String:
 func _process(delta: float) -> void:
 	if _done or _full_text.is_empty():
 		return
-	_revealed = minf(_revealed + delta * CHARS_PER_SEC, float(_full_text.length()))
+	# 엔딩 리포트도 대화창과 **같은 속도 설정**을 따른다 — 한 게임 안에서 글자가
+	# 흐르는 속도가 두 가지면 설정을 바꾼 사람이 여기서 다시 답답해진다.
+	if SettingsManager.is_text_instant():
+		_revealed = float(_full_text.length())
+	else:
+		var cps := CHARS_PER_SEC * SettingsManager.text_speed_factor()
+		_revealed = minf(_revealed + delta * cps, float(_full_text.length()))
 	var chars := int(_revealed)
 	var cursor := "▌" if fmod(Time.get_ticks_msec() / 400.0, 2.0) < 1.0 else " "
 	_text_label.text = _full_text.substr(0, chars) + cursor

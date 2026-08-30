@@ -22,6 +22,11 @@ const KEYART_DIR := "res://assets/keyart/"
 ## 텅 빈다. 생성기: tools/dev/make_keyart_fallback.py — 진짜 납품이 오면 그쪽이 이긴다.
 const KEYART_FALLBACK_DIR := "res://assets/keyart/_fallback/"
 const SHAKE_STEP := 0.05
+## 레터박스(04_uiux §6 "스크린샷/녹화 친화") — 컷신 동안 상하 띠를 넣어 화면을 극장비로
+## 자른다. 키아트가 뷰포트를 꽉 채우는 구조라(2026-08-30 결함의 배경) 띠가 없으면
+## 필드와 컷신이 같은 프레임으로 보인다. 띠 위에 대사창이 앉아 자리도 정리된다.
+const LETTERBOX_RATIO := 0.11  # 위·아래 각각 화면 높이의 비율
+const LETTERBOX_TIME := 0.35
 
 var _steps: Array = []
 var _idx := 0
@@ -34,6 +39,8 @@ var _cutscene_id := &""
 var _box: DialogueBox
 var _overlay: ColorRect
 var _illustration: TextureRect
+var _letterbox_top: ColorRect
+var _letterbox_bottom: ColorRect
 var _field: Node2D
 
 
@@ -77,11 +84,48 @@ func setup(p_field: Node2D) -> void:
 	# 자식으로 붙는다) 아래다. 별도 CanvasLayer로 빼지 말 것: 그러면 컷신이 끝나며
 	# 거는 visible=false가 안 먹어 중단 경로(craft 재료 부족 등)에서 검은 화면이
 	# 그대로 남고, 암전 중 선택지도 막 뒤로 숨는다.
+	# 레터박스 띠 — 키아트 위, 암전막 아래. 암전 때는 띠도 같이 묻혀야 자연스럽다.
+	_letterbox_top = _make_bar(Control.PRESET_TOP_WIDE)
+	_letterbox_bottom = _make_bar(Control.PRESET_BOTTOM_WIDE)
+
 	_overlay = ColorRect.new()
 	_overlay.color = Color(0, 0, 0, 0)
 	_overlay.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_overlay)
+
+
+## 상·하 띠 한 장. 높이는 뷰포트가 정해지는 시점에 _set_letterbox가 채운다.
+func _make_bar(preset: int) -> ColorRect:
+	var bar := ColorRect.new()
+	bar.color = Color(0, 0, 0, 1)
+	bar.set_anchors_preset(preset as Control.LayoutPreset)
+	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bar.custom_minimum_size = Vector2(0, 0)
+	bar.size.y = 0.0
+	add_child(bar)
+	return bar
+
+
+## 띠 높이를 h로 맞춘다(0이면 사라진다). 앵커가 상·하단이라 offset으로 키운다.
+func _set_letterbox(h: float) -> void:
+	if _letterbox_top == null:
+		return
+	_letterbox_top.offset_bottom = h
+	_letterbox_bottom.offset_top = -h
+
+
+func _tween_letterbox(show_bars: bool) -> void:
+	# setup() 없이 play()만 부르는 쓰임이 있다(tests/smoke_choice_test). 그때는 띠도
+	# 대사창도 없으므로 조용히 건너뛴다 — 여기서 죽으면 그 경로가 통째로 막힌다.
+	if _letterbox_top == null:
+		return
+	var vp := get_viewport()
+	var height := float(vp.get_visible_rect().size.y) if vp != null else 540.0
+	var target := height * LETTERBOX_RATIO if show_bars else 0.0
+	var tw := create_tween()
+	tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tw.tween_method(_set_letterbox, _letterbox_top.offset_bottom, target, LETTERBOX_TIME)
 
 
 func play(config: Dictionary) -> void:
@@ -94,6 +138,7 @@ func play(config: Dictionary) -> void:
 	_running = true
 	_handoff = false
 	visible = true
+	_tween_letterbox(true)
 	_run()
 
 
@@ -102,6 +147,14 @@ func play(config: Dictionary) -> void:
 ## 받아 소비하므로(자식이 먼저다) 여기까지 오지 않는다.
 func _unhandled_input(event: InputEvent) -> void:
 	if _box == null or not _box.is_open:
+		return
+	# 대화 로그 — 필드와 같은 키(ENTER)로 연다. 로그가 떠 있는 동안 진행 입력은
+	# 로그 창이 먼저 받아 소비하므로 여기까지 오지 않는다.
+	if event.is_action_pressed(&"menu"):
+		_box.toggle_log()
+		var vp0 := get_viewport()
+		if vp0 != null:
+			vp0.set_input_as_handled()
 		return
 	if event.is_action_pressed(&"interact") or event.is_action_pressed(&"cancel"):
 		_box.advance()
@@ -113,6 +166,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func stop() -> void:
 	_running = false
+	_set_letterbox(0.0)
 	visible = false
 
 
@@ -129,6 +183,10 @@ func _run() -> void:
 	# 재료 없이 그 자리를 조사한 플레이어는 게임이 멈춘 것으로 본다
 	# (2026-08-29 자동 주행이 f1·f2에서 「진행 정지」로 실측).
 	_running = false
+	# 띠는 **거두는 것을 보여 준다** — 컷신이 끝났다는 신호라 즉시 지우면 뚝 끊긴다.
+	# 이 노드 자체는 visible=false로 내려가므로 띠도 같이 사라지고, 다음 재생 때
+	# _tween_letterbox(true)가 0에서 다시 연다.
+	_set_letterbox(0.0)
 	visible = false
 	_clear_illustration()
 	finished.emit(_cutscene_id)

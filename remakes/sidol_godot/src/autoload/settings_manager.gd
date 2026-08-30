@@ -16,6 +16,9 @@ enum ScreenMode { WINDOWED, FULLSCREEN }
 enum Difficulty { EASY, NORMAL, HARD }
 ## 표시 언어 — UI 문자열은 data/l10n/ui.csv 한 곳에서 온다(04_uiux §6).
 enum Language { KO, EN }
+## 대사 타이핑 속도(04_uiux §1.2) — 대화창과 엔딩 콘솔이 같은 배율을 쓴다.
+## INSTANT는 타이핑 없이 한 번에(재플레이용).
+enum TextSpeed { SLOW, NORMAL, FAST, INSTANT }
 
 const SETTINGS_PATH := "user://settings.json"
 const BUSES: Array[StringName] = [&"Master", &"BGM", &"SFX", &"Voice"]
@@ -30,6 +33,13 @@ const TEXT_SCALE := {
 const DIFFICULTY_KEYS := ["easy", "normal", "hard"]
 ## 언어 enum → 로케일 코드. data/l10n/ui.csv의 열 이름과 1:1.
 const LANGUAGE_CODES := ["ko", "en"]
+## 타이핑 속도 → 초당 글자 수 배율. INSTANT는 배율이 아니라 분기로 처리한다.
+const TEXT_SPEED_SCALE := {
+	TextSpeed.SLOW: 0.6,
+	TextSpeed.NORMAL: 1.0,
+	TextSpeed.FAST: 1.8,
+	TextSpeed.INSTANT: 1.8,
+}
 const ENCOUNTER_SCALE := {
 	EncounterDensity.NONE: 0.0,
 	EncounterDensity.LOW: 0.5,
@@ -46,6 +56,12 @@ var screen_mode: ScreenMode = ScreenMode.WINDOWED
 var vsync := true
 var difficulty: Difficulty = Difficulty.NORMAL
 var language: Language = Language.KO
+var text_speed: TextSpeed = TextSpeed.NORMAL
+## 대사 자동 진행(오토플레이) — **기본 꺼짐.** 2026-08-29에 "컷신 대사도 사람이 넘긴다"로
+## 정한 동작이 기본값이고, 이 설정은 그것을 되돌릴 수 있게만 한다(04_uiux §1.2).
+var dialogue_auto := false
+## Q9 색각 대응 — HP 게이지에 색과 **함께** 무늬를 넣는다(색만으로 구분하지 않는다).
+var colorblind_patterns := false
 var volumes := {}  # StringName -> float
 
 
@@ -74,6 +90,15 @@ func encounter_count(base_count: int) -> int:
 
 ## 전투 연출 배수 — 안무·트윈 지속시간을 나누는 배속.
 ## 타이밍 링(입력 창)은 공정성을 위해 배속 제외. 원작 WVISUAL/SPEED 대체.
+## 타이핑 속도 배율. 즉시(INSTANT)는 is_text_instant()로 따로 묻는다.
+func text_speed_factor() -> float:
+	return float(TEXT_SPEED_SCALE.get(text_speed, 1.0))
+
+
+func is_text_instant() -> bool:
+	return text_speed == TextSpeed.INSTANT
+
+
 func battle_speed_factor() -> float:
 	match effect_speed:
 		EffectSpeed.FAST:
@@ -138,6 +163,12 @@ func load_settings() -> void:
 	difficulty = df_v
 	var lang_v: Variant = clampi(int(data.get("language", int(language))), 0, int(Language.EN))
 	language = lang_v
+	var tsp_v: Variant = clampi(
+		int(data.get("text_speed", int(text_speed))), 0, int(TextSpeed.INSTANT)
+	)
+	text_speed = tsp_v
+	dialogue_auto = bool(data.get("dialogue_auto", false))
+	colorblind_patterns = bool(data.get("colorblind_patterns", false))
 	_apply_all()
 
 
@@ -155,6 +186,9 @@ func save_settings() -> void:
 	data["vsync"] = vsync
 	data["difficulty"] = int(difficulty)
 	data["language"] = int(language)
+	data["text_speed"] = int(text_speed)
+	data["dialogue_auto"] = dialogue_auto
+	data["colorblind_patterns"] = colorblind_patterns
 	var fh := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if fh == null:
 		push_error("settings.json 저장 실패: %s" % FileAccess.get_open_error())

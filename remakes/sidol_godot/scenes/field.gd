@@ -175,6 +175,12 @@ func _physics_process(_delta: float) -> void:
 
 	# 대화 중: 입력을 박스 진행으로 중재 (단일 입력 경로)
 	if dialogue_box.is_open:
+		# 대화 중 ENTER = 대화 로그(04_uiux §1.2). 필드 메뉴는 대사가 없을 때만 뜬다.
+		if _edge(&"menu"):
+			dialogue_box.toggle_log()
+			return
+		if dialogue_box.is_log_open():
+			return  # 로그를 읽는 중 — 진행 입력은 로그 창이 받는다
 		if interact_edge or cancel_edge:
 			dialogue_box.advance()
 		return

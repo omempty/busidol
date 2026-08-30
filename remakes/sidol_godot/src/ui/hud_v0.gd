@@ -131,8 +131,7 @@ func refresh() -> void:
 	var hp := clampi(int(stats.get("hp", 0)), 0, max_hp)
 	var hp_ratio := float(hp) / float(max_hp)
 	_hp.set_value_text("%d / %d" % [hp, max_hp])
-	_hp.set_fill(HudTheme.hp_color(hp_ratio))
-	_hp.set_ratio(hp_ratio, animate)
+	_hp.set_hp(hp_ratio, animate)
 	_set_low_hp_pulse(hp_ratio < HudTheme.HP_LOW_AT and hp > 0)
 
 	var span := _exp_span(level, int(stats.get("exp", 0)))

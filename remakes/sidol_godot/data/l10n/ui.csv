@@ -155,3 +155,14 @@ UI_BATTLE_RESULT_FLEE,FLEE,FLEE
 UI_BATTLE_FLEE_FAIL,도망 실패!,Escape failed!
 UI_BATTLE_FLEE_BLOCKED,물러설 수 없다,No way out
 UI_CREDIT_CARD_LOCKED,아직 열리지 않은 후일담,Not unlocked yet
+UI_SETTINGS_TEXT_SPEED,대사 속도,Text speed
+UI_OPT_TSPEED_SLOW,느리게,Slow
+UI_OPT_TSPEED_NORMAL,보통,Normal
+UI_OPT_TSPEED_FAST,빠르게,Fast
+UI_OPT_TSPEED_INSTANT,즉시,Instant
+UI_SETTINGS_DIALOGUE_AUTO,대사 자동 진행,Auto-advance text
+UI_SETTINGS_COLORBLIND,색각 대응 무늬,Colorblind patterns
+UI_DLGLOG_TITLE,대화 로그,Dialogue log
+UI_DLGLOG_HINT,↑ ↓ 넘기기 | Enter·ESC 닫기,Up/Down scroll | Enter/ESC close
+UI_DLGLOG_EMPTY,아직 오간 말이 없다.,Nothing has been said yet.
+UI_HELP_DLGLOG,대화 로그(대화 중),Dialogue log (while talking)

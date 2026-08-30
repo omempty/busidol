@@ -13,6 +13,7 @@ const ROWS := [
 	["UI_HELP_CANCEL", "Esc / PAD B"],
 	["UI_HELP_BAG", "I / PAD Y"],
 	["UI_HELP_MAP", "M / PAD BACK"],
+	["UI_HELP_DLGLOG", "Enter / PAD START"],
 	["UI_HELP_SAVE", "UI_HELP_SAVE_DESC"],
 ]
 

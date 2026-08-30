@@ -93,6 +93,16 @@ static func outlined_label(text: String, size: int, color: Color) -> Label:
 
 
 ## HP 비율 → 게이지 색. 절반/사분의 일에서 단계적으로 경고색.
+## HP 단계 → 무늬 번호(HudGauge.Pattern과 같은 값). 색과 **같은 경계**를 쓴다 —
+## 둘이 어긋나면 색은 빨간데 무늬는 주의로 보이는 자리가 생긴다.
+static func hp_pattern(ratio: float) -> int:
+	if ratio < HP_LOW_AT:
+		return 2  # 교차 = 위험
+	if ratio < HP_WARN_AT:
+		return 1  # 사선 = 주의
+	return 0
+
+
 static func hp_color(ratio: float) -> Color:
 	if ratio < HP_LOW_AT:
 		return HP_LOW

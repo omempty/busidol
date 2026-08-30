@@ -8,7 +8,7 @@ signal finished(seq_id: StringName)
 ## `cafeteria_girl_shop`의 shop op이 아무 일도 하지 않았다.
 signal op_requested(op_name: String, args: Dictionary)
 
-const CPS := 40.0  # 초당 글자 수
+const CPS := 40.0  # 초당 글자 수(설정 배율 전 기준값)
 const INPUT_COOLDOWN := 0.05
 const AUTO_DELAY := 1.1  # auto_advance 시 타이핑 완료 후 대기(초)
 
@@ -22,6 +22,7 @@ var auto_advance := false
 var _revealed := 0.0
 var _cooldown := 0.0
 var _auto_wait := 0.0
+var _log_panel: DialogueLogPanel
 
 
 func is_typing() -> bool:
@@ -70,6 +71,11 @@ func _ready() -> void:
 
 	_apply_text_scale()
 
+	# 대화 로그 — 필드 대화창과 컷신 대사창이 각자 하나씩 갖지만 **내용은 한 저장소**다
+	# (DialogueLog가 static). 동시에 열리는 일이 없으므로 창이 둘이어도 무해하다.
+	_log_panel = DialogueLogPanel.new()
+	add_child(_log_panel)
+
 
 ## Q9 접근성 — 본문 글자 크기 설정을 이름/본문/패널 높이에 반영.
 func _apply_text_scale() -> void:
@@ -90,9 +96,26 @@ func start(p_seq_id: StringName, p_steps: Array) -> void:
 	index = 0
 	is_open = true
 	visible = true
+	# 오토플레이는 **설정이 정한다**(04_uiux §1.2). 기본은 꺼짐 — 2026-08-29에 정한
+	# "대사는 사람이 넘긴다"가 기본 동작이고, 이 설정은 그것을 되돌릴 수 있게만 한다.
+	auto_advance = SettingsManager.dialogue_auto
 	_cooldown = INPUT_COOLDOWN
 	_auto_wait = -1.0
 	_load_step()
+
+
+## 대화 로그 열기/닫기 — 진행 입력을 중재하는 쪽(Field·CutscenePlayer)이 부른다.
+func toggle_log() -> void:
+	if _log_panel == null:
+		return
+	if _log_panel.is_open():
+		_log_panel.close()
+	else:
+		_log_panel.open()
+
+
+func is_log_open() -> bool:
+	return _log_panel != null and _log_panel.is_open()
 
 
 func current_text() -> String:
@@ -100,7 +123,9 @@ func current_text() -> String:
 
 
 func advance() -> void:
-	if not is_open or _cooldown > 0.0:
+	# 로그를 읽는 동안에는 대사가 넘어가지 않는다 — 되돌려 읽으려고 연 창인데
+	# 그 사이에 진행되면 열어 둔 의미가 없다.
+	if not is_open or _cooldown > 0.0 or is_log_open():
 		return
 	var total: int = _body_label.text.length()
 	if _revealed < total:
@@ -135,9 +160,11 @@ func _load_step() -> void:
 	_name_label.add_theme_color_override("font_color", SpeakerColors.color_for(speaker))
 	_apply_portrait(step)
 	_body_label.text = Database.text(str(step["text"]))
-	_revealed = 0.0
+	DialogueLog.push(speaker, _body_label.text)
+	# 타이핑 속도 "즉시"는 처음부터 다 보여 준다(설정 §1.2).
+	_revealed = float(_body_label.text.length()) if SettingsManager.is_text_instant() else 0.0
 	_auto_wait = -1.0
-	_body_label.visible_characters = 0
+	_body_label.visible_characters = int(_revealed)
 
 
 ## 초상 적용 — step.portrait(에셋 id 직접 지정) 우선, 없으면 speaker 이름으로 조회.
@@ -159,7 +186,8 @@ func _process(delta: float) -> void:
 	var total := _body_label.text.length()
 	var typing := _revealed < total
 	if typing:
-		_revealed = minf(_revealed + CPS * delta, float(total))
+		var cps := CPS * SettingsManager.text_speed_factor()
+		_revealed = minf(_revealed + cps * delta, float(total))
 	elif auto_advance and _cooldown <= 0.0:
 		if _auto_wait < 0.0:
 			_auto_wait = AUTO_DELAY

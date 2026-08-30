@@ -98,8 +98,7 @@ func set_target(index: int) -> void:
 func _set_gauge(gauge: HudGauge, hp: int, max_hp: int) -> void:
 	var ratio := float(maxi(hp, 0)) / float(maxi(max_hp, 1))
 	gauge.set_value_text("%d / %d" % [maxi(hp, 0), max_hp])
-	gauge.set_fill(HudTheme.hp_color(ratio))
-	gauge.set_ratio(ratio)
+	gauge.set_hp(ratio)
 
 
 ## 상태이상 칩 갱신 — HP와 같은 시점에 돈다(부착·해제·턴 감소가 여기서 보인다).

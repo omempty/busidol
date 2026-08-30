@@ -24,13 +24,21 @@ const VOLUME_KEYS := [
 	"UI_SETTINGS_MASTER_VOL", "UI_SETTINGS_BGM_VOL", "UI_SETTINGS_SFX_VOL", "UI_SETTINGS_VOICE_VOL"
 ]
 const VOLUME_STEP := 0.1
-const ROW_DENSITY := 8
-const ROW_DIFFICULTY := 9
-const ROW_SCREEN := 10
-const ROW_VSYNC := 11
-const ROW_LANGUAGE := 12
-const ROW_CONTROLS := 13
-const ROW_COUNT := 14
+## 대사 타이핑 속도(§1.2) — 전투 연출 속도(SPEED_KEYS)와 **다른 축**이라 키도 나눈다.
+const TEXT_SPEED_KEYS := [
+	"UI_OPT_TSPEED_SLOW", "UI_OPT_TSPEED_NORMAL", "UI_OPT_TSPEED_FAST", "UI_OPT_TSPEED_INSTANT"
+]
+## 글자 크기·흔들림 바로 뒤에 붙인다 — 읽기·접근성 항목끼리 모여 있어야 찾는다.
+const ROW_TEXT_SPEED := 8
+const ROW_DIALOGUE_AUTO := 9
+const ROW_COLORBLIND := 10
+const ROW_DENSITY := 11
+const ROW_DIFFICULTY := 12
+const ROW_SCREEN := 13
+const ROW_VSYNC := 14
+const ROW_LANGUAGE := 15
+const ROW_CONTROLS := 16
+const ROW_COUNT := 17
 
 var _rows: Array[Label] = []
 var _values: Array[Label] = []
@@ -48,6 +56,10 @@ func _build() -> void:
 	var frame := ModalFrame.new()
 	frame.setup("UI_SETTINGS_TITLE", "UI_SETTINGS_HINT", Vector2(440, 0))
 	add_child(frame)
+	# 항목이 17행까지 늘어 기본 간격(6)으로는 패널이 540 뷰포트를 넘는다
+	# (2026-08-30 world_audit이 582px로 잡았다). 행 간격을 좁혀 담는다 —
+	# 더 늘어나면 스크롤로 바꿔야 하고, 넘치는 순간 관문이 다시 잡는다.
+	frame.body.add_theme_constant_override("separation", 1)
 
 	for i in range(ROW_COUNT):
 		var row := HBoxContainer.new()
@@ -121,6 +133,15 @@ func _adjust(dir: int) -> void:
 			SettingsManager.text_size = next_v
 		7:
 			SettingsManager.screen_shake = not SettingsManager.screen_shake
+		ROW_TEXT_SPEED:
+			var values: Array = SettingsManager.TextSpeed.values()
+			var idx: int = values.find(SettingsManager.text_speed)
+			var next_v: Variant = values[wrapi(idx + dir, 0, values.size())]
+			SettingsManager.text_speed = next_v
+		ROW_DIALOGUE_AUTO:
+			SettingsManager.dialogue_auto = not SettingsManager.dialogue_auto
+		ROW_COLORBLIND:
+			SettingsManager.colorblind_patterns = not SettingsManager.colorblind_patterns
 		ROW_DENSITY:
 			var values: Array = SettingsManager.EncounterDensity.values()
 			var idx: int = values.find(SettingsManager.encounter_density)
@@ -155,6 +176,21 @@ func _refresh() -> void:
 	_set_row(5, tr("UI_SETTINGS_ART"), tr(ART_KEYS[int(SettingsManager.art_mode)]))
 	_set_row(6, tr("UI_SETTINGS_TEXT_SIZE"), tr(TEXT_KEYS[int(SettingsManager.text_size)]))
 	_set_row(7, tr("UI_SETTINGS_SHAKE"), tr(SHAKE_KEYS[0 if SettingsManager.screen_shake else 1]))
+	_set_row(
+		ROW_TEXT_SPEED,
+		tr("UI_SETTINGS_TEXT_SPEED"),
+		tr(TEXT_SPEED_KEYS[int(SettingsManager.text_speed)])
+	)
+	_set_row(
+		ROW_DIALOGUE_AUTO,
+		tr("UI_SETTINGS_DIALOGUE_AUTO"),
+		tr(SHAKE_KEYS[0 if SettingsManager.dialogue_auto else 1])
+	)
+	_set_row(
+		ROW_COLORBLIND,
+		tr("UI_SETTINGS_COLORBLIND"),
+		tr(SHAKE_KEYS[0 if SettingsManager.colorblind_patterns else 1])
+	)
 	_set_row(
 		ROW_DENSITY,
 		tr("UI_SETTINGS_DENSITY"),

@@ -114,6 +114,7 @@ func _confirm() -> void:
 	match _index:
 		0:
 			GameState.reset()
+			DialogueLog.clear()  # 새 이야기 — 지난 판의 대사가 남으면 안 된다
 			get_tree().change_scene_to_file(FIELD_SCENE)
 		1:
 			if SaveManager.has_any_save():
@@ -137,6 +138,7 @@ func _on_load_slot(slot: int) -> void:
 	if not SaveManager.load_slot(slot):
 		push_warning("슬롯 %d 복원 실패" % slot)
 		return
+	DialogueLog.clear()  # 다른 시점으로 건너뛴다 — 이전 흐름의 대사는 무효
 	get_tree().change_scene_to_file(FIELD_SCENE)
 
 
