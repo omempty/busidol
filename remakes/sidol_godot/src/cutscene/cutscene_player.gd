@@ -101,8 +101,12 @@ func _make_bar(preset: int) -> ColorRect:
 	bar.color = Color(0, 0, 0, 1)
 	bar.set_anchors_preset(preset as Control.LayoutPreset)
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# size를 직접 건드리지 말 것 — 상·하단 앵커라 _ready 뒤에 엔진이 덮어쓰고, 그때마다
+	# "non-equal opposite anchors" 경고가 필드 진입마다 찍힌다(2026-08-30 실측).
+	# 높이는 _set_letterbox()가 offset으로만 정한다.
 	bar.custom_minimum_size = Vector2(0, 0)
-	bar.size.y = 0.0
+	bar.offset_top = 0.0
+	bar.offset_bottom = 0.0
 	add_child(bar)
 	return bar
 
