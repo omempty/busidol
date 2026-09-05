@@ -29,6 +29,7 @@ var _enemy_ids: Array[String] = []
 var _on_win_flag := ""  # 승리 시 세팅되는 시나리오 플래그 (pending_encounter에서 전달)
 
 var _ui: BattleUI
+var _pause_menu: PauseMenu
 var _busy := false
 ## 현재 지목한 적(Q/E) · 직전 행동(R 반복) — 둘 다 UI가 아니라 여기서 상태를 갖는다.
 var _target_index := 0
@@ -47,9 +48,12 @@ var _timing_cfg := {}  # skills.json timing 섹션 — 타임윈도우·보너�
 
 
 func _ready() -> void:
+	get_tree().paused = false
 	var def: Dictionary = GameState.pending_encounter
 	GameState.pending_encounter = {}
 	_on_win_flag = str(def.get("on_win_flag", ""))
+	var is_advantage := bool(def.get("advantage", false))
+	var is_ambush := bool(def.get("ambush", false))
 	_setup_combatants(def)
 	_load_skills()
 	_setup_ui()
@@ -58,8 +62,42 @@ func _ready() -> void:
 	AudioManager.play_bgm(&"bgm_boss" if _is_boss_fight() else &"bgm_battle")
 	BattleLog.clear()  # 이전 판의 줄이 남으면 첫 화면부터 거짓말이 된다
 	BattleLog.push(tr("UI_BLOG_START"), BattleLog.Kind.TURN)
+
+	if is_advantage:
+		BattleLog.push(tr("UI_BLOG_ADVANTAGE"), BattleLog.Kind.ACCENT)
+		AudioManager.play_sfx(&"impact_heavy")
+		_presenter.show_flag_pop("ADVANTAGE!", Color(1.0, 0.85, 0.2), 0)
+		for e in enemies:
+			e.break_gauge = mini(e.break_threshold - 1, e.break_gauge + 1)
+	elif is_ambush:
+		BattleLog.push(tr("UI_BLOG_AMBUSH"), BattleLog.Kind.DAMAGE)
+		AudioManager.play_sfx(&"sfx_hit_enemy")
+		_presenter.show_flag_pop("AMBUSH!", Color(1.0, 0.3, 0.3), 0)
+		controller.state = BattleController.TurnState.ENEMY_TURN
+
+	_ui.refresh_bars()
+	_sync_player_state()
 	_ui.refresh_log()
-	_ui.show_command_menu()
+
+	if is_ambush:
+		_resolve_turn()
+	else:
+		_ui.show_command_menu()
+
+
+func _sync_player_state() -> void:
+	if player_combatant != null:
+		var ratio := float(player_combatant.hp) / float(maxi(player_combatant.max_hp, 1))
+		var is_low := ratio <= 0.3
+		if _presenter != null:
+			_presenter.is_player_low_hp = is_low
+		AudioManager.set_low_hp_warning(is_low)
+
+
+func _check_break_chance_cue(enemy: Combatant) -> void:
+	if enemy != null and not enemy.is_down():
+		if enemy.broken_turns > 0 or enemy.break_gauge >= maxi(1, enemy.break_threshold - 1):
+			AudioManager.play_break_cue()
 
 
 func _is_boss_fight() -> bool:
@@ -80,7 +118,19 @@ func _setup_ui() -> void:
 	_ui.item_selected.connect(_on_item_selected)
 	_ui.target_cycled.connect(_on_target_cycled)
 	_ui.repeat_requested.connect(_on_repeat_requested)
+	_ui.cancel_requested.connect(_on_battle_cancel)
 	_ui.set_target(_target_index)
+
+	_pause_menu = PauseMenu.new()
+	_pause_menu.allow_save = false  # 전투 중 수동 저장은 방지
+	_pause_menu.can_open_on_cancel = false  # 전투 중에는 BattleUI가 cancel을 중재
+	_pause_menu.layer = 80
+	add_child(_pause_menu)
+
+
+func _on_battle_cancel() -> void:
+	if not _busy and not (_dodge != null and _dodge.is_active):
+		_pause_menu.toggle()
 
 
 ## 연출 계층 구성 — 안무 실행기와 프리젠터를 바인딩
@@ -141,6 +191,7 @@ func _on_target_cycled(direction: int) -> void:
 			_target_index = idx
 			_ui.set_target(idx)
 			AudioManager.play_sfx(&"sfx_menu_move")
+			_check_break_chance_cue(enemies[idx])
 			return
 
 
@@ -181,6 +232,13 @@ func _on_command(cmd_id: StringName) -> void:
 			player_combatant.attach_effect(
 				{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50}
 			)
+			var heal_amount := maxi(2, int(player_combatant.max_hp * 0.06))
+			var actual_heal := player_combatant.heal(heal_amount)
+			if actual_heal > 0:
+				_presenter.show_player_heal(actual_heal)
+			AudioManager.play_sfx(&"cast_shield")
+			_presenter.show_player_note(tr("UI_BLOG_GUARD"))
+			_ui.refresh_bars()
 			_end_player_defend()
 		&"item":
 			_ui.show_item_menu()
@@ -214,12 +272,14 @@ func _try_flee() -> void:
 
 func _on_skill_selected(skill: Dictionary) -> void:
 	_last_action = {"kind": &"skill", "skill": skill}
-	_log(tr("UI_BLOG_ACTION") % str(skill.get("name_ko", skill.get("id", ""))))
+	var skill_name := str(skill.get("display_key", skill.get("name_ko", skill.get("id", ""))))
+	_log(tr("UI_BLOG_ACTION") % skill_name)
 	var move_id := StringName(str(skill.get("choreography_id", "atk_flint_basic")))
 	_begin_player_action(
 		{
 			"type": &"skill",
 			"skill": skill,
+			"target": _first_alive_enemy(),
 			"ap": player_combatant.attack_stat(),
 		},
 		move_id
@@ -243,6 +303,7 @@ func _on_item_selected(item_def: Dictionary) -> void:
 	if not results.is_empty():
 		_presenter.show_player_note(" · ".join(results))
 	_ui.refresh_bars()
+	_sync_player_state()
 	_end_player_defend()
 
 
@@ -297,13 +358,39 @@ func _on_choreo_damage_frame() -> void:
 	var idx := int(pop.get("enemy_index", 0))
 	_presenter.show_damage_number(int(pop["amount"]), false, _pending_element, idx)
 	var who := enemies[idx].display_name if idx < enemies.size() else "?"
-	_log(tr("UI_BLOG_HIT") % [who, int(pop["amount"])], BattleLog.Kind.DAMAGE)
-	if bool(pop.get("weak", false)):
-		_presenter.show_flag_pop("WEAK!", Color(1.0, 0.92, 0.35), idx)
-		_log(tr("UI_BLOG_WEAK") % who, BattleLog.Kind.ACCENT)
-	if bool(pop.get("break", false)):
+	var broke := bool(pop.get("break", false))
+	var crit := bool(pop.get("crit", false))
+	var weak := bool(pop.get("weak", false))
+	var just := bool(pop.get("just", false))
+
+	if broke:
 		_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
 		_log(tr("UI_BLOG_BREAK") % who, BattleLog.Kind.ACCENT)
+		AudioManager.play_sfx(&"sfx_explosion")
+		AudioManager.play_break_shatter()
+		if SettingsManager.screen_shake:
+			_presenter.play_screen_kf({"shake": 7.0, "flash": "#ffffff", "a": 0.3})
+	elif crit:
+		_presenter.show_flag_pop("CRITICAL!", Color(1.0, 0.85, 0.2), idx)
+		_log(tr("UI_BLOG_CRIT") % [who, int(pop["amount"])], BattleLog.Kind.ACCENT)
+		AudioManager.play_sfx(&"impact_heavy")
+		if SettingsManager.screen_shake:
+			_presenter.play_screen_kf({"shake": 5.0, "flash": "#ffe066", "a": 0.2})
+	elif weak:
+		_presenter.show_flag_pop("WEAK!", Color(1.0, 0.92, 0.35), idx)
+		_log(tr("UI_BLOG_WEAK") % who, BattleLog.Kind.ACCENT)
+		AudioManager.play_sfx(&"impact_heavy")
+		if SettingsManager.screen_shake:
+			_presenter.play_screen_kf({"shake": 4.0})
+	elif just:
+		_presenter.show_flag_pop("JUST!", Color(0.4, 1.0, 0.5), idx)
+		_log(tr("UI_BLOG_HIT") % [who, int(pop["amount"])], BattleLog.Kind.DAMAGE)
+		AudioManager.play_sfx(&"impact_light")
+		if SettingsManager.screen_shake:
+			_presenter.play_screen_kf({"shake": 2.5})
+	else:
+		_log(tr("UI_BLOG_HIT") % [who, int(pop["amount"])], BattleLog.Kind.DAMAGE)
+		AudioManager.play_sfx(&"sfx_hit_enemy")
 	if idx < _presenter.enemy_sprites.size():
 		_presenter.hurt_flash(_presenter.enemy_sprites[idx])
 	_presenter.hitstop()
@@ -377,6 +464,7 @@ func _resolve_turn() -> void:
 		return
 
 	_ui.refresh_bars()
+	_sync_player_state()
 	_busy = false
 	# 커맨드 창을 열기 전에 판정 상태도 플레이어 차례로 돌려놓는다 —
 	# 이걸 빼먹으면 창은 열리는데 명령이 무시된다(2026-08-28 실측 버그).
@@ -384,6 +472,8 @@ func _resolve_turn() -> void:
 	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
 	_log(tr("UI_BLOG_TURN") % (controller.turn_count + 1), BattleLog.Kind.TURN)
 	_ui.show_command_menu()
+	if _target_index >= 0 and _target_index < enemies.size():
+		_check_break_chance_cue(enemies[_target_index])
 
 
 func _end_player_defend() -> void:
@@ -393,6 +483,7 @@ func _end_player_defend() -> void:
 		BattleEnemyPhase.regular_attack(attacker, player_combatant, _presenter)
 	_tick_effects()
 	_ui.refresh_bars()
+	_sync_player_state()
 
 	if player_combatant.is_down():
 		_show_result(&"lose")
@@ -413,7 +504,12 @@ func _tick_effects() -> void:
 		c.tick_effects()
 
 
+func _exit_tree() -> void:
+	AudioManager.set_low_hp_warning(false)
+
+
 func _show_result(result: StringName) -> void:
+	AudioManager.set_low_hp_warning(false)
 	_busy = true
 	AudioManager.play_voice(StringName(str(RESULT_VOICES.get(result, ""))))
 	_log(

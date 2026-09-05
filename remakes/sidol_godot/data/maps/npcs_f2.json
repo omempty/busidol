@@ -10,7 +10,20 @@
         10,
         9
       ],
-      "sequence_id": "npc_girl_rescue",
+      "sequence_id": "f2_rescue_girl",
+      "repeat_sequence_id": [
+        "f2_rescue_girl_repeat_1",
+        "f2_rescue_girl_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "f2_rescue_girl_f2",
+          "repeat_sequence_id": "f2_rescue_girl_f2_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 1,
       "tint": [
         1.0,
         0.9,
@@ -19,13 +32,31 @@
     },
     {
       "id": "nothing_man",
-      "name": "아무 도움 안 되는 사람",
+      "name": "자칭 쓸모없는 복학생",
       "_comment": "옛 좌표 (15,10)은 몸이 안 들어갔다 (cell_probe f2 실측: 설 수 있고 조사도 된다). 옛 좌표 [15, 10]",
       "pos": [
         15,
         8
       ],
       "sequence_id": "nothing_man",
+      "repeat_sequence_id": [
+        "nothing_man_repeat_1",
+        "nothing_man_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F3_PALIN",
+          "sequence_id": "nothing_man_f3",
+          "repeat_sequence_id": "nothing_man_f3_repeat"
+        },
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "nothing_man_f2",
+          "repeat_sequence_id": "nothing_man_f2_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 1,
       "tint": [
         0.7,
         0.7,
@@ -41,6 +72,23 @@
         23
       ],
       "sequence_id": "f2_dev1",
+      "repeat_sequence_id": [
+        "f2_dev1_repeat_1",
+        "f2_dev1_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F0_DISK",
+          "sequence_id": "f2_dev1_f0"
+        },
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "f2_dev1_f2",
+          "repeat_sequence_id": "f2_dev1_f2_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 0,
       "tint": [
         0.9,
         1.0,
@@ -56,6 +104,16 @@
         26
       ],
       "sequence_id": "f2_dev2",
+      "repeat_sequence_id": "f2_dev2_repeat",
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "f2_dev2_f2",
+          "repeat_sequence_id": "f2_dev2_f2_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 0,
       "tint": [
         0.9,
         0.9,

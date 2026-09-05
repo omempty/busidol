@@ -41,6 +41,7 @@ const BATTLE_PLAYER_CELL_PX := 96.0
 var _idle_clock := 0.0
 
 var target_index := 0  ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
+var is_player_low_hp := false  ## 빈사 상태 여부 — 호흡 연출(헐떡임 가속) 연동
 
 var player_sprite: Sprite2D
 var enemy_sprites: Array[Sprite2D] = []
@@ -92,8 +93,11 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 	var rs := maxf(_player_render_scale(), 0.01)
 	player_sprite.scale = Vector2.ONE * (BATTLE_PLAYER_CELL_PX / (float(cs.x) * rs))
 	player_sprite.set_meta(&"base_pos", player_sprite.position)
+	player_sprite.set_meta(&"base_scale", player_sprite.scale)
+	player_sprite.set_meta(&"phase", 0.0)
 	_root.add_child(player_sprite)
 	_attach_ground_shadow(player_sprite)
+	_face_combat_idle(player_sprite)
 
 	for i in enemy_ids.size():
 		var es := Sprite2D.new()
@@ -122,9 +126,12 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 		es.position = Vector2(600 + i * 100, 180)
 		es.scale = Vector2.ONE * node_scale
 		es.set_meta(&"base_pos", es.position)
+		es.set_meta(&"base_scale", es.scale)
+		es.set_meta(&"phase", float(i + 1) * 1.35)
 		_root.add_child(es)
 		_attach_ground_shadow(es)
 		enemy_sprites.append(es)
+		_face_combat_idle(es)
 		_slide_in(es, 1.0)  # 등장 — 화면 밖에서 미끄러져 들어온다(전투 시작의 박진감)
 	if player_sprite != null:
 		_slide_in(player_sprite, -1.0)
@@ -430,14 +437,22 @@ func play_sprite_kf(kf: Dictionary) -> void:
 		Vector2(float(pos_arr[0]), float(pos_arr[1])) if pos_arr.size() >= 2 else Vector2.ZERO
 	)
 	var dur := maxf(float(kf.get("dur", 0.12)), 0.01) / SettingsManager.battle_speed_factor()
-	# 시트에 이름 있는 행이 있으면 그 동작을 재생하고, 없으면 위치 트윈만으로 간다.
+	# 시트에 이름 있는 행이 있으면 그 동작을 재생하고, 없으면 타겟 방향 보행 행으로 전환
 	var anim_name := str(kf.get("anim", ""))
 	if anim_name in ["rush", "attack"]:
 		var actor_id := "" if spr == player_sprite else _sprite_asset_id(spr)
 		if play_anim(spr, "attack", actor_id):
 			spawn_afterimage(spr, -1.0 if spr == player_sprite else 1.0)
-		elif off.length() > 4.0:
-			spawn_afterimage(spr, -1.0 if spr == player_sprite else 1.0)
+		else:
+			# attack 애니가 없으면 공격 대상 방향으로 보행 행을 세워 응시
+			var dir_anim := "walk_right" if spr == player_sprite else "walk_left"
+			if not play_anim(spr, dir_anim, actor_id):
+				if spr != player_sprite:
+					spr.flip_h = true
+			if off.length() > 4.0:
+				spawn_afterimage(spr, -1.0 if spr == player_sprite else 1.0)
+	elif anim_name == "idle" or (off == Vector2.ZERO and not anim_name in ["rush", "attack"]):
+		_face_combat_idle(spr)
 	var tw := spr.create_tween()
 	(
 		tw
@@ -455,7 +470,8 @@ func play_fx_kf(kf: Dictionary) -> void:
 		return
 	var fx_id := str(kf.get("effect", "hit_spark"))
 	if not _play_effect_sheet(fx_id, anchor, kf):
-		_spawn_spark(anchor.position)
+		var target_pos := anchor.position + Vector2(0, float(kf.get("offset_y", -8)))
+		_spawn_procedural_fx(fx_id, target_pos, kf)
 
 
 ## 시트 이펙트 재생 시도. 반환 false = 미납품(폴백하라).
@@ -664,15 +680,16 @@ func _process(delta: float) -> void:
 	elif _was_shaken:
 		_root.position = _root_base
 		_was_shaken = false
-	# idle 프레임 순환 — 정지 1프레임 해소(행0 정면 2프레임 토글)
+	# idle 프레임 순환 — 정지 1프레임 해소 및 대치 호흡(헐떡임) 연출
 	_idle_clock += delta
 	_apply_anim_frame(int(_idle_clock * IDLE_FPS) % 2)
+	_apply_idle_breathing(_idle_clock)
 	_advance_effects(delta)
 	_advance_cuts(delta)
 	_advance_anims(delta)
 
 
-## 애니 메타 보유 스프라이트의 정면 프레임 순환
+## 애니 메타 보유 스프라이트의 대치 프레임 순환
 func _apply_anim_frame(frame: int) -> void:
 	for spr: Sprite2D in ([player_sprite] as Array[Sprite2D]) + enemy_sprites:
 		if spr == null or not is_instance_valid(spr) or not spr.has_meta(&"anim_cell"):
@@ -683,7 +700,35 @@ func _apply_anim_frame(frame: int) -> void:
 		if at == null:
 			continue
 		var cell: Vector2i = spr.get_meta(&"anim_cell")
+		var idle_row: int = int(spr.get_meta(&"idle_row", 0))
 		at.region.position.x = frame * float(cell.x)
+		at.region.position.y = idle_row * float(cell.y)
+
+
+## 전투 중 대치 자세 — 좌측 플레이어는 우측(적)을 보고, 우측 적은 좌측(플레이어)을 본다.
+func _face_combat_idle(spr: Sprite2D) -> void:
+	if spr == null or not is_instance_valid(spr) or not spr.has_meta(&"anim_cell"):
+		return
+	var at := spr.texture as AtlasTexture
+	if at == null:
+		return
+	var cell: Vector2i = spr.get_meta(&"anim_cell")
+	var meta := _sheet_meta(spr, "" if spr == player_sprite else _sprite_asset_id(spr))
+	var anims: Dictionary = meta.get("animations", {})
+	if spr == player_sprite:
+		spr.flip_h = false
+		if anims.has("walk_right"):
+			var row := int(anims["walk_right"].get("row", 3))
+			spr.set_meta(&"idle_row", row)
+			at.region.position.y = float(row * cell.y)
+	else:
+		if anims.has("walk_left"):
+			var row := int(anims["walk_left"].get("row", 2))
+			spr.set_meta(&"idle_row", row)
+			at.region.position.y = float(row * cell.y)
+			spr.flip_h = false
+		else:
+			spr.flip_h = true
 
 
 ## 스프라이트 → 종 id(적만). 시트 메타 조회에 쓴다.
@@ -708,9 +753,52 @@ func _actor_sprite(actor_id: String) -> Sprite2D:
 
 func _reset_sprites() -> void:
 	for spr: Sprite2D in ([player_sprite] as Array[Sprite2D]) + enemy_sprites:
-		if spr != null and is_instance_valid(spr) and spr.has_meta(&"base_pos"):
-			spr.position = spr.get_meta(&"base_pos")
+		if spr != null and is_instance_valid(spr):
+			if spr.has_meta(&"base_pos"):
+				spr.position = spr.get_meta(&"base_pos")
+			if spr.has_meta(&"base_scale"):
+				spr.scale = spr.get_meta(&"base_scale")
 			spr.modulate = Color.WHITE
+
+
+## 대치 중 유기적인 호흡(헐떡임) 연출 — 정지된 도트에 긴장감 부여
+func _apply_idle_breathing(clock: float) -> void:
+	var list: Array[Sprite2D] = []
+	if player_sprite != null and is_instance_valid(player_sprite):
+		list.append(player_sprite)
+	for es in enemy_sprites:
+		if es != null and is_instance_valid(es):
+			list.append(es)
+
+	for spr in list:
+		if not spr.has_meta(&"base_pos") or not spr.has_meta(&"base_scale"):
+			continue
+		if _is_animating(spr):
+			continue
+		var base_pos: Vector2 = spr.get_meta(&"base_pos")
+		var base_scale: Vector2 = spr.get_meta(&"base_scale")
+		# 이동 트윈 또는 큰 변위 중에는 호흡 애니메이션 억제
+		if spr.position.distance_to(base_pos) > 5.0:
+			continue
+
+		var is_p := spr == player_sprite
+		var phase: float = float(spr.get_meta(&"phase", 0.0))
+		var speed: float = 3.6
+		var amp_y: float = 1.8
+		var stretch_y: float = 0.024
+		var squash_x: float = 0.014
+
+		if is_p and is_player_low_hp:
+			# 빈사(HP 30% 이하): 헐떡임 주기 가속 및 상하 진폭 강화
+			speed = 7.0
+			amp_y = 2.6
+			stretch_y = 0.045
+			squash_x = 0.025
+
+		var s := sin(clock * speed + phase)
+		spr.position.y = base_pos.y + s * amp_y
+		spr.scale.y = base_scale.y * (1.0 + s * stretch_y)
+		spr.scale.x = base_scale.x * (1.0 - s * squash_x)
 
 
 func _pop_position(on_player: bool, enemy_index: int, font_size: int) -> Vector2:
@@ -739,6 +827,277 @@ func _spawn_spark(at: Vector2) -> void:
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.8).timeout.connect(p.queue_free)
+
+
+## 절차적 전투 VFX 디스패처 — 물리 베기 아크, 화염 폭발, 번개 스트라이크, 대폭발, 실드
+func _spawn_procedural_fx(fx_id: String, at: Vector2, kf: Dictionary) -> void:
+	var scale_mult := float(kf.get("scale", 1.0))
+	match fx_id:
+		"hit_spark":
+			_spawn_slash_arc_fx(at, scale_mult)
+		"flame_burst":
+			_spawn_flame_burst_fx(at, scale_mult)
+		"volt_arc":
+			_spawn_volt_arc_fx(at, scale_mult)
+		"blast":
+			_spawn_blast_fx(at, scale_mult)
+		"shield_up":
+			_spawn_shield_up_fx(at, scale_mult)
+		_:
+			_spawn_spark(at)
+
+
+## 물리 베기 아크 & 타격 스파크 (Physical Slash Arc)
+func _spawn_slash_arc_fx(at: Vector2, scale_mult: float = 1.0) -> void:
+	var slash := Line2D.new()
+	slash.width = 6.0 * scale_mult
+	slash.default_color = Color(1.0, 0.95, 0.8, 1.0)
+	slash.begin_cap_mode = Line2D.LINE_CAP_ROUND
+	slash.end_cap_mode = Line2D.LINE_CAP_ROUND
+	slash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	slash.z_index = 60
+
+	var angle := randf_range(-0.65, -0.45)
+	var length := 48.0 * scale_mult
+	var p0 := at + Vector2(-cos(angle), -sin(angle)) * length
+	var p1 := at + Vector2(sin(angle) * 10.0, -cos(angle) * 10.0)
+	var p2 := at + Vector2(cos(angle), sin(angle)) * length
+
+	var points := PackedVector2Array()
+	var steps := 8
+	for i in range(steps + 1):
+		var t := float(i) / float(steps)
+		var pt := (1.0 - t) * (1.0 - t) * p0 + 2.0 * (1.0 - t) * t * p1 + t * t * p2
+		points.append(pt)
+	slash.points = points
+	_root.add_child(slash)
+
+	var tw := slash.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(slash, "modulate:a", 0.0, 0.13).set_ease(Tween.EASE_OUT)
+	tw.tween_property(slash, "width", 1.0, 0.13)
+	tw.finished.connect(slash.queue_free)
+
+	var cross := Line2D.new()
+	cross.width = 3.0 * scale_mult
+	cross.default_color = Color.WHITE
+	cross.z_index = 61
+	var c_len := 16.0 * scale_mult
+	cross.points = PackedVector2Array(
+		[
+			at + Vector2(-c_len, -c_len * 0.4),
+			at + Vector2(c_len, c_len * 0.4),
+			at,
+			at + Vector2(-c_len * 0.4, c_len),
+			at + Vector2(c_len * 0.4, -c_len)
+		]
+	)
+	_root.add_child(cross)
+	var c_tw := cross.create_tween()
+	c_tw.tween_property(cross, "modulate:a", 0.0, 0.08)
+	c_tw.finished.connect(cross.queue_free)
+
+	var p := CPUParticles2D.new()
+	p.position = at
+	p.one_shot = true
+	p.explosiveness = 0.95
+	p.amount = 16
+	p.lifetime = 0.24
+	p.spread = 180.0
+	p.initial_velocity_min = 80.0 * scale_mult
+	p.initial_velocity_max = 180.0 * scale_mult
+	p.scale_amount_min = 2.0 * scale_mult
+	p.scale_amount_max = 4.5 * scale_mult
+	p.color = Color(1.0, 0.88, 0.3)
+	_root.add_child(p)
+	p.emitting = true
+	get_tree().create_timer(0.6).timeout.connect(p.queue_free)
+
+
+## 화염 폭발 & 불기둥 (Flame Burst VFX)
+func _spawn_flame_burst_fx(at: Vector2, scale_mult: float = 1.0) -> void:
+	var ring := Line2D.new()
+	ring.width = 4.0 * scale_mult
+	ring.default_color = Color(1.0, 0.45, 0.08, 0.95)
+	ring.z_index = 58
+	var ring_pts := PackedVector2Array()
+	var r_segs := 16
+	for i in range(r_segs + 1):
+		var rad := (float(i) / float(r_segs)) * TAU
+		ring_pts.append(Vector2(cos(rad), sin(rad)))
+	ring.points = ring_pts
+	ring.position = at
+	ring.scale = Vector2.ONE * (12.0 * scale_mult)
+	_root.add_child(ring)
+
+	var r_tw := ring.create_tween()
+	r_tw.set_parallel(true)
+	r_tw.tween_property(ring, "scale", Vector2.ONE * (52.0 * scale_mult), 0.25).set_ease(
+		Tween.EASE_OUT
+	)
+	r_tw.tween_property(ring, "modulate:a", 0.0, 0.25).set_ease(Tween.EASE_IN)
+	r_tw.finished.connect(ring.queue_free)
+
+	var p := CPUParticles2D.new()
+	p.position = at
+	p.one_shot = true
+	p.explosiveness = 0.85
+	p.amount = 26
+	p.lifetime = 0.38
+	p.direction = Vector2(0, -1)
+	p.spread = 65.0
+	p.gravity = Vector2(0, -90.0)
+	p.initial_velocity_min = 70.0 * scale_mult
+	p.initial_velocity_max = 160.0 * scale_mult
+	p.scale_amount_min = 3.5 * scale_mult
+	p.scale_amount_max = 7.5 * scale_mult
+	p.color = Color(1.0, 0.55, 0.1)
+	_root.add_child(p)
+	p.emitting = true
+	get_tree().create_timer(0.8).timeout.connect(p.queue_free)
+
+	_do_flash(Color(1.0, 0.4, 0.05, 0.22))
+
+
+## 전격 스트라이크 & 10,000V 볼트 아크 (Volt Arc Lightning Strike)
+func _spawn_volt_arc_fx(at: Vector2, scale_mult: float = 1.0) -> void:
+	var bolt := Line2D.new()
+	bolt.width = 4.0 * scale_mult
+	bolt.default_color = Color(0.4, 0.85, 1.0, 0.95)
+	bolt.z_index = 62
+
+	var core := Line2D.new()
+	core.width = 1.8 * scale_mult
+	core.default_color = Color.WHITE
+	core.z_index = 63
+
+	var top_pt := at + Vector2(randf_range(-25, 25) * scale_mult, -120.0 * scale_mult)
+	var segs := 6
+	var pts := PackedVector2Array([top_pt])
+	for i in range(1, segs):
+		var frac := float(i) / float(segs)
+		var base := top_pt.lerp(at, frac)
+		var jitter := Vector2(randf_range(-18, 18), randf_range(-6, 6)) * scale_mult
+		pts.append(base + jitter)
+	pts.append(at)
+	bolt.points = pts
+	core.points = pts
+
+	_root.add_child(bolt)
+	_root.add_child(core)
+
+	var b_tw := bolt.create_tween()
+	b_tw.set_parallel(true)
+	b_tw.tween_property(bolt, "modulate:a", 0.0, 0.14)
+	b_tw.tween_property(core, "modulate:a", 0.0, 0.14)
+	b_tw.finished.connect(bolt.queue_free)
+	b_tw.finished.connect(core.queue_free)
+
+	var p := CPUParticles2D.new()
+	p.position = at
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.amount = 22
+	p.lifetime = 0.22
+	p.spread = 180.0
+	p.initial_velocity_min = 120.0 * scale_mult
+	p.initial_velocity_max = 240.0 * scale_mult
+	p.damping_min = 60.0
+	p.damping_max = 100.0
+	p.scale_amount_min = 2.0 * scale_mult
+	p.scale_amount_max = 4.5 * scale_mult
+	p.color = Color(0.45, 0.9, 1.0)
+	_root.add_child(p)
+	p.emitting = true
+	get_tree().create_timer(0.6).timeout.connect(p.queue_free)
+
+	_do_flash(Color(0.35, 0.75, 1.0, 0.26))
+
+
+## 필살기 대폭발 (Blast Finisher VFX)
+func _spawn_blast_fx(at: Vector2, scale_mult: float = 1.0) -> void:
+	for i in 2:
+		var ring := Line2D.new()
+		ring.width = (5.0 - float(i) * 1.5) * scale_mult
+		ring.default_color = Color(1.0, 0.85, 0.3) if i == 0 else Color(1.0, 0.3, 0.1)
+		ring.z_index = 59
+		var ring_pts := PackedVector2Array()
+		for s in 17:
+			var rad := (float(s) / 16.0) * TAU
+			ring_pts.append(Vector2(cos(rad), sin(rad)))
+		ring.points = ring_pts
+		ring.position = at
+		ring.scale = Vector2.ONE * (14.0 * scale_mult)
+		_root.add_child(ring)
+
+		var tw := ring.create_tween()
+		tw.set_parallel(true)
+		var delay := float(i) * 0.05
+		tw.tween_property(ring, "scale", Vector2.ONE * (80.0 * scale_mult), 0.30).set_delay(delay)
+		tw.tween_property(ring, "modulate:a", 0.0, 0.30).set_delay(delay)
+		tw.finished.connect(ring.queue_free)
+
+	var p := CPUParticles2D.new()
+	p.position = at
+	p.one_shot = true
+	p.explosiveness = 1.0
+	p.amount = 32
+	p.lifetime = 0.35
+	p.spread = 180.0
+	p.initial_velocity_min = 120.0 * scale_mult
+	p.initial_velocity_max = 280.0 * scale_mult
+	p.scale_amount_min = 3.0 * scale_mult
+	p.scale_amount_max = 8.0 * scale_mult
+	p.color = Color(1.0, 0.9, 0.4)
+	_root.add_child(p)
+	p.emitting = true
+	get_tree().create_timer(0.7).timeout.connect(p.queue_free)
+
+	if SettingsManager.screen_shake:
+		_shake_power = maxf(_shake_power, 8.0)
+	_do_flash(Color(1.0, 1.0, 1.0, 0.45))
+
+
+## 방어/실드 전개 (Shield Up VFX)
+func _spawn_shield_up_fx(at: Vector2, scale_mult: float = 1.0) -> void:
+	var hex := Line2D.new()
+	hex.width = 3.0 * scale_mult
+	hex.default_color = Color(0.2, 0.9, 0.8, 0.9)
+	hex.z_index = 60
+	var pts := PackedVector2Array()
+	for i in range(7):
+		var rad := (float(i) / 6.0) * TAU - PI * 0.5
+		pts.append(Vector2(cos(rad), sin(rad)))
+	hex.points = pts
+	hex.position = at + Vector2(0, -8.0 * scale_mult)
+	hex.scale = Vector2.ONE * (20.0 * scale_mult)
+	_root.add_child(hex)
+
+	var tw := hex.create_tween()
+	tw.set_parallel(true)
+	tw.tween_property(hex, "scale", Vector2.ONE * (44.0 * scale_mult), 0.35).set_ease(
+		Tween.EASE_OUT
+	)
+	tw.tween_property(hex, "modulate:a", 0.0, 0.35).set_ease(Tween.EASE_IN)
+	tw.finished.connect(hex.queue_free)
+
+	var p := CPUParticles2D.new()
+	p.position = at
+	p.one_shot = true
+	p.explosiveness = 0.7
+	p.amount = 14
+	p.lifetime = 0.40
+	p.direction = Vector2(0, -1)
+	p.spread = 45.0
+	p.gravity = Vector2(0, -60.0)
+	p.initial_velocity_min = 40.0 * scale_mult
+	p.initial_velocity_max = 90.0 * scale_mult
+	p.scale_amount_min = 2.0 * scale_mult
+	p.scale_amount_max = 4.0 * scale_mult
+	p.color = Color(0.35, 1.0, 0.85)
+	_root.add_child(p)
+	p.emitting = true
+	get_tree().create_timer(0.7).timeout.connect(p.queue_free)
 
 
 func _do_flash(col: Color) -> void:

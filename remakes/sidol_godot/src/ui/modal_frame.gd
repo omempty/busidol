@@ -19,9 +19,13 @@ const TITLE_SIZE := 18
 const HINT_SIZE := 11
 const BODY_SEPARATION := 6
 
+signal dismissed
+
 var body: VBoxContainer
 var _title: Label
 var _hint: Label
+var _close_btn: PanelContainer
+var _dim: ColorRect
 
 
 ## 뷰포트 접근은 트리에 들어온 뒤에만 가능하다 — setup()은 add_child 전에 불린다.
@@ -36,12 +40,21 @@ func setup(title_key: String, hint_key: String = "", min_size: Vector2 = Vector2
 	top_level = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
-	var dim := ColorRect.new()
-	dim.color = DIM
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	dim.name = "Dim"
-	add_child(dim)
+	_dim = ColorRect.new()
+	_dim.color = DIM
+	_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	_dim.name = "Dim"
+	_dim.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if (
+				e is InputEventMouseButton
+				and e.pressed
+				and (e.button_index == MOUSE_BUTTON_LEFT or e.button_index == MOUSE_BUTTON_RIGHT)
+			):
+				dismissed.emit()
+	)
+	add_child(_dim)
 
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_CENTER)
@@ -49,6 +62,12 @@ func setup(title_key: String, hint_key: String = "", min_size: Vector2 = Vector2
 	panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
 	panel.custom_minimum_size = min_size
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_RIGHT:
+				dismissed.emit()
+	)
 	panel.add_theme_stylebox_override("panel", HudTheme.panel(RADIUS, PAD))
 	add_child(panel)
 
@@ -56,8 +75,34 @@ func setup(title_key: String, hint_key: String = "", min_size: Vector2 = Vector2
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
 
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 8)
+	column.add_child(header)
+
 	_title = HudTheme.label(tr(title_key), TITLE_SIZE, HudTheme.ACCENT)
-	column.add_child(_title)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_title)
+
+	_close_btn = PanelContainer.new()
+	_close_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	_close_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_close_btn.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.BG_SUNKEN, 4, 8, 2))
+	var close_lbl := HudTheme.label("✕", 12, HudTheme.TEXT_MUTED)
+	close_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_close_btn.add_child(close_lbl)
+	_close_btn.mouse_entered.connect(
+		func() -> void: close_lbl.add_theme_color_override("font_color", HudTheme.HP_LOW)
+	)
+	_close_btn.mouse_exited.connect(
+		func() -> void: close_lbl.add_theme_color_override("font_color", HudTheme.TEXT_MUTED)
+	)
+	_close_btn.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				dismissed.emit()
+	)
+	header.add_child(_close_btn)
+
 	var rule := HSeparator.new()
 	rule.add_theme_stylebox_override("separator", HudTheme.rule())
 	column.add_child(rule)
@@ -88,16 +133,23 @@ func set_hint(hint_key: String) -> void:
 	_hint.visible = not _hint.text.is_empty()
 
 
+func set_close_button_visible(v: bool) -> void:
+	if _close_btn != null:
+		_close_btn.visible = v
+
+
 ## 목록 한 줄 — 커서 자리를 고정 폭으로 따로 두어 선택 시 글자가 흔들리지 않게 한다.
 ## 구판은 "> "를 텍스트 앞에 붙여, 커서가 옮겨 다닐 때마다 항목이 좌우로 튀었다.
 static func row(text: String, size: int = 16) -> HBoxContainer:
 	var line := HBoxContainer.new()
 	line.add_theme_constant_override("separation", 6)
 	var cursor := HudTheme.label("", size, HudTheme.ACCENT)
+	cursor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cursor.custom_minimum_size = Vector2(14, 0)
 	cursor.name = "Cursor"
 	line.add_child(cursor)
 	var label := HudTheme.label(text, size, HudTheme.TEXT)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.name = "Text"
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.add_child(label)

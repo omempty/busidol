@@ -1,4 +1,4 @@
-﻿<#
+<#
 관문 실행 단일 소스 — 로컬(검증실행.bat)과 CI(.github/workflows/verify.yml)가 같은 목록을 쓴다.
 목록이 두 군데로 갈라지면 "로컬은 녹색, CI는 빨강"(또는 그 반대)이 생기므로 여기 한 곳에서만 정의한다.
 
@@ -23,8 +23,10 @@ $gates = @(
     @{ name = "Smoke cutscene";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_cutscene.tscn");                   fatal = $true }
     @{ name = "Smoke dialogue";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_dialogue.tscn");                   fatal = $true }
     @{ name = "Smoke transitions";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_transitions.tscn");                fatal = $true }
+    @{ name = "Smoke All-Floors events"; args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_all_floors_events.tscn"); fatal = $true }
     @{ name = "Smoke fx/portrait";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_fx.tscn");                        fatal = $true }
     @{ name = "Smoke battle input"; args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_battle_input.tscn");              fatal = $true }
+    @{ name = "Smoke AI perception"; args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_ai_perception.tscn");             fatal = $true }
     @{ name = "SelfCheck";           args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_selfcheck.tscn");                  fatal = $true }
     @{ name = "Smoke choice";        args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_choice.tscn");                     fatal = $true }
     @{ name = "Smoke inventory";     args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_inventory.tscn");                  fatal = $true }

@@ -19,6 +19,10 @@
         {
           "speaker": "개발자",
           "text": "@c203"
+        },
+        {
+          "speaker": "개발자",
+          "text": "@c209"
         }
       ]
     },
@@ -39,6 +43,14 @@
         {
           "speaker": "잔류생",
           "text": "@c431"
+        },
+        {
+          "speaker": "잔류생",
+          "text": "@c432"
+        },
+        {
+          "speaker": "잔류생",
+          "text": "@c433"
         }
       ]
     },
@@ -128,15 +140,15 @@
       "steps": [
         {
           "speaker": "멍청 조교",
-          "text": "@t24"
+          "text": "@c107"
         },
         {
           "speaker": "멍청 조교",
-          "text": "@t25"
+          "text": "@c108"
         },
         {
           "speaker": "멍청 조교",
-          "text": "@t26"
+          "text": "@c109"
         }
       ]
     },
@@ -145,15 +157,29 @@
       "steps": [
         {
           "speaker": "여학생",
-          "text": "@c101"
-        },
+          "text": "@c112"
+        }
+      ]
+    },
+    "walker_f1_corridor": {
+      "_comment": "1층 복도 대피 중인 학생 대사",
+      "steps": [
         {
-          "speaker": "시돌",
-          "text": "@c102"
+          "speaker": "대피 중인 학생",
+          "text": "@c113"
+        }
+      ]
+    },
+    "f2_rescue_girl": {
+      "_comment": "2층 여학생 대사 (1층 구출 후)",
+      "steps": [
+        {
+          "speaker": "여학생",
+          "text": "@c204"
         },
         {
           "speaker": "여학생",
-          "text": "@c103"
+          "text": "@c205"
         }
       ]
     },
@@ -161,23 +187,36 @@
       "steps": [
         {
           "speaker": "수위 아저씨",
-          "text": "@t203"
+          "text": "@c100"
+        }
+      ]
+    },
+    "guard_f0": {
+      "_comment": "지하 수위 아저씨 대사",
+      "steps": [
+        {
+          "speaker": "수위 아저씨",
+          "text": "@c004"
         },
         {
           "speaker": "수위 아저씨",
-          "text": "@t204"
+          "text": "@c005"
         }
       ]
     },
     "nothing_man": {
       "steps": [
         {
-          "speaker": "아무 도움 안 되는 사람",
-          "text": "@t197"
+          "speaker": "복학생",
+          "text": "@c206"
         },
         {
-          "speaker": "아무 도움 안 되는 사람",
-          "text": "@t198"
+          "speaker": "복학생",
+          "text": "@c207"
+        },
+        {
+          "speaker": "복학생",
+          "text": "@c208"
         }
       ]
     },
@@ -192,6 +231,242 @@
           "op": "shop",
           "args": {}
         }
+      ]
+    },
+    "tutor_sample_repeat": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c161" },
+        { "speaker": "멍청 조교", "text": "@c162" }
+      ]
+    },
+    "tutor_after_blast": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c163" }
+      ]
+    },
+    "tutor_after_blast_repeat": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c164" }
+      ]
+    },
+    "tutor_f2_cleared": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c165" }
+      ]
+    },
+    "tutor_f2_repeat": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c166" }
+      ]
+    },
+    "tutor_f3_cleared": {
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c167" }
+      ]
+    },
+    "guard_idle_repeat_1": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c168" }
+      ]
+    },
+    "guard_idle_repeat_2": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c169" }
+      ]
+    },
+    "guard_idle_blast": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c170" }
+      ]
+    },
+    "guard_idle_blast_repeat": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c171" }
+      ]
+    },
+    "guard_idle_f2": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c172" }
+      ]
+    },
+    "guard_idle_f3": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c173" }
+      ]
+    },
+    "walker_f1_repeat": {
+      "steps": [
+        { "speaker": "대피 중인 학생", "text": "@c174" }
+      ]
+    },
+    "walker_f1_blast": {
+      "steps": [
+        { "speaker": "대피 중인 학생", "text": "@c175" }
+      ]
+    },
+    "nothing_man_repeat_1": {
+      "steps": [
+        { "speaker": "복학생", "text": "@c241" }
+      ]
+    },
+    "nothing_man_repeat_2": {
+      "steps": [
+        { "speaker": "복학생", "text": "@c242" }
+      ]
+    },
+    "nothing_man_f2": {
+      "steps": [
+        { "speaker": "복학생", "text": "@c243" }
+      ]
+    },
+    "nothing_man_f2_repeat": {
+      "steps": [
+        { "speaker": "복학생", "text": "@c244" }
+      ]
+    },
+    "nothing_man_f3": {
+      "steps": [
+        { "speaker": "복학생", "text": "@c245" }
+      ]
+    },
+    "nothing_man_f3_repeat": {
+      "steps": [
+        { "speaker": "복학생", "text": "@c246" }
+      ]
+    },
+    "f2_dev1_repeat_1": {
+      "steps": [
+        { "speaker": "개발자 1", "text": "@c247" }
+      ]
+    },
+    "f2_dev1_repeat_2": {
+      "steps": [
+        { "speaker": "개발자 1", "text": "@c248" }
+      ]
+    },
+    "f2_dev1_f2": {
+      "steps": [
+        { "speaker": "개발자 1", "text": "@c249" }
+      ]
+    },
+    "f2_dev1_f2_repeat": {
+      "steps": [
+        { "speaker": "개발자 1", "text": "@c250" }
+      ]
+    },
+    "f2_dev1_f0": {
+      "steps": [
+        { "speaker": "개발자 1", "text": "@c251" }
+      ]
+    },
+    "f2_dev2_repeat": {
+      "steps": [
+        { "speaker": "개발자 2", "text": "@c252" }
+      ]
+    },
+    "f2_dev2_f2": {
+      "steps": [
+        { "speaker": "개발자 2", "text": "@c253" }
+      ]
+    },
+    "f2_dev2_f2_repeat": {
+      "steps": [
+        { "speaker": "개발자 2", "text": "@c254" }
+      ]
+    },
+    "f2_rescue_girl_repeat_1": {
+      "steps": [
+        { "speaker": "여학생", "text": "@c255" }
+      ]
+    },
+    "f2_rescue_girl_repeat_2": {
+      "steps": [
+        { "speaker": "여학생", "text": "@c256" }
+      ]
+    },
+    "f2_rescue_girl_f2": {
+      "steps": [
+        { "speaker": "여학생", "text": "@c257" }
+      ]
+    },
+    "f2_rescue_girl_f2_repeat": {
+      "steps": [
+        { "speaker": "여학생", "text": "@c258" }
+      ]
+    },
+    "f0_librarian_repeat_1": {
+      "steps": [
+        { "speaker": "사서", "text": "@c011" }
+      ]
+    },
+    "f0_librarian_repeat_2": {
+      "steps": [
+        { "speaker": "사서", "text": "@c012" }
+      ]
+    },
+    "f0_librarian_f0": {
+      "steps": [
+        { "speaker": "사서", "text": "@c013" }
+      ]
+    },
+    "f0_librarian_f0_repeat": {
+      "steps": [
+        { "speaker": "사서", "text": "@c014" }
+      ]
+    },
+    "guard_f0_repeat_1": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c015" }
+      ]
+    },
+    "guard_f0_repeat_2": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c016" }
+      ]
+    },
+    "guard_f0_f3": {
+      "steps": [
+        { "speaker": "수위 아저씨", "text": "@c017" }
+      ]
+    },
+    "f3_lab_student_repeat_1": {
+      "steps": [
+        { "speaker": "랩실생도", "text": "@c341" }
+      ]
+    },
+    "f3_lab_student_repeat_2": {
+      "steps": [
+        { "speaker": "랩실생도", "text": "@c342" }
+      ]
+    },
+    "f3_lab_student_f3": {
+      "steps": [
+        { "speaker": "랩실생도", "text": "@c343" }
+      ]
+    },
+    "f3_lab_student_f3_repeat": {
+      "steps": [
+        { "speaker": "랩실생도", "text": "@c344" }
+      ]
+    },
+    "f4_afterschool_student_repeat_1": {
+      "steps": [
+        { "speaker": "잔류생", "text": "@c441" }
+      ]
+    },
+    "f4_afterschool_student_repeat_2": {
+      "steps": [
+        { "speaker": "잔류생", "text": "@c442" }
+      ]
+    },
+    "f4_afterschool_student_f4": {
+      "steps": [
+        { "speaker": "잔류생", "text": "@c443" }
+      ]
+    },
+    "f4_afterschool_student_f4_repeat": {
+      "steps": [
+        { "speaker": "잔류생", "text": "@c444" }
       ]
     }
   }

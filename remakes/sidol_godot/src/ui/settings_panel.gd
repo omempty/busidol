@@ -55,6 +55,7 @@ func _ready() -> void:
 func _build() -> void:
 	var frame := ModalFrame.new()
 	frame.setup("UI_SETTINGS_TITLE", "UI_SETTINGS_HINT", Vector2(440, 0))
+	frame.dismissed.connect(func() -> void: closed.emit())
 	add_child(frame)
 	# 항목이 17행까지 늘어 기본 간격(6)으로는 패널이 540 뷰포트를 넘는다
 	# (2026-08-30 world_audit이 582px로 잡았다). 행 간격을 좁혀 담는다 —
@@ -68,15 +69,18 @@ func _build() -> void:
 
 		# 커서 자리를 고정 폭으로 분리 — 구판은 "> "를 글자 앞에 붙여 행이 좌우로 튀었다.
 		var cursor := HudTheme.label("", 15, HudTheme.ACCENT)
+		cursor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cursor.custom_minimum_size = Vector2(14, 0)
 		row.add_child(cursor)
 		_cursors.append(cursor)
 
 		var name_lbl := HudTheme.label("", 15, HudTheme.TEXT)
+		name_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		name_lbl.custom_minimum_size = Vector2(190, 0)
 		row.add_child(name_lbl)
 
 		var val_lbl := HudTheme.label("", 15, HudTheme.TEXT_MUTED)
+		val_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		val_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		val_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(val_lbl)
@@ -89,6 +93,14 @@ func _build() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		closed.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"move_up"):
 		_move(-1)
 	elif event.is_action_pressed(&"move_down"):
@@ -97,9 +109,30 @@ func _unhandled_input(event: InputEvent) -> void:
 		_adjust(-1)
 	elif event.is_action_pressed(&"move_right"):
 		_adjust(1)
-	elif event.is_action_pressed(&"cancel"):
+	elif (
+		event.is_action_pressed(&"cancel")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE)
+		)
+	):
 		closed.emit()
-	elif event.is_action_pressed(&"interact") or event.is_action_pressed(&"ui_accept"):
+	elif (
+		event.is_action_pressed(&"interact")
+		or event.is_action_pressed(&"ui_accept")
+		or event.is_action_pressed(&"menu")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (
+				event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_Z]
+				or event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_Z]
+			)
+		)
+	):
 		if _index == ROW_CONTROLS:
 			controls_requested.emit()
 	else:

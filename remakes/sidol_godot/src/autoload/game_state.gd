@@ -43,6 +43,22 @@ var pending_encounter := {}
 var field_roster := {}
 
 var inventory := Inventory.new()
+## NPC 대화 횟수 및 시퀀스 청취 기록 — 다회차 대화 밈/반복 대사 및 진행도 연동
+var npc_seen_sequences: Dictionary = {}
+
+
+func get_sequence_seen_count(seq_id: StringName) -> int:
+	return int(npc_seen_sequences.get(seq_id, 0))
+
+
+func record_sequence_seen(seq_id: StringName) -> int:
+	var c: int = int(npc_seen_sequences.get(seq_id, 0)) + 1
+	npc_seen_sequences[seq_id] = c
+	return c
+
+
+func _ready() -> void:
+	init_skills()
 
 
 func has_flag(flag_id: String) -> bool:
@@ -239,6 +255,7 @@ func reset() -> void:
 	pending_encounter = {}
 	field_roster = {}
 	inventory.clear()
+	npc_seen_sequences.clear()
 	state_changed.emit()
 
 

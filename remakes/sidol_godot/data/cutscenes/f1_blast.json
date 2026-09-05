@@ -12,6 +12,24 @@
         },
         "flag": "Q_F1_BLAST"
       }
+    },
+    {
+      "op": "sfx",
+      "id": "sfx_explosion"
+    },
+    {
+      "op": "shake",
+      "power": 8.0,
+      "times": 8
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "시돌",
+          "text": "@c110"
+        }
+      ]
     }
   ]
 }

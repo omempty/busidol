@@ -62,11 +62,13 @@ SOURCES: dict[str, tuple[str, int]] = {
 }
 
 # 행 → (애니 이름, 프레임 인덱스 2개, fps)
+# 원작 인덱스 매핑 (GOODITEM.C move_you / eye[i] 및 EVENT.C move_eventer 기준):
+#   DOWN={0,1} LEFT={2,3} RIGHT={4,5} UP={6,7}
 ROWS: list[tuple[str, tuple[int, int], int]] = [
     ("walk_down", (0, 1), 6),
-    ("walk_up", (2, 3), 6),
-    ("walk_left", (4, 5), 6),
-    ("walk_right", (6, 7), 6),
+    ("walk_up", (6, 7), 6),
+    ("walk_left", (2, 3), 6),
+    ("walk_right", (4, 5), 6),
     ("idle_down", (0, 1), 2),
 ]
 

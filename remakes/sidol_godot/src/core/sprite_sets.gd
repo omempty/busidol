@@ -96,4 +96,24 @@ static func build_frames(sheet_path: String, meta: Dictionary) -> SpriteFrames:
 		frames.set_animation_loop(&"idle", true)
 		for i in frames.get_frame_count(StringName(src)):
 			frames.add_frame(&"idle", frames.get_frame_texture(StringName(src), i))
+
+	# 단일 walk/idle만 있는 단방향 시트 지원 (4방향으로 자동 복제)
+	var fallback_walk: StringName = &""
+	if frames.has_animation(&"walk"):
+		fallback_walk = &"walk"
+	elif frames.has_animation(&"idle"):
+		fallback_walk = &"idle"
+	elif frames.has_animation(&"idle_down"):
+		fallback_walk = &"idle_down"
+
+	if fallback_walk != &"":
+		for dir_name in ["down", "up", "left", "right"]:
+			var walk_dir := StringName("walk_" + dir_name)
+			if not frames.has_animation(walk_dir):
+				frames.add_animation(walk_dir)
+				frames.set_animation_speed(walk_dir, frames.get_animation_speed(fallback_walk))
+				frames.set_animation_loop(walk_dir, true)
+				for i in frames.get_frame_count(fallback_walk):
+					frames.add_frame(walk_dir, frames.get_frame_texture(fallback_walk, i))
+
 	return frames

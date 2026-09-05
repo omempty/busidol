@@ -188,6 +188,44 @@ func contact_entity(player_cell: Vector2i) -> EnemyEntity:
 ## 종별 행동 주기마다 한 걸음. 구판은 매 물리 프레임 순간이동해 초당 60칸을 갔다.
 func tick(player_cell: Vector2i, delta: float) -> void:
 	_respawn_tick(player_cell, delta)
+
+	# 다중 추적 시 플랭킹(Flanking) 슬롯 계산: 단일 행렬(Conga line)을 방지하고 좌우/배후로 포위
+	var alerted_chasers: Array[EnemyEntity] = []
+	for e in enemies:
+		if not is_instance_valid(e):
+			continue
+		var b: AIBrain = _brains.get(e)
+		if b != null and b.is_alerted():
+			alerted_chasers.append(e)
+
+	var flank_targets: Dictionary = {}
+	if alerted_chasers.size() >= 2:
+		alerted_chasers.sort_custom(
+			func(a: EnemyEntity, b: EnemyEntity) -> bool:
+				var da := (
+					absi(a.mover.grid_pos.x - player_cell.x)
+					+ absi(a.mover.grid_pos.y - player_cell.y)
+				)
+				var db := (
+					absi(b.mover.grid_pos.x - player_cell.x)
+					+ absi(b.mover.grid_pos.y - player_cell.y)
+				)
+				return da < db
+		)
+		var slots: Array[Vector2i] = [
+			player_cell + Vector2i(-2, 0),
+			player_cell + Vector2i(2, 0),
+			player_cell + Vector2i(0, -2),
+			player_cell + Vector2i(0, 2),
+		]
+		for i in range(1, alerted_chasers.size()):
+			var chaser: EnemyEntity = alerted_chasers[i]
+			var slot_cand: Vector2i = slots[(i - 1) % slots.size()]
+			if _runtime != null and _runtime.is_passable(slot_cand):
+				flank_targets[chaser] = slot_cand
+			else:
+				flank_targets[chaser] = player_cell
+
 	for e in enemies:
 		if not is_instance_valid(e) or e.mover.moving:
 			continue
@@ -201,12 +239,19 @@ func tick(player_cell: Vector2i, delta: float) -> void:
 			continue
 		var phasing := bool(_phasing.get(e, false))
 		var anchor_free := func(c: Vector2i) -> bool: return _anchor_free_for(e, c, phasing)
+		var is_passable_cell := func(c: Vector2i) -> bool:
+			return phasing or (_runtime != null and _runtime.is_passable(c))
+		var assigned_target: Vector2i = flank_targets.get(e, player_cell)
 		var ctx := {
 			"self_cell": e.mover.grid_pos,
 			"player_cell": player_cell,
+			"target_cell": assigned_target,
+			"facing": e.facing_vector(),
+			"is_passable_cell": is_passable_cell,
 			"passable": anchor_free,
 			"occupied": {},  # 점유는 passable 안에서 이미 반영된다
 			"rng": rng,
+			"enemy_entity": e,
 		}
 		var dir: Vector2i = brain.decide(ctx)
 		e.set_alerted(brain.is_alerted())

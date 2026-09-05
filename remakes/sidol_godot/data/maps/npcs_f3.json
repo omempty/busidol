@@ -11,6 +11,19 @@
         18
       ],
       "sequence_id": "f3_lab_student",
+      "repeat_sequence_id": [
+        "f3_lab_student_repeat_1",
+        "f3_lab_student_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F3_PALIN",
+          "sequence_id": "f3_lab_student_f3",
+          "repeat_sequence_id": "f3_lab_student_f3_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 1,
       "tint": [
         1.0,
         1.0,
@@ -26,6 +39,8 @@
         19
       ],
       "sequence_id": "prof_chem_first",
+      "idle_anim": "squash",
+      "wander_range": 0,
       "tint": [
         1.0,
         0.85,

@@ -108,6 +108,31 @@ func _ready() -> void:
 		if not ok:
 			failures.append("설치된 초상이 있는데 셀 텍스처를 못 만들었다")
 
+	# ⑤ 절차적 특수효과(VFX) — 슬래시 아크, 화염 폭발, 번개 스트라이크, 대폭발, 실드 검증
+	for fx_id in ["hit_spark", "flame_burst", "volt_arc", "blast", "shield_up"]:
+		var before_vfx := root.get_child_count()
+		presenter.play_fx_kf({"effect": fx_id, "at_actor": "target"})
+		if root.get_child_count() <= before_vfx:
+			failures.append("절차적 VFX %s 연출 노드가 생성되지 않았다" % fx_id)
+		else:
+			print(
+				(
+					"[smoke_fx] 절차적 VFX %s 정상 생성 OK (%d -> %d)"
+					% [fx_id, before_vfx, root.get_child_count()]
+				)
+			)
+
+	# ⑥ 동적 오디오 — 빈사 LPF/심장 박동 & 브레이크 텐션 신스음 검증
+	AudioManager.set_low_hp_warning(true)
+	if not AudioManager._is_low_hp:
+		failures.append("빈사 저역통과 필터 및 심장 박동 모드가 활성화되지 않았다")
+	AudioManager.play_break_cue()
+	AudioManager.play_break_shatter()
+	AudioManager.set_low_hp_warning(false)
+	if AudioManager._is_low_hp:
+		failures.append("빈사 경고 모드가 정상 해제되지 않았다")
+	print("[smoke_fx] 동적 오디오(LPF, 심장 박동, 브레이크 큐) 검증 완료")
+
 	_finish(failures)
 
 

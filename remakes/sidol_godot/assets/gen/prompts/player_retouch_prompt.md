@@ -1,56 +1,50 @@
-# 주인공 스프라이트 시트 리터칭 의뢰
+# 주인공 시돌이(SIDOL) 스프라이트 시트 리터칭 & 스케일업 의뢰
 
 ## 역할
-너는 1995년 DOS RPG의 원작 도트 스프라이트를 현대 JRPG 톤으로 격상시키는
-픽셀 아트 리터처러다. **재창작이 아니라 리터칭**이다. 실루엣과 픽셀 배치는
-원작을 그대로 유지하며 색감·명암·디테일만 끌어올린다.
+너는 1995년 DOS RPG의 원작 도트 스프라이트를 현대 명작 JRPG 톤으로 격상시키는
+16비트 픽셀 아트 리터처러다. 원작의 캐릭터 콘셉트와 색채를 베이스로, **2.5~3등신 SD 클래식 JRPG 체형과 셀을 꽉 채우는 묵직한 볼륨감의 정통 도트 그래픽**으로 스케일업 및 리터칭한다.
 
-## 캐릭터
-부싯돌: 1995년 한국 공대 새내기 남학생. 활달하고 허둥대지만 의리파. 잿빛 교복 재킷+청바지, 손에 작은 부싯돌 조각. 탑다운 JRPG 3/4 시점
+## 캐릭터 콘셉트: 부싯돌 (SIDOL)
+1995년 한국 공대 새내기 남학생. 활달하고 허둥대지만 의리파.
+- **의상/외형**: 잿빛 공대 자켓 교복, 청바지, 흰 운동화, 손에 작은 부싯돌 조각.
+- **체형/비율**: 2.5~3등신 SD 체형 (팔콤 『쯔바이!!』, 『악튜러스』 풍).
+- **시점**: 탑다운 JRPG 3/4 쿼터뷰 시점.
 
-## 입력 (첨부: player_sheet_original.png / 레이아웃 안내: player_sheet_annotated.png)
-- 시트: 128x320px, 셀 64x64px, 2열 x 5행
-- **실제 캐릭터 도트는 24x24px**이며 각 셀 내 (20,40) 오프셋에 위치한다.
-  셀의 나머지 영역은 전부 투명 패딩이다. 캐릭터를 키워 셀을 채우지 마라.
-- 권장 작업법: 각 셀의 24x24 도트만 잘라 **8배(192x192) 확대** 후 리터치하고,
-  납품 시 축소해 원래 오프셋에 배치한다.
-- 각 행 = 한 애니메이션, 좌→우가 프레임 순서:
+## 화풍 & 픽셀 스타일 핵심 지침 (★최우선 적용★)
+1. **2.5~3등신 SD 클래식 JRPG 체형 + 셀을 꽉 채우는 볼륨감**:
+   - 큰 머리와 명확한 눈매/표정, 듬직하고 단단한 상체와 짤막하지만 안정감 있는 하체.
+   - 기존 24×24px의 왜소한 빈 공간을 탈피하여, **셀 영역(실높이 약 80~88% 면적, 40~44px on 48×48 / 80~88px on 96×96 / 100~115px on 128×128)을 묵직하고 밀도 있게 꽉 채우는 볼륨감 있는 실루엣**.
+2. **100% 순수 16비트 도트 픽셀 아트 (Pure Dot Matrix)**:
+   - 3D 렌더, 벡터(SVG), 수채화, 일러스트 브러시 질감 절대 금지.
+   - 캔버스 확대 시 각진 픽셀 도트(Pixel Grid)가 한 땀 한 땀 뚜렷하게 보이는 정통 도트 그래픽.
+   - 안티에일리어싱(AA), 블러, 부드러운 그라데이션 금지 ➔ 색당 4~6단계의 계단식 밴딩(Color Ramping)과 체커보드 디더링(Bayer Dithering)으로 명암 표현.
+   - 1px 다크 아웃라인: 순수 블랙 대신 짙은 남색(#0A082E) 도트 테두리.
+   - 색조 그림자: 단순 검정 대신 남보라(#3A285C) 계열의 깊이 있는 색조 그림자 적용.
+   - 고유색: 24~48색 양자화 도트 팔레트.
 
-| 행 | 애니 | 프레임 | FPS |
-|---|---|---|---|
-| 0 | walk_down | 2프레임 | 7 |
-| 1 | walk_up | 2프레임 | 7 |
-| 2 | walk_left | 2프레임 | 7 |
-| 3 | walk_right | 2프레임 | 7 |
-| 4 | idle_down | 2프레임 | 1 |
+## 출력 규격 & 애니메이션 레이아웃
+- **시트 규격**: **128×320px PNG** (셀 단위: 64×64px, 2열 × 5행) 또는 **256×640px PNG** (셀 단위: 128×128px, 2열 × 5행)
+- 각 행 = 한 애니메이션, 좌→우가 2프레임 루프 순서:
 
-## 절대 규칙 (위반 시 반려)
-1. **지오메트리 무변경**: 픽셀 위치·실루엣·머리-몸 비율을 한 픽셀도 옮기지 않는다.
-   캐릭터는 24x24 도트 그대로 — 크게 그리거나 셀을 채우면 즉시 반려된다.
-2. **그리드 무변경**: 납품은 반드시 동일 128x320 PNG,
-   같은 셀 위치에 같은 프레임, 캐릭터도 같은 (20,40) 오프셋.
-   프레임 추가/삭제/이동 금지.
-3. **배경 완전 투명**: 셀 바깥은 alpha=0. 체커보드/흰색/**마젠타 등 키컬러** 채움 금지.
-4. **검정(0,0,0) 투명 처리 금지**: 캐릭터 내부의 검정 디테일(눈·입·틈)은
-   투명으로 만들지 말고 아웃라인색 또는 아주 어두운 남색으로 채워 유지한다.
-5. 안티에일리어싱 금지 / 그라데이션 금지(반드시 단계 밴딩).
+| 행 | 애니메이션 이름 | 프레임 수 | 세부 동작 묘사 |
+|:---:|:---:|:---:|:---|
+| 0 | walk_down | 2프레임 | 정면 2.5등신 씩씩한 발구름 보행 |
+| 1 | walk_up | 2프레임 | 뒷모습 자켓 펄럭임 보행 |
+| 2 | walk_left | 2프레임 | 좌향 2.5등신 팔다리 교차 보행 |
+| 3 | walk_right | 2프레임 | 우향 2.5등신 팔다리 교차 보행 |
+| 4 | idle_down | 2프레임 | 정면 대기 — 1px 미세 호흡 바운스 |
 
-## 스타일 타깃 (후기 클래식 JRPG - 쯔바이/나르실리온/악튜러스풍)
-- 전체 인상: 어두운 VGA 레트로 -> 따뜻하고 채도 있는 필드 톤으로 격상
-- 명암: 색상당 하이라이트~그림자 **4~6단계 밴딩**
-- 그림자: 검정 금지 -> **남보라 계열**(예: #3A285C) 색조 그림자
-- 하이라이트: 따뜻한 톤(예: #FFF4D6 방향)으로 미세 리프트
-- 외곽선: 기존 1px 다크 아웃라인 유지, 순수 블랙 대신 짙은 남색(예: #0A082E)
-- 색 범위: 원본에 없던 파스텔/형광/EGA 원색 유입 금지. 원본 색상 세트 내에서
-  채도·명도 조정만 허용.
+- 각 셀 내부에서 캐릭터는 **가로 중앙(Center), 세로 바닥(Bottom 접지 여백 6~10px)** 에 정렬하며, 셀 영역을 넉넉히 채운다.
+- 배경: **완전 투명(alpha=0)** 또는 **단색 마젠타 #FF00FF**.
 
-## 기존 제약(스펙 명세)
-- transparent_bg
-- no_aa
-- 1px_outline
-- palette_locked
-- 16px_grid_redraw
+---
 
-## 납품물
-1. 리터치된 시트 PNG 1장 (128x320, 투명 배경)
-2. (선택) 변경 요약: 어떤 부위를 어떻게 고쳤는지 3줄 이내
+## 🌐 Midjourney / DALL-E / 영문 생성기 복사용 프롬프트
+```text
+16-bit retro JRPG male student hero pixel art sprite sheet, super deformed 2.5 heads tall bulky proportions filling the cell with substantial presence (Zwei / Arcturus / Narsillion 1990s retro sprite style), 1995 Korean engineering college student hero Sidol with ash-grey jacket uniform, blue jeans, white sneakers, holding a tiny flint stone, authentic chunky dot matrix pixel art, crisp 1px dark indigo pixel outline #0A082E, 4-6 tone discrete color step banding, classic dithered shading, vibrant retro JRPG color palette. Complete animation sprite sheet grid in 2 columns by 5 rows on solid magenta #FF00FF background. Row 1: walk_down (2 frames), Row 2: walk_up (2 frames), Row 3: walk_left (2 frames), Row 4: walk_right (2 frames), Row 5: idle_down (2 frames). Pure pixel art asset, perfect uniform grid, no antialiasing, no vector graphics, no 3d render, no smooth gradients, no blur, no text, no watermark --ar 1:2
+```
+
+---
+## 납품 및 검증
+- 결과 파일 저장 경로: `assets/raw/llm/10_submitted/sprites/player_sheet_v1.png`
+- 검증 명령어: `python tools/convert/validate_retouch_sheet.py assets/raw/llm/10_submitted/sprites/player_sheet_v1.png`

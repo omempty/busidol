@@ -27,6 +27,19 @@ func _ready() -> void:
 	while expected <= 5:
 		player.teleport(UP_ANCHOR)
 		await get_tree().process_frame
+		if expected == 2 and not GameState.has_flag("Q_F1_BLAST"):
+			Input.action_press(&"move_down")
+			var locked := await _wait_until(
+				func() -> bool: return GameState.current_floor != 1, 0.8
+			)
+			Input.action_release(&"move_down")
+			if locked:
+				failures.append("F1→F2 잠금 해제(플래그 없이 통과)")
+			else:
+				print("[smoke_tr] F1→F2 locked (no flag) — ok")
+			GameState.flags["Q_F1_BLAST"] = true
+			player.teleport(UP_ANCHOR)
+			await get_tree().process_frame
 		if expected == 3 and not GameState.has_flag("Q_F2_POSTER"):
 			# 잠금 확인 — 플래그 없이는 f2에 머물러야 한다.
 			Input.action_press(&"move_down")
@@ -40,6 +53,19 @@ func _ready() -> void:
 				print("[smoke_tr] F2→F3 locked (no flag) — ok")
 			# 프리셋: 퀘스트 플래그 부여 후 재도전(게임 내 = 포스터 퀘스트 완료).
 			GameState.flags["Q_F2_POSTER"] = true
+			player.teleport(UP_ANCHOR)
+			await get_tree().process_frame
+		if expected == 5 and not GameState.has_flag("Q_F4_SACRIFICE"):
+			Input.action_press(&"move_down")
+			var locked := await _wait_until(
+				func() -> bool: return GameState.current_floor != 4, 0.8
+			)
+			Input.action_release(&"move_down")
+			if locked:
+				failures.append("F4→F5 잠금 해제(플래그 없이 통과)")
+			else:
+				print("[smoke_tr] F4→F5 locked (no flag) — ok")
+			GameState.flags["Q_F4_SACRIFICE"] = true
 			player.teleport(UP_ANCHOR)
 			await get_tree().process_frame
 		Input.action_press(&"move_down")

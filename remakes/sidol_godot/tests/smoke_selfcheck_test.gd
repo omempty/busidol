@@ -11,6 +11,36 @@ func _ready() -> void:
 			push_error("[smoke_selfcheck] WATCHDOG timeout")
 			get_tree().quit(1)
 	)
+	var pm := PauseMenu.new()
+	add_child(pm)
+	print("--- PAUSE MENU DIAGNOSTICS ---")
+	print("pm.visible: ", pm.visible)
+	print(
+		"pm._root_box.visible: ",
+		pm._root_box.visible,
+		" in_tree: ",
+		pm._root_box.is_visible_in_tree()
+	)
+	print(
+		"pm._settings_panel.visible: ",
+		pm._settings_panel.visible,
+		" in_tree: ",
+		pm._settings_panel.is_visible_in_tree()
+	)
+	var s_frame: Control = pm._settings_panel.get_child(0) as Control
+	print("s_frame.visible: ", s_frame.visible, " in_tree: ", s_frame.is_visible_in_tree())
+	var s_dim: Control = s_frame.get_node("Dim") as Control
+	print(
+		"s_dim.visible: ",
+		s_dim.visible,
+		" in_tree: ",
+		s_dim.is_visible_in_tree(),
+		" mouse_filter: ",
+		s_dim.mouse_filter
+	)
+	pm.queue_free()
+	print("--------------------------------")
+
 	var checker := SelfCheck.new()
 	add_child(checker)
 	var report := checker.run_all()

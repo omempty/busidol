@@ -35,6 +35,24 @@ func _build() -> void:
 		var row := Label.new()
 		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		row.add_theme_font_size_override("font_size", 18)
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var idx := i
+		row.mouse_entered.connect(
+			func() -> void:
+				if mode == Mode.SAVE or not SaveManager.slot_meta(idx).is_empty():
+					_index = idx
+					_refresh()
+		)
+		row.gui_input.connect(
+			func(e: InputEvent) -> void:
+				if e is InputEventMouseButton and e.pressed:
+					if e.button_index == MOUSE_BUTTON_LEFT:
+						_index = idx
+						_choose()
+					elif e.button_index == MOUSE_BUTTON_RIGHT:
+						canceled.emit()
+		)
 		vbox.add_child(row)
 		_rows.append(row)
 
@@ -42,13 +60,29 @@ func _build() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		canceled.emit()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"move_up"):
 		_move(-1)
 	elif event.is_action_pressed(&"move_down"):
 		_move(1)
 	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"interact"):
 		_choose()
-	elif event.is_action_pressed(&"cancel"):
+	elif (
+		event.is_action_pressed(&"cancel")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE)
+		)
+	):
 		canceled.emit()
 	else:
 		return

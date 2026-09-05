@@ -53,7 +53,60 @@ func _capture_field() -> void:
 	field.inventory_panel.open()
 	await _settle()
 	await _shot("field_inventory", field)
+	await _shot("field_inventory_items", field)
+
+	field.inventory_panel.call("_set_tab", InventoryPanel.Tab.GEAR)
+	await _settle()
+	await _shot("field_inventory_gear", field)
+
+	field.inventory_panel.call("_set_tab", InventoryPanel.Tab.STATUS)
+	await _settle()
+	await _shot("field_inventory_status", field)
+
+	field.inventory_panel.call("_set_tab", InventoryPanel.Tab.SYSTEM)
+	await _settle()
+	await _shot("field_inventory_system", field)
 	field.inventory_panel.close()
+	await _settle()
+
+	# 미니맵 캡처
+	if field.minimap != null:
+		field.minimap.visible = true
+		await _settle()
+		await _shot("field_minimap", field)
+		field.minimap.visible = false
+		await _settle()
+
+	# 대화창 캡처 (초상화 포함)
+	var test_steps: Array = [{"speaker": "수위 아저씨", "text": "@c102", "portrait": "npc_guard_v2"}]
+	field.dialogue_box.start(&"guard_warning", test_steps)
+	field.dialogue_box._revealed = 1000.0
+	field.dialogue_box._body_label.visible_characters = -1
+	await _settle()
+	await _shot("field_dialogue", field)
+	field.dialogue_box.close()
+	await _settle()
+
+	# 1F 멍청 조교 조사 프롬프트 및 신규 대사 캡처
+	var tutor: NpcEntity = field.get_npc("tutor_dumb")
+	if tutor != null:
+		field.player.mover.grid_pos = tutor.cell + Vector2i.RIGHT
+		field.player.facing = &"left"
+		field.player.position = GridMover.block_center(field.player.mover.grid_pos)
+		field._prompt.show_at("%s   SPACE" % tutor.display_name, tutor.position + Vector2(0, -46))
+		field._focus.show_cells(tutor.body_cells())
+		await _settle()
+		await _shot("field_npc_tutor_focus", field)
+		field._prompt.visible = false
+		field._focus.visible = false
+		var tutor_steps: Array = Database.sequence(tutor.resolve_sequence())
+		field.dialogue_box.start(tutor.resolve_sequence(), tutor_steps)
+		field.dialogue_box._revealed = 1000.0
+		field.dialogue_box._body_label.visible_characters = -1
+		await _settle()
+		await _shot("field_npc_tutor_dialogue", field)
+		field.dialogue_box.close()
+		await _settle()
 
 	field.shop.open()
 	await _settle()

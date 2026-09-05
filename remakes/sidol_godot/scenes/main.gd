@@ -1,7 +1,7 @@
-extends Node
 ## 타이틀 화면 — 새 게임/계속하기/설정/종료 + 아트 모드 선택.
 ## 아트 모드: LEGACY=원작 도트 세트(_original) / REMAKE=신규 세트(_remake).
 ## 경로 결정은 SpriteSets가 담당(부재 세트 자동 폴백).
+extends Node
 
 const FIELD_SCENE := "res://scenes/field.tscn"
 ## 표시 문자열은 data/l10n/ui.csv — const는 tr()을 담을 수 없어 키만 둔다.
@@ -59,12 +59,32 @@ func _build_menu() -> void:
 	vbox.add_child(title)
 
 	vbox.add_child(_spacer(18))
-	for item_key in MENU_ITEM_KEYS:
+	for i in MENU_ITEM_KEYS.size():
 		var row := Label.new()
-		row.text = tr(item_key)
+		row.text = tr(MENU_ITEM_KEYS[i])
 		row.add_theme_font_size_override("font_size", 22)
 		row.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var idx := i
+		row.mouse_entered.connect(
+			func() -> void:
+				if _screen == Screen.MENU:
+					_index = idx
+					_refresh()
+		)
+		row.gui_input.connect(
+			func(e: InputEvent) -> void:
+				if (
+					_screen == Screen.MENU
+					and e is InputEventMouseButton
+					and e.pressed
+					and e.button_index == MOUSE_BUTTON_LEFT
+				):
+					_index = idx
+					_confirm()
+		)
 		vbox.add_child(row)
 		_menu_labels.append(row)
 
@@ -73,6 +93,19 @@ func _build_menu() -> void:
 	_mode_label.add_theme_font_size_override("font_size", 16)
 	_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mode_label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_mode_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	_mode_label.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_mode_label.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if _screen == Screen.MENU and e is InputEventMouseButton and e.pressed:
+				if e.button_index == MOUSE_BUTTON_LEFT or e.button_index == MOUSE_BUTTON_WHEEL_UP:
+					_cycle_art_mode(1)
+				elif (
+					e.button_index == MOUSE_BUTTON_RIGHT
+					or e.button_index == MOUSE_BUTTON_WHEEL_DOWN
+				):
+					_cycle_art_mode(-1)
+	)
 	vbox.add_child(_mode_label)
 
 	var hint := Label.new()
@@ -92,6 +125,20 @@ func _spacer(height: float) -> Control:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		if _screen != Screen.MENU:
+			_switch(Screen.MENU)
+			get_viewport().set_input_as_handled()
+			return
+	if event.is_action_pressed(&"cancel"):
+		if _screen != Screen.MENU:
+			_switch(Screen.MENU)
+			get_viewport().set_input_as_handled()
+			return
 	if _screen != Screen.MENU:
 		return
 	if event.is_action_pressed(&"move_left") or event.is_action_pressed(&"move_right"):

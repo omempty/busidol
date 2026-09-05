@@ -42,6 +42,7 @@ func _build() -> void:
 	_built = true
 	var frame := ModalFrame.new()
 	frame.setup("UI_DLGLOG_TITLE", "UI_DLGLOG_HINT", Vector2(620, 340))
+	frame.dismissed.connect(close)
 	add_child(frame)
 
 	_scroll = ScrollContainer.new()
@@ -81,6 +82,14 @@ func _fill() -> void:
 ## ↑↓ 스크롤 · Esc/Enter 닫기. 창이 떠 있는 동안 대사 진행은 DialogueBox가 막는다.
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
+		return
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		close()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(&"move_up", true):
 		_scroll.scroll_vertical -= int(SCROLL_STEP)

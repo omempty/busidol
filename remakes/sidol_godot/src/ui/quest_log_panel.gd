@@ -19,6 +19,7 @@ func _ready() -> void:
 func _build() -> void:
 	var frame := ModalFrame.new()
 	frame.setup("UI_QUESTLOG_TITLE", "UI_CLOSE_ESC", Vector2(460, 0))
+	frame.dismissed.connect(func() -> void: closed.emit())
 	add_child(frame)
 
 	# 목록이 길어 화면을 넘길 수 있다 — 스크롤 안에 담고 높이를 묶는다.
@@ -71,6 +72,22 @@ func _refresh() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if event.is_action_pressed(&"cancel"):
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		closed.emit()
+		get_viewport().set_input_as_handled()
+		return
+	if (
+		event.is_action_pressed(&"cancel")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE)
+		)
+	):
 		closed.emit()
 		get_viewport().set_input_as_handled()

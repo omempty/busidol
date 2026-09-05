@@ -58,7 +58,12 @@ func _build() -> void:
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.6)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed:
+				close()
+	)
 	add_child(dim)
 
 	var card := PanelContainer.new()
@@ -66,7 +71,12 @@ func _build() -> void:
 	card.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	card.grow_vertical = Control.GROW_DIRECTION_BOTH
 	card.custom_minimum_size = Vector2(PANEL_WIDTH, 0)
-	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.mouse_filter = Control.MOUSE_FILTER_STOP
+	card.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_RIGHT:
+				close()
+	)
 	card.add_theme_stylebox_override("panel", HudTheme.panel(10, 14))
 	add_child(card)
 
@@ -74,9 +84,32 @@ func _build() -> void:
 	box.add_theme_constant_override("separation", 6)
 	card.add_child(box)
 
+	var header := HBoxContainer.new()
+	header.add_theme_constant_override("separation", 6)
+	box.add_child(header)
+
 	var title := HudTheme.label(tr("UI_FASTTRAVEL_TITLE"), 15, HudTheme.ACCENT)
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+
+	var close_btn := PanelContainer.new()
+	close_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	close_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	close_btn.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.BG_SUNKEN, 3, 6, 1))
+	var close_lbl := HudTheme.label("✕", 11, HudTheme.TEXT_MUTED)
+	close_btn.add_child(close_lbl)
+	close_btn.mouse_entered.connect(
+		func() -> void: close_lbl.add_theme_color_override("font_color", HudTheme.HP_LOW)
+	)
+	close_btn.mouse_exited.connect(
+		func() -> void: close_lbl.add_theme_color_override("font_color", HudTheme.TEXT_MUTED)
+	)
+	close_btn.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				close()
+	)
+	header.add_child(close_btn)
 
 	var rule := ColorRect.new()
 	rule.color = HudTheme.BORDER
@@ -84,8 +117,28 @@ func _build() -> void:
 	box.add_child(rule)
 
 	var names := _floor_names()
-	for f: int in _floors:
+	for i in _floors.size():
+		var f: int = _floors[i]
 		var row := HudTheme.label(str(names.get(f, "F%d" % f)), 14, HudTheme.TEXT)
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		var idx := i
+		var target := f
+		row.mouse_entered.connect(
+			func() -> void:
+				_index = idx
+				_refresh()
+		)
+		row.gui_input.connect(
+			func(e: InputEvent) -> void:
+				if e is InputEventMouseButton and e.pressed:
+					if e.button_index == MOUSE_BUTTON_LEFT:
+						_open = false
+						visible = false
+						floor_chosen.emit(target)
+					elif e.button_index == MOUSE_BUTTON_RIGHT:
+						close()
+		)
 		box.add_child(row)
 		_rows.append(row)
 
@@ -119,6 +172,14 @@ func _refresh() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not _open:
 		return
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		close()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"cancel"):
 		close()
 		get_viewport().set_input_as_handled()
@@ -133,7 +194,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_refresh()
 		get_viewport().set_input_as_handled()
 		return
-	if event.is_action_pressed(&"interact"):
+	if event.is_action_pressed(&"interact") or event.is_action_pressed(&"ui_accept"):
 		var target := _floors[_index]
 		_open = false
 		visible = false

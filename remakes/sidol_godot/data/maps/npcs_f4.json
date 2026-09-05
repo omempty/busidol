@@ -11,6 +11,19 @@
         14
       ],
       "sequence_id": "f4_afterschool_student",
+      "repeat_sequence_id": [
+        "f4_afterschool_student_repeat_1",
+        "f4_afterschool_student_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F4_BATTERY",
+          "sequence_id": "f4_afterschool_student_f4",
+          "repeat_sequence_id": "f4_afterschool_student_f4_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 1,
       "tint": [
         0.8,
         0.8,

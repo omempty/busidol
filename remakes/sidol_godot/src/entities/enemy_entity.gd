@@ -86,6 +86,21 @@ func set_alerted(on: bool) -> void:
 	tw.tween_property(_alert, "position:y", ALERT_Y, 0.10)
 
 
+func is_alerted() -> bool:
+	return _alerted
+
+
+## 플레이어 2칸 접근 시 1틱 위협 멈칫(Hesitation) 전조 펄스
+func trigger_threat_pulse() -> void:
+	if _alert == null or not is_inside_tree():
+		return
+	var tw := create_tween()
+	_alert.modulate = Color(1.0, 0.2, 0.2)
+	tw.tween_property(_alert, "scale", Vector2(1.35, 1.35), 0.12).set_trans(Tween.TRANS_BACK)
+	tw.tween_property(_alert, "scale", Vector2.ONE, 0.14)
+	tw.tween_property(_alert, "modulate", Color.WHITE, 0.10)
+
+
 ## 이동 방향을 바라본다 — 시트가 방향별 프레임을 갖추면 그쪽 포즈로.
 func face(dir: Vector2i) -> void:
 	facing = GridMover.dir_name(dir)
@@ -96,6 +111,11 @@ func face(dir: Vector2i) -> void:
 	# play(이름)은 프레임 0으로 되감아 걸음 위상을 끊는다 — 프로퍼티만 바꾼다.
 	sprite.animation = anim
 	sprite.play()
+
+
+## facing 이름 → 방향 벡터
+func facing_vector() -> Vector2i:
+	return GridMover.name_dir(facing)
 
 
 ## 시트에 없는 방향은 플레이스홀더로 떨어졌는지 감사 도구가 볼 수 있게 노출.
@@ -121,4 +141,23 @@ func _build_frames() -> SpriteFrames:
 			at.atlas = tex
 			at.region = Rect2(f * cw, int(a["row"]) * ch, cw, ch)
 			frames.add_frame(anim, at)
+
+	# 단일 walk/idle만 있는 단방향 시트 지원 (4방향으로 자동 복제)
+	var fallback_walk: StringName = &""
+	if frames.has_animation(&"walk"):
+		fallback_walk = &"walk"
+	elif frames.has_animation(&"idle"):
+		fallback_walk = &"idle"
+	elif frames.has_animation(&"idle_down"):
+		fallback_walk = &"idle_down"
+
+	if fallback_walk != &"":
+		for dir_name in ["down", "up", "left", "right"]:
+			var walk_dir := StringName("walk_" + dir_name)
+			if not frames.has_animation(walk_dir):
+				frames.add_animation(walk_dir)
+				frames.set_animation_speed(walk_dir, frames.get_animation_speed(fallback_walk))
+				frames.set_animation_loop(walk_dir, true)
+				for i in frames.get_frame_count(fallback_walk):
+					frames.add_frame(walk_dir, frames.get_frame_texture(fallback_walk, i))
 	return frames

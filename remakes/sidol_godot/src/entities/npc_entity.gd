@@ -1,72 +1,74 @@
 class_name NpcEntity
 extends Node2D
-## 필드 NPC — 단일 셀 점유, 상호작용 시 DialogueBox로 시퀀스 재생.
+## 필드 NPC — 2×2 셀 점유, 상호작용 시 DialogueBox로 시퀀스 재생.
 ## 전용 시트(<npc_id>_original/_remake)를 쓰고, 없을 때만 플레이어 시트 플레이스홀더.
+## 제자리 호흡 아이들(Squash & Stretch) 및 필요 시 소폭 배회(wander_range) 지원.
 
 var npc_id := &""
 var display_name := ""
 var sequence_id := &""
+var repeat_sequence_id: Variant = null
 ## 상태에 따라 갈아 끼우는 대사. `[{requires_flag: String|Array, sequence_id: String}]`,
-## **먼저 맞는 것이 이긴다**. 비어 있으면 sequence_id 하나만 쓴다(종전과 같다).
+## **먼저 맞는 것이 이긴다**. 비어 있으면 sequence_id 하나만 쓴다.
 var sequence_variants: Array = []
 var cell := Vector2i.ZERO
 var sprite := AnimatedSprite2D.new()
+var wander_range := 0
+
 var _paths: Dictionary = {}
 var _meta: Dictionary = {}
+var _runtime: MapRuntime
+var _home_cell := Vector2i.ZERO
 
-## 둘러보는 주기(초). 원작 대조 결과 **대화 상대는 원작에서도 고정**이었다 —
-## 움직이는 것은 `move_eventer()`가 모는 층당 1명의 **말 걸 수 없는** 배경 보행자이고,
-## 그 둘을 잇는 `Talk_eventer()` 호출은 원작에서 주석 처리돼 있다. 그러니 대화 NPC를
-## 걸어다니게 만드는 것은 고증이 아니다.
-##
-## 다만 **완전히 얼어 있으면 인형처럼 보인다**(2026-08-29 유저 지적). 자리를 지키되
-## 가끔 고개를 돌리게 한다 — 칸을 옮기지 않으므로 통행 판정도 감사 도구도 흔들지
-## 않는다. 진짜 순찰은 별개의 존재가 맡는다 — `WalkerEntity`(배경 보행자).
 const LOOK_MIN := 2.6
 const LOOK_MAX := 6.4
+const WANDER_STEP_TIME := 0.38
 const FACINGS: Array[StringName] = [&"down", &"left", &"right", &"up"]
 
 var _look_wait := 0.0
+var _wander_wait := 0.0
 var _facing := &"down"
+var _base_scale := Vector2.ONE
+var _breath_phase := 0.0
+var _fidget_wait := 0.0
+var _fidget_duration := 0.0
+var _is_talking := false
+var _is_wandering := false
 
 
-## 비주얼 조립까지 여기서 끝낸다. _ready()에 두면 add_child() 시점에 먼저 돌아
-## npc_id가 아직 빈 문자열 — 전용 시트를 못 찾고 전원이 주인공 얼굴로 나왔다.
 func setup(
 	p_id: StringName,
 	p_name: String,
 	p_seq: StringName,
 	p_cell: Vector2i,
 	tint: Color,
-	p_variants: Array = []
+	p_variants: Array = [],
+	p_wander_range: int = 0,
+	p_runtime: MapRuntime = null,
+	p_repeat_seq: Variant = null
 ) -> void:
 	npc_id = p_id
 	display_name = p_name
 	sequence_id = p_seq
+	repeat_sequence_id = p_repeat_seq
 	sequence_variants = p_variants
 	cell = p_cell
+	_home_cell = p_cell
+	wander_range = p_wander_range
+	_runtime = p_runtime
 	position = GridMover.block_center(cell)
 	modulate = tint
 	z_index = 15
 	_build_visual()
+	_wander_wait = randf_range(3.0, 7.0)
 
 
-## 지금 이 사람이 할 말. **NPC 하나에 시퀀스 하나**뿐이라, 두 번째로 찾아갔을 때
-## 다른 말을 하는 대사는 데이터에 있어도 아무도 재생하지 않았다 —
-## `prof_chem_cure_request`(해독제 의뢰 본문, 원작 TALK.TXT @t8~@t20)가 그랬다.
-## 조건은 데이터가 갖는다: 코드는 플래그가 서 있는지만 본다.
 func resolve_sequence() -> StringName:
-	for v: Variant in sequence_variants:
-		if v is not Dictionary:
-			continue
-		var d: Dictionary = v
-		if GameState.has_all_flags(d.get("requires_flag")):
-			return StringName(str(d.get("sequence_id", "")))
-	return sequence_id
+	return DialogueManager.resolve_npc_sequence(
+		npc_id, sequence_id, sequence_variants, repeat_sequence_id
+	)
 
 
-## NPC는 움직이지 않는 고정 액터이므로 그려지는 2×2를 그대로 점유한다
-## (앵커 한 칸만 보면 오른쪽/아래에서 다가갔을 때 말을 걸 수 없다).
 func body_cells() -> Array[Vector2i]:
 	return Placement.body_cells(cell)
 
@@ -76,13 +78,28 @@ func occupies(c: Vector2i) -> bool:
 	return d.x >= 0 and d.y >= 0 and d.x < Placement.BODY.x and d.y < Placement.BODY.y
 
 
-## 감사 도구용 — 전용 시트를 못 찾아 플레이어 시트로 떨어졌는지 확인.
 func sheet_path() -> String:
 	return str(_paths.get("sheet", ""))
 
 
+func set_talking(talking: bool) -> void:
+	_is_talking = talking
+	if not talking:
+		_look_wait = randf_range(LOOK_MIN, LOOK_MAX)
+		_wander_wait = randf_range(3.0, 6.0)
+
+
+func face_towards(target_cell: Vector2i) -> void:
+	var diff := target_cell - cell
+	var next := _facing
+	if absi(diff.x) > absi(diff.y):
+		next = &"right" if diff.x > 0 else &"left"
+	else:
+		next = &"down" if diff.y > 0 else &"up"
+	_apply_facing(next)
+
+
 func _build_visual() -> void:
-	# 전용 시트 우선 — 부재 시 플레이어 시트 플레이스홀더(quiet: 미정착은 정상 경로)
 	_paths = SpriteSets.character_sheet(npc_id, true)
 	if str(_paths["sheet"]).is_empty():
 		_paths = SpriteSets.character_sheet(&"player")
@@ -94,31 +111,140 @@ func _build_visual() -> void:
 	if not _meta.is_empty():
 		sprite.scale = Vector2.ONE * float(_meta.get("scale", 1.0))
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(_meta))
+	_base_scale = sprite.scale
 	sprite.animation = &"idle"
 	sprite.play()
 	add_child(sprite)
-	# 같은 순간에 전원이 고개를 돌리면 기계처럼 보인다 — 시작 시각을 흩는다.
 	_look_wait = randf_range(0.0, LOOK_MAX)
+	_breath_phase = randf_range(0.0, PI * 2.0)
+	_fidget_wait = randf_range(2.5, 5.5)
 
 
-## 가끔 고개를 돌린다. **칸은 옮기지 않는다** — 옮기는 순간 통행 오버라이드와
-## 감사 도구의 도달성 계산을 같이 손봐야 한다.
 func _process(delta: float) -> void:
+	_update_breathing(delta)
+	if _is_talking or _is_wandering:
+		return
+
+	if wander_range > 0 and _runtime != null:
+		_wander_wait -= delta
+		if _wander_wait <= 0.0:
+			_wander_wait = randf_range(4.0, 8.0)
+			if _try_wander_step():
+				return
+
 	_look_wait -= delta
 	if _look_wait > 0.0:
 		return
 	_look_wait = randf_range(LOOK_MIN, LOOK_MAX)
 	var next: StringName = FACINGS[randi() % FACINGS.size()]
-	if next == _facing:
+	if next != _facing:
+		_apply_facing(next)
+
+
+func _update_breathing(delta: float) -> void:
+	if _is_wandering:
+		sprite.scale = _base_scale
+		sprite.position = Vector2.ZERO
 		return
+	_breath_phase += delta * 2.8
+	var breath := sin(_breath_phase) * 0.035
+	sprite.position.y = sin(_breath_phase) * 1.5
+	sprite.scale.y = _base_scale.y * (1.0 + breath)
+	sprite.scale.x = _base_scale.x * (1.0 - breath * 0.5)
+
+	# 고정 NPC 주기적 미세 움직임 / 프레임 토글 (fidget)
+	if not _is_talking:
+		_fidget_wait -= delta
+		if _fidget_wait <= 0.0:
+			_fidget_wait = randf_range(3.5, 6.5)
+			_fidget_duration = 0.18
+			if (
+				sprite.sprite_frames != null
+				and sprite.sprite_frames.has_animation(sprite.animation)
+			):
+				if sprite.sprite_frames.get_frame_count(sprite.animation) > 1:
+					sprite.frame = 1
+		elif _fidget_duration > 0.0:
+			_fidget_duration -= delta
+			if _fidget_duration <= 0.0:
+				if not String(sprite.animation).begins_with("idle_"):
+					sprite.frame = 0
+
+
+func _apply_facing(next: StringName) -> void:
 	var anim := SpriteSets.pose_anim(sprite.sprite_frames, next, false)
 	if anim.is_empty():
 		return
 	_facing = next
 	sprite.animation = anim
-	# 정지 포즈로 walk 프레임을 쓸 때는 첫 장에서 세운다(SpriteSets.pose_anim 규약).
 	if String(anim).begins_with("idle_"):
 		sprite.play()
 	else:
 		sprite.stop()
 		sprite.frame = 0
+
+
+func _try_wander_step() -> bool:
+	var dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]
+	dirs.shuffle()
+	if cell != _home_cell and randf() < 0.5:
+		var back := _step_towards(cell, _home_cell)
+		if back != Vector2i.ZERO:
+			dirs.push_front(back)
+
+	for dir in dirs:
+		var target := cell + dir
+		if (
+			absi(target.x - _home_cell.x) > wander_range
+			or absi(target.y - _home_cell.y) > wander_range
+		):
+			continue
+		for c in body_cells():
+			_runtime.set_override_attr(c, 0)
+		var fits := Placement.body_fits(_runtime, target)
+		if not fits:
+			for c in body_cells():
+				_runtime.set_override_attr(c, 1)
+			continue
+		if Placement.bodies_touch(target, GameState.player_cell):
+			for c in body_cells():
+				_runtime.set_override_attr(c, 1)
+			continue
+
+		cell = target
+		for c in body_cells():
+			_runtime.set_override_attr(c, 1)
+
+		_is_wandering = true
+		var face_name := &"down"
+		if dir.x < 0:
+			face_name = &"left"
+		elif dir.x > 0:
+			face_name = &"right"
+		elif dir.y < 0:
+			face_name = &"up"
+
+		var walk_anim := SpriteSets.pose_anim(sprite.sprite_frames, face_name, true)
+		if not walk_anim.is_empty():
+			sprite.animation = walk_anim
+			sprite.play()
+		_facing = face_name
+
+		var tw := create_tween()
+		tw.tween_property(self, "position", GridMover.block_center(cell), WANDER_STEP_TIME)
+		tw.finished.connect(
+			func() -> void:
+				_is_wandering = false
+				_apply_facing(_facing)
+		)
+		return true
+	return false
+
+
+func _step_towards(from: Vector2i, to: Vector2i) -> Vector2i:
+	var diff := to - from
+	if absi(diff.x) >= absi(diff.y) and diff.x != 0:
+		return Vector2i(1 if diff.x > 0 else -1, 0)
+	elif diff.y != 0:
+		return Vector2i(0, 1 if diff.y > 0 else -1)
+	return Vector2i.ZERO

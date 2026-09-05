@@ -27,6 +27,7 @@ func _ready() -> void:
 func _build() -> void:
 	var frame := ModalFrame.new()
 	frame.setup("UI_HELP_TITLE", "UI_CLOSE_ESC", Vector2(420, 0))
+	frame.dismissed.connect(func() -> void: closed.emit())
 	add_child(frame)
 
 	# 키캡(고정 폭) + 설명 2열 — 구판은 한 줄에 이어 붙여 눈이 키를 찾기 어려웠다.
@@ -48,6 +49,23 @@ func _build() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if event.is_action_pressed(&"cancel") or event.is_action_pressed(&"ui_accept"):
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		closed.emit()
+		get_viewport().set_input_as_handled()
+		return
+	if (
+		event.is_action_pressed(&"cancel")
+		or event.is_action_pressed(&"ui_accept")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE)
+		)
+	):
 		closed.emit()
 		get_viewport().set_input_as_handled()

@@ -16,6 +16,7 @@ signal item_selected(item_def: Dictionary)
 ## 단축키 — 대상 전환(Q/E)과 직전 행동 반복(R). 컨트롤러가 처리한다.
 signal target_cycled(direction: int)
 signal repeat_requested
+signal cancel_requested
 
 ## 커맨드 id ↔ 표시 키. id는 번역과 무관한 계약값(컨트롤러가 이걸로 분기한다).
 const COMMANDS: Array[Dictionary] = [
@@ -58,6 +59,7 @@ var _skills: Array[Dictionary] = []
 var _player: Combatant
 var _enemies: Array[Combatant] = []
 var _enemy_cards: Array[PanelContainer] = []  # 대상 강조용
+var _target_markers: Array[Label] = []  # 타겟 마커 표시
 var _log_panel: PanelContainer
 var _log_box: VBoxContainer
 var _target_index := 0
@@ -107,10 +109,15 @@ func set_target(index: int) -> void:
 		var card := _enemy_cards[i]
 		if not is_instance_valid(card):
 			continue
-		if i == index:
+		var is_sel := i == index
+		if is_sel:
 			card.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.ROW_SELECTED, 8, 7, 3))
 		else:
 			card.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
+		if i < _target_markers.size() and is_instance_valid(_target_markers[i]):
+			_target_markers[i].visible = is_sel
+	if _menu_kind == &"skill":
+		show_skill_menu()
 
 
 func _set_gauge(gauge: HudGauge, hp: int, max_hp: int) -> void:
@@ -133,13 +140,22 @@ func _refresh_break(e: Combatant) -> void:
 	var row: HBoxContainer = _break_bars[e]
 	var broken := e.is_broken()
 	for i in row.get_child_count():
-		var pip := row.get_child(i) as PanelContainer
-		var filled := i < e.break_gauge
-		# 빈 칸도 보여야 "게이지가 있다"는 것이 읽힌다 — 검정으로 두면 카드 배경에 묻힌다.
-		var color := (
-			HudTheme.BREAK_ON if broken else (HudTheme.ACCENT if filled else HudTheme.TRACK)
-		)
-		pip.add_theme_stylebox_override("panel", HudTheme.fill(color, 2))
+		var child := row.get_child(i)
+		var pip := child as PanelContainer
+		if pip != null:
+			var filled := i < e.break_gauge
+			var color := (
+				HudTheme.BREAK_ON if broken else (HudTheme.ACCENT if filled else HudTheme.TRACK)
+			)
+			pip.add_theme_stylebox_override("panel", HudTheme.fill(color, 2))
+		var lbl := child as Label
+		if lbl != null:
+			if broken:
+				lbl.text = "BREAK!"
+				lbl.add_theme_color_override("font_color", HudTheme.BREAK_ON)
+			else:
+				lbl.text = _format_weaknesses(e.weaknesses)
+				lbl.add_theme_color_override("font_color", HudTheme.ACCENT)
 
 
 func set_turn_text(text: String) -> void:
@@ -181,17 +197,34 @@ func show_command_menu() -> void:
 
 func show_skill_menu() -> void:
 	var entries: Array[Dictionary] = []
+	var target_enemy: Combatant = null
+	if _target_index >= 0 and _target_index < _enemies.size():
+		target_enemy = _enemies[_target_index]
 	for skill: Dictionary in _skills:
+		var el := str(skill.get("element", ""))
+		var note := _element_note(skill)
+		var is_weak := false
+		if target_enemy != null and not target_enemy.is_down():
+			if StringName(el) in target_enemy.weaknesses:
+				is_weak = true
+		elif str(skill.get("targeting", "")) == "all_enemies":
+			for e in _enemies:
+				if not e.is_down() and StringName(el) in e.weaknesses:
+					is_weak = true
+					break
+		if is_weak:
+			note = (note + " " if not note.is_empty() else "") + "WEAK!"
 		var entry := {
 			"text": str(skill.get("display_key", skill["id"])),
 			"skill": skill,
-			"note": _element_note(skill),
+			"note": note,
 		}
 		entries.append(entry)
 	if entries.is_empty():
 		# 빈 상자만 뜨면 "고장"으로 읽힌다 — 도구 메뉴와 같은 규약으로 이유를 적는다.
 		# (스킬은 GameState.owned_skills 게이팅이라 미습득이면 실제로 0개일 수 있다.)
 		entries.append({"text": tr("UI_BATTLE_NO_SKILL"), "disabled": true})
+	entries.append({"text": tr("UI_BATTLE_BACK"), "id": &"back"})
 	_open_menu(&"skill", entries)
 
 
@@ -209,6 +242,7 @@ func show_item_menu() -> void:
 		entries.append(entry)
 	if entries.is_empty():
 		entries.append({"text": tr("UI_BATTLE_NO_ITEM"), "disabled": true})
+	entries.append({"text": tr("UI_BATTLE_BACK"), "id": &"back"})
 	_open_menu(&"item", entries)
 
 
@@ -249,7 +283,16 @@ func _open_menu(kind: StringName, entries: Array[Dictionary]) -> void:
 		box.add_child(row)
 		_menu_rows.append(row)
 	if kind != &"command":
-		box.add_child(HudTheme.label(tr("UI_BATTLE_MENU_BACK"), 10, HudTheme.TEXT_MUTED))
+		var back_lbl := HudTheme.label(tr("UI_BATTLE_MENU_BACK"), 10, HudTheme.TEXT_MUTED)
+		back_lbl.mouse_filter = Control.MOUSE_FILTER_STOP
+		back_lbl.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		back_lbl.gui_input.connect(
+			func(e: InputEvent) -> void:
+				if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+					AudioManager.play_sfx(&"sfx_menu_cancel")
+					show_command_menu()
+		)
+		box.add_child(back_lbl)
 	# 단축키 안내 — 메뉴 아래 한 줄. 번역 키는 data/l10n/ui.csv.
 	var hint := HudTheme.label(tr("UI_BATTLE_HOTKEYS"), 10, HudTheme.TEXT_MUTED)
 	hint.name = "Hotkeys"
@@ -276,10 +319,12 @@ func _bind_menu_mouse(shell: Control, index: int) -> void:
 		func(e: InputEvent) -> void:
 			if not (e is InputEventMouseButton and e.pressed):
 				return
-			if e.button_index != MOUSE_BUTTON_LEFT or index >= _menu_entries.size():
-				return
-			_menu_index = index
-			_confirm_menu()
+			if e.button_index == MOUSE_BUTTON_LEFT and index < _menu_entries.size():
+				_menu_index = index
+				_refresh_menu()
+				_confirm_menu()
+			elif e.button_index == MOUSE_BUTTON_RIGHT and _menu_kind != &"command":
+				show_command_menu()
 	)
 
 
@@ -287,16 +332,19 @@ func _make_menu_row(index: int, entry: Dictionary) -> Control:
 	var shell := PanelContainer.new()
 	_bind_menu_mouse(shell, index)
 	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_theme_constant_override("separation", 6)
 	shell.add_child(row)
 
 	var cursor := HudTheme.label("", 13, HudTheme.ACCENT)
+	cursor.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cursor.custom_minimum_size = Vector2(13, 0)
 	row.add_child(cursor)
 
 	# 숫자 배지 — 단축키가 있다는 사실 자체를 화면이 알려 준다(설명서를 읽게 만들지 않는다).
 	if index < SLOT_KEYS:
 		var slot := HudTheme.label("%d" % (index + 1), 11, HudTheme.TEXT_MUTED)
+		slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.custom_minimum_size = Vector2(11, 0)
 		row.add_child(slot)
 	# 노드 경로가 아니라 참조로 들고 있는다 — 컨테이너 이름은 엔진이 자동으로 붙여 바뀐다.
@@ -306,23 +354,17 @@ func _make_menu_row(index: int, entry: Dictionary) -> Control:
 	var label := HudTheme.label(
 		str(entry.get("text", "")), 14, HudTheme.TEXT_MUTED if muted else HudTheme.TEXT
 	)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	label.name = "Text"
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 
 	var note := str(entry.get("note", ""))
 	if not note.is_empty():
-		row.add_child(HudTheme.label(note, 11, HudTheme.TEXT_MUTED))
+		var note_lbl := HudTheme.label(note, 11, HudTheme.TEXT_MUTED)
+		note_lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(note_lbl)
 
-	# 마우스로도 고를 수 있게 유지한다 — 키보드가 주, 마우스는 보조.
-	shell.mouse_filter = Control.MOUSE_FILTER_STOP
-	shell.gui_input.connect(
-		func(event: InputEvent) -> void:
-			if event is InputEventMouseButton and event.pressed:
-				_menu_index = index
-				_refresh_menu()
-				_confirm_menu()
-	)
 	return shell
 
 
@@ -355,6 +397,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _menu_panel == null or _menu_entries.is_empty():
 		return
+	# 우클릭으로 서브메뉴(스킬/아이템) 취소
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		if _menu_kind != &"command":
+			show_command_menu()
+			get_viewport().set_input_as_handled()
+			return
 	# 숫자 단축키 — 커서를 옮기고 곧바로 결정한다(두 번 누르지 않게).
 	for i in mini(_menu_entries.size(), SLOT_KEYS):
 		if not event.is_action_pressed(StringName("battle_slot_%d" % (i + 1))):
@@ -371,11 +423,34 @@ func _unhandled_input(event: InputEvent) -> void:
 		_move_menu(-1)
 	elif event.is_action_pressed(&"move_down"):
 		_move_menu(1)
-	elif event.is_action_pressed(&"interact") or event.is_action_pressed(&"ui_accept"):
+	elif (
+		event.is_action_pressed(&"interact")
+		or event.is_action_pressed(&"ui_accept")
+		or event.is_action_pressed(&"menu")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (
+				event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_Z]
+				or event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_Z]
+			)
+		)
+	):
 		_confirm_menu()
-	elif event.is_action_pressed(&"cancel"):
+	elif (
+		event.is_action_pressed(&"cancel")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE)
+		)
+	):
 		if _menu_kind == &"command":
-			return  # 전투 중 커맨드는 물러설 곳이 없다
+			cancel_requested.emit()
+			get_viewport().set_input_as_handled()
+			return
 		show_command_menu()
 	else:
 		return
@@ -393,6 +468,11 @@ func _confirm_menu() -> void:
 		return
 	var entry: Dictionary = _menu_entries[clampi(_menu_index, 0, _menu_entries.size() - 1)]
 	if bool(entry.get("disabled", false)):
+		AudioManager.play_sfx(&"sfx_menu_cancel")
+		return
+	if entry.get("id") == &"back":
+		AudioManager.play_sfx(&"sfx_menu_cancel")
+		show_command_menu()
 		return
 	match _menu_kind:
 		&"command":
@@ -423,7 +503,7 @@ func _build_log() -> void:
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	panel.offset_left = LOG_MARGIN
-	panel.offset_bottom = -LOG_MARGIN
+	panel.offset_bottom = -(MENU_MARGIN + 62.0)
 	add_child(panel)
 	_log_box = VBoxContainer.new()
 	_log_box.add_theme_constant_override("separation", 2)
@@ -462,12 +542,13 @@ func _build_background() -> void:
 	backdrop.build(GameState.current_floor)
 
 
-## 적 카드 — 스프라이트 머리 위. 이름·HP·브레이크·상태이상을 한 덩어리로 묶는다.
+## 적 카드 — 스프라이트 머리 위 플로팅. 타겟마커·이름·HP·브레이크·상태이상을 한 덩어리로 묶는다.
 func _build_enemy_status() -> void:
+	_target_markers.clear()
 	for i in _enemies.size():
 		var e := _enemies[i]
 		var card := PanelContainer.new()
-		card.position = Vector2(ENEMY_SLOT_X + i * ENEMY_SLOT_STEP - ENEMY_CARD_WIDTH * 0.5, 44)
+		card.position = Vector2(ENEMY_SLOT_X + i * ENEMY_SLOT_STEP - ENEMY_CARD_WIDTH * 0.5, 84.0)
 		card.custom_minimum_size = Vector2(ENEMY_CARD_WIDTH, 0)
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
@@ -475,8 +556,15 @@ func _build_enemy_status() -> void:
 		_enemy_cards.append(card)
 
 		var box := VBoxContainer.new()
-		box.add_theme_constant_override("separation", 4)
+		box.add_theme_constant_override("separation", 3)
 		card.add_child(box)
+
+		var marker := HudTheme.label("▼ TARGET", 9, HudTheme.ACCENT)
+		marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		marker.visible = (i == _target_index)
+		box.add_child(marker)
+		_target_markers.append(marker)
+
 		var name_lbl := HudTheme.label(e.display_name, 11, HudTheme.TEXT)
 		name_lbl.clip_text = true
 		box.add_child(name_lbl)
@@ -498,15 +586,32 @@ func _build_enemy_status() -> void:
 func _make_break_row(e: Combatant) -> Control:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 3)
-	row.custom_minimum_size = Vector2(0, 6)
+	row.custom_minimum_size = Vector2(0, 8)
 	for i in maxi(e.break_threshold, 1):
 		var pip := PanelContainer.new()
 		pip.custom_minimum_size = Vector2(0, 5)
 		pip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		pip.add_theme_stylebox_override("panel", HudTheme.fill(HudTheme.TRACK, 2))
 		row.add_child(pip)
+	var weak_lbl := HudTheme.label(_format_weaknesses(e.weaknesses), 9, HudTheme.ACCENT)
+	row.add_child(weak_lbl)
 	_break_bars[e] = row
 	return row
+
+
+func _format_weaknesses(weaknesses: Array[StringName]) -> String:
+	var icons: Array[String] = []
+	for w in weaknesses:
+		match str(w):
+			"fire":
+				icons.append("🔥")
+			"electric":
+				icons.append("⚡")
+			"physical":
+				icons.append("⚔")
+			_:
+				icons.append(str(w))
+	return " ".join(icons)
 
 
 ## 플레이어 카드 — 좌하단(커맨드 메뉴가 우하단이라 시선이 아래 한 줄에 모인다).
@@ -527,6 +632,9 @@ func _build_player_status() -> void:
 
 	var head := HBoxContainer.new()
 	head.add_child(HudTheme.label(tr("UI_BATTLE_PLAYER_NAME"), 14, HudTheme.TEXT))
+	var lv_val := int(GameState.player_stats.get("level", 1))
+	var lv_badge := HudTheme.label("Lv.%d" % lv_val, 11, HudTheme.ACCENT)
+	head.add_child(lv_badge)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(spacer)

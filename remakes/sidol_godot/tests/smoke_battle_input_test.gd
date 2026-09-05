@@ -11,6 +11,7 @@ extends Node
 var _got_command := &""
 var _got_target := 0
 var _got_repeat := false
+var _got_cancel := false
 
 
 func _ready() -> void:
@@ -74,6 +75,94 @@ func _ready() -> void:
 	await _send(&"battle_repeat")
 	if not _got_repeat:
 		failures.append("메뉴가 닫힌 상태에서 R이 먹히지 않았다")
+
+	# ⑤ Enter 키로 현재 선택 항목 결정
+	ui.show_command_menu()
+	await get_tree().process_frame
+	_got_command = &""
+	var enter_ev := InputEventKey.new()
+	enter_ev.keycode = KEY_ENTER
+	enter_ev.pressed = true
+	Input.parse_input_event(enter_ev)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if _got_command != &"attack":
+		failures.append("Enter 키 커맨드 결정 실패: 기대 'attack', 실제 '%s'" % _got_command)
+	else:
+		print("[smoke_input] Enter 키 결정 OK -> attack")
+
+	# ⑥ 커맨드 메뉴에서 Esc 누르면 cancel_requested 시그널 발생
+	ui.show_command_menu()
+	await get_tree().process_frame
+	_got_cancel = false
+	ui.cancel_requested.connect(func() -> void: _got_cancel = true)
+	var esc_ev := InputEventKey.new()
+	esc_ev.keycode = KEY_ESCAPE
+	esc_ev.pressed = true
+	Input.parse_input_event(esc_ev)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if not _got_cancel:
+		failures.append("커맨드 메뉴에서 Esc 시 cancel_requested 누락")
+	else:
+		print("[smoke_input] 커맨드 메뉴 Esc -> cancel_requested OK")
+
+	# ⑦ 서브메뉴(Skill) 열려 있을 때 Esc 누르면 커맨드 메뉴로 복귀
+	ui.show_skill_menu()
+	await get_tree().process_frame
+	if ui._menu_kind != &"skill":
+		failures.append("스킬 메뉴 열기 실패")
+	var esc_ev2 := InputEventKey.new()
+	esc_ev2.keycode = KEY_ESCAPE
+	esc_ev2.pressed = true
+	Input.parse_input_event(esc_ev2)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	if ui._menu_kind != &"command":
+		failures.append("서브메뉴에서 Esc 후 커맨드 메뉴 미복귀: %s" % ui._menu_kind)
+	else:
+		print("[smoke_input] 서브메뉴에서 Esc -> 커맨드 메뉴 복귀 OK")
+
+	# ⑧ 마우스 좌클릭으로 항목 선택 및 결정 (자식 Label 클릭 포함)
+	ui.show_command_menu()
+	await get_tree().process_frame
+	_got_command = &""
+	if ui._menu_rows.size() > 2:
+		var guard_row: Control = ui._menu_rows[2]  # guard
+		var click_ev := InputEventMouseButton.new()
+		click_ev.button_index = MOUSE_BUTTON_LEFT
+		click_ev.pressed = true
+		guard_row.gui_input.emit(click_ev)
+		await get_tree().process_frame
+		if _got_command != &"guard":
+			failures.append("마우스 좌클릭 커맨드 선택 실패: 기대 'guard', 실제 '%s'" % _got_command)
+		else:
+			print("[smoke_input] 마우스 좌클릭 결정 OK -> guard")
+
+	# ⑨ PauseMenu 연동 검증: can_open_on_cancel = false 확인 및 toggle 후 Esc 닫기
+	var pause := PauseMenu.new()
+	pause.allow_save = false
+	pause.can_open_on_cancel = false
+	pause.layer = 80
+	add_child(pause)
+	await get_tree().process_frame
+	# 전투 중에는 보이지 않는 상태에서 Esc로 스스로 열리지 않아야 함
+	var esc_ev3 := InputEventKey.new()
+	esc_ev3.keycode = KEY_ESCAPE
+	esc_ev3.pressed = true
+	pause._unhandled_input(esc_ev3)
+	if pause.visible:
+		failures.append("can_open_on_cancel=false인데 Esc로 PauseMenu가 자동 오픈됨")
+	# 수동 toggle 시 열리고, 열린 상태에서 Esc로 닫혀야 함
+	pause.toggle()
+	if not pause.visible:
+		failures.append("PauseMenu toggle() 오픈 실패")
+	pause._unhandled_input(esc_ev3)
+	if pause.visible:
+		failures.append("열린 PauseMenu에서 Esc 닫기 실패")
+	else:
+		print("[smoke_input] PauseMenu toggle 및 Esc 닫기 OK")
+	pause.queue_free()
 
 	_finish(failures)
 

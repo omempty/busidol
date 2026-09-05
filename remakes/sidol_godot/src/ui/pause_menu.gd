@@ -25,6 +25,8 @@ var _slot_list: SaveSlotList
 var _settings_panel: SettingsPanel
 var _help_panel: HelpPanel
 var _quest_log: QuestLogPanel
+var allow_save: bool = true
+var can_open_on_cancel: bool = true
 
 
 func _ready() -> void:
@@ -59,6 +61,7 @@ func _ready() -> void:
 func _build_root() -> void:
 	var frame := ModalFrame.new()
 	frame.setup("UI_PAUSE_TITLE", "UI_PAUSE_HINT", Vector2(300, 0))
+	frame.dismissed.connect(toggle)
 	add_child(frame)
 	_root_box = frame
 
@@ -70,23 +73,63 @@ func _build_root() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"cancel"):
-		if _screen == Screen.ROOT:
-			toggle()
+	if (
+		event.is_action_pressed(&"cancel")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (event.keycode == KEY_ESCAPE or event.physical_keycode == KEY_ESCAPE)
+		)
+	):
+		if visible:
+			if _screen == Screen.ROOT:
+				toggle()
+			else:
+				_switch(Screen.ROOT)
 			get_viewport().set_input_as_handled()
-		return
+			return
+		elif can_open_on_cancel:
+			if _screen == Screen.ROOT:
+				toggle()
+				get_viewport().set_input_as_handled()
+				return
 	if not visible or _screen != Screen.ROOT:
+		return
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		toggle()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(&"move_up"):
 		_move(-1)
 	elif event.is_action_pressed(&"move_down"):
 		_move(1)
-	elif event.is_action_pressed(&"ui_accept") or event.is_action_pressed(&"interact"):
+	elif (
+		event.is_action_pressed(&"ui_accept")
+		or event.is_action_pressed(&"interact")
+		or event.is_action_pressed(&"menu")
+		or (
+			event is InputEventKey
+			and event.pressed
+			and not event.echo
+			and (
+				event.keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_Z]
+				or event.physical_keycode in [KEY_ENTER, KEY_KP_ENTER, KEY_SPACE, KEY_Z]
+			)
+		)
+	):
 		_confirm()
 
 
 func toggle() -> void:
 	if _screen != Screen.ROOT:
+		_switch(Screen.ROOT)
+		visible = false
+		get_tree().paused = false
 		return
 	visible = not visible
 	get_tree().paused = visible
@@ -105,6 +148,9 @@ func _confirm() -> void:
 		0:
 			toggle()
 		1:
+			if not allow_save:
+				AudioManager.play_sfx(&"sfx_menu_cancel")
+				return
 			_slot_list.mode = SaveSlotList.Mode.SAVE
 			_switch(Screen.SAVE)
 		2:
@@ -189,3 +235,6 @@ func _to_title() -> void:
 func _refresh() -> void:
 	for i in range(_root_labels.size()):
 		ModalFrame.set_row_selected(_root_labels[i], i == _index)
+		if i == 1 and not allow_save:
+			var label := _root_labels[i].get_node("Text") as Label
+			label.add_theme_color_override("font_color", HudTheme.TEXT_MUTED)

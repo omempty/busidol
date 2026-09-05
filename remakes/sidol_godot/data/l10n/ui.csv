@@ -146,6 +146,7 @@ UI_SHOP_HINT,↑↓ 선택   SPACE 구매   Esc 닫기,↑↓ Select   SPACE Buy
 UI_SHOP_EMPTY,재고가 없다,Out of stock
 UI_SHOP_NO_MONEY,소지금 부족,Not enough money
 UI_BATTLE_MENU_BACK,Esc 뒤로,Esc Back
+UI_BATTLE_BACK,뒤로,Back
 UI_BATTLE_HOTKEYS,1~9 선택 · Q/E 대상 · R 반복,1-9 select · Q/E target · R repeat
 UI_BATTLE_RESULT_WIN,WIN!,WIN!
 UI_BATTLE_RESULT_LOSE,LOSE...,LOSE...
@@ -173,6 +174,10 @@ UI_BLOG_BREAK,%s 브레이크!,%s break!
 UI_BLOG_ENEMY_HIT,%s의 공격 %d,%s attacks for %d
 UI_BLOG_DODGE_HIT,피격 %d회 %d,%d hits taken for %d
 UI_BLOG_RESULT,%s,%s
+UI_BLOG_CRIT,%s에게 치명타! %d,Critical hit on %s! %d
+UI_BLOG_GUARD,방어 태세 (피해 경감 + 소량 회복),Guarding (Reduce damage + small heal)
+UI_BLOG_ADVANTAGE,선제 기습 성공! (적 방어 압박),Surprise attack! (Enemy defense broken)
+UI_BLOG_AMBUSH,적의 기습 공격!,Enemy ambush!
 UI_MENU_TAB_ITEMS,아이템,Items
 UI_MENU_TAB_GEAR,장비,Gear
 UI_MENU_TAB_STATUS,상태,Status
@@ -187,3 +192,28 @@ UI_STAT_EXP,경험치,EXP
 UI_STAT_MONEY,소지금,Money
 UI_CHAR_MENU_TITLE,캐릭터 메뉴,Character menu
 UI_CHAR_MENU_HINT,↑ ↓ ← → 선택 | Q/E 탭 | 클릭도 됨 | I·ESC 닫기,Arrows select | Q/E tabs | click works | I/ESC close
+UI_GEAR_SLOTS_TITLE,장착 슬롯,Equipped Slots
+UI_GEAR_INV_TITLE,착용 가능 장비,Equipable Gear
+UI_GEAR_NO_EQUIPABLE,착용 가능한 장비 없음,No equipable gear
+UI_GEAR_COMPARE_TITLE,스탯 비교,Stat Comparison
+UI_GEAR_UNEQUIP,장비 해제,Unequip
+UI_STAT_PROFILE_TITLE,시돌 (컴공 2학년),Sidol (CS Sophomore)
+UI_STAT_SKILLS_TITLE,습득 기술,Skills
+UI_STAT_NO_SKILLS,기본 기술만 보유 중,Basic skills only
+UI_STAT_NEXT_EXP,다음 레벨까지,Next Level
+UI_SYSTEM_SUB_SAVE,현재 진행 상황을 슬롯에 저장,Save current game progress
+UI_SYSTEM_SUB_LOAD,저장된 기록을 불러오기,Load saved game data
+UI_SYSTEM_SUB_QUESTLOG,진행 중인 퀘스트와 목표 확인,Check active quests and goals
+UI_SYSTEM_SUB_SETTINGS,볼륨·속도·화면 등 설정 조정,Adjust volume and display settings
+UI_SYSTEM_SUB_HELP,게임 조작법 및 키 안내 확인,View controls and game guide
+UI_DLG_BTN_LOG,로그 (Enter),Log (Enter)
+UI_DLG_BTN_AUTO,자동,Auto
+UI_DLG_BTN_SKIP,스킵,Skip
+UI_DLG_NEXT,▼,▼
+UI_HUD_TRACKER_TITLE,현재 목표,Current Objective
+UI_TRACKER_F1,3층 화공과 사고 조사,Investigate 3F Chem incident
+UI_TRACKER_F2,전산과 실습실 및 단서 수색,Search CS lab and clues
+UI_TRACKER_F3,화공과 해독제 시약 합성,Synthesize antidote reagents
+UI_TRACKER_F4,실험 구역 돌파 및 전원 복구,Breach lab and restore power
+UI_TRACKER_F5,시스템 빌더 제어실 도달,Reach System Builder chamber
+UI_TRACKER_DEFAULT,학교 탈출 단서 수색,Search clues to escape

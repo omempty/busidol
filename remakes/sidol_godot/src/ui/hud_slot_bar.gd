@@ -4,6 +4,8 @@ extends HBoxContainer
 ## 구판은 빈 칸까지 항상 6개를 깔아 화면 아래를 회색 상자로 채웠다.
 ## 지금은 보유분만 그리고, 하나도 없으면 바 자체를 숨긴다.
 
+signal slot_activated(index: int)
+
 const SLOT_COUNT := 6
 const SLOT_SIZE := 38.0
 
@@ -23,17 +25,18 @@ func refresh(slots: Array[Dictionary]) -> void:
 	if not visible:
 		return
 	for i in mini(SLOT_COUNT, slots.size()):
-		add_child(_make_slot(slots[i]))
+		add_child(_make_slot(slots[i], i))
 	if slots.size() > SLOT_COUNT:
 		add_child(_make_more(slots.size() - SLOT_COUNT))
 
 
-func _make_slot(slot: Dictionary) -> PanelContainer:
+func _make_slot(slot: Dictionary, slot_idx: int) -> PanelContainer:
 	var item_def := Database.get_item(StringName(str(slot["item_id"])))
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(SLOT_SIZE, SLOT_SIZE)
 	box.tooltip_text = str(item_def.get("name_ko", slot["item_id"]))
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.mouse_filter = Control.MOUSE_FILTER_STOP
+	box.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	var kind := ItemIcons.kind_color(StringName(str(item_def.get("kind", ""))))
 	var sb := HudTheme.panel(8, 3)
 	sb.bg_color = Color(kind.r * 0.45, kind.g * 0.45, kind.b * 0.45, 0.92)
@@ -41,7 +44,14 @@ func _make_slot(slot: Dictionary) -> PanelContainer:
 	sb.shadow_size = 3
 	box.add_theme_stylebox_override("panel", sb)
 	box.add_child(_icon(item_def))
+	box.add_child(_key_badge(slot_idx + 1))
 	box.add_child(_count_badge(int(slot["count"])))
+
+	box.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				slot_activated.emit(slot_idx)
+	)
 	return box
 
 
@@ -58,6 +68,15 @@ func _icon(item_def: Dictionary) -> Control:
 	var glyph := HudTheme.label(ItemIcons.glyph(item_def), 17, HudTheme.TEXT)
 	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return glyph
+
+
+## 단축키 배지 — 아이콘 위 좌상단 [1], [2]...
+func _key_badge(num: int) -> Control:
+	var badge := HudTheme.outlined_label(str(num), 9, HudTheme.ACCENT)
+	badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	badge.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return badge
 
 
 ## 수량 배지 — 아이콘 위 우하단. PanelContainer는 자식을 늘려 채우므로 앵커·오프셋이 아니라

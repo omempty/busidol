@@ -30,11 +30,13 @@ func is_typing() -> bool:
 
 
 var _panel: PanelContainer
+var _name_badge: PanelContainer
 var _name_label: Label
 var _body_label: Label
-## 화자 초상 — PortraitLibrary가 speaker(또는 step.portrait)로 찾는다.
-## 미설치 화자는 숨긴다(초상 16종이 다 차기 전에도 대화가 정상 동작해야 한다).
+var _portrait_frame: PanelContainer
 var _portrait: TextureRect
+var _next_indicator: Label
+var _auto_btn_label: Label
 
 
 func _ready() -> void:
@@ -43,58 +45,164 @@ func _ready() -> void:
 
 	_panel = PanelContainer.new()
 	_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_panel.offset_left = 12
-	_panel.offset_right = -12
-	_panel.offset_bottom = -12
-	# 대사창을 클릭해도 넘어간다 — 키보드·패드와 같은 진행 수단(04_uiux §1.3).
+	_panel.offset_left = 28
+	_panel.offset_right = -28
+	_panel.offset_bottom = -14
 	_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_panel.add_theme_stylebox_override("panel", HudTheme.panel(10, 14))
 	_panel.gui_input.connect(
 		func(e: InputEvent) -> void:
-			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			if (
+				e is InputEventMouseButton
+				and e.pressed
+				and (e.button_index == MOUSE_BUTTON_LEFT or e.button_index == MOUSE_BUTTON_RIGHT)
+			):
 				advance()
 	)
 	add_child(_panel)
 
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 10)
-	_panel.add_child(row)
+	var main_row := HBoxContainer.new()
+	main_row.add_theme_constant_override("separation", 14)
+	_panel.add_child(main_row)
+
+	# 초상화 프레임 (도트 보존 & 입체 액자)
+	_portrait_frame = PanelContainer.new()
+	_portrait_frame.custom_minimum_size = Vector2(104, 104)
+	var psb := StyleBoxFlat.new()
+	psb.bg_color = Color(0.08, 0.09, 0.12, 0.95)
+	psb.border_color = Color(0.4, 0.45, 0.55, 0.6)
+	psb.set_border_width_all(2)
+	psb.set_corner_radius_all(8)
+	psb.shadow_size = 4
+	psb.shadow_color = Color(0, 0, 0, 0.5)
+	_portrait_frame.add_theme_stylebox_override("panel", psb)
+	_portrait_frame.visible = false
+	main_row.add_child(_portrait_frame)
 
 	_portrait = TextureRect.new()
-	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
+	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # 도트 보존
-	_portrait.visible = false
-	row.add_child(_portrait)
+	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_portrait.custom_minimum_size = Vector2(98, 98)
+	_portrait_frame.add_child(_portrait)
 
-	var vbox := VBoxContainer.new()
-	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(vbox)
+	var content_col := VBoxContainer.new()
+	content_col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content_col.add_theme_constant_override("separation", 6)
+	main_row.add_child(content_col)
+
+	# 헤더 바: [독립 화자 명찰 배지] + [스페이서] + [도구 버튼들: LOG, AUTO, SKIP]
+	var header_bar := HBoxContainer.new()
+	header_bar.add_theme_constant_override("separation", 8)
+	content_col.add_child(header_bar)
+
+	_name_badge = PanelContainer.new()
+	_name_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_name_badge.add_theme_stylebox_override(
+		"panel", HudTheme.chip(Color(0.14, 0.16, 0.22, 0.95), 4, 10, 3)
+	)
 	_name_label = Label.new()
-	# 초기색일 뿐 — 실제 색은 _load_step()이 화자마다 SpeakerColors로 덮어쓴다.
 	_name_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
-	vbox.add_child(_name_label)
+	_name_badge.add_child(_name_label)
+	header_bar.add_child(_name_badge)
+
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header_bar.add_child(sp)
+
+	# 도구 버튼들
+	var tools_row := HBoxContainer.new()
+	tools_row.add_theme_constant_override("separation", 4)
+	header_bar.add_child(tools_row)
+
+	# [LOG]
+	var log_btn := PanelContainer.new()
+	log_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	log_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	log_btn.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.BG_SUNKEN, 4, 6, 2))
+	var log_lbl := HudTheme.label(tr("UI_DLG_BTN_LOG"), 10, HudTheme.TEXT_MUTED)
+	log_btn.add_child(log_lbl)
+	log_btn.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				toggle_log()
+	)
+	tools_row.add_child(log_btn)
+
+	# [AUTO]
+	var auto_btn := PanelContainer.new()
+	auto_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	auto_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	auto_btn.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.BG_SUNKEN, 4, 6, 2))
+	_auto_btn_label = HudTheme.label(tr("UI_DLG_BTN_AUTO"), 10, HudTheme.TEXT_MUTED)
+	auto_btn.add_child(_auto_btn_label)
+	auto_btn.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				auto_advance = not auto_advance
+				_refresh_auto_btn()
+	)
+	tools_row.add_child(auto_btn)
+
+	# [SKIP]
+	var skip_btn := PanelContainer.new()
+	skip_btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	skip_btn.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	skip_btn.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.BG_SUNKEN, 4, 6, 2))
+	var skip_lbl := HudTheme.label(tr("UI_DLG_BTN_SKIP"), 10, HudTheme.TEXT_MUTED)
+	skip_btn.add_child(skip_lbl)
+	skip_btn.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+				advance()
+	)
+	tools_row.add_child(skip_btn)
+
+	# 본문 및 진행 인디케이터 컨테이너
+	var body_box := HBoxContainer.new()
+	body_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_col.add_child(body_box)
+
 	_body_label = Label.new()
+	_body_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	vbox.add_child(_body_label)
+	body_box.add_child(_body_label)
+
+	_next_indicator = Label.new()
+	_next_indicator.text = tr("UI_DLG_NEXT")
+	_next_indicator.add_theme_color_override("font_color", HudTheme.ACCENT)
+	_next_indicator.add_theme_font_size_override("font_size", 14)
+	_next_indicator.size_flags_vertical = Control.SIZE_SHRINK_END
+	_next_indicator.visible = false
+	body_box.add_child(_next_indicator)
 
 	_apply_text_scale()
+	_refresh_auto_btn()
 
-	# 대화 로그 — 필드 대화창과 컷신 대사창이 각자 하나씩 갖지만 **내용은 한 저장소**다
-	# (DialogueLog가 static). 동시에 열리는 일이 없으므로 창이 둘이어도 무해하다.
 	_log_panel = DialogueLogPanel.new()
 	add_child(_log_panel)
+
+
+func _refresh_auto_btn() -> void:
+	if _auto_btn_label != null:
+		_auto_btn_label.add_theme_color_override(
+			"font_color", HudTheme.ACCENT if auto_advance else HudTheme.TEXT_MUTED
+		)
 
 
 ## Q9 접근성 — 본문 글자 크기 설정을 이름/본문/패널 높이에 반영.
 func _apply_text_scale() -> void:
 	var s := SettingsManager.get_text_scale()
-	_panel.offset_top = -118 * s
-	_body_label.custom_minimum_size = Vector2(0, 72 * s)
-	_body_label.add_theme_font_size_override("font_size", int(17 * s))
-	_name_label.add_theme_font_size_override("font_size", int(15 * s))
+	_panel.offset_top = -126 * s
+	_body_label.custom_minimum_size = Vector2(0, 64 * s)
+	_body_label.add_theme_font_size_override("font_size", int(16 * s))
+	_name_label.add_theme_font_size_override("font_size", int(14 * s))
 	if _portrait != null:
-		# 패널 높이(118*s)에서 여백을 뺀 정사각 — 초상 셀이 256이라 축소만 일어난다.
-		var side := 96.0 * s
+		var side := 98.0 * s
 		_portrait.custom_minimum_size = Vector2(side, side)
+	if _portrait_frame != null:
+		var side_f := 104.0 * s
+		_portrait_frame.custom_minimum_size = Vector2(side_f, side_f)
 
 
 func start(p_seq_id: StringName, p_steps: Array) -> void:
@@ -163,8 +271,14 @@ func _load_step() -> void:
 		return
 	var speaker := str(step.get("speaker", ""))
 	_name_label.text = speaker
-	# 화자마다 다른 색 — 누가 말하는지 이름을 읽지 않고도 안다(04_uiux §1.2).
-	_name_label.add_theme_color_override("font_color", SpeakerColors.color_for(speaker))
+	var spk_color := SpeakerColors.color_for(speaker)
+	_name_label.add_theme_color_override("font_color", spk_color)
+	if _name_badge != null:
+		_name_badge.visible = not speaker.is_empty()
+		var bsb := HudTheme.chip(Color(0.12, 0.14, 0.18, 0.95), 4, 10, 3)
+		bsb.border_color = Color(spk_color, 0.7)
+		bsb.set_border_width_all(1)
+		_name_badge.add_theme_stylebox_override("panel", bsb)
 	_apply_portrait(step)
 	_body_label.text = Database.text(str(step["text"]))
 	DialogueLog.push(speaker, _body_label.text)
@@ -182,7 +296,15 @@ func _apply_portrait(step: Dictionary) -> void:
 	var key := str(step.get("portrait", step.get("speaker", "")))
 	var tex := PortraitLibrary.texture_for(key, str(step.get("expr", "")))
 	_portrait.texture = tex
-	_portrait.visible = tex != null
+	var has_tex := tex != null
+	_portrait.visible = has_tex
+	if _portrait_frame != null:
+		_portrait_frame.visible = has_tex
+		if has_tex:
+			var spk_color := SpeakerColors.color_for(str(step.get("speaker", "")))
+			var psb: StyleBoxFlat = _portrait_frame.get_theme_stylebox("panel") as StyleBoxFlat
+			if psb != null:
+				psb.border_color = Color(spk_color, 0.8)
 
 
 func _process(delta: float) -> void:
@@ -204,4 +326,8 @@ func _process(delta: float) -> void:
 				advance()
 				return
 	_body_label.visible_characters = int(_revealed)
-	# 진행 입력은 Field가 중재해 advance()를 호출한다(입력 엣지 유실 방지).
+
+	if _next_indicator != null:
+		_next_indicator.visible = not typing and is_open
+		if _next_indicator.visible:
+			_next_indicator.modulate.a = 0.4 + 0.6 * absf(sin(Time.get_ticks_msec() * 0.006))

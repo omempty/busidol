@@ -4,13 +4,14 @@
   "transitions": [
     {
       "id": "stairs_center_up_f1",
+      "_comment": "F1→F2 마스터 게이트 — 2층 철문 대폭파(Q_F1_BLAST) 완료 시 개방",
       "anchor": [100, 63],
       "trigger_dir": "down",
       "floor_delta": 1,
       "spawn_offset": [3, -2],
       "guard_min_floor": 1,
       "guard_max_floor": 1,
-      "requires_flag": null
+      "requires_flag": "Q_F1_BLAST"
     },
     {
       "id": "stairs_center_up_f2",
@@ -30,8 +31,19 @@
       "floor_delta": 1,
       "spawn_offset": [3, -2],
       "guard_min_floor": 3,
-      "guard_max_floor": 4,
+      "guard_max_floor": 3,
       "requires_flag": null
+    },
+    {
+      "id": "stairs_center_up_f4",
+      "_comment": "F4→F5 마스터 게이트 — 동료 괴물 3인방 레버 희생(Q_F4_SACRIFICE) 완료 시 개방",
+      "anchor": [100, 63],
+      "trigger_dir": "down",
+      "floor_delta": 1,
+      "spawn_offset": [3, -2],
+      "guard_min_floor": 4,
+      "guard_max_floor": 4,
+      "requires_flag": "Q_F4_SACRIFICE"
     },
     {
       "id": "stairs_center_down",
@@ -44,14 +56,25 @@
       "requires_flag": null
     },
     {
-      "id": "stairs_east_up_f01",
+      "id": "stairs_east_up_f0",
       "anchor": [169, 60],
       "trigger_dir": "down",
       "floor_delta": 1,
       "spawn_offset": [8, -2],
       "guard_min_floor": 0,
-      "guard_max_floor": 1,
+      "guard_max_floor": 0,
       "requires_flag": null
+    },
+    {
+      "id": "stairs_east_up_f1",
+      "_comment": "F1→F2 마스터 게이트 — center와 동일 조건(Q_F1_BLAST)",
+      "anchor": [169, 60],
+      "trigger_dir": "down",
+      "floor_delta": 1,
+      "spawn_offset": [8, -2],
+      "guard_min_floor": 1,
+      "guard_max_floor": 1,
+      "requires_flag": "Q_F1_BLAST"
     },
     {
       "id": "stairs_east_up_f2",
@@ -65,14 +88,25 @@
       "requires_flag": "Q_F2_POSTER"
     },
     {
-      "id": "stairs_east_up_f34",
+      "id": "stairs_east_up_f3",
       "anchor": [169, 60],
       "trigger_dir": "down",
       "floor_delta": 1,
       "spawn_offset": [8, -2],
       "guard_min_floor": 3,
-      "guard_max_floor": 4,
+      "guard_max_floor": 3,
       "requires_flag": null
+    },
+    {
+      "id": "stairs_east_up_f4",
+      "_comment": "F4→F5 마스터 게이트 — center와 동일 조건(Q_F4_SACRIFICE)",
+      "anchor": [169, 60],
+      "trigger_dir": "down",
+      "floor_delta": 1,
+      "spawn_offset": [8, -2],
+      "guard_min_floor": 4,
+      "guard_max_floor": 4,
+      "requires_flag": "Q_F4_SACRIFICE"
     },
     {
       "id": "stairs_east_down",

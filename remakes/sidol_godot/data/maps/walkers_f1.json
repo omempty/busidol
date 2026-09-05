@@ -5,6 +5,15 @@
     {
       "id": "walker_f1",
       "sprite": "rescue_girl",
+      "name": "대피 중인 학생",
+      "sequence_id": "walker_f1_corridor",
+      "repeat_sequence_id": "walker_f1_repeat",
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F1_BLAST",
+          "sequence_id": "walker_f1_blast"
+        }
+      ],
       "pos": [
         100,
         26

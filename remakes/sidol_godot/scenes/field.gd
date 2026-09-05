@@ -25,6 +25,7 @@ var _focus: InteractFocus
 var fx: FieldFx
 var renderer: MapRenderer
 var _talking_npc: NpcEntity
+var _talking_walker: WalkerEntity
 var _trigger_seq_active := false
 var _prev_states := {}
 ## 필드 진입 직후 접촉 무시 시간(초) — 전투에서 돌아오자마자 옆에 선 몬스터에게
@@ -169,8 +170,21 @@ func _physics_process(_delta: float) -> void:
 			# **붙은 개체는 명단에서 뺀다.** 이기면 잡은 것이고, 도망쳐도 그 자리에
 			# 그대로 서 있으면 도망이 아니다. 전투는 씬 전환이라 지금 빼 둬야 한다.
 			var species := String(contact.species_id)
+			var p_face := player.facing_vector()
+			var e_face := contact.facing_vector()
+			var enemy_alerted := contact.is_alerted()
+			var is_advantage := false
+			var is_ambush := false
+
+			if not enemy_alerted:
+				# 적이 플레이어를 인지하지 못한 상태에서 기습 -> 선제 공격권(Advantage)
+				is_advantage = true
+			elif p_face != Vector2i.ZERO and e_face != Vector2i.ZERO and p_face == e_face:
+				# 플레이어가 도망치는 중 등 뒤에서 적에게 닿음 -> 적 기습(Ambush)
+				is_ambush = true
+
 			enemy_manager.remove_entity(contact)
-			_trigger_encounter(species)
+			_trigger_encounter(species, is_advantage, is_ambush)
 			return
 
 	# 이벤트 트리거 판정 (zone/auto)
@@ -204,6 +218,14 @@ func _physics_process(_delta: float) -> void:
 		_focus.show_cells(npc.body_cells())
 		if interact_edge:
 			_start_dialogue(npc)
+		return
+
+	var walker := _walker_in_front()
+	if walker != null and not walker.sequence_id.is_empty():
+		_prompt.show_at("%s   SPACE" % walker.display_name, walker.position + Vector2(0, -46))
+		_focus.show_cells(Placement.body_cells(walker.cell))
+		if interact_edge:
+			_start_walker_dialogue(walker)
 		return
 
 	# 원작 ATT 대화 마커 — 맵 그림에 붙은 말 걸 수 있는 자리(TalkTargets 참조).
@@ -339,12 +361,12 @@ func _open_chest(cell: Vector2i) -> void:
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
 
 	if attr == CHEST_MEET:
-		# 원작 MEET — 상자를 열면 몬스터가 튀어나온다.
+		# 원작 MEET — 상자를 열면 몬스터가 튀어나온다 (기습 인카운터).
 		AudioManager.play_sfx(&"sfx_encounter")
 		_show_pickup_popup(tr("UI_FIELD_AMBUSH"))
 		var species := Database.encounter_species(GameState.current_floor)
 		if not species.is_empty():
-			_trigger_encounter(str(species[0]["id"]))
+			_trigger_encounter(str(species[0]["id"]), false, true)
 		return
 
 	var item_id := Database.legacy_item(attr)
@@ -496,6 +518,7 @@ func _spawn_npcs() -> void:
 		elif relaxed > 0:
 			push_warning("NPC 배치 제약 완화(%d): %s %s -> %s" % [relaxed, n["id"], desired, cell])
 		var tint_arr: Array = n.get("tint", [1.0, 1.0, 1.0])
+		var wander_range := int(n.get("wander_range", 0))
 		var npc := NpcEntity.new()
 		add_child(npc)
 		npc.setup(
@@ -504,7 +527,10 @@ func _spawn_npcs() -> void:
 			StringName(str(n["sequence_id"])),
 			cell,
 			Color(tint_arr[0], tint_arr[1], tint_arr[2]),
-			n.get("sequence_variants", [])
+			n.get("sequence_variants", []),
+			wander_range,
+			runtime,
+			n.get("repeat_sequence_id", null)
 		)
 		npcs.append(npc)
 		# 고정 액터는 실체가 있어야 한다 — 통과해 지나가지 못하게 몸 셀을 막는다.
@@ -538,7 +564,11 @@ func _spawn_walkers() -> void:
 			StringName(str(w.get("sprite", ""))),
 			Vector2i(int(w["pos"][0]), int(w["pos"][1])),
 			legs,
-			runtime
+			runtime,
+			str(w.get("name", "")),
+			StringName(str(w.get("sequence_id", ""))),
+			w.get("sequence_variants", []),
+			w.get("repeat_sequence_id", null)
 		)
 		walkers.append(walker)
 
@@ -598,15 +628,42 @@ func _npc_in_front() -> NpcEntity:
 	return null
 
 
+func _walker_in_front() -> WalkerEntity:
+	for c in front_cells():
+		for w in walkers:
+			if is_instance_valid(w) and w.occupies(c):
+				return w
+	return null
+
+
 func _start_dialogue(npc: NpcEntity) -> void:
 	_talking_npc = npc
 	player.mover.enabled = false
 	_prompt.visible = false
+	npc.face_towards(player.mover.grid_pos)
+	npc.set_talking(true)
 	# **지금 상태에 맞는 대사**를 고른다 — 두 번째로 찾아가면 다른 말을 할 수 있다.
 	var seq := npc.resolve_sequence()
 	var steps: Array = Database.sequence(seq)
 	if steps.is_empty():
 		push_warning("빈 시퀀스: %s" % seq)
+		npc.set_talking(false)
+		player.mover.enabled = true
+		return
+	dialogue_box.start(seq, steps)
+
+
+func _start_walker_dialogue(walker: WalkerEntity) -> void:
+	_talking_walker = walker
+	player.mover.enabled = false
+	_prompt.visible = false
+	walker.face_towards(player.mover.grid_pos)
+	walker.set_talking(true)
+	var seq := walker.resolve_sequence()
+	var steps: Array = Database.sequence(seq)
+	if steps.is_empty():
+		push_warning("빈 시퀀스: %s" % seq)
+		walker.set_talking(false)
 		player.mover.enabled = true
 		return
 	dialogue_box.start(seq, steps)
@@ -614,8 +671,13 @@ func _start_dialogue(npc: NpcEntity) -> void:
 
 func _on_dialogue_finished(_seq_id: StringName) -> void:
 	if _talking_npc != null:
+		_talking_npc.set_talking(false)
 		player.mover.enabled = true
 		_talking_npc = null
+	elif _talking_walker != null:
+		_talking_walker.set_talking(false)
+		player.mover.enabled = true
+		_talking_walker = null
 	elif _trigger_seq_active:
 		_trigger_seq_active = false
 		player.mover.enabled = true
@@ -653,13 +715,15 @@ func _play_sequence(sequence_id: StringName) -> void:
 
 
 ## 몬스터 접촉 → 전투 씬 전환 (원작 Check_Quang 대응)
-func _trigger_encounter(enemy_id: String) -> void:
+func _trigger_encounter(enemy_id: String, advantage: bool = false, ambush: bool = false) -> void:
 	AudioManager.play_sfx(&"sfx_encounter")
 	var edef := Database.get_enemy_def(StringName(enemy_id))
 	GameState.pending_encounter = {
 		"enemies": [enemy_id],
 		# first_win_flag(Q_F1_START 등) — 승리 시 BattleSceneController가 세팅
 		"on_win_flag": str(edef.get("first_win_flag", "")),
+		"advantage": advantage,
+		"ambush": ambush,
 	}
 	get_tree().change_scene_to_file("res://scenes/battle.tscn")
 

@@ -11,10 +11,29 @@
         11
       ],
       "sequence_id": "tutor_sample",
+      "repeat_sequence_id": "tutor_sample_repeat",
+      "idle_anim": "squash",
+      "wander_range": 1,
       "tint": [
         0.7,
         0.9,
         1.0
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F3_PALIN",
+          "sequence_id": "tutor_f3_cleared"
+        },
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "tutor_f2_cleared",
+          "repeat_sequence_id": "tutor_f2_repeat"
+        },
+        {
+          "requires_flag": "Q_F1_BLAST",
+          "sequence_id": "tutor_after_blast",
+          "repeat_sequence_id": "tutor_after_blast_repeat"
+        }
       ]
     }
   ]

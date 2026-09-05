@@ -156,13 +156,28 @@ func _apply_player_damage(
 	if weak:
 		dmg = int(dmg * 1.5)
 	var timing_mult := float(cmd.get("timing_mult", 1.0))
-	if timing_mult > 1.0:
+	var is_just := timing_mult > 1.0
+	if is_just:
 		dmg = int(dmg * timing_mult)
+
+	# 크리티컬 판정: 기본 6% + 타이밍 성공(Just Hit) 시 60%
+	var crit_rate := 0.60 if is_just else 0.06
+	var crit := EnemyManager.rng.randf() < crit_rate
+	if crit:
+		dmg = int(dmg * 1.5)
+
 	dmg = target.take_damage(dmg)
 	var broke := false
 	if weak:
 		broke = target.register_weak_hit()
-	return {"amount": dmg, "enemy_index": _alive_enemy_index(target), "weak": weak, "break": broke}
+	return {
+		"amount": dmg,
+		"enemy_index": _alive_enemy_index(target),
+		"weak": weak,
+		"break": broke,
+		"just": is_just,
+		"crit": crit,
+	}
 
 
 func _resolve_skill(user: Combatant, target: Combatant, cmd: Dictionary) -> void:

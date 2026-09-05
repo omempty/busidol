@@ -7,6 +7,10 @@
   "window": 0.45,
   "mult": 1.2
  },
+ "starting": [
+  "flint_strike",
+  "combo_punch"
+ ],
  "skills": [
   {
    "id": "flint_strike",

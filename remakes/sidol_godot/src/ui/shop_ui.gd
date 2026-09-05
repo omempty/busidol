@@ -53,6 +53,7 @@ func _build() -> void:
 
 	var frame := ModalFrame.new()
 	frame.setup("UI_SHOP_TITLE", "UI_SHOP_HINT", Vector2(460, 340))
+	frame.dismissed.connect(close)
 	add_child(frame)
 
 	_money_label = HudTheme.label("", 13, HudTheme.ACCENT)
@@ -73,6 +74,14 @@ func _build() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not _open:
+		return
+	if (
+		event is InputEventMouseButton
+		and event.pressed
+		and event.button_index == MOUSE_BUTTON_RIGHT
+	):
+		close()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed(&"cancel"):
 		close()
@@ -121,6 +130,8 @@ func _make_row(i: int, money: int) -> Control:
 	var affordable := money >= price
 
 	var shell := PanelContainer.new()
+	shell.mouse_filter = Control.MOUSE_FILTER_STOP
+	shell.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	if selected:
 		shell.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.ROW_SELECTED, 6, 4, 2))
 	var row := HBoxContainer.new()
@@ -142,6 +153,23 @@ func _make_row(i: int, money: int) -> Control:
 		HudTheme.money(price), 13, HudTheme.ACCENT if affordable else HudTheme.HP_LOW
 	)
 	row.add_child(price_lbl)
+
+	var idx := i
+	shell.mouse_entered.connect(
+		func() -> void:
+			if _index != idx:
+				_index = idx
+				_refresh()
+	)
+	shell.gui_input.connect(
+		func(e: InputEvent) -> void:
+			if e is InputEventMouseButton and e.pressed:
+				if e.button_index == MOUSE_BUTTON_LEFT:
+					_index = idx
+					_buy_selected()
+				elif e.button_index == MOUSE_BUTTON_RIGHT:
+					close()
+	)
 	return shell
 
 

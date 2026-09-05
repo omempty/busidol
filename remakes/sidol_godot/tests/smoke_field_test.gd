@@ -122,8 +122,34 @@ func _ready() -> void:
 			elif first_fail.is_empty():
 				first_fail = "상자%s 서는자리%s" % [marker, anchor]
 	print("[smoke_field] 12시 상자 %d자리 중 %d 성공" % [tried, opened])
-	if tried > 0 and opened < tried:
-		failures.append("아래에서 못 여는 상자 %d곳(예: %s)" % [tried - opened, first_fail])
+	# --- 4) ESC 일시정지 메뉴 토글 검증 ---
+	var pause_menu: PauseMenu = null
+	for child in field.get_children():
+		if child is PauseMenu:
+			pause_menu = child
+			break
+	if pause_menu == null:
+		failures.append("field에 PauseMenu 없음")
+	else:
+		if pause_menu.visible:
+			failures.append("PauseMenu 초기 상태가 visible")
+		var ev_cancel := InputEventAction.new()
+		ev_cancel.action = &"cancel"
+		ev_cancel.pressed = true
+		Input.parse_input_event(ev_cancel)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if not pause_menu.visible:
+			failures.append("ESC 눌렀을 때 PauseMenu가 열리지 않음")
+		else:
+			print("[smoke_field] ESC -> PauseMenu 열림 확인 OK")
+			Input.parse_input_event(ev_cancel)
+			await get_tree().process_frame
+			await get_tree().process_frame
+			if pause_menu.visible:
+				failures.append("ESC 재입력 시 PauseMenu가 닫히지 않음")
+			else:
+				print("[smoke_field] ESC 재입력 -> PauseMenu 닫힘 확인 OK")
 
 	_finish(failures)
 

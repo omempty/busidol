@@ -11,6 +11,8 @@
         59
       ],
       "sequence_id": "cafeteria_girl_shop",
+      "idle_anim": "squash",
+      "wander_range": 0,
       "tint": [
         1.0,
         0.8,
@@ -26,6 +28,19 @@
         50
       ],
       "sequence_id": "f0_librarian",
+      "repeat_sequence_id": [
+        "f0_librarian_repeat_1",
+        "f0_librarian_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F0_DISK",
+          "sequence_id": "f0_librarian_f0",
+          "repeat_sequence_id": "f0_librarian_f0_repeat"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 1,
       "tint": [
         0.8,
         0.8,
@@ -40,7 +55,19 @@
         170,
         45
       ],
-      "sequence_id": "guard_idle",
+      "sequence_id": "guard_f0",
+      "repeat_sequence_id": [
+        "guard_f0_repeat_1",
+        "guard_f0_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F3_PALIN",
+          "sequence_id": "guard_f0_f3"
+        }
+      ],
+      "idle_anim": "squash",
+      "wander_range": 0,
       "tint": [
         0.8,
         1.0,

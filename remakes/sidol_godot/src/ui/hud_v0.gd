@@ -12,6 +12,14 @@ const PULSE_ALPHA := 0.45
 const PULSE_TIME := 0.55
 ## 조작 힌트 — InputMap 액션 실제 바인딩과 같은 순서(input_bootstrap.ACTIONS).
 const HINTS_KEY := "UI_HUD_HINT"
+const TRACKER_KEYS := {
+	0: "UI_TRACKER_DEFAULT",
+	1: "UI_TRACKER_F1",
+	2: "UI_TRACKER_F2",
+	3: "UI_TRACKER_F3",
+	4: "UI_TRACKER_F4",
+	5: "UI_TRACKER_F5",
+}
 
 var _floor_chip: Label
 var _lv_label: Label
@@ -19,6 +27,7 @@ var _hp: HudGauge
 var _exp: HudGauge
 var _money_label: Label
 var _slot_bar: HudSlotBar
+var _tracker_label: Label
 var _first_paint := true
 var _pulse: Tween
 
@@ -26,14 +35,40 @@ var _pulse: Tween
 func _ready() -> void:
 	layer = 10
 	add_child(_build_card())
-	add_child(_build_hints())
+	add_child(_build_hints_and_tracker())
 	_slot_bar = HudSlotBar.new()
 	add_child(_slot_bar)
+	_slot_bar.slot_activated.connect(_on_slot_activated)
 	refresh()
 	GameState.state_changed.connect(refresh)
 	EventBus.floor_changed.connect(func(_f: int) -> void: refresh())
 	GameState.inventory.changed.connect(_refresh_slots)
 	_refresh_slots()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if get_tree().paused or not is_inside_tree():
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		if event.keycode >= KEY_1 and event.keycode <= KEY_6:
+			var idx: int = event.keycode - KEY_1
+			_on_slot_activated(idx)
+
+
+func _on_slot_activated(idx: int) -> void:
+	var slots := GameState.inventory.all_slots()
+	if idx < 0 or idx >= slots.size():
+		return
+	var item_id := StringName(str(slots[idx]["item_id"]))
+	var def := Database.get_item(item_id)
+	if ItemEffects.is_usable(def, false):
+		var note := ItemEffects.use_on_field(def)
+		if not note.is_empty():
+			GameState.inventory.remove(item_id, 1)
+			refresh()
+	elif str(def.get("kind", "")) in ["weapon", "armor"]:
+		GameState.equip(item_id)
+		refresh()
 
 
 func _build_card() -> Control:
@@ -43,10 +78,10 @@ func _build_card() -> Control:
 	card.position = Vector2(MARGIN, MARGIN)
 	card.custom_minimum_size = Vector2(CARD_WIDTH, 0)
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	card.add_theme_stylebox_override("panel", HudTheme.panel())
+	card.add_theme_stylebox_override("panel", HudTheme.panel(8, 10))
 
 	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 6)
+	vbox.add_theme_constant_override("separation", 5)
 	card.add_child(vbox)
 	vbox.add_child(_build_header())
 
@@ -62,23 +97,27 @@ func _build_card() -> Control:
 	return card
 
 
-## 층 배지 + LV/AP — 한 줄에 좌우로 붙인다.
+## 층 배지 + 캐릭터명 + LV/AP — 현대적 레이아웃
 func _build_header() -> Control:
 	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 8)
+	header.add_theme_constant_override("separation", 6)
 
 	var chip := PanelContainer.new()
-	chip.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.ACCENT))
+	chip.add_theme_stylebox_override("panel", HudTheme.chip(HudTheme.ACCENT, 4, 6, 2))
 	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_floor_chip = HudTheme.label("", 12, HudTheme.TEXT_ON_ACCENT)
+	_floor_chip = HudTheme.label("", 11, HudTheme.TEXT_ON_ACCENT)
 	chip.add_child(_floor_chip)
 	header.add_child(chip)
+
+	var name_lbl := HudTheme.label("시돌", 12, HudTheme.ACCENT)
+	name_lbl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	header.add_child(name_lbl)
 
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
 
-	_lv_label = HudTheme.label("", 12, HudTheme.TEXT)
+	_lv_label = HudTheme.label("", 11, HudTheme.TEXT)
 	header.add_child(_lv_label)
 	return header
 
@@ -90,27 +129,49 @@ func _build_money_row() -> Control:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(spacer)
-	_money_label = HudTheme.label("", 13, HudTheme.ACCENT)
+	_money_label = HudTheme.label("", 12, HudTheme.ACCENT)
 	row.add_child(_money_label)
 	return row
 
 
-## 우상단 조작 힌트 — 항상 보이되 존재감은 낮게(초보 이탈 방지, 숙련자 방해 없음).
-func _build_hints() -> Control:
-	var chip := PanelContainer.new()
-	chip.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	# position이 아니라 offset으로 잡는다 — 우측 앵커에서 position은 왼쪽 변을 옮겨
-	# 칩이 화면 밖으로 밀려 나간다. 폭은 내용대로 왼쪽으로 자란다.
-	chip.offset_right = -MARGIN
-	chip.offset_top = MARGIN
-	chip.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	chip.grow_vertical = Control.GROW_DIRECTION_END
-	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# 구판은 칩 전체를 0.55로 죽여 맵 무늬 위에서 글자가 읽히지 않았다.
-	# 배경은 그대로 두고 글자만 낮춘다 — 존재감은 낮게, 가독성은 확보.
-	chip.add_theme_stylebox_override("panel", HudTheme.panel(8, 7))
-	chip.add_child(HudTheme.outlined_label(tr(HINTS_KEY), 10, HudTheme.TEXT_MUTED))
-	return chip
+## 우상단 조작 힌트 + 스마트 퀘스트 트래커
+func _build_hints_and_tracker() -> Control:
+	var top_right := VBoxContainer.new()
+	top_right.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	top_right.offset_right = -MARGIN
+	top_right.offset_top = MARGIN
+	top_right.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	top_right.grow_vertical = Control.GROW_DIRECTION_END
+	top_right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	top_right.add_theme_constant_override("separation", 6)
+
+	# 1) 조작 힌트 칩
+	var hint_chip := PanelContainer.new()
+	hint_chip.size_flags_horizontal = Control.SIZE_SHRINK_END
+	hint_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hint_chip.add_theme_stylebox_override("panel", HudTheme.panel(6, 6))
+	hint_chip.add_child(HudTheme.outlined_label(tr(HINTS_KEY), 10, HudTheme.TEXT_MUTED))
+	top_right.add_child(hint_chip)
+
+	# 2) 스마트 퀘스트 트래커 카드
+	var tracker_card := PanelContainer.new()
+	tracker_card.size_flags_horizontal = Control.SIZE_SHRINK_END
+	tracker_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tracker_card.add_theme_stylebox_override("panel", HudTheme.panel(6, 8))
+	var tr_box := VBoxContainer.new()
+	tr_box.add_theme_constant_override("separation", 2)
+	tracker_card.add_child(tr_box)
+
+	var tr_head := HBoxContainer.new()
+	tr_head.add_theme_constant_override("separation", 4)
+	tr_head.add_child(HudTheme.label("⚔️ " + tr("UI_HUD_TRACKER_TITLE"), 10, HudTheme.ACCENT))
+	tr_box.add_child(tr_head)
+
+	_tracker_label = HudTheme.label("", 11, HudTheme.TEXT)
+	tr_box.add_child(_tracker_label)
+	top_right.add_child(tracker_card)
+
+	return top_right
 
 
 func _refresh_slots() -> void:
@@ -139,6 +200,10 @@ func refresh() -> void:
 	_exp.set_ratio(float(span["ratio"]), animate)
 
 	_money_label.text = HudTheme.money(int(stats.get("money", 0)))
+
+	if _tracker_label != null:
+		var tr_key: String = str(TRACKER_KEYS.get(GameState.current_floor, "UI_TRACKER_DEFAULT"))
+		_tracker_label.text = tr(tr_key)
 
 
 ## 현재 레벨 최대 HP — 초기값 + 레벨 테이블 hp_up 누적(growth.json).
