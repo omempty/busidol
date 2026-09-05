@@ -60,6 +60,7 @@ UI_OPT_LANG_KO,한국어,Korean
 UI_OPT_LANG_EN,English,English
 UI_HELP_MOVE,이동,Move
 UI_HELP_MOVE_KEYS,방향키 / WASD / 패드 십자키·왼쪽 스틱,Arrow keys / WASD / Pad D-pad · Left stick
+UI_HELP_RUN,빨리 걷기,Run
 UI_HELP_INTERACT,조사 · 대화 · 확인,Inspect · Talk · Confirm
 UI_HELP_CANCEL,취소 · 일시정지,Cancel · Pause
 UI_HELP_BAG,가방 열기,Open bag

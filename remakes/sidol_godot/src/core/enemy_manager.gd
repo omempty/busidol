@@ -18,6 +18,9 @@ const MAX_WARP := 16
 ## 리스폰이 서는 최소 거리 — 스폰보다 멀다. **화면 밖에서 차오르게** 하려는 것이다.
 ## 눈앞에서 솟아나면 "치운 길"이라는 감각이 그 자리에서 깨진다.
 const RESPAWN_DIST := 16
+## 근접 어그로 반경(맨해튼, 앵커 기준) — 특수 패턴·보스가 아니면 이 안에 들어오면
+## 탐지 여부와 무관하게 달려든다. F1 몹에 chase가 없어 "앞에 와도 가만히" 보이던 자리.
+const PROXIMITY_AGGRO := 2
 ## 한 마리가 다시 차오르는 데 걸리는 시간(초). monsters.json의 층별
 ## `respawn_seconds`가 있으면 그쪽이 이긴다.
 ##
@@ -234,6 +237,9 @@ func tick(player_cell: Vector2i, delta: float) -> void:
 			_act_accum[e] = accum
 			continue
 		_act_accum[e] = 0.0
+		# 근접 어그로가 먼저 — 옆에 와놓고 배회만 하면 "가만히" 보인다.
+		if _try_proximity_lunge(e, player_cell):
+			continue
 		var brain: AIBrain = _brains.get(e)
 		if brain == null:
 			continue
@@ -258,6 +264,43 @@ func tick(player_cell: Vector2i, delta: float) -> void:
 		if dir == Vector2i.ZERO:
 			continue
 		_apply_move(e, dir)
+
+
+## 근접 돌진 — 반경 안 + 일반 패턴 + 비보스면 탐지 여부와 무관하게 한 걸음 접근.
+## burrow/ambusher/teleport/pulse/ranged와 보스는 각자 룰이 있어 제외한다.
+## 달려든 놈은 alerted로 찍는다 — 기습(Advantage)은 "못 본" 상태가 조건이라,
+## 정면에서 달려들었는데 선제 보너스가 들어가면 앞뒤가 안 맞는다.
+func _try_proximity_lunge(e: EnemyEntity, player_cell: Vector2i) -> bool:
+	var d: Vector2i = e.mover.grid_pos - player_cell
+	var dist := absi(d.x) + absi(d.y)
+	if dist == 0 or dist > PROXIMITY_AGGRO:
+		return false
+	var entry: Dictionary = _entry.get(e, {})
+	var kind := MovementPattern.kind_from_name(str(entry.get("pattern", "wander")))
+	if (
+		kind != MovementPattern.Kind.WANDER
+		and kind != MovementPattern.Kind.DASH
+		and kind != MovementPattern.Kind.ZIGZAG
+		and kind != MovementPattern.Kind.PATROL
+	):
+		return false
+	if bool(Database.get_enemy_def(StringName(e.species_id)).get("is_boss", false)):
+		return false
+	var phasing := bool(_phasing.get(e, false))
+	var best := Vector2i.ZERO
+	var best_d := dist
+	for step: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+		if not _anchor_free_for(e, e.mover.grid_pos + step, phasing):
+			continue
+		var dd: Vector2i = e.mover.grid_pos + step - player_cell
+		if absi(dd.x) + absi(dd.y) < best_d:
+			best_d = absi(dd.x) + absi(dd.y)
+			best = step
+	if best == Vector2i.ZERO:
+		return false
+	e.set_alerted(true)
+	_apply_move(e, best)
+	return true
 
 
 ## 브레인이 낸 방향을 적용한다. BURROW/TELEPORT는 한 칸이 아니라

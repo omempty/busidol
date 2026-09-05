@@ -13,6 +13,8 @@ const DIRS := {
 ## 보행 사이클 길이 — 2보에 1사이클(왼발/오른발).
 ## 원작 move_you()가 한 걸음마다 스프라이트를 토글한 박자(2프레임 시트 기준)와 동일.
 const STEPS_PER_CYCLE := 2.0
+## 달리기 배율 — Shift(패드 R숄더)를 누르고 있으면 걸음이 이만큼 빨라진다.
+const RUN_MULT := 2.0
 ## 막힌 방향으로 밀리는 거리(px) — 벽에 부딪혔음을 즉시 알리는 최소 피드백.
 const BUMP_PX := 3.0
 
@@ -68,6 +70,10 @@ func face(dir_name: StringName) -> void:
 
 
 func _physics_process(_delta: float) -> void:
+	# 달리기 — 누르고 있는 동안 걸음 보간·발 박자가 함께 빨라진다(적 속도는 그대로).
+	mover.step_time = (
+		GridMover.STEP_TIME / RUN_MULT if Input.is_action_pressed(&"run") else GridMover.STEP_TIME
+	)
 	var dir := _poll_dir()
 	if not mover.enabled:
 		dir = Vector2i.ZERO
@@ -161,7 +167,7 @@ func _step_sync_scale(anim: StringName) -> float:
 	var authored := sprite.sprite_frames.get_animation_speed(anim)
 	if n <= 0 or authored <= 0.0:
 		return 1.0
-	return (float(n) / (GridMover.STEP_TIME * STEPS_PER_CYCLE)) / authored
+	return (float(n) / (mover.step_time * STEPS_PER_CYCLE)) / authored
 
 
 ## facing 이름 → 방향 벡터 — 전방 셀 조회용.

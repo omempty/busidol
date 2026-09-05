@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "_comment": "주요 방 문패 — 문(ATT 9) 셀 위에 뜨는 방 이름. cell은 문 2칸 중 왼쪽(또는 위쪽) 한 칸. 방 추가는 한 줄이면 된다. 좌표 근거는 각 _comment.",
+  "plates": {
+    "0": [
+      {
+        "cell": [170, 44],
+        "name_ko": "서고",
+        "name_en": "Archive",
+        "_comment": "F0에서 문으로 막힌 유일한 방(x169~191 y45~61) 북문. triggers_f0 실측."
+      }
+    ],
+    "1": [
+      {
+        "cell": [168, 25],
+        "name_ko": "우편물실",
+        "name_en": "Mail Room",
+        "_comment": "교무과 우편물실(x148~178 y14~23) 남문. f1_sopo zone [163,18]이 이 방 안."
+      },
+      {
+        "cell": [23, 28],
+        "name_ko": "창고",
+        "name_en": "Storage",
+        "_comment": "서쪽 외딴 창고(x1~24 y29~36) 북문. f1_gas zone [12,32]가 이 방 안."
+      }
+    ],
+    "2": [
+      {
+        "cell": [195, 22],
+        "name_ko": "HP실",
+        "name_en": "HP Room",
+        "_comment": "동아리 HP실 문. HPbang 표식(195,20) 아래. npcs_f2 실측."
+      }
+    ]
+  }
+}

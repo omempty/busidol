@@ -22,6 +22,9 @@ var fast_travel: FastTravelPanel
 var shop: ShopUI
 var _prompt: InteractPrompt
 var _focus: InteractFocus
+var _plates: DoorPlates
+var _coord_label: Label
+var _coord_layer: CanvasLayer
 var fx: FieldFx
 var renderer: MapRenderer
 var _talking_npc: NpcEntity
@@ -101,6 +104,19 @@ func _ready() -> void:
 	_focus = InteractFocus.new()
 	add_child(_focus)
 
+	_plates = DoorPlates.new()
+	add_child(_plates)
+	_plates.setup(GameState.current_floor)
+
+	_coord_label = HudTheme.label("", 13, HudTheme.TEXT_MUTED)
+	var coord_layer := CanvasLayer.new()
+	coord_layer.layer = 60
+	coord_layer.add_child(_coord_label)
+	_coord_label.position = Vector2(8, 8)
+	coord_layer.visible = false
+	add_child(coord_layer)
+	_coord_layer = coord_layer
+
 	_spawn_npcs()
 	_spawn_walkers()
 
@@ -145,6 +161,20 @@ func _physics_process(_delta: float) -> void:
 		return
 
 	GameState.player_cell = player.mover.grid_pos
+
+	# 개발자 모드 좌표 — F9를 켜면 좌상단에 실시간 셀 좌표.
+	if SettingsManager.developer_mode:
+		_coord_layer.visible = true
+		_coord_label.text = (
+			"F%d (%d, %d)"
+			% [GameState.current_floor, player.mover.grid_pos.x, player.mover.grid_pos.y]
+		)
+	else:
+		_coord_layer.visible = false
+
+	# 문패 — 매 프레임 갱신(값싼 거리 비교). 대화·메뉴 중에는 _prompt와 무관하게 둔다.
+	if _plates != null:
+		_plates.tick(player.mover.grid_pos)
 
 	# 컷신 재생 중 — 입력·인카운터 전면 차단
 	if cutscene_player != null and cutscene_player.is_running():

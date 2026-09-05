@@ -11,6 +11,7 @@ const ACTIONS := {
 	&"move_down": [KEY_DOWN, KEY_S],
 	&"move_left": [KEY_LEFT, KEY_A],
 	&"move_right": [KEY_RIGHT, KEY_D],
+	&"run": [KEY_SHIFT],
 	&"interact": [KEY_SPACE, KEY_Z],
 	&"menu": [KEY_ENTER],
 	&"cancel": [KEY_ESCAPE],
@@ -51,6 +52,8 @@ const PAD_BUTTONS := {
 	&"minimap": [JOY_BUTTON_BACK],
 	&"battle_target_prev": [JOY_BUTTON_LEFT_SHOULDER],
 	&"battle_target_next": [JOY_BUTTON_RIGHT_SHOULDER],
+	# 필드 달리기 — 전투 와 화면이 겹치지 않아 같은 숄더를 쓴다(Q·E 선례).
+	&"run": [JOY_BUTTON_RIGHT_SHOULDER],
 	&"battle_repeat": [JOY_BUTTON_X],
 	&"tab_prev": [JOY_BUTTON_LEFT_SHOULDER],
 	&"tab_next": [JOY_BUTTON_RIGHT_SHOULDER],

@@ -9,6 +9,7 @@ signal closed
 ## 패드 표기는 input_bootstrap.PAD_BUTTONS와 같은 배치(Xbox 기준)를 적는다.
 const ROWS := [
 	["UI_HELP_MOVE", "UI_HELP_MOVE_KEYS"],
+	["UI_HELP_RUN", "Shift"],
 	["UI_HELP_INTERACT", "Space / Z / PAD A"],
 	["UI_HELP_CANCEL", "Esc / PAD B"],
 	["UI_HELP_BAG", "I / PAD Y"],

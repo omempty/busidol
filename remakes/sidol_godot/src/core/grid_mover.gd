@@ -9,6 +9,10 @@ signal step_blocked(dir: Vector2i)
 
 const STEP_TIME := 0.16
 
+## 한 걸음 보간 시간(초) — 평소 STEP_TIME, 달리기면 절반. 플레이어가 달리기
+## 키 입력에 따라 바꾼다(적·NPC는 손대지 않는다 — 추격 밸런스 유지).
+var step_time := STEP_TIME
+
 var grid_pos := Vector2i.ZERO
 var footprint := Vector2i(2, 2)  # 원작: 캐릭터 몸이 2x2 셀 점유
 var moving := false
@@ -67,7 +71,7 @@ func try_step(dir: Vector2i) -> bool:
 	# self는 씬 트리 밖 멤버 노드라 create_tween()이 실패한다 —
 	# 트리에 있는 body 기준으로 생성(보간·_on_arrived 체인의 생명선).
 	var tween := body.create_tween()
-	tween.tween_property(body, "position", block_center(grid_pos), STEP_TIME)
+	tween.tween_property(body, "position", block_center(grid_pos), step_time)
 	tween.finished.connect(_on_arrived)
 	return true
 
