@@ -14,6 +14,7 @@ const REPORT_PATH := "user://debug_report.txt"
 
 var _log: Label
 var _flag_buttons := {}
+var _dev_mode_btn: Button
 
 
 func _ready() -> void:
@@ -27,6 +28,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.is_pressed() and not event.is_echo():
 		if (event as InputEventKey).keycode == KEY_F10 and OS.is_debug_build():
 			toggle()
+			get_viewport().set_input_as_handled()
+		elif (event as InputEventKey).keycode == KEY_F9 and OS.is_debug_build():
+			set_developer_mode(not SettingsManager.developer_mode)
 			get_viewport().set_input_as_handled()
 
 
@@ -111,6 +115,11 @@ func _build() -> void:
 	_section(grid, "— 자가 검증 —")
 	grid.add_child(_btn("SelfCheck 실행", run_self_check))
 
+	_section(grid, "— 표시 —")
+	_dev_mode_btn = _btn("", func() -> void: set_developer_mode(not SettingsManager.developer_mode))
+	grid.add_child(_dev_mode_btn)
+	_refresh_dev_mode_btn()
+
 	_log = Label.new()
 	_log.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_log.offset_left = 16
@@ -170,6 +179,39 @@ func _toggle_flag(fid: String) -> void:
 		GameState.set_flag(fid, true)
 	_refresh_flags()
 	_logline("플래그 %s" % fid)
+
+
+## 개발자 모드 — 조사 틀 등 디버그 표시 스위치. F9·패널 버튼이 함께 쓴다.
+## 패널이 닫혀 있어도 화면에 1초 토스트를 띄워 상태가 보이게 한다.
+func set_developer_mode(on: bool) -> void:
+	SettingsManager.developer_mode = on
+	_refresh_dev_mode_btn()
+	_logline("개발자 모드 %s (조사 틀 %s)" % ["켬" if on else "끔", "표시" if on else "숨김"])
+	_toast("개발자 모드 %s" % ("ON" if on else "OFF"))
+
+
+func _refresh_dev_mode_btn() -> void:
+	if _dev_mode_btn != null and is_instance_valid(_dev_mode_btn):
+		_dev_mode_btn.text = (
+			"개발자 모드: 켬 (조사 틀 표시, F9)" if SettingsManager.developer_mode else "개발자 모드: 끔 (F9)"
+		)
+
+
+func _toast(text: String) -> void:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.4))
+	lbl.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	lbl.offset_top = 48
+	lbl.offset_left = -120
+	lbl.offset_right = 120
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	add_child(lbl)
+	var tw := lbl.create_tween()
+	tw.tween_interval(1.0)
+	tw.tween_property(lbl, "modulate:a", 0.0, 0.3)
+	tw.tween_callback(lbl.queue_free)
 
 
 func _teleport_floor(floor_no: int) -> void:

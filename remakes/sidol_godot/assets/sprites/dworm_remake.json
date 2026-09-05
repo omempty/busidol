@@ -19,18 +19,18 @@
    "fps": 5,
    "loop": true
   },
-  "walk_left": {
-   "row": 2,
-   "frames": 4,
-   "fps": 5,
-   "loop": true
-  },
-  "walk_right": {
-   "row": 3,
-   "frames": 4,
-   "fps": 5,
-   "loop": true
-  },
+   "walk_left": {
+    "row": 3,
+    "frames": 4,
+    "fps": 5,
+    "loop": true
+   },
+   "walk_right": {
+    "row": 2,
+    "frames": 4,
+    "fps": 5,
+    "loop": true
+   },
   "idle_down": {
    "row": 4,
    "frames": 2,

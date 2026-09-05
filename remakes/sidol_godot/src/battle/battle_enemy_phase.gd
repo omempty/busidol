@@ -12,6 +12,7 @@ static func regular_attack(
 	var actual: int = player.take_damage(raw)
 	# 적 시트에 attack 행이 있으면 그 동작으로 때린다(없으면 기존 연출 그대로).
 	presenter.play_enemy_anim(presenter.target_index, "attack")
+	presenter.enemy_lunge(presenter.target_index)
 	presenter.show_damage_number(actual, true)
 	BattleLog.push(
 		TranslationServer.translate("UI_BLOG_ENEMY_HIT") % [attacker.display_name, actual],
@@ -20,7 +21,10 @@ static func regular_attack(
 	presenter.hurt_flash(presenter.player_sprite)
 	# 원작은 피격도 대형 컷이었다(DEF 시퀀스) — 시트가 없으면 조용히 건너뛴다.
 	presenter.play_cut("player_hurt")
-	presenter.play_screen_kf({"shake": 3})
+	# 아군 타격과 같은 등급화 — 피해 비례 shake + 임팩트 히트스톱.
+	presenter.play_screen_kf({"shake": minf(3.0 + float(maxi(actual, 0)) / 8.0, 7.0)})
+	if actual > 0:
+		presenter.hitstop()
 
 
 ## 텔레그래프 + 회피 페이즈 시퀀스 — 피격 횟수 × dodge_damage_per_hit 를

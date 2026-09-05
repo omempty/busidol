@@ -127,6 +127,8 @@ func _setup_ui() -> void:
 	_pause_menu.layer = 80
 	add_child(_pause_menu)
 
+	add_child(DebugPanel.new())  # F9 개발자 모드·F10 — 필드와 동일(패널 내부 가드)
+
 
 func _on_battle_cancel() -> void:
 	if not _busy and not (_dodge != null and _dodge.is_active):
@@ -450,6 +452,8 @@ func _resolve_turn() -> void:
 		elif actor != null and not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
 			await BattleEnemyPhase.dodge_sequence(_dodge, edef, _presenter, _ui, player_combatant)
 		elif actor != null:
+			# 누구 턴인지 글자로 — TURN N 라벨만으로는 적 공격이 안 보인다.
+			_ui.set_turn_text(_enemy_turn_text(actor.display_name))
 			BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
 		controller.turn_count += 1
 		_tick_effects()
@@ -480,6 +484,7 @@ func _end_player_defend() -> void:
 	# 적 턴만 진행
 	var attacker := _first_alive_enemy()
 	if attacker != null:
+		_ui.set_turn_text(_enemy_turn_text(attacker.display_name))
 		BattleEnemyPhase.regular_attack(attacker, player_combatant, _presenter)
 	_tick_effects()
 	_ui.refresh_bars()
@@ -490,6 +495,15 @@ func _end_player_defend() -> void:
 		return
 	controller.begin_player_phase()
 	_ui.show_command_menu()
+
+
+## 적 턴 배너 — .translation이 csv보다 stale하면 tr()이 키 그대로를 돌려주고
+## "%s"가 없어 % 연산이 터진다(2026-09-05 ambush 실측). 그때는 이름 병기로 폴백.
+func _enemy_turn_text(enemy_name: String) -> String:
+	var fmt := tr("UI_BATTLE_ENEMY_TURN")
+	if "%s" in fmt:
+		return fmt % enemy_name
+	return "%s %s" % [fmt, enemy_name]
 
 
 ## 로그 한 줄 — 적립과 화면 갱신을 한 창구로 묶는다(둘로 나누면 한쪽만 부르는 자리가 생긴다).

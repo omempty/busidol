@@ -636,12 +636,33 @@ func play_timing_ring(enemy_index: int, window: float) -> bool:
 	return success
 
 
+## 적 돌진 — 때리는 쪽이 앞으로 나갔다 제자리로. 아군 rush의 반대 방향.
+## 위치 트윈이라 시트 행이 없어도 돈다(행이 있으면 attack 재생은 호출부 몫).
+func enemy_lunge(index: int) -> void:
+	if index < 0 or index >= enemy_sprites.size():
+		return
+	var spr := enemy_sprites[index]
+	if spr == null or not is_instance_valid(spr) or not spr.has_meta(&"base_pos"):
+		return
+	var base: Vector2 = spr.get_meta(&"base_pos")
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	spawn_afterimage(spr, 1.0)
+	var tw := spr.create_tween()
+	(
+		tw
+		. tween_property(spr, "position", base + Vector2(-26, 0), 0.1 / speed)
+		. set_trans(Tween.TRANS_QUAD)
+		. set_ease(Tween.EASE_OUT)
+	)
+	tw.tween_property(spr, "position", base, 0.14 / speed).set_trans(Tween.TRANS_BACK)
+
+
 ## 피격 플래시 — 타겟이 빨갛게 깜빡임.
 ## 피격 표현 — 붉은 플래시 + 넉백 + (시트에 hurt 행이 있으면) 피격 동작.
 func hurt_flash(spr: Sprite2D) -> void:
 	knockback(spr, 1.0 if spr == player_sprite else -1.0)
-	if spr != player_sprite:
-		play_anim(spr, "hurt", _sprite_asset_id(spr))
+	if spr != null and is_instance_valid(spr):
+		play_anim(spr, "hurt", "" if spr == player_sprite else _sprite_asset_id(spr))
 	if spr == null or not is_instance_valid(spr):
 		return
 	var f := SettingsManager.battle_speed_factor()

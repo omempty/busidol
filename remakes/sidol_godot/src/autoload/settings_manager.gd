@@ -62,6 +62,9 @@ var text_speed: TextSpeed = TextSpeed.NORMAL
 var dialogue_auto := false
 ## Q9 색각 대응 — HP 게이지에 색과 **함께** 무늬를 넣는다(색만으로 구분하지 않는다).
 var colorblind_patterns := false
+## 개발자 모드 — 조사 틀 등 디버그 표시의 스위치. **기본 끔, 저장 안 됨(켜고 시작 금지).**
+## F9(디버그 빌드 한정, DebugPanel이 수신)로 켜고 끈다.
+var developer_mode := false
 var volumes := {}  # StringName -> float
 
 

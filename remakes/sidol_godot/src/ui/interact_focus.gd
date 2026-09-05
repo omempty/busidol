@@ -20,7 +20,11 @@ func _ready() -> void:
 
 
 ## 대상 칸들을 표시한다. 같은 칸 목록이면 위상(깜빡임)을 유지해 끊기지 않는다.
+## 개발자 모드가 꺼져 있으면(기본) 표시하지 않는다 — 평시 화면의 디버그感이 지적됐다.
 func show_cells(cells: Array[Vector2i]) -> void:
+	if not SettingsManager.developer_mode:
+		clear()
+		return
 	if cells.is_empty():
 		clear()
 		return
@@ -50,10 +54,15 @@ func _draw() -> void:
 		return
 	var alpha := 0.35 + 0.25 * sin(_phase * TAU * PULSE_HZ * 0.5)
 	var px := float(MapDefinition.TILE_PX)
+	# 셀 낱개가 아니라 몸통 전체를 하나의 선택틀로 — 낱개 4칸은 충돌 디버그처럼 보인다.
+	var lo := _cells[0]
+	var hi := _cells[0]
 	for cell: Vector2i in _cells:
-		var r := Rect2(
-			Vector2(cell) * px + Vector2(INSET, INSET),
-			Vector2(px, px) - Vector2(INSET, INSET) * 2.0
-		)
-		draw_rect(r, Color(HudTheme.ACCENT, alpha * 0.18), true)
-		draw_rect(r, Color(HudTheme.ACCENT, alpha), false, 1.5)
+		lo = Vector2i(mini(lo.x, cell.x), mini(lo.y, cell.y))
+		hi = Vector2i(maxi(hi.x, cell.x), maxi(hi.y, cell.y))
+	var r := Rect2(
+		Vector2(lo) * px + Vector2(INSET, INSET),
+		(Vector2(hi - lo) + Vector2.ONE) * px - Vector2(INSET, INSET) * 2.0
+	)
+	draw_rect(r, Color(HudTheme.ACCENT, alpha * 0.10), true)
+	draw_rect(r, Color(HudTheme.ACCENT, alpha), false, 2.0)

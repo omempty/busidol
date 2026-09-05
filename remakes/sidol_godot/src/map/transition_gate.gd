@@ -3,7 +3,15 @@ extends Node
 ## 문 통과(ATT==9, mapy±3)와 계단 층 전환 처리 — 원작 move_check_gate/floor_move 대체.
 ## 데이터: data/maps/transitions.json (좌표 하드코딩 금지). 페이드 연출은 walk_floor 대체.
 
+## 잠긴 계단 — 앵커·방향·가드는 맞는데 requires_flag가 없다. 조용히 넘기면
+## "계단이 고장"으로 보인다(2026-09-05 실측: Q_F1_BLAST 전 위층 계단 무반응).
+signal stairs_locked
+## 막힌 계단 — 앵커는 맞는데 현 층에 맞는 정의가 없다(예: F1 중앙 하향.
+## F0 도착점이 벽이라 guard 2-5로 제외됨). 여기도 무반응이면 고장으로 보인다.
+signal stairs_dead
+
 const TRANSITIONS_PATH := "res://data/maps/transitions.json"
+const FLOORS_PATH := "res://data/maps/floors.json"
 const FADE_TIME := 0.18
 const DOOR_SLIDE_TIME := 0.4
 
@@ -44,6 +52,49 @@ func is_travel_anchor(cell: Vector2i) -> bool:
 		if cell == Vector2i(int(t["anchor"][0]), int(t["anchor"][1])):
 			return true
 	return false
+
+
+## 앵커의 행선 정보 — {delta: ±1, dest: 목적 층, locked: requires_flag 미충족}.
+## 가드가 안 맞는 층의 정의는 남의 층 계단이므로 제외. 빈 사전 = 계단 아님.
+func anchor_info(cell: Vector2i, floor_now: int) -> Dictionary:
+	for t: Dictionary in _transitions:
+		if cell != Vector2i(int(t["anchor"][0]), int(t["anchor"][1])):
+			continue
+		if floor_now < int(t["guard_min_floor"]) or floor_now > int(t["guard_max_floor"]):
+			continue
+		var req: Variant = t.get("requires_flag")
+		return {
+			"delta": int(t["floor_delta"]),
+			"dest": floor_now + int(t["floor_delta"]),
+			"locked": req != null and not GameState.has_flag(str(req)),
+		}
+	return {}
+
+
+## 앵커 행선 알약 문구 — "▲ 2층 · 전산과의 요람" / 잠기면 "(잠김)" 접미.
+## 층 이름은 floors.json이 소유한다(소스 하드코딩 금지 — FastTravelPanel과 같은 출처).
+func anchor_label(cell: Vector2i, floor_now: int) -> String:
+	var info := anchor_info(cell, floor_now)
+	if info.is_empty():
+		return ""
+	var dest := int(info["dest"])
+	var nm := str(_floor_names().get(dest, "F%d" % dest))
+	var s := (tr("UI_STAIRS_UP") if int(info["delta"]) > 0 else tr("UI_STAIRS_DOWN")) % nm
+	if bool(info["locked"]):
+		s += tr("UI_STAIRS_LOCKED_TAG")
+	return s
+
+
+var _floor_names_cache := {}
+
+
+func _floor_names() -> Dictionary:
+	if not _floor_names_cache.is_empty():
+		return _floor_names_cache
+	var raw: Dictionary = JsonUtil.load_dict(FLOORS_PATH, "TransitionGate").get("floors", {})
+	for key: String in raw:
+		_floor_names_cache[int(key)] = str((raw[key] as Dictionary).get("name_ko", "F" + key))
+	return _floor_names_cache
 
 
 ## 빠른 이동 실행 — 지금 서 있는 계단 앵커 그대로 목적 층에 내린다.
@@ -133,18 +184,25 @@ func _try_stairs(dir: Vector2i) -> void:
 	if dir != Vector2i.DOWN:
 		return  # 원작은 아래키 입력으로만 계단 트리거
 	var anchor := player.mover.grid_pos
+	var anchor_hit := false
+	var guard_hit := false
 	for t: Dictionary in _transitions:
 		var at := Vector2i(int(t["anchor"][0]), int(t["anchor"][1]))
 		if anchor != at or str(t["trigger_dir"]) != "down":
 			continue
+		anchor_hit = true
 		var floor_now := GameState.current_floor
 		if floor_now < int(t["guard_min_floor"]) or floor_now > int(t["guard_max_floor"]):
 			continue
+		guard_hit = true
 		var req: Variant = t.get("requires_flag")
 		if req != null and not GameState.has_flag(str(req)):
+			stairs_locked.emit()
 			continue
 		_start_floor_change(t)
 		return
+	if anchor_hit and not guard_hit:
+		stairs_dead.emit()
 
 
 func _start_floor_change(t: Dictionary) -> void:

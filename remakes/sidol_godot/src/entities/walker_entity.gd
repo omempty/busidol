@@ -114,14 +114,16 @@ func _build_visual() -> void:
 func _process(delta: float) -> void:
 	if _legs.is_empty() or _runtime == null:
 		return
+	# 외형 호흡은 매 프레임(정지 중에도 살아 있게). 이동은 아래 게이트를 통과해야.
+	_update_breathing(delta)
 	if _is_talking:
-		_update_breathing(delta)
+		return
+	if _is_stepping:
 		return
 	_wait -= delta
 	if _wait > 0.0:
-		if not _is_stepping:
-			_update_breathing(delta)
 		return
+	_step_once()
 
 
 func _update_breathing(delta: float) -> void:
@@ -131,6 +133,10 @@ func _update_breathing(delta: float) -> void:
 	sprite.scale.y = _base_scale.y * (1.0 + breath)
 	sprite.scale.x = _base_scale.x * (1.0 - breath * 0.5)
 
+
+## 한 스텝 판정 — _process에서만 호출. 막히면 다리를 한 칸만 넘기고 쉰다
+## (예전에는 호흡 안에 있어 매 프레임 토글→접촉 시 좌우 왕복으로 보였다).
+func _step_once() -> void:
 	if _left <= 0:
 		_face(_current_dir, false)
 		_leg = (_leg + 1) % _legs.size()

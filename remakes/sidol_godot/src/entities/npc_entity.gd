@@ -29,6 +29,7 @@ var _look_wait := 0.0
 var _wander_wait := 0.0
 var _facing := &"down"
 var _base_scale := Vector2.ONE
+var _base_offset := Vector2.ZERO
 var _breath_phase := 0.0
 var _fidget_wait := 0.0
 var _fidget_duration := 0.0
@@ -96,6 +97,8 @@ func face_towards(target_cell: Vector2i) -> void:
 		next = &"right" if diff.x > 0 else &"left"
 	else:
 		next = &"down" if diff.y > 0 else &"up"
+	if next == _facing:
+		return  # 매 프레임 접근 반응으로 불러도 같은 방향이면 손대지 않는다
 	_apply_facing(next)
 
 
@@ -112,6 +115,7 @@ func _build_visual() -> void:
 		sprite.scale = Vector2.ONE * float(_meta.get("scale", 1.0))
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(_meta))
 	_base_scale = sprite.scale
+	_base_offset = sprite.offset
 	sprite.animation = &"idle"
 	sprite.play()
 	add_child(sprite)
@@ -148,11 +152,13 @@ func _update_breathing(delta: float) -> void:
 		return
 	_breath_phase += delta * 2.8
 	var breath := sin(_breath_phase) * 0.035
-	sprite.position.y = sin(_breath_phase) * 1.5
+	sprite.position.y = sin(_breath_phase) * 2.2
 	sprite.scale.y = _base_scale.y * (1.0 + breath)
 	sprite.scale.x = _base_scale.x * (1.0 - breath * 0.5)
 
-	# 고정 NPC 주기적 미세 움직임 / 프레임 토글 (fidget)
+	# 고정 NPC 주기적 미세 움직임: 단방향 1프레임 시트에서도 보이도록
+	# 발돋움 홉(offset — 호흡과 채널이 달라 묻히지 않는다) + 고개 까딱(회전).
+	# 프레임 복구는 idle 계열 포함(예전 조건은 idle에서 frame 1에 stuck됐다).
 	if not _is_talking:
 		_fidget_wait -= delta
 		if _fidget_wait <= 0.0:
@@ -164,11 +170,15 @@ func _update_breathing(delta: float) -> void:
 			):
 				if sprite.sprite_frames.get_frame_count(sprite.animation) > 1:
 					sprite.frame = 1
+			var fg := create_tween().set_parallel(true)
+			fg.tween_property(sprite, "offset:y", _base_offset.y - 5.0, 0.09)
+			fg.tween_property(sprite, "rotation", 0.09, 0.09)
+			fg.chain().tween_property(sprite, "offset:y", _base_offset.y, 0.12)
+			fg.parallel().tween_property(sprite, "rotation", 0.0, 0.12)
 		elif _fidget_duration > 0.0:
 			_fidget_duration -= delta
 			if _fidget_duration <= 0.0:
-				if not String(sprite.animation).begins_with("idle_"):
-					sprite.frame = 0
+				sprite.frame = 0
 
 
 func _apply_facing(next: StringName) -> void:
@@ -182,6 +192,10 @@ func _apply_facing(next: StringName) -> void:
 	else:
 		sprite.stop()
 		sprite.frame = 0
+	# 단방향 시트는 방향을 바꿔도 같은 그림이라, 고개 돌림을 까딱으로 보여 준다.
+	var nod := create_tween()
+	nod.tween_property(sprite, "rotation", 0.08, 0.08)
+	nod.tween_property(sprite, "rotation", 0.0, 0.10)
 
 
 func _try_wander_step() -> bool:

@@ -28,6 +28,10 @@ var _talking_npc: NpcEntity
 var _talking_walker: WalkerEntity
 var _trigger_seq_active := false
 var _prev_states := {}
+## 잠긴/막힌 계단 안내 — stairs_locked/dead 신호 시각+문구. 1.2초간 플레이어 머리 위에 유지.
+var _stairs_hint_until := 0.0
+var _stairs_hint_text := ""
+const STAIRS_HINT_SECS := 1.2
 ## 필드 진입 직후 접촉 무시 시간(초) — 전투에서 돌아오자마자 옆에 선 몬스터에게
 ## 다시 끌려가는 사고를 막는다(Q6 현대 편의). 스폰 안전거리로도 못 막는 경우가 있다.
 var _encounter_grace := 0.0
@@ -79,6 +83,8 @@ func _ready() -> void:
 	gate = TransitionGate.new()
 	add_child(gate)
 	gate.setup(self)
+	gate.stairs_locked.connect(_on_stairs_locked)
+	gate.stairs_dead.connect(_on_stairs_dead)
 
 	dialogue_box = DialogueBox.new()
 	add_child(dialogue_box)
@@ -216,6 +222,9 @@ func _physics_process(_delta: float) -> void:
 	if npc != null:
 		_prompt.show_at("%s   SPACE" % npc.display_name, npc.position + Vector2(0, -46))
 		_focus.show_cells(npc.body_cells())
+		# 접근 반응 — 말을 걸기 전부터 플레이어를 쳐다본다(이동 중에는 손대지 않음).
+		if not npc._is_wandering:
+			npc.face_towards(player.mover.grid_pos)
 		if interact_edge:
 			_start_dialogue(npc)
 		return
@@ -257,8 +266,33 @@ func _physics_process(_delta: float) -> void:
 			_open_chest(chest)
 		return
 
+	# 계단 행선 — 앵커 위에 서면 윗층/아랫층·목적지를 알약에 (원작 타일은 동결이라 런타임 표시).
+	if gate != null:
+		var stair_label := gate.anchor_label(player.mover.grid_pos, GameState.current_floor)
+		if stair_label.is_empty() and gate.is_travel_anchor(player.mover.grid_pos):
+			stair_label = tr("UI_STAIRS_DEAD")
+		if not stair_label.is_empty():
+			_prompt.show_at(stair_label, player.position + Vector2(0, -46))
+			return
+
+	# 잠긴/막힌 계단 안내 — 다른 상호작용이 없을 때만 (우선순위 최하).
+	if Time.get_ticks_msec() / 1000.0 < _stairs_hint_until and not _stairs_hint_text.is_empty():
+		_prompt.show_at(_stairs_hint_text, player.position + Vector2(0, -46))
+		return
 	_prompt.visible = false
 	_focus.clear()
+
+
+## 잠긴 계단에서 아래키 — 무반응 대신 이유를 보여 준다.
+func _on_stairs_locked() -> void:
+	_stairs_hint_until = Time.get_ticks_msec() / 1000.0 + STAIRS_HINT_SECS
+	_stairs_hint_text = tr("UI_STAIRS_LOCKED")
+
+
+## 막힌 계단에서 아래키 — 현 층에서는 어디로도 이어지지 않는다.
+func _on_stairs_dead() -> void:
+	_stairs_hint_until = Time.get_ticks_msec() / 1000.0 + STAIRS_HINT_SECS
+	_stairs_hint_text = tr("UI_STAIRS_DEAD")
 
 
 ## 문 통과 연출 — TransitionGate가 3칸 점프 직전에 부른다(연출만, 판정은 게이트의 몫).
