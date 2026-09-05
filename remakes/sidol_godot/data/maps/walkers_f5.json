@@ -5,6 +5,19 @@
     {
       "id": "walker_f5",
       "sprite": "guard_idle",
+      "name": "5층 당직 보조",
+      "sequence_id": "walker_f5_duty",
+      "repeat_sequence_id": [
+        "walker_f5_duty_repeat_1",
+        "walker_f5_duty_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F5_BOSS_CURE",
+          "sequence_id": "walker_f5_boss_cure",
+          "repeat_sequence_id": "walker_f5_boss_cure_repeat"
+        }
+      ],
       "pos": [
         140,
         37

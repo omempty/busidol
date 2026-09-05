@@ -11,6 +11,28 @@
         59
       ],
       "sequence_id": "cafeteria_girl_shop",
+      "repeat_sequence_id": [
+        "cafeteria_girl_shop_repeat_1",
+        "cafeteria_girl_shop_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F1_BLAST",
+          "sequence_id": "cafeteria_girl_blast",
+          "repeat_sequence_id": [
+            "cafeteria_girl_shop_repeat_1",
+            "cafeteria_girl_shop_repeat_2"
+          ]
+        },
+        {
+          "requires_flag": "Q_F0_DISK",
+          "sequence_id": "cafeteria_girl_f0_disk",
+          "repeat_sequence_id": [
+            "cafeteria_girl_shop_repeat_1",
+            "cafeteria_girl_shop_repeat_2"
+          ]
+        }
+      ],
       "idle_anim": "squash",
       "wander_range": 0,
       "tint": [

@@ -468,6 +468,155 @@
       "steps": [
         { "speaker": "잔류생", "text": "@c444" }
       ]
+    },
+    "walker_f0_archive": {
+      "steps": [
+        { "speaker": "서고에서 밤샌 학생", "text": "@c614" }
+      ]
+    },
+    "walker_f0_archive_repeat_1": {
+      "steps": [
+        { "speaker": "서고에서 밤샌 학생", "text": "@c616" }
+      ]
+    },
+    "walker_f0_archive_repeat_2": {
+      "steps": [
+        { "speaker": "서고에서 밤샌 학생", "text": "@c617" }
+      ]
+    },
+    "walker_f0_disk": {
+      "steps": [
+        { "speaker": "서고에서 밤샌 학생", "text": "@c619" }
+      ]
+    },
+    "walker_f0_disk_repeat": {
+      "steps": [
+        { "speaker": "서고에서 밤샌 학생", "text": "@c618" }
+      ]
+    },
+    "walker_f2_copy": {
+      "steps": [
+        { "speaker": "복사기 앞에 막힌 조교", "text": "@c620" }
+      ]
+    },
+    "walker_f2_copy_repeat_1": {
+      "steps": [
+        { "speaker": "복사기 앞에 막힌 조교", "text": "@c622" }
+      ]
+    },
+    "walker_f2_copy_repeat_2": {
+      "steps": [
+        { "speaker": "복사기 앞에 막힌 조교", "text": "@c623" }
+      ]
+    },
+    "walker_f2_poster": {
+      "steps": [
+        { "speaker": "복사기 앞에 막힌 조교", "text": "@c625" }
+      ]
+    },
+    "walker_f2_poster_repeat": {
+      "steps": [
+        { "speaker": "복사기 앞에 막힌 조교", "text": "@c624" }
+      ]
+    },
+    "walker_f3_lab": {
+      "steps": [
+        { "speaker": "실험 가운 입은 연구생", "text": "@c626" }
+      ]
+    },
+    "walker_f3_lab_repeat_1": {
+      "steps": [
+        { "speaker": "실험 가운 입은 연구생", "text": "@c628" }
+      ]
+    },
+    "walker_f3_lab_repeat_2": {
+      "steps": [
+        { "speaker": "실험 가운 입은 연구생", "text": "@c629" }
+      ]
+    },
+    "walker_f3_cure": {
+      "steps": [
+        { "speaker": "실험 가운 입은 연구생", "text": "@c631" }
+      ]
+    },
+    "walker_f3_cure_repeat": {
+      "steps": [
+        { "speaker": "실험 가운 입은 연구생", "text": "@c630" }
+      ]
+    },
+    "walker_f4_solder": {
+      "steps": [
+        { "speaker": "납땜하다 지친 잔류생", "text": "@c635" }
+      ]
+    },
+    "walker_f4_solder_repeat_1": {
+      "steps": [
+        { "speaker": "납땜하다 지친 잔류생", "text": "@c632" }
+      ]
+    },
+    "walker_f4_solder_repeat_2": {
+      "steps": [
+        { "speaker": "납땜하다 지친 잔류생", "text": "@c634" }
+      ]
+    },
+    "walker_f4_battery": {
+      "steps": [
+        { "speaker": "납땜하다 지친 잔류생", "text": "@c637" }
+      ]
+    },
+    "walker_f4_battery_repeat": {
+      "steps": [
+        { "speaker": "납땜하다 지친 잔류생", "text": "@c636" }
+      ]
+    },
+    "walker_f5_duty": {
+      "steps": [
+        { "speaker": "5층 당직 보조", "text": "@c638" }
+      ]
+    },
+    "walker_f5_duty_repeat_1": {
+      "steps": [
+        { "speaker": "5층 당직 보조", "text": "@c640" }
+      ]
+    },
+    "walker_f5_duty_repeat_2": {
+      "steps": [
+        { "speaker": "5층 당직 보조", "text": "@c641" }
+      ]
+    },
+    "walker_f5_boss_cure": {
+      "steps": [
+        { "speaker": "5층 당직 보조", "text": "@c642" }
+      ]
+    },
+    "walker_f5_boss_cure_repeat": {
+      "steps": [
+        { "speaker": "5층 당직 보조", "text": "@c643" }
+      ]
+    },
+    "cafeteria_girl_shop_repeat_1": {
+      "steps": [
+        { "speaker": "식당 아가씨", "text": "@c644" },
+        { "op": "shop" }
+      ]
+    },
+    "cafeteria_girl_shop_repeat_2": {
+      "steps": [
+        { "speaker": "식당 아가씨", "text": "@c645" },
+        { "op": "shop" }
+      ]
+    },
+    "cafeteria_girl_blast": {
+      "steps": [
+        { "speaker": "식당 아가씨", "text": "@c646" },
+        { "op": "shop" }
+      ]
+    },
+    "cafeteria_girl_f0_disk": {
+      "steps": [
+        { "speaker": "식당 아가씨", "text": "@c648" },
+        { "op": "shop" }
+      ]
     }
   }
 }

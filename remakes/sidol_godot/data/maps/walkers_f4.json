@@ -5,6 +5,19 @@
     {
       "id": "walker_f4",
       "sprite": "cafeteria_girl",
+      "name": "납땜하다 지친 잔류생",
+      "sequence_id": "walker_f4_solder",
+      "repeat_sequence_id": [
+        "walker_f4_solder_repeat_1",
+        "walker_f4_solder_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F4_BATTERY",
+          "sequence_id": "walker_f4_battery",
+          "repeat_sequence_id": "walker_f4_battery_repeat"
+        }
+      ],
       "pos": [
         90,
         34

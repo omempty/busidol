@@ -5,6 +5,19 @@
     {
       "id": "walker_f0",
       "sprite": "librarian",
+      "name": "서고에서 밤샌 학생",
+      "sequence_id": "walker_f0_archive",
+      "repeat_sequence_id": [
+        "walker_f0_archive_repeat_1",
+        "walker_f0_archive_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F0_DISK",
+          "sequence_id": "walker_f0_disk",
+          "repeat_sequence_id": "walker_f0_disk_repeat"
+        }
+      ],
       "pos": [
         56,
         4

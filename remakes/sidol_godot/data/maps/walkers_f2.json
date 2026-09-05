@@ -5,6 +5,19 @@
     {
       "id": "walker_f2",
       "sprite": "tutor_dumb",
+      "name": "복사기 앞에 막힌 조교",
+      "sequence_id": "walker_f2_copy",
+      "repeat_sequence_id": [
+        "walker_f2_copy_repeat_1",
+        "walker_f2_copy_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "walker_f2_poster",
+          "repeat_sequence_id": "walker_f2_poster_repeat"
+        }
+      ],
       "pos": [
         100,
         34

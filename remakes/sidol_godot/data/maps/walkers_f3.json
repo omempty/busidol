@@ -5,6 +5,19 @@
     {
       "id": "walker_f3",
       "sprite": "prof_chem",
+      "name": "실험 가운 입은 연구생",
+      "sequence_id": "walker_f3_lab",
+      "repeat_sequence_id": [
+        "walker_f3_lab_repeat_1",
+        "walker_f3_lab_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F3_CURE_DONE",
+          "sequence_id": "walker_f3_cure",
+          "repeat_sequence_id": "walker_f3_cure_repeat"
+        }
+      ],
       "pos": [
         100,
         34

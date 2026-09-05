@@ -239,14 +239,23 @@ func _physics_process(_delta: float) -> void:
 			dialogue_box.advance()
 		return
 
-	# 계단 위 SPACE → 빠른 이동(Q5). 트리거·NPC보다 먼저 — 앵커에 서 있는 상황은 명확하다.
+	# interact 트리거 우선 — 계단 앵커 위 컷신(폭파·희생)이 빠른 이동에
+	# 가로막히면 진행이 영영 막힌다(2026-09-05 실측: 방문층 2개부터 blast 불발).
+	if triggers != null and interact_edge:
+		var icells := front_cells()
+		# 계단 위에서는 발밑 앵커도 본다 — 판정이 몸 앞만 봐서 계단 위
+		# SPACE가 트리거에 안 닿았다. 앵커 한정이라 오발사 없음(셋 다 앵커).
+		if gate != null and gate.is_travel_anchor(player.mover.grid_pos):
+			for c in Placement.body_cells(player.mover.grid_pos):
+				if not icells.has(c):
+					icells.append(c)
+		if triggers.try_interact(icells):
+			return
+
+	# 계단 위 SPACE → 빠른 이동(Q5). 트리거·NPC 다음 — 앵커라도 앞의 사건이 먼저다.
 	if interact_edge and gate != null and gate.is_travel_anchor(player.mover.grid_pos):
 		if fast_travel.open_for(GameState.current_floor):
 			return
-
-	# interact 트리거 우선 — NPC/상자보다 앞서 판정
-	if triggers != null and interact_edge and triggers.try_interact(front_cells()):
-		return
 
 	var npc := _npc_in_front()
 	if npc != null:
