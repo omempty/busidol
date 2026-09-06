@@ -31,6 +31,7 @@ var _on_win_flag := ""  # 승리 시 세팅되는 시나리오 플래그 (pendin
 var _ui: BattleUI
 var _pause_menu: PauseMenu
 var _busy := false
+var _multi_warned := false  # 다체 전투 경고는 전투당 한 번만
 ## 현재 지목한 적(Q/E) · 직전 행동(R 반복) — 둘 다 UI가 아니라 여기서 상태를 갖는다.
 var _target_index := 0
 var _last_action: Dictionary = {}
@@ -435,6 +436,15 @@ func _on_choreo_finished(_move_id: StringName) -> void:
 
 
 ## 현재 대상 — 지목한 적이 살아 있으면 그 적, 아니면 첫 생존자.
+## 살아 있는 적 수 — 다체 전투 경고 판정용.
+func _alive_enemy_count() -> int:
+	var n := 0
+	for e in enemies:
+		if not e.is_down():
+			n += 1
+	return n
+
+
 func _alive_enemy_index() -> int:
 	if (
 		_target_index >= 0
@@ -521,7 +531,25 @@ func _resolve_turn() -> void:
 
 ## 적 한 체의 행동 — 종별 특수(상태이상)를 먼저 굴리고, 안 나오면 통상공격.
 ## 두 경로가 나뉜 곳이 두 곳이라 여기 한 함수로 모은다(한쪽만 고치는 사고를 막는다).
+##
+## **한 라운드에 한 마리만 행동한다.** 부르는 쪽이 "첫 번째 생존 적"을 골라 넘긴다.
+## 지금은 모든 전투가 1대1이라 문제가 되지 않는다(필드 인카운터는 enemies 하나,
+## 컷신 강제 전투 2건도 단일). 쓰이지 않을 코드를 미리 쓰지 않는다는 판단이다 —
+## 다만 **조용히 틀리면 안 되므로** 2체 이상이 되는 순간 경고를 띄운다.
+## 설계 근거와 구현 지침: docs/02_design/08_battle_rules.md §8.3
 func _enemy_act(actor: Combatant, idx: int) -> void:
+	if _alive_enemy_count() > 1 and not _multi_warned:
+		_multi_warned = true
+		push_warning(
+			(
+				(
+					"BattleSceneController: 적 %d체 전투인데 한 라운드에 한 마리만 행동한다 — "
+					+ "다체 전투를 넣었다면 _resolve_turn/_end_player_defend를 전원 순회로 고쳐야 한다"
+					+ "(docs/02_design/08_battle_rules.md §8.3)."
+				)
+				% _alive_enemy_count()
+			)
+		)
 	var eid := str(_enemy_ids[idx]) if idx >= 0 and idx < _enemy_ids.size() else ""
 	if (
 		not eid.is_empty()
