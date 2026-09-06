@@ -15,18 +15,19 @@
         "cafeteria_girl_shop_repeat_1",
         "cafeteria_girl_shop_repeat_2"
       ],
+      "_comment_variants": "변형은 **늦은 플래그부터** 적는다 — DialogueManager는 먼저 맞는 것을 쓴다. 2026-09-06까지 Q_F1_BLAST가 위에 있었는데, quests_v2.json 사슬상 Q_F0_DISK는 Q_F3_CURE_DONE→Q_F2_POSTER→Q_F1_BLAST를 모두 거친 뒤에만 켜진다. 즉 Q_F0_DISK가 켜질 땐 Q_F1_BLAST가 반드시 이미 켜져 있어 cafeteria_girl_f0_disk(@c648)가 영영 안 나오는 사문화 대사였다.",
       "sequence_variants": [
         {
-          "requires_flag": "Q_F1_BLAST",
-          "sequence_id": "cafeteria_girl_blast",
+          "requires_flag": "Q_F0_DISK",
+          "sequence_id": "cafeteria_girl_f0_disk",
           "repeat_sequence_id": [
             "cafeteria_girl_shop_repeat_1",
             "cafeteria_girl_shop_repeat_2"
           ]
         },
         {
-          "requires_flag": "Q_F0_DISK",
-          "sequence_id": "cafeteria_girl_f0_disk",
+          "requires_flag": "Q_F1_BLAST",
+          "sequence_id": "cafeteria_girl_blast",
           "repeat_sequence_id": [
             "cafeteria_girl_shop_repeat_1",
             "cafeteria_girl_shop_repeat_2"

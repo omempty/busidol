@@ -31,6 +31,54 @@
         "name_en": "HP Room",
         "_comment": "동아리 HP실 문. HPbang 표식(195,20) 아래. npcs_f2 실측."
       }
+    ],
+    "3": [
+      {
+        "cell": [164, 25],
+        "name_ko": "화공과 교수실",
+        "name_en": "Chem-Eng Prof. Office",
+        "_comment": "원작 ATT Howa=51 @(150,18)이 이 방(알코브 x150~167 y14~23) 안. GOODITEM.H:71. @t211 '3층 화학공학과 교수실로 가보세요!'"
+      },
+      {
+        "cell": [144, 25],
+        "name_ko": "화공과 조교실",
+        "name_en": "Chem-Eng TA Room",
+        "_comment": "원작 ATT HowaJo=56 @(140,19)이 이 방(알코브 x130~148 y15~23) 안. GOODITEM.H:73. npcs_f3 prof_chem(138,19)도 여기."
+      },
+      {
+        "cell": [113, 25],
+        "name_ko": "교수 연구실",
+        "name_en": "Professor's Office",
+        "_comment": "triggers_f3 f3_drag zone(111,19)이 이 방(x106~116 y15~23) 안. 마스터 시나리오 :188. 시나리오는 '남앙골 교수실'이지만 원작 ATT는 남 교수를 F2에 두므로 중립 표기."
+      },
+      {
+        "cell": [101, 25],
+        "name_ko": "대학원 랩실",
+        "name_en": "Graduate Lab",
+        "_comment": "triggers_f3 f3_allin zone(98,18)이 이 방(x93~104 y15~23) 안. 마스터 시나리오 :196."
+      }
+    ],
+    "4": [
+      {
+        "cell": [74, 13],
+        "name_ko": "부싯돌 동아리방",
+        "name_en": "BSD Game Club",
+        "_comment": "원작 ATT HongBo_BSD=75 @(74,8) 바로 아래 문. GOODITEM.H:79 · @t140 '정보공학부의 게임동아리 에요.' 상단 대공간은 문 4개(9·26·60·74 @y13)가 같은 방이라 표식 바로 아래 하나만 단다."
+      }
+    ],
+    "5": [
+      {
+        "cell": [74, 13],
+        "name_ko": "중앙통제실",
+        "name_en": "Central Control Room",
+        "_comment": "근거 약함(시나리오만) — F5는 원작 attr 고유값이 0/1/2/9뿐이라 방 마커가 아예 없다. 마스터 시나리오 :295 '[5층] 결: 중앙통제실' · @c104/@c230. 문 6개(24·35·44·60·74·100 @y13)가 한 방이라 동선상 가운데 하나만."
+      },
+      {
+        "cell": [60, 36],
+        "name_ko": "서버실",
+        "name_en": "Server Room",
+        "_comment": "근거 약함(대사만) — @t205 '모교수님이 5층 서버실에서…' · @c530. 문 2개(39·60 @y36)가 한 방이라 하나만."
+      }
     ]
   }
 }

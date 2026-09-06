@@ -42,7 +42,20 @@ static func resolve_npc_sequence(
 		break
 
 	var seen_count := GameState.get_sequence_seen_count(chosen_seq)
-	GameState.record_sequence_seen(chosen_seq)
+	# **청취 기록은 여기(고르는 순간)에 남긴다 — 대화가 끝나는 순간이 아니다.**
+	#
+	# 끝나는 순간(`DialogueBox.finished`)으로 옮기고 싶어지는 게 자연스럽지만 두 가지가 막는다.
+	#  1. 카운터의 키는 **여기서 고른 chosen_seq(기준 시퀀스)**인데, finished가 실어 보내는 건
+	#     실제로 재생된 시퀀스다. 순환 중이면 그건 repeat 풀의 항목(…_repeat_1)이라 서로 다르다.
+	#     그대로 기록하면 기준 시퀀스의 seen_count가 1에서 멈춰 순환이 idx 0에 얼어붙는다.
+	#     제대로 하려면 필드가 "어느 기준 시퀀스로 열었는지"를 따로 들고 다녀야 한다.
+	#  2. 그렇게 옮겨도 "안 읽었는데 기록" 은 안 닫힌다. op 스텝이 0번이면 DialogueBox._load_step()이
+	#     곧장 close()를 부르고, close()는 한 줄도 안 보여 준 채로 finished를 쏜다.
+	# 즉 옮겨도 이득이 없고 회귀만 진다. 대신 **읽을 줄이 하나도 없는 시퀀스는 세지 않는다** —
+	# 정확히 그 경우(빈 시퀀스, op 전용 시퀀스)만 예외로 판다. 필드도 빈 시퀀스면 대화를 열지 않고
+	# 되돌아가므로(scenes/field.gd `_start_dialogue`), 그때 카운터만 오르던 어긋남도 같이 닫힌다.
+	if _has_readable_line(chosen_seq):
+		GameState.record_sequence_seen(chosen_seq)
 
 	# 해당 상태를 이미 한 번 이상 들었고, 반복/아이들 대사 풀이 정의되어 있다면 아이들 밈 대사로 순환
 	if seen_count > 0 and chosen_repeat != null:
@@ -55,3 +68,17 @@ static func resolve_npc_sequence(
 			return StringName(str(chosen_repeat))
 
 	return chosen_seq
+
+
+## 그 시퀀스가 **화면에 한 줄이라도 띄우는가**. op 스텝은 대사가 아니라 명령이라
+## (DialogueBox._load_step()이 close()하고 op_requested를 쏜다) 읽은 것으로 치지 않는다.
+## 2026-09-06 실측: 현재 91개 시퀀스 전부 0번 스텝이 대사라 이 함수는 항상 true다 —
+## 즉 지금 동작을 바꾸지 않는 방어선이고, op 전용 변형을 나중에 쓰게 될 때를 위한 것이다.
+static func _has_readable_line(seq: StringName) -> bool:
+	for s: Variant in Database.sequence(seq):
+		if s is not Dictionary:
+			continue
+		var d: Dictionary = s
+		if str(d.get("op", "")).is_empty() and not str(d.get("text", "")).is_empty():
+			return true
+	return false

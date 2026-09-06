@@ -196,6 +196,26 @@ func _physics_process(_delta: float) -> void:
 	if inventory_panel.visible:
 		return  # 가방 개방 중 — 입력은 패널이, 월드 정지는 paused가 담당
 
+	# 대화 중: 입력을 박스 진행으로 중재 (단일 입력 경로)
+	#
+	# **몬스터 틱·트리거 틱보다 앞이다.** 컷신·상점·빠른이동·가방은 이미 각자 위에서
+	# 월드를 세우는데 대화창만 세우지 않아, 말을 거는 동안에도 적이 계속 다가와 닿으면
+	# 인카운터가 씬을 갈아 대사를 통째로 삼켰다(2026-09-06). 그러면 DialogueManager가
+	# 이미 올려 둔 청취 기록만 남아 "안 읽었는데 읽은 것"이 되고, 다음에 말을 걸면
+	# 기준 대사를 건너뛰고 반복 풀부터 나온다. triggers.tick도 같은 이유로 막는다 —
+	# 열려 있는 대화창 위로 _play_sequence()가 start()를 다시 불러 덮어썼다.
+	# 적은 대화가 끝나면 그 자리에서 다시 움직인다(닿아 있으면 그때 인카운터가 뜬다).
+	if dialogue_box.is_open:
+		# 대화 중 ENTER = 대화 로그(04_uiux §1.2). 필드 메뉴는 대사가 없을 때만 뜬다.
+		if _edge(&"menu"):
+			dialogue_box.toggle_log()
+			return
+		if dialogue_box.is_log_open():
+			return  # 로그를 읽는 중 — 진행 입력은 로그 창이 받는다
+		if interact_edge or cancel_edge:
+			dialogue_box.advance()
+		return
+
 	# 몬스터 틱 (EnemyManager에 위임)
 	if _encounter_grace > 0.0:
 		_encounter_grace -= _delta
@@ -226,18 +246,6 @@ func _physics_process(_delta: float) -> void:
 	# 이벤트 트리거 판정 (zone/auto)
 	if triggers != null:
 		triggers.tick(player.mover.grid_pos, _delta)
-
-	# 대화 중: 입력을 박스 진행으로 중재 (단일 입력 경로)
-	if dialogue_box.is_open:
-		# 대화 중 ENTER = 대화 로그(04_uiux §1.2). 필드 메뉴는 대사가 없을 때만 뜬다.
-		if _edge(&"menu"):
-			dialogue_box.toggle_log()
-			return
-		if dialogue_box.is_log_open():
-			return  # 로그를 읽는 중 — 진행 입력은 로그 창이 받는다
-		if interact_edge or cancel_edge:
-			dialogue_box.advance()
-		return
 
 	# interact 트리거 우선 — 계단 앵커 위 컷신(폭파·희생)이 빠른 이동에
 	# 가로막히면 진행이 영영 막힌다(2026-09-05 실측: 방문층 2개부터 blast 불발).

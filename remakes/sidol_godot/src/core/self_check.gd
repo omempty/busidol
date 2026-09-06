@@ -18,6 +18,7 @@ extends Node
 ## 11) 몬스터 명단 유지            — 전투를 다녀와도 잡은 놈이 되살아나지 않는가
 ## 12) 설정 저장 왕복             — 볼륨·난이도 등이 실제로 파일에 남고 되읽히는가
 ## 13) 조사 판정 네 방향 대칭      — 위·왼쪽만 좁게 잡히던 결함 회귀 방지
+## 14) 문패 좌표가 실제 문인가      — ATT 9가 아니면 이름표가 벽 위에 조용히 뜬다
 
 const FLOORS := [1, 2, 3, 0, 4, 5]  # 마스터 시나리오 진행 순서
 
@@ -44,6 +45,7 @@ func run_all() -> PackedStringArray:
 		_check_enemy_roster(),
 		_check_settings_roundtrip(),
 		_check_interact_probe(),
+		_check_door_plates(),
 	]:
 		for line: String in res:
 			out.append(line)
@@ -125,6 +127,58 @@ func _check_seq_refs(who: String, kind: String, d: Dictionary) -> Array:
 			if rid.is_empty() or Database.sequence(rid).is_empty():
 				out += _fail("%s %s 반복 시퀀스 없음: %s" % [who, kind, rid])
 	return out
+
+
+## 문패(data/maps/door_plates.json) 좌표가 실제 문(ATT 9) 위인가.
+##
+## 문패는 런타임 렌더라 좌표가 틀려도 아무 오류 없이 **벽 위에 이름표가 뜬다** —
+## 걸어가 보기 전에는 알 수 없다. 문은 가로 2칸이므로 오른쪽 칸도 같이 본다
+## (`cell`은 왼쪽 칸이라는 것이 이 파일의 규약이다).
+func _check_door_plates() -> Array:
+	var lines: Array = []
+	var path := "res://data/maps/door_plates.json"
+	if not FileAccess.file_exists(path):
+		return _ok("door_plates.json 없음(스킵)")
+	var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
+	if typeof(raw) != TYPE_DICTIONARY:
+		return _fail("door_plates.json 파싱 실패")
+	var plates: Dictionary = Dictionary(raw).get("plates", {})
+	var bad := 0
+	var total := 0
+	for floor_str: String in plates:
+		var def := MapDefinition.load_from_json("res://data/maps/f%s.json" % floor_str)
+		if def == null or def.width <= 0:
+			bad += 1
+			lines += _fail("문패 f%s 맵 로드 실패" % floor_str)
+			continue
+		for e: Variant in plates[floor_str]:
+			if e is not Dictionary:
+				continue
+			total += 1
+			var xy: Array = Dictionary(e).get("cell", [])
+			var who := str(Dictionary(e).get("name_ko", "?"))
+			if xy.size() < 2:
+				bad += 1
+				lines += _fail("문패 f%s/%s cell 누락" % [floor_str, who])
+				continue
+			var c := Vector2i(int(xy[0]), int(xy[1]))
+			var a0 := def.attr_at(c)
+			var a1 := def.attr_at(c + Vector2i.RIGHT)
+			if a0 != Placement.DOOR_ATTR:
+				bad += 1
+				lines += _fail("문패 f%s/%s (%d,%d)이 문이 아님 — ATT %d" % [floor_str, who, c.x, c.y, a0])
+			elif a1 != Placement.DOOR_ATTR:
+				# 왼쪽 칸 규약을 어긴 경우(오른쪽 칸을 적었다) — 이름표가 문 밖으로 밀린다.
+				bad += 1
+				lines += _fail(
+					(
+						"문패 f%s/%s (%d,%d) 오른쪽 칸이 문이 아님 — cell은 문 2칸 중 왼쪽이어야 한다"
+						% [floor_str, who, c.x, c.y]
+					)
+				)
+	if bad == 0:
+		lines += _ok("문패 %d개 전부 문(ATT 9) 위" % total)
+	return lines
 
 
 func _check_trigger_refs() -> Array:

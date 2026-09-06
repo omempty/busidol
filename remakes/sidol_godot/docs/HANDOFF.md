@@ -1706,7 +1706,9 @@ snow_frost_war/LodeRunner git 저장소화 완료(Lode는 AudioManager 마이그
 7. **단일 책임 원칙(SRP) 기반 `DialogueManager` 클래스 분리 및 게임 상태 연동 완료**:
    - **아키텍처 분리 이유**: 기존에는 `NpcEntity`와 `WalkerEntity`가 각각 대사 분기 조건을 직접 품고 있어, 필드 액터의 물리/시각 연출(호흡, 배회, 시선, 충돌)과 게임 스토리 진행도 판정 로직이 강하게 결합되어 있었음.
    - **구현 (`src/core/dialogue_manager.gd`)**:
-     - `DialogueManager`는 순수 상태/대화 중재자(Coordinator)로 기능하며, `GameState`의 스토리 마일스톤(`MILESTONES`: `Q_F1_START`, `Q_F1_BLAST`, `Q_F2_POSTER`, `Q_F3_PALIN`, `Q_F0_DISK`, `Q_F4_BATTERY`, `Q_F4_SACRIFICE`, `Q_F5_BOSS_CURE`, `Q_F5_AI_BATTLE`, `Q_ENDING`)을 모니터링.
+     - `DialogueManager`는 상태를 들고 있지 않는 순수 중재자다. `resolve_npc_sequence(base, variants, repeat)` 정적 함수 하나가 전부이며, **마일스톤 목록을 코드에 두지 않는다**. 판정 조건은 배치 데이터가 갖는다 — `data/maps/npcs_f*.json`·`walkers_f*.json`의 `sequence_variants[].requires_flag`를 위에서부터 훑어 `GameState.has_all_flags()`로 확인하고 **먼저 맞는 변형이 이긴다**(그래서 변형은 늦은 플래그부터 적어야 한다). 변형이 하나도 안 맞으면 기본 `sequence_id`.
+       - 2026-09-06 정리: 호출부가 0곳이던 `MILESTONES` 상수와 `current_milestone()`·`is_idle()`을 걷어냈다. 코드에 마일스톤 목록을 또 두면 데이터와 갈라진다.
+       - 청취 횟수는 **고른 기준 시퀀스**를 키로 `GameState.npc_seen_sequences`에 쌓인다(고르는 순간 기록. 단 화면에 한 줄도 안 띄우는 시퀀스 — 빈 시퀀스·op 전용 — 는 세지 않는다).
      - **진행 상태 (Progressed Milestone Reaction)**: 새로운 사건이 벌어졌을 때 처음 말을 걸면, 힌트나 지시문이 아닌 NPC 개인이 직접 겪은 생생한 현장 체감 대사(폭파 충격, 울음소리, 냄새 완화, 승강기 모터 소리 등)를 출력.
      - **아이들/정체 상태 (90s Idle Chatter Pool Cycling)**: 동일 구간에서 추가로 말을 걸거나 스토리가 정체 중일 때는 90년대 대학가 문화·밈·개그 대사 풀(`repeat_sequence_id` 단일 또는 배열)을 순환하여 항상 신선하고 위트 있는 반응 제공.
    - **엔진 등록 및 테스트**:
