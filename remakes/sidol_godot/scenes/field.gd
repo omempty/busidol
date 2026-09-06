@@ -107,6 +107,10 @@ func _ready() -> void:
 	add_child(_plates)
 	_plates.setup(GameState.current_floor)
 
+	# 획득 알림 — GameState.acquired를 듣는다. 컷신도 필드의 자식이라 컷신 안에서
+	# 준 것도 여기로 뜬다.
+	add_child(AcquireToast.new())
+
 	_coord_label = HudTheme.label("", 13, HudTheme.TEXT_MUTED)
 	var coord_layer := CanvasLayer.new()
 	coord_layer.layer = 60
@@ -485,6 +489,7 @@ func _open_chest(cell: Vector2i) -> void:
 	# money 계열은 소지품이 아니라 골드로 — ItemEffects가 판정한다.
 	if ItemEffects.on_acquire(item_id, 1):
 		GameState.inventory.add(item_id, 1)
+		GameState.acquired.emit(&"item", item_id, 1)
 		_show_pickup_popup(tr("UI_FIELD_GOT_ITEM") % str(def.get("name_ko", item_id)))
 	else:
 		_show_pickup_popup("%s" % str(def.get("name_ko", item_id)))

@@ -242,6 +242,7 @@ func _execute(step: Dictionary) -> void:
 			# money 계열은 소지품이 아니라 골드로 — 원작 DON 처리.
 			if ItemEffects.on_acquire(gid, gcount):
 				GameState.inventory.add(gid, gcount)
+				GameState.acquired.emit(&"item", gid, gcount)
 		"grant_skill":
 			# 성장 트리(마스터 §2.2)의 습득 지점. skills.json에 starting이 없으면
 			# 전 스킬이 이미 열려 있어 이 op은 무해하게 통과한다.

@@ -1,13 +1,15 @@
 class_name QuestLogPanel
 extends Control
-## 진행 기록(Q3) — data/quests_v2.json 마일스톤을 플래그 달성 여부로 표시.
-## 일시정지 메뉴에서 연다. Esc로 닫는다.
+## 진행 기록(Q3) — data/quests_v2.json 마일스톤. 일시정지 메뉴에서 연다. Esc로 닫는다.
+##
+## **`description`과 `reward`를 그린다.** 2026-09-06까지 이 패널은 `id·zone·name`만
+## 그렸고 `description`을 읽는 줄이 **0개**였다 — 21개 퀘스트의 "무엇을 하는가"가
+## 데이터에만 있고 화면에 없었다. 유저가 "물품 찾기가 힘들다"고 한 절반이 여기다.
+## 상태 판정은 QuestState가 단일 출처다(HUD 트래커와 같은 것을 쓴다).
 
 signal closed
 
-const QUESTS_PATH := "res://data/quests_v2.json"
-
-var _rows: Array[Label] = []
+var _rows: Array[VBoxContainer] = []
 
 
 func _ready() -> void:
@@ -32,14 +34,23 @@ func _build() -> void:
 	list.add_theme_constant_override("separation", 4)
 	scroll.add_child(list)
 
-	var quests: Array = _load_quests()
+	var quests: Array = QuestState.all()
+	var last_zone := ""
 	for q: Dictionary in quests:
-		var row := HudTheme.label("", 14, HudTheme.TEXT)
-		list.add_child(row)
-		row.set_meta("flag_id", str(q["id"]))
-		row.set_meta("zone", str(q.get("zone", "")))
-		row.set_meta("name", str(q.get("name", "")))
-		_rows.append(row)
+		# 구역이 바뀌면 머리글을 넣는다 — 21줄을 통으로 늘어놓으면 훑을 수가 없다.
+		var zone := str(q.get("zone", ""))
+		if zone != last_zone:
+			var head := HudTheme.label(zone, 13, HudTheme.TEXT_MUTED)
+			head.add_theme_constant_override("line_spacing", 0)
+			list.add_child(head)
+			last_zone = zone
+		var box := VBoxContainer.new()
+		box.add_theme_constant_override("separation", 0)
+		list.add_child(box)
+		box.add_child(HudTheme.label("", 14, HudTheme.TEXT))  # 제목 줄
+		box.add_child(HudTheme.label("", 12, HudTheme.TEXT_MUTED))  # 설명 줄
+		box.set_meta("quest", q)
+		_rows.append(box)
 
 	visibility_changed.connect(
 		func() -> void:
@@ -48,24 +59,37 @@ func _build() -> void:
 	)
 
 
-func _load_quests() -> Array:
-	if not FileAccess.file_exists(QUESTS_PATH):
-		push_warning("quests 데이터 없음: %s" % QUESTS_PATH)
-		return []
-	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(QUESTS_PATH))
-	if typeof(raw) != TYPE_DICTIONARY:
-		push_warning("quests 파싱 실패")
-		return []
-	return raw.get("quests", [])
-
-
 func _refresh() -> void:
-	for row in _rows:
-		var done := GameState.has_flag(str(row.get_meta("flag_id")))
-		var mark := "✓" if done else "·"
-		row.text = "%s  %s — %s" % [mark, str(row.get_meta("zone")), str(row.get_meta("name"))]
-		row.add_theme_color_override(
-			"font_color", Color(1.0, 0.9, 0.5) if done else Color(0.55, 0.55, 0.62)
+	for box in _rows:
+		var q: Dictionary = box.get_meta("quest")
+		var st := QuestState.status_of(q)
+		var title: Label = box.get_child(0)
+		var desc: Label = box.get_child(1)
+		var mark := "·"
+		var col := Color(0.45, 0.45, 0.52)
+		match st:
+			QuestState.Status.DONE:
+				mark = "✓"
+				col = Color(1.0, 0.9, 0.5)
+			QuestState.Status.ACTIVE:
+				# **지금 할 수 있는 것**만 밝게 — 이게 이 창을 여는 이유다.
+				mark = "▶"
+				col = HudTheme.ACCENT
+			_:
+				mark = "·"
+		title.text = "%s %s" % [mark, str(q.get("name", ""))]
+		title.add_theme_color_override("font_color", col)
+		# 잠긴 것은 내용을 감춘다 — 앞으로 할 일을 미리 다 보여 주면 읽을 이유가 없다.
+		if st == QuestState.Status.LOCKED:
+			desc.text = "     " + tr("UI_QUEST_LOCKED")
+		else:
+			var line := "     " + str(q.get("description", ""))
+			var rw := str(q.get("reward", ""))
+			if not rw.is_empty():
+				line += "   (%s: %s)" % [tr("UI_QUEST_REWARD"), rw]
+			desc.text = line
+		desc.add_theme_color_override(
+			"font_color", HudTheme.TEXT if st == QuestState.Status.ACTIVE else Color(0.5, 0.5, 0.57)
 		)
 
 

@@ -3,6 +3,11 @@ extends Node
 ## TODO(Phase 4): CharacterStats·Inventory 리소스 연결.
 
 signal state_changed
+## 획득 알림 — **얻은 줄 모르면 얻은 것이 아니다.**
+## 2026-09-06까지 스킬도 아이템도 조용히 들어왔다(유일한 신호가 콘솔 print였다).
+## 그래서 마스터 시나리오 §2.2 성장 트리를 배선해도 플레이어는 몰랐다.
+## 화면에 무엇을 띄울지는 HUD가 정한다 — 여기는 "무엇이 들어왔다"만 알린다.
+signal acquired(kind: StringName, id: StringName, amount: int)
 
 const BASE_HP := 50  # 원작 We 초기값
 const BASE_DP := 10  # 맨몸 방어력 — 구판 Combatant 생성 시 하드코딩돼 있던 값
@@ -181,6 +186,7 @@ func grant_skill(skill_id: StringName) -> bool:
 	if sid.is_empty() or owned_skills.has(sid):
 		return false
 	owned_skills[sid] = true
+	acquired.emit(&"skill", skill_id, 1)
 	state_changed.emit()
 	return true
 

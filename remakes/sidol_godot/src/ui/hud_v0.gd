@@ -12,14 +12,10 @@ const PULSE_ALPHA := 0.45
 const PULSE_TIME := 0.55
 ## 조작 힌트 — InputMap 액션 실제 바인딩과 같은 순서(input_bootstrap.ACTIONS).
 const HINTS_KEY := "UI_HUD_HINT"
-const TRACKER_KEYS := {
-	0: "UI_TRACKER_DEFAULT",
-	1: "UI_TRACKER_F1",
-	2: "UI_TRACKER_F2",
-	3: "UI_TRACKER_F3",
-	4: "UI_TRACKER_F4",
-	5: "UI_TRACKER_F5",
-}
+## 트래커 문구는 **층이 아니라 퀘스트 사슬**이 정한다(QuestState).
+## 2026-09-06까지 층 번호로 골랐고, 그래서 `UI_TRACKER_F1`이 "3층 화공과 사고 조사"인
+## 채로 F1에서 3층을 가리키고 있었다. 층당 한 줄은 애초에 표현할 수 없는 것을
+## 표현하려던 것이다 — 한 층에 퀘스트가 여럿이고 순서도 있다.
 
 var _floor_chip: Label
 var _lv_label: Label
@@ -202,8 +198,7 @@ func refresh() -> void:
 	_money_label.text = HudTheme.money(int(stats.get("money", 0)))
 
 	if _tracker_label != null:
-		var tr_key: String = str(TRACKER_KEYS.get(GameState.current_floor, "UI_TRACKER_DEFAULT"))
-		_tracker_label.text = tr(tr_key)
+		_tracker_label.text = QuestState.tracker_line()
 
 
 ## 현재 레벨 최대 HP — 초기값 + 레벨 테이블 hp_up 누적(growth.json).
