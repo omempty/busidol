@@ -29,6 +29,8 @@ const PROXIMITY_AGGRO := 2
 ## 끝에서 반대편까지가 대략 30초(200칸 × 0.16초)이니, 한 번 왕복하는 동안
 ## 한두 마리가 돌아오는 셈이다.
 const RESPAWN_SECONDS := 45.0
+## 도달 판정 기준점을 못 세웠을 때 나선으로 찾아보는 반경(셀).
+const SEED_SEARCH_RADIUS := 40
 
 var enemies: Array[EnemyEntity] = []
 var _occupied := {}  # Vector2i(몸 셀) -> EnemyEntity
@@ -42,10 +44,20 @@ var _floor := -1
 var _cap := 0
 var _respawn_seconds := RESPAWN_SECONDS
 var _respawn_accum := 0.0
+## 이 층의 고정 NPC·배회 워커 **앵커** — 스폰에서 "NPC가 사는 방"을 빼는 데 쓴다.
+## 필드가 액터를 먼저 세우고 넘겨준다(scenes/field.gd). 비어 있으면 방 배제를 건너뛴다.
+var _actor_anchors: Array[Vector2i] = []
 
 
-func spawn_for_floor(floor_idx: int, rt: MapRuntime, parent: Node2D, player_cell: Vector2i) -> void:
+func spawn_for_floor(
+	floor_idx: int,
+	rt: MapRuntime,
+	parent: Node2D,
+	player_cell: Vector2i,
+	actor_anchors: Array[Vector2i] = []
+) -> void:
 	despawn_all()
+	_actor_anchors = actor_anchors
 	_runtime = rt
 	_parent = parent
 	_floor = floor_idx
@@ -365,9 +377,73 @@ func _anchor_free_for(e: EnemyEntity, anchor: Vector2i, phasing: bool = false) -
 
 
 ## 몸이 들어가고 플레이어에게서 충분히 떨어진 앵커만 후보로 모은다.
+## 스폰 앵커 — **걸어 닿을 수 있는 복도와 빈 방만.**
+##
+## 구판은 맵 전체에서 2×2가 들어가는 칸을 전부 후보로 삼았다. 그래서 둘이 났다
+## (2026-09-06 유저 실플레이 지적):
+##   ① **건물 밖·고립 구역에 선다.** 원작 맵에는 걸어 닿을 수 없는 지대가 넓게 남아
+##      있다(world_audit 실측: f5 앵커 10,989개 중 2,250개 미도달, 최대 덩어리
+##      1,170칸 @(0,49) · f3 7,971개 중 2,928개). 거기 선 몬스터는 만날 수 없고,
+##      미니맵과 소리로만 존재해 세계가 가짜로 보인다.
+##   ② **NPC가 사는 방 안에 선다.** 교수실·동아리방에 말을 걸러 들어갔더니 전투방이다.
+##
+## 두 그래프를 쓴다 — 묻는 것이 다르기 때문이다.
+##   도달 판정  `ReachProbe.reachable_anchors` (문 통과 포함) — "플레이어가 갈 수 있는가"
+##   방 구분    걸음 인접만, **문은 벽으로 취급**            — "여기가 복도인가 방인가"
+## 문(ATT 9)은 통행 가능이 아니라 걸음 인접만으로 성분을 뜨면 방이 복도에서 저절로
+## 끊긴다. 착지점이 든 성분이 복도이고 나머지가 방이다.
 func _collect_spawn_anchors(
 	rt: MapRuntime, player_cell: Vector2i, min_dist: int
 ) -> Array[Vector2i]:
+	var seed_anchor := _reach_seed(rt, player_cell)
+	if seed_anchor.x < 0:
+		# 기준점을 못 잡으면 도달 판정 자체가 성립하지 않는다 — 층을 텅 비우느니
+		# 옛 방식(맵 전체)으로 되돌린다. 실제 게임에서는 플레이어가 선 칸을 넘기므로
+		# 여기 오지 않지만, 프루브·도구가 임의 좌표로 부를 수 있다.
+		push_warning("EnemyManager: f%d 기준 앵커 없음 — 맵 전체에서 뽑는다" % _floor)
+		return _all_anchors(rt, player_cell, min_dist)
+
+	var reach := ReachProbe.reachable_anchors(rt, seed_anchor)
+	var banned := _banned_room_anchors(rt)
+	var out: Array[Vector2i] = []
+	var without_rooms: Array[Vector2i] = []
+	for anchor: Variant in reach:
+		var a: Vector2i = anchor
+		var d := a - player_cell
+		if maxi(absi(d.x), absi(d.y)) < min_dist:
+			continue
+		# reachable_anchors는 문 점프 착지도 돌려준다(통행 판정을 안 한다) —
+		# 설 수 있는 자리만 남긴다.
+		if not Placement.body_fits(rt, a):
+			continue
+		without_rooms.append(a)
+		if not banned.has(a):
+			out.append(a)
+	if not out.is_empty():
+		return out
+	if not without_rooms.is_empty():
+		# 빈 방이 하나도 없는 층 — ①(건물 밖)이 ②(NPC 방)보다 심한 결함이므로
+		# 도달 판정만 남기고 방 배제를 포기한다.
+		push_warning("EnemyManager: f%d 빈 방이 없어 NPC 방 배제를 생략" % _floor)
+		return without_rooms
+	push_warning("EnemyManager: f%d 도달 가능 앵커 없음 — 맵 전체에서 뽑는다" % _floor)
+	return _all_anchors(rt, player_cell, min_dist)
+
+
+## 도달 판정의 기준점 — 플레이어가 선 앵커. 착지 보정 전이거나 도구가 임의 좌표를
+## 넘기면 설 수 없는 칸일 수 있어, 그때는 나선으로 가장 가까운 설 수 있는 칸을 찾는다.
+func _reach_seed(rt: MapRuntime, player_cell: Vector2i) -> Vector2i:
+	if Placement.body_fits(rt, player_cell):
+		return player_cell
+	for r in range(1, SEED_SEARCH_RADIUS + 1):
+		for a: Vector2i in Placement.ring(player_cell, r):
+			if Placement.body_fits(rt, a):
+				return a
+	return Vector2i(-1, -1)
+
+
+## 옛 방식 — 맵 전체에서 2×2가 들어가는 칸. 위 두 폴백에서만 쓴다.
+func _all_anchors(rt: MapRuntime, player_cell: Vector2i, min_dist: int) -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for y in rt.definition.height - 1:
 		for x in rt.definition.width - 1:
@@ -378,6 +454,111 @@ func _collect_spawn_anchors(
 			if Placement.body_fits(rt, a):
 				out.append(a)
 	return out
+
+
+## 액터(고정 NPC·배회 워커)가 **사는 방**의 앵커들. 복도는 넣지 않는다.
+##
+## 워커는 원래 복도를 걷는 존재라, 복도까지 막으면 스폰할 곳이 사라진다.
+## 막는 것은 "문으로만 드나드는 닫힌 구역에 액터가 있는 경우"뿐이다.
+func _banned_room_anchors(rt: MapRuntime) -> Dictionary:
+	if _actor_anchors.is_empty():
+		return {}
+	var room := _room_ids(rt)
+	var corridor := _main_room(room)
+	var banned_rooms := {}
+	for a: Vector2i in _actor_anchors:
+		var rid := _room_near(room, a)
+		if rid >= 0 and rid != corridor:
+			banned_rooms[rid] = true
+	if banned_rooms.is_empty():
+		return {}
+	var out := {}
+	for anchor: Variant in room:
+		if banned_rooms.has(int(room[anchor])):
+			out[anchor] = true
+	return out
+
+
+## 방 번호 매기기 — **앵커(2×2 몸) 인접**으로 성분을 뜬다. 문(ATT 9)은 몸이 들어가지
+## 않으므로 방이 복도에서 저절로 끊긴다.
+##
+## 셀 단위 인접으로 하면 안 된다. 처음에 그렇게 썼더니 F3의 교수실 알코브가 복도와
+## 한 덩어리(9,865칸)로 잡혀 아무것도 배제되지 않았다 — 한 칸 폭 틈은 셀로는
+## 이어져 있어도 2×2 몸은 못 지나간다. 실제 이동 규칙으로 재야 실제 방이 나온다
+## (2×2로 다시 재니 F3에서 교수실 35칸·랩실 57칸이 제대로 떨어져 나왔다).
+##
+## **런타임 오버라이드가 아니라 원본 ATT를 본다.** `_spawn_npcs()`가 NPC 몸 셀을
+## ATT 1로 덮으므로, 오버라이드로 성분을 뜨면 NPC 자신이 선 자리가 방에서 떨어져
+## 나와 정작 그 방을 못 찾는다.
+func _room_ids(rt: MapRuntime) -> Dictionary:
+	var out := {}
+	var next_id := 0
+	for y in rt.definition.height - 1:
+		for x in rt.definition.width - 1:
+			var start := Vector2i(x, y)
+			if out.has(start) or not _raw_fits(rt, start):
+				continue
+			var stack: Array[Vector2i] = [start]
+			out[start] = next_id
+			while not stack.is_empty():
+				var c: Vector2i = stack.pop_back()
+				for d: Vector2i in [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT]:
+					var n := c + d
+					if out.has(n) or not _raw_fits(rt, n):
+						continue
+					out[n] = next_id
+					stack.append(n)
+			next_id += 1
+	return out
+
+
+## 2×2 몸이 들어가는가 — 원본 ATT 기준(0·2만 통행). Placement.body_fits는 오버라이드를
+## 보므로 방 분해에는 쓸 수 없다.
+func _raw_fits(rt: MapRuntime, a: Vector2i) -> bool:
+	if a.x < 0 or a.y < 0:
+		return false
+	if a.x + Placement.BODY.x > rt.definition.width:
+		return false
+	if a.y + Placement.BODY.y > rt.definition.height:
+		return false
+	for c in Placement.body_cells(a):
+		var v := rt.definition.attr_at(c)
+		if v != 0 and v != 2:
+			return false
+	return true
+
+
+## 액터 앵커가 속한 방. 액터는 Placement.find_spot으로 자리를 옮겨 앉을 수 있어
+## 앵커가 성분에 없을 수 있다 — 그럴 땐 두 칸 안에서 찾는다.
+func _room_near(room: Dictionary, a: Vector2i) -> int:
+	if room.has(a):
+		return int(room[a])
+	for r in range(1, 3):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				var n := a + Vector2i(dx, dy)
+				if room.has(n):
+					return int(room[n])
+	return -1
+
+
+## 복도 = **가장 넓은 성분**.
+##
+## 처음에는 "플레이어 착지점이 든 성분"으로 잡았는데 F0에서 뒤집혔다 — 동쪽 계단
+## 앵커(169,58)가 NPC 셋이 있는 방(296칸) **안**이라 그 방이 복도로 잡히고 본
+## 구역 4,171칸이 통째로 배제됐다. 층의 주 통행 공간은 언제나 가장 넓은 성분이다.
+func _main_room(room: Dictionary) -> int:
+	var size := {}
+	var best := -1
+	var best_n := 0
+	for anchor: Variant in room:
+		var rid: int = int(room[anchor])
+		var n: int = int(size.get(rid, 0)) + 1
+		size[rid] = n
+		if n > best_n:
+			best_n = n
+			best = rid
+	return best
 
 
 func _pick_free_anchor(spots: Array[Vector2i], taken: Dictionary) -> Vector2i:

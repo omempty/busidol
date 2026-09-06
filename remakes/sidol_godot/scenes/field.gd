@@ -96,7 +96,6 @@ func _ready() -> void:
 
 	enemy_manager = EnemyManager.new()
 	add_child(enemy_manager)
-	enemy_manager.spawn_for_floor(GameState.current_floor, runtime, self, player.mover.grid_pos)
 
 	_prompt = InteractPrompt.new()
 	add_child(_prompt)
@@ -119,6 +118,12 @@ func _ready() -> void:
 
 	_spawn_npcs()
 	_spawn_walkers()
+	# **액터가 먼저 서고 몬스터가 나중이다.** 구판은 이 호출이 _spawn_npcs()보다
+	# 위에 있어서, 첫 층에서는 NPC 통행 오버라이드도 안 선 상태로 자리를 골랐고
+	# "NPC가 사는 방은 비운다"는 판정에 넘길 액터 목록도 비어 있었다(2026-09-06).
+	enemy_manager.spawn_for_floor(
+		GameState.current_floor, runtime, self, player.mover.grid_pos, _actor_anchors()
+	)
 
 	triggers = TriggerSystem.new()
 	add_child(triggers)
@@ -519,8 +524,14 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	_despawn_npcs()
 	_despawn_walkers()
 	_spawn_npcs()  # NPC 통행 오버라이드가 먼저 서야 몬스터가 그 자리를 피한다
+	# **워커도 다시 세운다.** 구판은 여기서 _despawn_walkers()만 하고 다시 세우지
+	# 않아, 계단을 한 번 오르내리면 배경 보행자가 그 판 내내 사라졌다(2026-09-06).
+	# 13차 세션이 전 층에 워커 대사를 붙여 놓았는데 첫 층에서만 만날 수 있었다.
+	_spawn_walkers()
 	if enemy_manager != null:
-		enemy_manager.spawn_for_floor(GameState.current_floor, runtime, self, new_anchor)
+		enemy_manager.spawn_for_floor(
+			GameState.current_floor, runtime, self, new_anchor, _actor_anchors()
+		)
 	if triggers != null:
 		triggers.load_for_floor(GameState.current_floor)
 	_talking_npc = null
@@ -624,6 +635,17 @@ func _spawn_npcs() -> void:
 ## 배경 보행자 — 대화 상대와 **다른 종류의 존재**다(WalkerEntity 주석 참고).
 ## 길을 막지 않으므로 통행 오버라이드도 건드리지 않는다: 그래서 이 함수는
 ## NPC 배치와 달리 자리 다툼을 하지 않는다.
+## 이 층에 서 있는 액터(고정 NPC + 배회 워커)의 **앵커** — EnemyManager가 "NPC가 사는
+## 방"을 스폰에서 빼는 데 쓴다. 상자에서 나오는 NPC는 액터가 아니라 여기 없다.
+func _actor_anchors() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for n: NpcEntity in npcs:
+		out.append(n.cell)
+	for w: WalkerEntity in walkers:
+		out.append(w.cell)
+	return out
+
+
 func _spawn_walkers() -> void:
 	var path := "res://data/maps/walkers_f%d.json" % GameState.current_floor
 	if not FileAccess.file_exists(path):
