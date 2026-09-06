@@ -116,6 +116,9 @@ func _snapshot() -> Dictionary:
 		"visited_floors": GameState.visited_list(),
 		"equipped": GameState.equipped.duplicate(),
 		"owned_skills": GameState.owned_skill_ids(),
+		# 들은 대사 기록 — 이게 빠져 있어서 불러오면 모든 NPC가 첫 만남으로 되돌아갔다.
+		# 13차 세션이 넣은 반복/밈 순환(시퀀스 91종)이 통째로 초기화되던 자리다.
+		"npc_seen_sequences": GameState.npc_seen_sequences.duplicate(),
 	}
 
 
@@ -145,5 +148,11 @@ func _apply(data: Dictionary) -> void:
 			var parts := cell_str.split(",")
 			cells[Vector2i(int(parts[0]), int(parts[1]))] = int(chests[floor_str][cell_str])
 		GameState.chest_overrides[int(floor_str)] = cells
+	# 구 세이브(이 키가 없던 시절)는 빈 기록으로 시작한다 — 첫 만남 대사부터 다시.
+	var seen_v: Variant = data.get("npc_seen_sequences", {})
+	GameState.npc_seen_sequences = {}
+	if typeof(seen_v) == TYPE_DICTIONARY:
+		for k: Variant in Dictionary(seen_v):
+			GameState.npc_seen_sequences[str(k)] = int(Dictionary(seen_v)[k])
 	GameState.pending_encounter = {}
 	GameState.state_changed.emit()

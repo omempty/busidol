@@ -72,32 +72,59 @@ func _check_floors() -> Array:
 	return lines
 
 
+## 대사 시퀀스 참조 검증 — 고정 NPC와 **배회 워커**를 같은 규칙으로 본다.
+##
+## 2026-09-06까지 이 검사는 `npcs_f*.json`만 봤다. 13차 세션이 워커 5종(F0·F2~F5)에
+## 이름·첫마디·반복 풀을 붙이면서 `walkers_f*.json` 쪽 참조가 훨씬 두꺼워졌는데
+## 그쪽은 아무도 안 봤다. `repeat_sequence_id`(단일 또는 배열)도 마찬가지였다 —
+## 오타가 나면 그 대사만 조용히 사라지고 관문은 녹색으로 남는다.
 func _check_npc_sequences() -> Array:
 	var lines: Array = []
 	var bad := 0
 	for f: int in FLOORS:
-		var path := "res://data/maps/npcs_f%d.json" % f
-		if not FileAccess.file_exists(path):
-			lines += _ok("npcs_f%d 없음(스킵)" % f)
-			continue
-		var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
-		if typeof(raw) != TYPE_DICTIONARY:
-			lines += _fail("npcs_f%d 파싱 실패" % f)
-			continue
-		for n: Dictionary in raw.get("npcs", []):
-			var seq := StringName(str(n.get("sequence_id", "")))
-			if Database.sequence(seq).is_empty():
+		for kind: String in ["npcs", "walkers"]:
+			var path := "res://data/maps/%s_f%d.json" % [kind, f]
+			if not FileAccess.file_exists(path):
+				continue
+			var raw: Variant = JsonUtil.load_value(path, "SelfCheck")
+			if typeof(raw) != TYPE_DICTIONARY:
+				lines += _fail("%s_f%d 파싱 실패" % [kind, f])
 				bad += 1
-				lines += _fail("NPC %s 시퀀스 없음: %s" % [str(n.get("id")), seq])
-			# 조건부 변형 대사도 같이 본다 — 오타가 나면 그 대사만 조용히 안 나온다.
-			for v: Variant in n.get("sequence_variants", []):
-				var vs := StringName(str(Dictionary(v).get("sequence_id", "")))
-				if Database.sequence(vs).is_empty():
-					bad += 1
-					lines += _fail("NPC %s 변형 시퀀스 없음: %s" % [str(n.get("id")), vs])
+				continue
+			for n: Dictionary in raw.get(kind, []):
+				var who := "%s_f%d/%s" % [kind, f, str(n.get("id", "?"))]
+				var found: Array = _check_seq_refs(who, "기본", n)
+				# 조건부 변형 대사도 같이 본다 — 오타가 나면 그 대사만 조용히 안 나온다.
+				for v: Variant in n.get("sequence_variants", []):
+					if v is Dictionary:
+						found += _check_seq_refs(who, "변형", v)
+				bad += found.size()
+				lines += found
 	if bad == 0:
-		lines += _ok("모든 NPC 시퀀스 참조 유효")
+		lines += _ok("모든 NPC·워커 시퀀스 참조 유효")
 	return lines
+
+
+## 한 항목의 sequence_id / repeat_sequence_id(단일·배열 모두) 참조를 확인한다.
+##
+## **실패 줄은 반환값으로 넘긴다.** 인자로 받은 배열에 `lines += ...` 를 쓰면 그것은
+## 지역 변수 재바인딩이라 호출자 배열이 그대로다 — 실제로 그렇게 썼다가 고의 오타를
+## 넣은 부정 시험에서 관문이 조용히 통과했다(2026-09-06).
+func _check_seq_refs(who: String, kind: String, d: Dictionary) -> Array:
+	var out: Array = []
+	var seq := StringName(str(d.get("sequence_id", "")))
+	if seq.is_empty() or Database.sequence(seq).is_empty():
+		out += _fail("%s %s 시퀀스 없음: %s" % [who, kind, seq])
+	var rep: Variant = d.get("repeat_sequence_id", null)
+	if rep != null:
+		# 반복 풀은 한 개(String)일 수도 여러 개(Array)일 수도 있다 — DialogueManager가
+		# 청취 횟수로 그 안을 순환한다. 어느 형태든 전부 실재해야 한다.
+		var pool: Array = rep if rep is Array else [rep]
+		for r: Variant in pool:
+			var rid := StringName(str(r))
+			if rid.is_empty() or Database.sequence(rid).is_empty():
+				out += _fail("%s %s 반복 시퀀스 없음: %s" % [who, kind, rid])
+	return out
 
 
 func _check_trigger_refs() -> Array:

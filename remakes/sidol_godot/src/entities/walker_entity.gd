@@ -68,9 +68,7 @@ func setup(
 
 
 func resolve_sequence() -> StringName:
-	return DialogueManager.resolve_npc_sequence(
-		walker_id, sequence_id, sequence_variants, repeat_sequence_id
-	)
+	return DialogueManager.resolve_npc_sequence(sequence_id, sequence_variants, repeat_sequence_id)
 
 
 func occupies(c: Vector2i) -> bool:

@@ -43,17 +43,22 @@ var pending_encounter := {}
 var field_roster := {}
 
 var inventory := Inventory.new()
-## NPC 대화 횟수 및 시퀀스 청취 기록 — 다회차 대화 밈/반복 대사 및 진행도 연동
+## NPC 대화 횟수 및 시퀀스 청취 기록 — 다회차 대화 밈/반복 대사 및 진행도 연동.
+##
+## **키는 반드시 String이다**(StringName 아님). 세이브를 거치면 JSON이 키를 String으로
+## 되돌려 주는데, 기록은 StringName으로 하고 조회도 StringName으로 하면 불러온 뒤
+## 조회가 어긋날 여지가 남는다. 들어오고 나가는 자리에서 한 번에 str()로 눕힌다.
 var npc_seen_sequences: Dictionary = {}
 
 
 func get_sequence_seen_count(seq_id: StringName) -> int:
-	return int(npc_seen_sequences.get(seq_id, 0))
+	return int(npc_seen_sequences.get(str(seq_id), 0))
 
 
 func record_sequence_seen(seq_id: StringName) -> int:
-	var c: int = int(npc_seen_sequences.get(seq_id, 0)) + 1
-	npc_seen_sequences[seq_id] = c
+	var key := str(seq_id)
+	var c: int = int(npc_seen_sequences.get(key, 0)) + 1
+	npc_seen_sequences[key] = c
 	return c
 
 
