@@ -31,6 +31,11 @@ func flee_rules() -> Dictionary:
 	return _battle_rules.get("flee", {})
 
 
+## 패배 대가 — {hp_ratio, money_loss}. 값의 출처는 battle_rules.json.
+func defeat_rules() -> Dictionary:
+	return _battle_rules.get("defeat", {})
+
+
 func level_table() -> Array:
 	return _growth.get("levels", [])
 
@@ -147,6 +152,11 @@ func _apply_species_meta(raw: Dictionary) -> void:
 		_enemies[sid]["weaknesses"] = entry.get("weaknesses", [])
 		if entry.has("display_name"):
 			_enemies[sid]["display_name"] = str(entry["display_name"])
+		# 종별 특수 행동(상태이상) — 강도는 층이 정하지만 **무엇을 거는가는 종이 정한다.**
+		# 이 패스스루가 없으면 monsters.json에 데이터를 넣어도 전투에 닿지 않는다
+		# (2026-09-06: 실제로 넣자마자 발동률 0%가 나와 여기가 막힌 것을 알았다).
+		if entry.has("special"):
+			_enemies[sid]["special"] = entry["special"]
 	for bid: String in raw.get("bosses", {}):
 		if _enemies.has(bid):
 			_enemies[bid]["weaknesses"] = raw["bosses"][bid].get("weaknesses", [])

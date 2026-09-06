@@ -98,7 +98,12 @@ func refresh_bars() -> void:
 	if _hp_gauges.has(&"player"):
 		_set_gauge(_hp_gauges[&"player"], _player.hp, _player.max_hp)
 	if _player_ap != null:
-		_player_ap.text = "AP %d   DP %d" % [_player.attack_stat(), _player.dp]
+		# 기력은 **매 턴 보이는 자리에** 있어야 한다 — 안 보이면 "지금 쓸까 모을까"를
+		# 판단할 근거가 없어 자원이 있으나 마나가 된다.
+		var line := "AP %d   DP %d" % [_player.attack_stat(), _player.dp]
+		if _player.max_stamina > 0:
+			line += "   %s %d/%d" % [tr("UI_BATTLE_STAMINA"), _player.stamina, _player.max_stamina]
+		_player_ap.text = line
 	_refresh_status()
 
 
@@ -214,10 +219,18 @@ func show_skill_menu() -> void:
 					break
 		if is_weak:
 			note = (note + " " if not note.is_empty() else "") + "WEAK!"
+		# 코스트를 이름 옆에 적고, 못 쓰면 회색으로 잠근다 — 고르고 나서 "모자란다"를
+		# 듣는 것보다 고르기 전에 보이는 편이 낫다.
+		var cost := int(skill.get("cost", 0))
+		var label := str(skill.get("display_key", skill["id"]))
+		if cost > 0:
+			label += "  (%d)" % cost
+		var affordable := _player == null or _player.can_spend_stamina(cost)
 		var entry := {
-			"text": str(skill.get("display_key", skill["id"])),
+			"text": label,
 			"skill": skill,
 			"note": note,
+			"disabled": not affordable,
 		}
 		entries.append(entry)
 	if entries.is_empty():

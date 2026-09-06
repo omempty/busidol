@@ -165,12 +165,22 @@ func _setup_combatants(def: Dictionary) -> void:
 	# 주인공 이름은 **번역표가 단일 출처**다(UI_BATTLE_PLAYER_NAME). 여기 문자열로
 	# 박아 두면 이름을 바꿀 때 한 곳이 빠지고, 영어 로케일에서도 한글이 나온다
 	# (2026-08-30 「부싯돌 → 시돌」 개명 때 실제로 이 자리가 걸렸다).
+	# **최대 HP는 GameState가 정한다.** 구판은 `stats["hp"]`(입장 시 현재 HP)를 넘겨
+	# Combatant의 max_hp가 그 값이 됐다 — 필드에서 HP를 잃은 채 들어가면 회복 아이템도
+	# 방어도 입장 HP를 못 넘겼고, 방어의 "최대치 6%"도 최대치가 아니었다. 필드 회복
+	# (ItemEffects)은 GameState.max_hp()를 쓰고 있어 대칭이 깨져 있었다(2026-09-06).
 	player_combatant = Combatant.new(
 		tr("UI_BATTLE_PLAYER_NAME"),
-		int(stats["hp"]),
+		GameState.max_hp(),
 		GameState.attack_power(),
 		GameState.defense_power()
 	)
+	player_combatant.hp = clampi(int(stats["hp"]), 1, player_combatant.max_hp)
+	# 기력 — skills.json이 값의 출처. 전투마다 start에서 시작한다(층을 넘나들며
+	# 쌓아 두는 자원이 아니다. 그러면 첫 턴에 궁극기가 나가고 전투 안의 선택이 사라진다).
+	var st: Dictionary = BattleSetup.stamina_config()
+	player_combatant.max_stamina = int(st.get("max", 100))
+	player_combatant.stamina = mini(int(st.get("start", 40)), player_combatant.max_stamina)
 	# 보유 스킬은 GameState가 단일 출처 — 구판은 여기 5종이 하드코딩돼 있었고
 	# 아무도 읽지 않았으며 이름도 틀렸다(flame_beaker ≠ flame_beaker_throw).
 	player_combatant.skills.assign(GameState.owned_skill_ids())
@@ -220,6 +230,11 @@ func _on_command(cmd_id: StringName) -> void:
 		_log(tr("UI_BLOG_ACTION") % _ui.command_label(cmd_id))
 	match cmd_id:
 		&"attack":
+			# 평타로 기력을 번다 — 이것이 "공격 연타"에 의미를 주는 자리다.
+			# 때리면서 모으고, 모이면 스킬로 터뜨린다.
+			player_combatant.gain_stamina(
+				int(BattleSetup.stamina_config().get("gain_on_attack", 9))
+			)
 			_begin_player_action(
 				{
 					"type": &"attack",
@@ -231,15 +246,19 @@ func _on_command(cmd_id: StringName) -> void:
 		&"skill":
 			_ui.show_skill_menu()
 		&"guard":
+			# **회복이 아니라 기력을 번다.** 구판은 방어가 최대 HP 6%를 무료·무제한으로
+			# 회복해 죽음이 원리적으로 불가능했다(2026-09-06 실측: 승률 100%).
+			# 이제 방어는 "한 턴을 팔아 다음 스킬을 산다" — 피해 절반 + 기력 큰 회복.
 			player_combatant.attach_effect(
 				{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50}
 			)
-			var heal_amount := maxi(2, int(player_combatant.max_hp * 0.06))
-			var actual_heal := player_combatant.heal(heal_amount)
-			if actual_heal > 0:
-				_presenter.show_player_heal(actual_heal)
+			var st_cfg: Dictionary = BattleSetup.stamina_config()
+			var gained := player_combatant.gain_stamina(int(st_cfg.get("gain_on_guard", 28)))
 			AudioManager.play_sfx(&"cast_shield")
-			_presenter.show_player_note(tr("UI_BLOG_GUARD"))
+			var note := tr("UI_BLOG_GUARD")
+			if gained > 0:
+				note += "  " + tr("UI_BATTLE_STAMINA_GAIN") % gained
+			_presenter.show_player_note(note)
 			_ui.refresh_bars()
 			_end_player_defend()
 		&"item":
@@ -273,6 +292,15 @@ func _try_flee() -> void:
 
 
 func _on_skill_selected(skill: Dictionary) -> void:
+	# 기력이 모자라면 턴을 쓰지 않고 메뉴로 돌려보낸다 — 실수로 턴을 날리게 하지 않는다.
+	var cost := int(skill.get("cost", 0))
+	if not player_combatant.can_spend_stamina(cost):
+		AudioManager.play_sfx(&"sfx_menu_move")
+		_presenter.show_player_note(tr("UI_BATTLE_NO_STAMINA"))
+		_ui.show_skill_menu()
+		return
+	player_combatant.spend_stamina(cost)
+	_ui.refresh_bars()
 	_last_action = {"kind": &"skill", "skill": skill}
 	var skill_name := str(skill.get("display_key", skill.get("name_ko", skill.get("id", ""))))
 	_log(tr("UI_BLOG_ACTION") % skill_name)
@@ -454,7 +482,7 @@ func _resolve_turn() -> void:
 		elif actor != null:
 			# 누구 턴인지 글자로 — TURN N 라벨만으로는 적 공격이 안 보인다.
 			_ui.set_turn_text(_enemy_turn_text(actor.display_name))
-			BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
+			_enemy_act(actor, idx)
 		controller.turn_count += 1
 		_tick_effects()
 
@@ -475,9 +503,32 @@ func _resolve_turn() -> void:
 	controller.begin_player_phase()
 	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
 	_log(tr("UI_BLOG_TURN") % (controller.turn_count + 1), BattleLog.Kind.TURN)
+	# 턴마다 조금씩 회복되는 기력 — 아무것도 안 해도 아주 천천히는 찬다.
+	player_combatant.gain_stamina(int(BattleSetup.stamina_config().get("gain_on_turn", 3)))
+	# **마비 — 이 턴을 잃는다.** `Combatant.has_paralysis()`는 2026-09-06까지 호출부가
+	# 0곳이라, 상태이상 데이터도 진통 파스(마비 해제)도 전부 사문화였다. 적이 마비를
+	# 걸기 시작하면서 여기가 실제 판정이 된다. 지속은 1턴이다 — 여러 턴을 연속으로
+	# 빼앗으면 "내가 하는 게임"이 아니게 된다(고전 RPG가 가장 자주 미움받는 자리).
+	if player_combatant.has_paralysis():
+		_presenter.show_player_note(tr("UI_BATTLE_PARALYZED"))
+		_log(tr("UI_BLOG_PLAYER_PARALYZED"), BattleLog.Kind.DAMAGE)
+		_end_player_defend()
+		return
 	_ui.show_command_menu()
 	if _target_index >= 0 and _target_index < enemies.size():
 		_check_break_chance_cue(enemies[_target_index])
+
+
+## 적 한 체의 행동 — 종별 특수(상태이상)를 먼저 굴리고, 안 나오면 통상공격.
+## 두 경로가 나뉜 곳이 두 곳이라 여기 한 함수로 모은다(한쪽만 고치는 사고를 막는다).
+func _enemy_act(actor: Combatant, idx: int) -> void:
+	var eid := str(_enemy_ids[idx]) if idx >= 0 and idx < _enemy_ids.size() else ""
+	if (
+		not eid.is_empty()
+		and BattleEnemyPhase.try_special(actor, player_combatant, eid, _presenter, EnemyManager.rng)
+	):
+		return
+	BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
 
 
 func _end_player_defend() -> void:
@@ -485,7 +536,7 @@ func _end_player_defend() -> void:
 	var attacker := _first_alive_enemy()
 	if attacker != null:
 		_ui.set_turn_text(_enemy_turn_text(attacker.display_name))
-		BattleEnemyPhase.regular_attack(attacker, player_combatant, _presenter)
+		_enemy_act(attacker, enemies.find(attacker))
 	_tick_effects()
 	_ui.refresh_bars()
 	_sync_player_state()

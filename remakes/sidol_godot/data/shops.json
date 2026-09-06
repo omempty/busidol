@@ -1,34 +1,44 @@
 {
- "schema_version": 1,
- "_comment": "상점 재고 — 품목명·가격은 items.json이 소유(price 필드). 여기는 '어느 상점이 무엇을 파는가'만 둔다. 구판은 shop_ui.gd에 품목·가격이 하드코딩돼 있었다(AGENTS.md 위반).",
- "shops": {
-  "default": {
-   "name_ko": "식당",
-   "stock": [
-    "ITEM_HERB_TEA",
-    "ITEM_HONEY_WATER",
-    "ITEM_MEDICINE",
-    "ITEM_ION_DRINK",
-    "ITEM_PAIN_PATCH",
-    "ITEM_FEVER_MED",
-    "ITEM_UHWANGCHEONGSIM",
-    "ITEM_MINERAL_WATER",
-    "ITEM_CALM_PILL",
-    "ITEM_FOCUS_DRINK",
-    "ITEM_YONGYONG_JU",
-    "ITEM_SAMGYETANG",
-    "ITEM_HONGSAM",
-    "ITEM_ARMOR_GOWN",
-    "ITEM_ARMOR_APRON",
-    "ITEM_ARMOR_JACKET",
-    "ITEM_ARMOR_VEST",
-    "ITEM_ARMOR_LAB_COAT",
-    "ITEM_ARMOR_ESD",
-    "ITEM_ARMOR_WELDING",
-    "ITEM_ARMOR_HAZMAT",
-    "ITEM_ARMOR_EXO"
-   ],
-   "_comment": "가격 오름차순. 상비약(진통 파스·해열제·신경 안정제·집중 음료·미네랄 워터)은 2026-08-27 편입 — 그 전까지 획득 경로가 아예 없어 5종이 사문화돼 있었다. 방어구 9종은 2026-08-27 신설 — 원작에 방어구가 없어 DP가 사문화돼 있었다(백로그 §2 'DP 실사용')."
+  "schema_version": 1,
+  "_comment": "상점 재고 — 품목명·가격은 items.json이 소유(price 필드). 여기는 '어느 상점이 무엇을 파는가'만 둔다. 구판은 shop_ui.gd에 품목·가격이 하드코딩돼 있었다(AGENTS.md 위반).",
+  "shops": {
+    "default": {
+      "name_ko": "식당",
+      "stock": [
+        "ITEM_HERB_TEA",
+        "ITEM_HONEY_WATER",
+        "ITEM_MEDICINE",
+        "ITEM_ION_DRINK",
+        "ITEM_PAIN_PATCH",
+        "ITEM_FEVER_MED",
+        "ITEM_UHWANGCHEONGSIM",
+        "ITEM_MINERAL_WATER",
+        "ITEM_CALM_PILL",
+        "ITEM_FOCUS_DRINK",
+        "ITEM_YONGYONG_JU",
+        "ITEM_SAMGYETANG",
+        "ITEM_HONGSAM",
+        "ITEM_ARMOR_GOWN",
+        "ITEM_ARMOR_APRON",
+        "ITEM_ARMOR_JACKET",
+        "ITEM_ARMOR_VEST",
+        "ITEM_ARMOR_LAB_COAT",
+        "ITEM_ARMOR_ESD",
+        "ITEM_ARMOR_WELDING",
+        "ITEM_ARMOR_HAZMAT",
+        "ITEM_ARMOR_EXO"
+      ],
+      "_comment": "가격 오름차순. 상비약(진통 파스·해열제·신경 안정제·집중 음료·미네랄 워터)은 2026-08-27 편입 — 그 전까지 획득 경로가 아예 없어 5종이 사문화돼 있었다. 방어구 9종은 2026-08-27 신설 — 원작에 방어구가 없어 DP가 사문화돼 있었다(백로그 §2 'DP 실사용').",
+      "stock_requires": {
+        "_comment": "품목별 해금 플래그. 없으면 처음부터 판다. 2026-09-06 신설 — 그 전까지 방어구 9종이 층·플래그 제한 없이 전부 열려 있었고, 시작 소지금 5,000온이 화학 보호복(dp 88) 값과 정확히 같아 **게임 시작 5분 안에 최종보스까지 1피해로 만드는 방어구**를 살 수 있었다. 해금 지점은 quests_v2.json 사슬을 따른다.",
+        "ITEM_ARMOR_JACKET": "Q_F1_BLAST",
+        "ITEM_ARMOR_VEST": "Q_F1_BLAST",
+        "ITEM_ARMOR_LAB_COAT": "Q_F2_POSTER",
+        "ITEM_ARMOR_ESD": "Q_F2_POSTER",
+        "ITEM_ARMOR_WELDING": "Q_F3_CURE_DONE",
+        "ITEM_ARMOR_HAZMAT": "Q_F3_CURE_DONE",
+        "ITEM_ARMOR_EXO": "Q_F4_SACRIFICE"
+      }
+    }
   }
- }
 }

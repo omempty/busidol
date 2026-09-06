@@ -219,7 +219,7 @@ func _alive_enemy_index(c: Combatant) -> int:
 
 func _tick_status_effects() -> void:
 	for c in _all_combatants():
-		c.tick_status_effects()
+		c.tick_effects()
 
 
 func _current_enemy() -> Combatant:

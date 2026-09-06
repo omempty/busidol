@@ -15,11 +15,17 @@ const DEFAULT_RUNS := 200
 ## 층 ↔ 이 층을 도는 시점의 플레이어 레벨.
 ## 근거: 04_game_systems §2.1이 옮긴 원작 층별 난수 테이블의 Level 칸(1+rnd3 · 4+rnd3 ·
 ## 7+rnd3 · 10+rnd3 · 13+rnd4)의 중앙값. f0 지하·f5는 리메이크 신설이라 인접 층을 따른다.
-const FLOOR_LEVELS := {0: 2, 1: 5, 2: 8, 3: 11, 4: 14, 5: 15}
+## f0은 **f3 다음**이다 — 마스터 시나리오 진행 순서가 f1→f2→f3→**f0**→f4→f5이고
+## SelfCheck.FLOORS도 그 순서다. 구판은 f0을 Lv2로 잡아(층 번호가 작다는 이유로)
+## 지하를 실제보다 12레벨 낮은 눈으로 재고 있었다(2026-09-06).
+const FLOOR_LEVELS := {0: 12, 1: 5, 2: 8, 3: 11, 4: 14, 5: 15}
 ## 플레이어 정책 — 기본 공격만. 스킬/아이템은 층마다 보유가 달라 비교가 흐려진다.
 const BASE_HP := 50  # 원작 We 초기값(HudV0와 같은 근거)
 const BASE_AP := 30
 const BASE_DP := 10
+## 그 층에서 **살 수 있는** 방어구의 dp — shops.json의 해금 플래그(stock_requires)를
+## 따른 것이다. 맨몸 하한만 보면 실제 플레이보다 짜게 나온다.
+const ARMOR_AT_FLOOR := {0: 36, 1: 36, 2: 60, 3: 60, 4: 88, 5: 110}
 
 
 func _ready() -> void:
@@ -29,6 +35,7 @@ func _ready() -> void:
 	print("층  Lv  적종           턴(평균/최대)  승률    받은HP/최대  적1타  내1타  적HP  EXP/체  레벨업까지")
 	for f: int in FLOOR_LEVELS:
 		_run_floor(f, int(FLOOR_LEVELS[f]), runs)
+	_report_streak(runs)
 	_report_pacing()
 	print("[battle_sim] done")
 	get_tree().quit(0)
@@ -158,6 +165,75 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 		"hits": hits,
 		"broke": broke,
 	}
+
+
+## **연전 — 회복 없이 몇 판을 버티는가.**
+##
+## 설계 목표가 여기 있다(2026-09-06): "회복 없이 연전 3~4회면 위험."
+## 한 판씩 보는 승률로는 이걸 못 본다 — 매 판 이겨도 HP가 안 줄면 자원 관리가
+## 성립하지 않는다. 유저 지적("4F까지 공격만 연속하면 무조건 이김")이 가리킨 층이
+## 정확히 여기다. 방어구 없는 맨몸과, 그 층에서 살 수 있는 방어구를 낀 경우를 함께 본다.
+func _report_streak(runs: int) -> void:
+	print("")
+	print("연전(회복 없이 몇 판) — 맨몸 / 그 층 방어구")
+	print("층  Lv   맨몸dp10   방어구dp%-3d" % ARMOR_AT_FLOOR.values()[0])
+	for f: int in FLOOR_LEVELS:
+		var lv := int(FLOOR_LEVELS[f])
+		var bare := _streak_avg(f, lv, BASE_DP, runs)
+		var armed := _streak_avg(f, lv, int(ARMOR_AT_FLOOR.get(f, BASE_DP)), runs)
+		print(
+			(
+				"f%-2d %-3d  %6.1f판    %6.1f판 (dp %d)"
+				% [f, lv, bare, armed, int(ARMOR_AT_FLOOR.get(f, BASE_DP))]
+			)
+		)
+
+
+## 한 판씩 이어 싸워 쓰러질 때까지의 판 수 평균. HP는 판 사이에 회복하지 않는다.
+func _streak_avg(floor_no: int, level: int, dp: int, runs: int) -> float:
+	GameState.current_floor = floor_no
+	var species := Database.encounter_species(floor_no)
+	if species.is_empty():
+		return 0.0
+	var trials := maxi(runs / 10, 20)
+	var total := 0
+	for t in trials:
+		var built := _player_at(level)
+		var player := Combatant.new(
+			tr("UI_BATTLE_PLAYER_NAME"), int(built["hp"]), int(built["ap"]), dp
+		)
+		var fights := 0
+		while fights < 40 and not player.is_down():
+			var spec: Dictionary = species[(t + fights) % species.size()]
+			if not _fight_once(player, str(spec.get("id", ""))):
+				break
+			fights += 1
+		total += fights
+	return float(total) / float(trials)
+
+
+## 한 판 — 플레이어 HP를 이어서 쓴다. 반환: 이겼는가.
+func _fight_once(player: Combatant, enemy_id: String) -> bool:
+	var built := BattleSetup.build_enemies({"enemies": [enemy_id]})
+	var enemies: Array[Combatant] = []
+	enemies.assign(built["combatants"])
+	if enemies.is_empty():
+		return false
+	var ctrl := BattleController.new()
+	add_child(ctrl)
+	ctrl.start(player, enemies)
+	var turns := 0
+	while turns < 30 and not player.is_down() and ctrl.state != BattleController.TurnState.FINISHED:
+		turns += 1
+		ctrl.submit_player_command(
+			{"type": &"attack", "ap": player.attack_stat(), "target": enemies[0]}
+		)
+		if ctrl.state == BattleController.TurnState.FINISHED:
+			break
+		ctrl.enemy_turn()
+		ctrl.begin_player_phase()
+	ctrl.queue_free()
+	return enemies[0].is_down() and not player.is_down()
 
 
 ## growth.json 레벨 테이블로 그 레벨의 플레이어 스탯을 만든다(하드코딩 금지).

@@ -93,10 +93,12 @@
           "text": "@t7"
         },
         {
-          "op": "set_flags",
+          "op": "grant_skill",
           "args": {
-            "Q_F3_CURE_REQ": true
-          }
+            "skill": "flame_beaker_throw",
+            "flag": "Q_F3_CURE_REQ"
+          },
+          "_comment": "[2026-09-06] set_flags → grant_skill(+flag). 마스터 시나리오 §2.2 / 4.2가 Q_F3_CURE_REQ 보상으로 [화염 비커 투척]을 못박아 뒀는데 grant_skill op을 쓰는 데이터가 저장소에 0건이라 스킬 4종이 통째로 사문화돼 있었다. **스텝 두 개로 나눌 수 없다**: DialogueBox._load_step()이 op 스텝에서 close()를 먼저 부르고 op_requested를 쏘므로 한 시퀀스에서 실제로 도는 op은 첫 하나뿐이다(뒤에 grant_skill을 이어 붙이면 영영 안 돈다). 그래서 한 스텝이 플래그와 스킬을 함께 진다. 인자 이름이 flags가 아니라 **flag**인 것은 craft op(f2_poster·f5_cure)이 쓰는 「성공 시 세우는 플래그 하나」 규약과 같은 어휘이기 때문이다 — SelfCheck의 플래그 setter 수집기도 args.flag를 읽으므로 게이트가 이 플래그를 계속 본다(set_flags만 보는 수집기라 args.flags 형태로 넣었더니 f3_allin·f3_drag의 requires_flag가 「세우는 곳이 없다」로 잡혔다)."
         }
       ],
       "_comment": "씬 3-1 화공과 교수 대면 — 해독제 의뢰가 여기서 시작된다. 여기서 세우는 Q_F3_CURE_REQ가 사슬의 뿌리다(안 세우면 F3 시약 세 퀘스트의 선행이 영영 안 선다). 그리고 그 플래그가 **다시 찾아갔을 때의 대사**를 연다 — npcs_f3.json의 sequence_variants가 prof_chem_cure_request로 갈아 끼운다. 2026-08-29 이전에는 NPC 하나에 시퀀스 하나뿐이라 그 뒷대사가 데이터에만 있고 영영 재생되지 않았다."

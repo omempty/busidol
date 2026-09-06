@@ -1,420 +1,498 @@
 {
- "schema_version": 1,
- "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그. species 섹션 = 종별 약점(브레이크 시스템): 기계 계열=electric(docs/03_backlog EMP 근거), 종이·유기질=fire, 안구·무기질=physical.",
- "_floors_note": "floors.count = 그 층의 **정원**(동시 스폰 상한). 2026-08-29 재조정: 2/4/5/4/5/5 → 3/5/6/7/8/9. 전에는 f3(4)이 f2(5)보다 적어 깊어질수록 조여드는 곡선이 역전돼 있었다. 지금은 층마다 완만히 늘고, f0은 지하 초입이라 낮게 둔다. respawn_seconds = 정원이 빌 때 한 마리가 다시 차오르는 간격(초). 잡은 개체는 그 층 명단에서 빠지고(GameState.field_roster) 전투를 다녀와도 되살아나지 않는다 — 「치웠다」가 남아야 되돌아 걷는 길이 벌이 되지 않는다. 다만 영영 비면 층이 안전지대가 되므로 시간으로 메운다. 깊은 층일수록 짧게(60→40초) 잡아 압박을 유지한다.", "_floor_stats_note": "floor_stats = 층별 필드 몬스터 기본 스탯. 원작 init_enemy() 난수 테이블(docs/01_analysis/04_game_systems.md §2.1) 이관 — '11+rnd10'을 [11,21]로 편 것. 2026-08-27 이전에는 Database가 전 종에 ap15/hp[20,40]을 하드코딩해 **층별 난이도가 아예 없었다**(F5 몬스터가 F0과 같은 강도). 종별 개성은 weaknesses·pattern이, 강도는 층이 담당한다. stat_mult(선택, 기본 1.0)로 종별 미세조정 가능.",
- "floor_stats": {
-  "f0": {
-   "hp_range": [
-    20,
-    35
-   ],
-   "ap_range": [
-    12,
-    18
-   ],
-   "dp_range": [
-    8,
-    14
-   ],
-   "exp": [
-    6,
-    12
-   ],
-   "money": [
-    120,
-    250
-   ]
+  "schema_version": 1,
+  "_comment": "층별 인카운터 테이블 — species는 EnemyDef의 id. count는 동시 스폰 수. first_win_flag: 해당 종 처음 격파 시 세팅되는 시나리오 플래그. species 섹션 = 종별 약점(브레이크 시스템): 기계 계열=electric(docs/03_backlog EMP 근거), 종이·유기질=fire, 안구·무기질=physical.",
+  "_floors_note": "floors.count = 그 층의 **정원**(동시 스폰 상한). 2026-08-29 재조정: 2/4/5/4/5/5 → 3/5/6/7/8/9. 전에는 f3(4)이 f2(5)보다 적어 깊어질수록 조여드는 곡선이 역전돼 있었다. 지금은 층마다 완만히 늘고, f0은 지하 초입이라 낮게 둔다. respawn_seconds = 정원이 빌 때 한 마리가 다시 차오르는 간격(초). 잡은 개체는 그 층 명단에서 빠지고(GameState.field_roster) 전투를 다녀와도 되살아나지 않는다 — 「치웠다」가 남아야 되돌아 걷는 길이 벌이 되지 않는다. 다만 영영 비면 층이 안전지대가 되므로 시간으로 메운다. 깊은 층일수록 짧게(60→40초) 잡아 압박을 유지한다.",
+  "_floor_stats_note": "floor_stats = 층별 필드 몬스터 기본 스탯. 원작 init_enemy() 난수 테이블(docs/01_analysis/04_game_systems.md §2.1) 이관 — '11+rnd10'을 [11,21]로 편 것. 2026-08-27 이전에는 Database가 전 종에 ap15/hp[20,40]을 하드코딩해 **층별 난이도가 아예 없었다**(F5 몬스터가 F0과 같은 강도). 종별 개성은 weaknesses·pattern이, 강도는 층이 담당한다. stat_mult(선택, 기본 1.0)로 종별 미세조정 가능.",
+  "floor_stats": {
+    "f0": {
+      "hp_range": [
+        150,
+        230
+      ],
+      "ap_range": [
+        188,
+        278
+      ],
+      "dp_range": [
+        32,
+        52
+      ],
+      "exp": [
+        42,
+        66
+      ],
+      "money": [
+        560,
+        950
+      ],
+      "_scale_note": "지하(f0)는 층 번호가 0이지만 **f3 다음에 방문한다** — 마스터 시나리오 진행 순서가 f1→f2→f3→f0→f4→f5다(SelfCheck.FLOORS도 같다). 그런데 2026-09-06까지 스탯이 hp 20~35 / ap 12~18 / exp 6~12로 **Lv2용**이었다. 실제로는 Lv12에 들어오므로 1턴에 끝나고 레벨업에 84체가 필요했다 — 층 하나가 통째로 의미가 없었다. f3 바로 아래로 맞춘다."
+    },
+    "f1": {
+      "hp_range": [
+        40,
+        65
+      ],
+      "ap_range": [
+        45,
+        70
+      ],
+      "dp_range": [
+        12,
+        22
+      ],
+      "exp": [
+        12,
+        22
+      ],
+      "money": [
+        250,
+        450
+      ]
+    },
+    "f2": {
+      "hp_range": [
+        90,
+        140
+      ],
+      "ap_range": [
+        78,
+        118
+      ],
+      "dp_range": [
+        20,
+        35
+      ],
+      "exp": [
+        25,
+        40
+      ],
+      "money": [
+        400,
+        700
+      ]
+    },
+    "f3": {
+      "hp_range": [
+        160,
+        240
+      ],
+      "ap_range": [
+        139,
+        200
+      ],
+      "dp_range": [
+        35,
+        55
+      ],
+      "exp": [
+        45,
+        70
+      ],
+      "money": [
+        600,
+        1000
+      ]
+    },
+    "f4": {
+      "hp_range": [
+        260,
+        360
+      ],
+      "ap_range": [
+        281,
+        389
+      ],
+      "dp_range": [
+        55,
+        80
+      ],
+      "exp": [
+        70,
+        110
+      ],
+      "money": [
+        850,
+        1400
+      ]
+    },
+    "f5": {
+      "hp_range": [
+        380,
+        500
+      ],
+      "ap_range": [
+        234,
+        312
+      ],
+      "dp_range": [
+        75,
+        110
+      ],
+      "exp": [
+        100,
+        160
+      ],
+      "money": [
+        1200,
+        2000
+      ]
+    },
+    "_ap_note": "적 AP는 2026-09-06에 층별 1.6~2.6배로 올렸다. 그 전까지 원작(GOODITEM.C:232-272)의 0.30~0.40배였고, 레벨업(원작에 없다)·방어구(원작에 없다)와 겹쳐 f4에서 죽는 데 53대가 걸렸다(원작 1대). 목표는 '회복 없이 연전 3~4회면 위험' — battle_sim의 연전 칸이 그 관문이다."
   },
-  "f1": {
-   "hp_range": [
-    40,
-    65
-   ],
-   "ap_range": [
-    18,
-    28
-   ],
-   "dp_range": [
-    12,
-    22
-   ],
-   "exp": [
-    12,
-    22
-   ],
-   "money": [
-    250,
-    450
-   ]
+  "species": {
+    "sparker": {
+      "weaknesses": [
+        "physical"
+      ],
+      "display_name": "스파커",
+      "special": {
+        "kind": "paralysis",
+        "chance": 0.12,
+        "turns": 1,
+        "_desc": "스파크 방전 — 감전 마비"
+      }
+    },
+    "mad_eye": {
+      "weaknesses": [
+        "fire"
+      ],
+      "display_name": "매드 아이",
+      "special": {
+        "kind": "dot",
+        "chance": 0.19,
+        "turns": 3,
+        "_desc": "안광 화상 — 지속 화상"
+      }
+    },
+    "vulgar": {
+      "weaknesses": [
+        "fire"
+      ],
+      "display_name": "불거",
+      "special": {
+        "kind": "dot",
+        "chance": 0.17,
+        "turns": 3,
+        "_desc": "구토성 산 — 지속 화상"
+      }
+    },
+    "dworm": {
+      "weaknesses": [
+        "electric"
+      ],
+      "display_name": "디웜",
+      "special": {
+        "kind": "dot",
+        "chance": 0.15,
+        "turns": 3,
+        "_desc": "산성 점액 — 지속 화상"
+      }
+    },
+    "ozzy": {
+      "weaknesses": [
+        "fire"
+      ],
+      "display_name": "오지",
+      "special": {
+        "kind": "dot",
+        "chance": 0.19,
+        "turns": 3,
+        "_desc": "폐시약 분사 — 지속 화상"
+      }
+    },
+    "iron_voc": {
+      "weaknesses": [
+        "electric"
+      ],
+      "display_name": "아이언 보크",
+      "special": {
+        "kind": "paralysis",
+        "chance": 0.12,
+        "turns": 1,
+        "_desc": "고출력 하울링 — 마비"
+      }
+    },
+    "hellcop": {
+      "weaknesses": [
+        "electric"
+      ],
+      "display_name": "헬캅",
+      "special": {
+        "kind": "paralysis",
+        "chance": 0.12,
+        "turns": 1,
+        "_desc": "전기 곤봉 — 마비"
+      }
+    },
+    "o_ray": {
+      "weaknesses": [
+        "physical"
+      ],
+      "display_name": "오레이",
+      "special": {
+        "kind": "dot",
+        "chance": 0.17,
+        "turns": 3,
+        "_desc": "광선 화상"
+      }
+    },
+    "c_bug": {
+      "weaknesses": [
+        "electric"
+      ],
+      "display_name": "씨버그",
+      "special": {
+        "kind": "paralysis",
+        "chance": 0.12,
+        "turns": 1,
+        "_desc": "버스 단락 — 마비"
+      }
+    },
+    "flying_thesis": {
+      "weaknesses": [
+        "fire"
+      ],
+      "display_name": "플라잉 논문",
+      "special": {
+        "kind": "dot",
+        "chance": 0.15,
+        "turns": 3,
+        "_desc": "종이 베임 — 지속 출혈(화상 계열로 처리)"
+      }
+    },
+    "rogue_vending": {
+      "weaknesses": [
+        "electric"
+      ],
+      "display_name": "로그 벤딩",
+      "special": {
+        "kind": "paralysis",
+        "chance": 0.12,
+        "turns": 1,
+        "_desc": "동전 방전 — 마비"
+      }
+    },
+    "null_pointer": {
+      "weaknesses": [
+        "electric"
+      ],
+      "display_name": "널 포인터",
+      "special": {
+        "kind": "dot",
+        "chance": 0.21,
+        "turns": 3,
+        "_desc": "널 참조 오류 — 지속 피해"
+      }
+    }
   },
-  "f2": {
-   "hp_range": [
-    90,
-    140
-   ],
-   "ap_range": [
-    28,
-    42
-   ],
-   "dp_range": [
-    20,
-    35
-   ],
-   "exp": [
-    25,
-    40
-   ],
-   "money": [
-    400,
-    700
-   ]
-  },
-  "f3": {
-   "hp_range": [
-    160,
-    240
-   ],
-   "ap_range": [
-    45,
-    65
-   ],
-   "dp_range": [
-    35,
-    55
-   ],
-   "exp": [
-    45,
-    70
-   ],
-   "money": [
-    600,
-    1000
-   ]
-  },
-  "f4": {
-   "hp_range": [
-    260,
-    360
-   ],
-   "ap_range": [
-    65,
-    90
-   ],
-   "dp_range": [
-    55,
-    80
-   ],
-   "exp": [
-    70,
-    110
-   ],
-   "money": [
-    850,
-    1400
-   ]
-  },
-  "f5": {
-   "hp_range": [
-    380,
-    500
-   ],
-   "ap_range": [
-    90,
-    120
-   ],
-   "dp_range": [
-    75,
-    110
-   ],
-   "exp": [
-    100,
-    160
-   ],
-   "money": [
-    1200,
-    2000
-   ]
-  }
- },
- "species": {
-  "sparker": {
-   "weaknesses": [
-    "physical"
-   ],
-   "display_name": "스파커"
-  },
-  "mad_eye": {
-   "weaknesses": [
-    "fire"
-   ],
-   "display_name": "매드 아이"
-  },
-  "vulgar": {
-   "weaknesses": [
-    "fire"
-   ],
-   "display_name": "불거"
-  },
-  "dworm": {
-   "weaknesses": [
-    "electric"
-   ],
-   "display_name": "디웜"
-  },
-  "ozzy": {
-   "weaknesses": [
-    "fire"
-   ],
-   "display_name": "오지"
-  },
-  "iron_voc": {
-   "weaknesses": [
-    "electric"
-   ],
-   "display_name": "아이언 보크"
-  },
-  "hellcop": {
-   "weaknesses": [
-    "electric"
-   ],
-   "display_name": "헬캅"
-  },
-  "o_ray": {
-   "weaknesses": [
-    "physical"
-   ],
-   "display_name": "오레이"
-  },
-  "c_bug": {
-   "weaknesses": [
-    "electric"
-   ],
-   "display_name": "씨버그"
-  },
-  "flying_thesis": {
-   "weaknesses": [
-    "fire"
-   ],
-   "display_name": "플라잉 논문"
-  },
-  "rogue_vending": {
-   "weaknesses": [
-    "electric"
-   ],
-   "display_name": "로그 벤딩"
-  },
-  "null_pointer": {
-   "weaknesses": [
-    "electric"
-   ],
-   "display_name": "널 포인터"
-  }
- },
- "floors": {
-  "f0": {
-   "count": 3,
+  "floors": {
+    "f0": {
+      "count": 3,
       "respawn_seconds": 60,
-   "species": [
-    {
-     "id": "sparker",
-     "pattern": "teleport"
-    }
-   ]
-  },
-  "f1": {
-   "count": 5,
+      "species": [
+        {
+          "id": "sparker",
+          "pattern": "teleport"
+        }
+      ]
+    },
+    "f1": {
+      "count": 5,
       "respawn_seconds": 50,
-   "species": [
-    {
-     "id": "dworm",
-     "pattern": "burrow",
-     "first_win_flag": "Q_F1_START"
+      "species": [
+        {
+          "id": "dworm",
+          "pattern": "burrow",
+          "first_win_flag": "Q_F1_START"
+        },
+        {
+          "id": "vulgar",
+          "pattern": "wander"
+        },
+        {
+          "id": "mad_eye",
+          "pattern": "dash",
+          "params": {
+            "pause_ticks": 3,
+            "dash_cells": 3
+          }
+        },
+        {
+          "id": "c_bug",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "rogue_vending",
+          "pattern": "ambusher"
+        }
+      ]
     },
-    {
-     "id": "vulgar",
-     "pattern": "wander"
-    },
-    {
-     "id": "mad_eye",
-     "pattern": "dash",
-     "params": {
-      "pause_ticks": 3,
-      "dash_cells": 3
-     }
-    },
-    {
-     "id": "c_bug",
-     "pattern": "zigzag"
-    },
-    {
-     "id": "rogue_vending",
-     "pattern": "ambusher"
-    }
-   ]
-  },
-  "f2": {
-   "count": 6,
+    "f2": {
+      "count": 6,
       "respawn_seconds": 45,
-   "species": [
-    {
-     "id": "mad_eye",
-     "pattern": "dash"
+      "species": [
+        {
+          "id": "mad_eye",
+          "pattern": "dash"
+        },
+        {
+          "id": "vulgar",
+          "pattern": "chase"
+        },
+        {
+          "id": "ozzy",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "c_bug",
+          "pattern": "teleport",
+          "params": {
+            "interval_ticks": 4,
+            "jump_radius": 3
+          }
+        },
+        {
+          "id": "flying_thesis",
+          "pattern": "wander"
+        }
+      ]
     },
-    {
-     "id": "vulgar",
-     "pattern": "chase"
-    },
-    {
-     "id": "ozzy",
-     "pattern": "zigzag"
-    },
-    {
-     "id": "c_bug",
-     "pattern": "teleport",
-     "params": {
-      "interval_ticks": 4,
-      "jump_radius": 3
-     }
-    },
-    {
-     "id": "flying_thesis",
-     "pattern": "wander"
-    }
-   ]
-  },
-  "f3": {
-   "count": 7,
+    "f3": {
+      "count": 7,
       "respawn_seconds": 45,
-   "species": [
-    {
-     "id": "ozzy",
-     "pattern": "zigzag"
+      "species": [
+        {
+          "id": "ozzy",
+          "pattern": "zigzag"
+        },
+        {
+          "id": "iron_voc",
+          "pattern": "patrol"
+        },
+        {
+          "id": "flying_thesis",
+          "pattern": "wander"
+        }
+      ]
     },
-    {
-     "id": "iron_voc",
-     "pattern": "patrol"
-    },
-    {
-     "id": "flying_thesis",
-     "pattern": "wander"
-    }
-   ]
-  },
-  "f4": {
-   "count": 8,
+    "f4": {
+      "count": 8,
       "respawn_seconds": 40,
-   "species": [
-    {
-     "id": "hellcop",
-     "pattern": "chase",
-     "params": {
-      "aggro_radius": 7
-     }
+      "species": [
+        {
+          "id": "hellcop",
+          "pattern": "chase",
+          "params": {
+            "aggro_radius": 7
+          }
+        },
+        {
+          "id": "o_ray",
+          "pattern": "pulse",
+          "params": {
+            "interval_ticks": 5,
+            "radius": 2
+          }
+        },
+        {
+          "id": "sparker",
+          "pattern": "teleport"
+        },
+        {
+          "id": "null_pointer",
+          "pattern": "phaser"
+        }
+      ]
     },
-    {
-     "id": "o_ray",
-     "pattern": "pulse",
-     "params": {
-      "interval_ticks": 5,
-      "radius": 2
-     }
-    },
-    {
-     "id": "sparker",
-     "pattern": "teleport"
-    },
-    {
-     "id": "null_pointer",
-     "pattern": "phaser"
-    }
-   ]
-  },
-  "f5": {
-   "count": 9,
+    "f5": {
+      "count": 9,
       "respawn_seconds": 40,
-   "species": [
-    {
-     "id": "hellcop",
-     "pattern": "chase"
-    },
-    {
-     "id": "null_pointer",
-     "pattern": "phaser"
+      "species": [
+        {
+          "id": "hellcop",
+          "pattern": "chase"
+        },
+        {
+          "id": "null_pointer",
+          "pattern": "phaser"
+        }
+      ]
     }
-   ]
-  }
- },
- "bosses": {
-  "professor_monster": {
-   "display_name": "모교수 괴물",
-   "ap": 20,
-   "dp": 6,
-   "hp_range": [
-    90,
-    120
-   ],
-   "exp": [
-    60,
-    90
-   ],
-   "money": [
-    300,
-    480
-   ],
-   "weaknesses": [
-    "fire"
-   ],
-   "_comment": "씬 5-1 — 제압전. dodge_phase 미채택(D14): 회피 페이즈는 최종보스 전용 연출."
   },
-  "sys_builder": {
-   "display_name": "SYS 빌더",
-   "ap": 30,
-   "dp": 8,
-   "hp_range": [
-    120,
-    160
-   ],
-   "exp": [
-    100,
-    150
-   ],
-   "money": [
-    500,
-    800
-   ],
-   "weaknesses": [
-    "electric"
-   ],
-   "dodge_phase": {
-    "telegraph": "screen_static_full_1s",
-    "duration": 4.0,
-    "patterns": [
-     {
-      "pattern_id": "bp1",
-      "type": "radial",
-      "count": 10,
-      "speed": 140,
-      "interval": 0.9,
-      "initial_delay": 0.6
-     },
-     {
-      "pattern_id": "bp2",
-      "type": "aimed",
-      "speed": 200,
-      "interval": 1.3,
-      "initial_delay": 1.0
-     },
-     {
-      "pattern_id": "bp3",
-      "type": "rain",
-      "count": 2,
-      "speed": 160,
-      "interval": 0.8,
-      "initial_delay": 1.8
-     }
-    ]
-   },
-   "dodge_damage_per_hit": 4
-  }
- }
+  "bosses": {
+    "professor_monster": {
+      "display_name": "모교수 괴물",
+      "ap": 200,
+      "dp": 40,
+      "hp_range": [
+        1100,
+        1400
+      ],
+      "exp": [
+        60,
+        90
+      ],
+      "money": [
+        300,
+        480
+      ],
+      "weaknesses": [
+        "fire"
+      ],
+      "_comment": "씬 5-1 — 제압전. dodge_phase 미채택(D14): 회피 페이즈는 최종보스 전용 연출.",
+      "_balance_note": "2026-09-06: hp 90~120 / ap 20이었다 — 같은 층(f5) 잡몹 hp 380~500 / ap 90~120의 1/4로, 보스가 잡몹보다 약했다. 보스는 from_floor_stats를 안 타서 층 스케일에서 빠져 있었다. f5 잡몹의 2.5배 HP / 0.7배 AP로 둔다 — 오래 버티되 한 대는 덜 아픈 제압전."
+    },
+    "sys_builder": {
+      "display_name": "SYS 빌더",
+      "ap": 300,
+      "dp": 55,
+      "hp_range": [
+        2200,
+        2600
+      ],
+      "exp": [
+        100,
+        150
+      ],
+      "money": [
+        500,
+        800
+      ],
+      "weaknesses": [
+        "electric"
+      ],
+      "dodge_phase": {
+        "telegraph": "screen_static_full_1s",
+        "duration": 4.0,
+        "patterns": [
+          {
+            "pattern_id": "bp1",
+            "type": "radial",
+            "count": 10,
+            "speed": 140,
+            "interval": 0.9,
+            "initial_delay": 0.6
+          },
+          {
+            "pattern_id": "bp2",
+            "type": "aimed",
+            "speed": 200,
+            "interval": 1.3,
+            "initial_delay": 1.0
+          },
+          {
+            "pattern_id": "bp3",
+            "type": "rain",
+            "count": 2,
+            "speed": 160,
+            "interval": 0.8,
+            "initial_delay": 1.8
+          }
+        ]
+      },
+      "dodge_damage_per_hit": 4,
+      "_balance_note": "2026-09-06: hp 120~160 / ap 30이었다. 표창 쓰리(ap800)를 들면 최종보스가 1타에 죽었다. Lv15 1타 약 260 기준 9~10턴 버티게 두고, 회피 페이즈와 상태이상이 그 위에 얹힌다."
+    }
+  },
+  "_special_note": "종별 특수 행동 — 2026-09-06 신설. 그 전까지 적 행동은 통상공격 1종뿐이라 attach_effect 호출자가 전부 플레이어 쪽이었고, 상비약 5종(진통 파스·해열제·신경 안정제·미네랄 워터·집중 음료)과 상태이상 시스템이 통째로 사문화였다. dot 피해량은 코드가 적 AP에서 뽑는다(BattleEnemyPhase) — 층이 올라가면 같이 아파진다. 마비는 확률 0.12·지속 1턴으로 낮췄다 — 여러 턴을 연속으로 빼앗으면 '내가 하는 게임'이 아니게 된다. dot은 회복 압력을 만드는 쪽이라 3턴을 둔다."
 }

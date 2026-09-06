@@ -1,108 +1,122 @@
 {
- "schema_version": 1,
- "_comment": "스킬 6종 — 마스터 시나리오 §2.2 성장 트리. 획득은 grant_skill op로만.",
- "_status_note": "status_effects의 문자열은 아래 status_effect_defs의 키다. Combatant가 아는 kind는 dot/buff_damage_taken/paralysis 세 가지뿐이라, 'burn'·'buff_damage_taken_50'을 kind로 그대로 넘기면 매칭이 안 돼 효과가 사라진다(2026-08-26 실측: 화염 비커의 burn과 디버그 실드가 무효였다). turns/magnitude도 battle_controller에 3/10으로 하드코딩돼 있던 것을 여기로 옮겼다.",
- "timing": {
-  "_comment": "타이밍 버튼(timed hit) — 공격·단일 대상 스킬에 적용. 링이 sweet zone(후반 40%)일 때 입력하면 피해 ×mult.",
-  "window": 0.45,
-  "mult": 1.2
- },
- "starting": [
-  "flint_strike",
-  "combo_punch"
- ],
- "skills": [
-  {
-   "id": "flint_strike",
-   "display_key": "부싯돌 치기",
-   "element": "physical",
-   "targeting": "single",
-   "power": 10,
-   "status_effects": [],
-   "choreography_id": "atk_flint_basic"
+  "schema_version": 1,
+  "_comment": "스킬 6종 — 마스터 시나리오 §2.2 성장 트리. 획득은 grant_skill op로만.",
+  "_status_note": "status_effects의 문자열은 아래 status_effect_defs의 키다. Combatant가 아는 kind는 dot/buff_damage_taken/paralysis 세 가지뿐이라, 'burn'·'buff_damage_taken_50'을 kind로 그대로 넘기면 매칭이 안 돼 효과가 사라진다(2026-08-26 실측: 화염 비커의 burn과 디버그 실드가 무효였다). turns/magnitude도 battle_controller에 3/10으로 하드코딩돼 있던 것을 여기로 옮겼다.",
+  "timing": {
+    "_comment": "타이밍 버튼(timed hit) — 공격·단일 대상 스킬에 적용. 링이 sweet zone(후반 40%)일 때 입력하면 피해 ×mult.",
+    "window": 0.45,
+    "mult": 1.2
   },
-  {
-   "id": "combo_punch",
-   "display_key": "연속 펀치",
-   "element": "physical",
-   "targeting": "single",
-   "power": 25,
-   "status_effects": [],
-   "choreography_id": "atk_combo_punch"
+  "starting": [
+    "flint_strike",
+    "combo_punch"
+  ],
+  "skills": [
+    {
+      "id": "flint_strike",
+      "display_key": "부싯돌 치기",
+      "element": "physical",
+      "targeting": "single",
+      "power": 10,
+      "cost": 12,
+      "status_effects": [],
+      "choreography_id": "atk_flint_basic"
+    },
+    {
+      "id": "combo_punch",
+      "display_key": "연속 펀치",
+      "element": "physical",
+      "targeting": "single",
+      "power": 25,
+      "cost": 22,
+      "status_effects": [],
+      "choreography_id": "atk_combo_punch"
+    },
+    {
+      "id": "flame_beaker_throw",
+      "display_key": "화염 비커 투척",
+      "element": "fire",
+      "targeting": "all_enemies",
+      "power": 30,
+      "cost": 34,
+      "status_effects": [
+        "burn"
+      ],
+      "choreography_id": "atk_flame_throw"
+    },
+    {
+      "id": "debug_shield",
+      "display_key": "디버그 쉴드",
+      "element": "none",
+      "targeting": "self",
+      "power": 0,
+      "cost": 18,
+      "status_effects": [
+        "buff_damage_taken_50"
+      ],
+      "choreography_id": "atk_debug_shield"
+    },
+    {
+      "id": "volt_arc",
+      "display_key": "10,000V 아크 방전",
+      "element": "electric",
+      "targeting": "all_enemies",
+      "power": 50,
+      "cost": 45,
+      "status_effects": [
+        "paralysis"
+      ],
+      "choreography_id": "atk_volt_arc"
+    },
+    {
+      "id": "ember_of_flint",
+      "display_key": "부싯돌의 불꽃",
+      "element": "none",
+      "targeting": "story",
+      "power": 999,
+      "cost": 0,
+      "status_effects": [],
+      "choreography_id": "finisher_ember"
+    }
+  ],
+  "status_effect_defs": {
+    "burn": {
+      "kind": "dot",
+      "turns": 3,
+      "magnitude": 10,
+      "_desc": "화염 계열 지속 피해 — 턴당 magnitude만큼"
+    },
+    "buff_damage_taken_50": {
+      "kind": "buff_damage_taken",
+      "turns": 3,
+      "magnitude": 50,
+      "_desc": "받는 피해 magnitude% 경감 — id의 50이 곧 값"
+    },
+    "paralysis": {
+      "kind": "paralysis",
+      "turns": 3,
+      "magnitude": 0,
+      "_desc": "행동 불가"
+    },
+    "status_resist": {
+      "kind": "buff_status_resist",
+      "turns": 3,
+      "magnitude": 0,
+      "_desc": "지속 동안 새 상태이상이 붙지 않는다 — 마비·화상 대비 선제 수단"
+    },
+    "shield_25": {
+      "kind": "buff_damage_taken",
+      "turns": 3,
+      "magnitude": 25,
+      "_desc": "받는 피해 25% 경감 — 디버그 실드(50%)의 소모품판"
+    }
   },
-  {
-   "id": "flame_beaker_throw",
-   "display_key": "화염 비커 투척",
-   "element": "fire",
-   "targeting": "all_enemies",
-   "power": 30,
-   "status_effects": [
-    "burn"
-   ],
-   "choreography_id": "atk_flame_throw"
-  },
-  {
-   "id": "debug_shield",
-   "display_key": "디버그 쉴드",
-   "element": "none",
-   "targeting": "self",
-   "power": 0,
-   "status_effects": [
-    "buff_damage_taken_50"
-   ],
-   "choreography_id": "atk_debug_shield"
-  },
-  {
-   "id": "volt_arc",
-   "display_key": "10,000V 아크 방전",
-   "element": "electric",
-   "targeting": "all_enemies",
-   "power": 50,
-   "status_effects": [
-    "paralysis"
-   ],
-   "choreography_id": "atk_volt_arc"
-  },
-  {
-   "id": "ember_of_flint",
-   "display_key": "부싯돌의 불꽃",
-   "element": "none",
-   "targeting": "story",
-   "power": 999,
-   "status_effects": [],
-   "choreography_id": "finisher_ember"
+  "stamina": {
+    "_comment": "기력(氣力) — 스킬 자원. 평타로 모으고 방어로 크게 모아 스킬로 쓴다. 2026-09-06 신설: 그 전까지 스킬에 cost/mp/cooldown 필드 자체가 없어 공격의 1.37~1.62배를 무제한으로 쓸 수 있었고, 그래서 '스킬 연타'가 늘 정답이면서도 승패를 안 바꿨다. MP·마나가 아닌 것은 배경이 1995년 공대이기 때문이다.",
+    "max": 100,
+    "start": 40,
+    "gain_on_attack": 9,
+    "gain_on_guard": 28,
+    "gain_on_turn": 3
   }
- ],
- "status_effect_defs": {
-  "burn": {
-   "kind": "dot",
-   "turns": 3,
-   "magnitude": 10,
-   "_desc": "화염 계열 지속 피해 — 턴당 magnitude만큼"
-  },
-  "buff_damage_taken_50": {
-   "kind": "buff_damage_taken",
-   "turns": 3,
-   "magnitude": 50,
-   "_desc": "받는 피해 magnitude% 경감 — id의 50이 곧 값"
-  },
-  "paralysis": {
-   "kind": "paralysis",
-   "turns": 3,
-   "magnitude": 0,
-   "_desc": "행동 불가"
-  },
-  "status_resist": {
-   "kind": "buff_status_resist",
-   "turns": 3,
-   "magnitude": 0,
-   "_desc": "지속 동안 새 상태이상이 붙지 않는다 — 마비·화상 대비 선제 수단"
-  },
-  "shield_25": {
-   "kind": "buff_damage_taken",
-   "turns": 3,
-   "magnitude": 25,
-   "_desc": "받는 피해 25% 경감 — 디버그 실드(50%)의 소모품판"
-  }
- }
 }

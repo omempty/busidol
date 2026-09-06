@@ -356,11 +356,21 @@ func play_door_fx(anchor: Vector2i, dir: Vector2i, hold: float) -> void:
 	fx.actor_through_door(player, hold)
 
 
-## 대사 시퀀스의 op 스텝 — shop과 set_flags. 구판은 op이 실행되지 않았다.
+## 대사 시퀀스의 op 스텝 — shop·set_flags·grant_skill. 구판은 op이 실행되지 않았다.
 ##
 ## **set_flags를 여기서 처리하지 않으면 대사가 세우는 플래그가 통째로 죽는다.**
 ## 컷신(CutscenePlayer)에는 있고 대사에는 없어서, dialogue_sequences.json이 적어 둔
 ## set_flags가 "알 수 없는 시퀀스 op"로 버려지고 있었다(2026-08-29 발견).
+##
+## **한 시퀀스에서 실행되는 op 스텝은 하나뿐이다.** DialogueBox._load_step()이 op 스텝을
+## 만나면 `close()`를 먼저 부르고 그 다음에 op_requested를 쏜다 — 대화가 그 자리에서
+## 끝나므로 op 뒤에 붙인 스텝은 대사든 op이든 영영 실행되지 않는다(2026-09-06 확인).
+## 그래서 grant_skill은 **flag 인자를 같이 받는다**: 화공과 교수 대면처럼 "플래그를
+## 세우면서 스킬도 준다"를 한 스텝으로 표현해야 하기 때문이다. 인자 이름은 craft op이
+## 쓰는 「성공 시 세우는 플래그 하나」 규약(args.flag)을 그대로 따른다 — SelfCheck의
+## 플래그 setter 수집기가 읽는 이름도 그것이라, 게이트가 이 플래그를 계속 본다.
+## DialogueBox를 고쳐 op 스텝 뒤를 이어 재생하게 만드는 편이 정공법이지만, 그쪽은
+## 컷신·상점·NPC가 모두 얹혀 있는 종료 경로라 이번 범위에서는 건드리지 않았다.
 func _on_dialogue_op(op_name: String, _args: Dictionary) -> void:
 	match op_name:
 		"shop":
@@ -369,6 +379,15 @@ func _on_dialogue_op(op_name: String, _args: Dictionary) -> void:
 		"set_flags":
 			for k: String in _args:
 				GameState.set_flag(k, _args[k])
+			player.mover.enabled = true
+		"grant_skill":
+			# CutscenePlayer._execute의 grant_skill과 같은 동작(GameState.grant_skill).
+			var flag := str(_args.get("flag", ""))
+			if not flag.is_empty():
+				GameState.set_flag(flag, true)
+			var skid := StringName(str(_args.get("skill", "")))
+			if GameState.grant_skill(skid):
+				print("[dialogue] 스킬 습득: %s" % skid)
 			player.mover.enabled = true
 		_:
 			push_warning("알 수 없는 시퀀스 op: %s" % op_name)

@@ -26,6 +26,13 @@
       }
     },
     {
+      "op": "grant_skill",
+      "args": {
+        "skill": "volt_arc"
+      },
+      "_comment": "마스터 시나리오 §2.2 / 4.2 Q_F4_SACRIFICE 보상 — 3인방의 레버 희생(@c407~@c420 「동료들의 전기 에너지가 공명하여 [신기술: 10,000V 아크 방전]을 습득」). 2026-09-06 배선."
+    },
+    {
       "op": "illustration",
       "args": {
         "id": "",

@@ -33,7 +33,22 @@ static func apply(
 	# 곧바로 다시 패배라 그 자리에서 무한 패배가 된다 — 자동 주행 한 판에 17회
 	# 관측(2026-08-29, docs/05_status/01_autoplay.md). 원작에 게임오버 처리가 없어
 	# 최소 복구("정신을 차린다")만 한다. 패널티 설계는 별도 결정 사항이다.
-	GameState.player_stats["hp"] = GameState.max_hp() if result == &"lose" else player_hp
+	if result == &"lose":
+		# **패배에 대가가 있다.** 구판은 풀 HP로 되돌려 보내 지는 것이 공짜였고,
+		# 그래서 "질 수 있다"는 긴장이 성립하지 않았다(2026-09-06 유저 지적).
+		# 그렇다고 HP 0으로 돌려보내면 다음 접촉이 곧바로 다시 패배라 무한 패배가
+		# 된다(2026-08-29 자동 주행 한 판에 17회 관측). 그 사이를 데이터로 정한다 —
+		# 절반 남짓 회복하고 소지금 일부를 잃는다. 되돌아갈 수는 있되 공짜는 아니다.
+		var rules: Dictionary = Database.defeat_rules()
+		var hp_ratio := float(rules.get("hp_ratio", 0.5))
+		var money_loss := float(rules.get("money_loss", 0.25))
+		GameState.player_stats["hp"] = maxi(1, int(round(GameState.max_hp() * hp_ratio)))
+		var lost := int(round(float(GameState.player_stats["money"]) * money_loss))
+		GameState.player_stats["money"] = maxi(0, int(GameState.player_stats["money"]) - lost)
+		if lost > 0:
+			print("[battle] 패배 — 소지금 %d 손실" % lost)
+	else:
+		GameState.player_stats["hp"] = player_hp
 	var growth := {}
 	if result == &"win":
 		GameState.player_stats["money"] = (

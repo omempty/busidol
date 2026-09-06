@@ -96,9 +96,21 @@ func _trigger_cells(t: Dictionary) -> Array[Vector2i]:
 	return out
 
 
+## zone 판정은 **플레이어 2×2 몸**으로 한다 — 넘어오는 cell은 좌상단 앵커 하나다.
+##
+## 구판은 `c == cell` 완전 일치라, 몸으로 트리거 칸을 밟고 서 있어도 앵커가
+## 정확히 그 칸일 때만 발동했다. 트리거 칸 하나를 덮을 수 있는 앵커는 최대 4개이므로
+## 발동 자리가 4분의 1로 좁아진 셈이고, 실제로 유저가 "특정 위치에서만 발현된다"고
+## 지적한 직접 원인이다(2026-09-06 실측: 전 층 zone 8종의 발동 앵커 합 7 → 21).
+## interact 트리거는 `try_interact`가 정면 셀 목록으로 따로 판정하므로 영향이 없고,
+## auto 트리거는 이 함수를 거치지 않는다. `_fired`·`done_flag`·`once` 규약은 `_consumed`가
+## 그대로 지키므로 넓힌 것은 "발동 자리"뿐, 발동 횟수가 아니다.
 func _in_zone(t: Dictionary, cell: Vector2i) -> bool:
-	for c in _trigger_cells(t):
-		if c == cell:
+	var cells := _trigger_cells(t)
+	if cells.is_empty():
+		return false
+	for c in Placement.body_cells(cell):
+		if c in cells:
 			return true
 	return false
 

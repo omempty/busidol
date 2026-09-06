@@ -25,6 +25,13 @@
       }
     },
     {
+      "op": "grant_skill",
+      "args": {
+        "skill": "debug_shield"
+      },
+      "_comment": "마스터 시나리오 §2.2 / 4.2 Q_F0_DISK 보상 — 지하 서고 C언어 서적. 이 op이 어느 데이터에도 없어 skills.json의 스킬 4종이 통째로 사문화돼 있었다(2026-09-06). 습득 알림 UI는 아직 없다 — 콘솔 print만 나간다."
+    },
+    {
       "op": "illustration",
       "args": {
         "id": "",

@@ -142,6 +142,13 @@
       ]
     },
     {
+      "op": "grant_skill",
+      "args": {
+        "skill": "ember_of_flint"
+      },
+      "_comment": "궁극기 [부싯돌의 불꽃] — 마스터 시나리오 §2.2 / 4.2는 Q_ENDING 보상으로 적지만, 씬 5-4의 '최종 피니시'가 곧 이 전투다. **start_battle보다 앞**에 둔다: 뒤에 두면 습득 시점이 전투 종료 후라 정작 최종보스전에서 못 쓴다(start_battle은 change_scene_to_file로 넘어가며 컷신을 끝내므로 뒤 스텝은 실행 자체가 안 된다). targeting이 'story'라 battle_controller.skill_targets의 기본 분기(단일 대상)로 떨어지고, battle_ui.show_skill_menu는 보유 스킬을 targeting과 무관하게 전부 올린다 — 연출 전용이 아니라 실제로 메뉴에 뜨고 쓸 수 있다(power 999)."
+    },
+    {
       "op": "start_battle",
       "enemies": [
         "sys_builder"

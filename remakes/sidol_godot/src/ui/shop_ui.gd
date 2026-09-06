@@ -213,7 +213,13 @@ func _stock() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var shops: Dictionary = JsonUtil.load_dict("res://data/shops.json", "ShopUI").get("shops", {})
 	var entry: Dictionary = shops.get(SHOP_ID, {})
+	# 해금 플래그 — 아직 안 선 품목은 매대에 오르지 않는다. 방어구를 게이팅하는 자리다
+	# (2026-09-06: 시작 소지금 5,000온이 최상급 방어구 값과 같아 5분 만에 전투가 끝났다).
+	var gate: Dictionary = entry.get("stock_requires", {})
 	for item_id: String in entry.get("stock", []):
+		var need := str(gate.get(item_id, ""))
+		if not need.is_empty() and not GameState.has_flag(need):
+			continue
 		var def := Database.get_item(StringName(item_id))
 		if def.is_empty():
 			push_warning("상점 재고에 없는 아이템: %s" % item_id)

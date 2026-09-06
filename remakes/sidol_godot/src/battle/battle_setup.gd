@@ -19,6 +19,14 @@ static func load_skills() -> Dictionary:
 	return out
 
 
+## 기력 설정 {max, start, gain_on_attack, gain_on_guard, gain_on_turn}. skills.json이 값의 출처.
+static func stamina_config() -> Dictionary:
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/skills.json"))
+	if typeof(raw) != TYPE_DICTIONARY:
+		return {}
+	return (raw as Dictionary).get("stamina", {})
+
+
 ## 상태이상 id → {kind, turns, magnitude}. skills.json이 값의 출처.
 static func status_effect_defs() -> Dictionary:
 	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/skills.json"))
