@@ -1,0 +1,11 @@
+{
+  "_comment": "플레이스홀더 — tools/dev/make_visual_placeholders.py 생성. 납품이 오면 덮어쓴다.",
+  "cell": 128,
+  "animations": {
+    "play": {
+      "row": 0,
+      "frames": 6,
+      "fps": 14
+    }
+  }
+}
