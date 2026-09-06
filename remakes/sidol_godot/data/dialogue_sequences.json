@@ -451,6 +451,14 @@
         { "speaker": "랩실생도", "text": "@c344" }
       ]
     },
+    "f3_lab_student_cure_req": {
+      "_comment": "[2026-09-07] 시약 3종의 **위치**를 말해 주는 유일한 대사. 그전에는 조합법(@c208 식초+요소+건전지)과 이름(@c302·@c342)만 있고 「어느 방으로 가야 하는가」를 말하는 live 대사가 하나도 없었다 — 유저가 「이벤트 진행 시 물품 찾기가 힘들다」고 한 지점이다. 방 이름은 door_plates.json(정본)의 문패를 그대로 쓴다: 드래그=「교수 연구실」(문 113,25 · triggers_f3 f3_drag zone 111,19), 앨린=「대학원 랩실」(문 101,25 · f3_allin zone 98,18), 팰린=퀴즈맨(f3_quiz_gate zone 125,21 — 문패 113과 144 사이 복도). 화자 lab_student는 (161,18)이라 셋 다 서쪽이다. repeat_sequence_id를 두지 않아 Q_F3_PALIN이 설 때까지 몇 번이고 같은 안내가 나온다."
+      ,
+      "steps": [
+        { "speaker": "랩실생도", "text": "@c345" },
+        { "speaker": "랩실생도", "text": "@c346" }
+      ]
+    },
     "f4_afterschool_student_repeat_1": {
       "steps": [
         { "speaker": "잔류생", "text": "@c441" }

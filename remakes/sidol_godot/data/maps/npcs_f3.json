@@ -20,6 +20,11 @@
           "requires_flag": "Q_F3_PALIN",
           "sequence_id": "f3_lab_student_f3",
           "repeat_sequence_id": "f3_lab_student_f3_repeat"
+        },
+        {
+          "requires_flag": "Q_F3_CURE_REQ",
+          "sequence_id": "f3_lab_student_cure_req",
+          "_comment": "[2026-09-07] 해독제 의뢰를 받은 뒤(Q_F3_CURE_REQ) 시약 3종이 **어느 방에 있는지** 알려 주는 자리. 변형은 늦은 플래그부터 적는다(먼저 맞는 것이 이긴다) — Q_F3_PALIN이 위, 이쪽이 아래다. repeat_sequence_id를 일부러 비워 둬 팰린을 얻을 때까지 몇 번을 물어도 같은 안내가 나온다."
         }
       ],
       "idle_anim": "squash",
