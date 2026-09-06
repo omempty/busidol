@@ -57,7 +57,10 @@ func _ready() -> void:
 	# 마지막 스텝도 실전과 동일하게 진행 입력 한 번으로 닫힌다.
 	var expected_steps: int = Database.sequence(npc.sequence_id).size()
 	for s in range(expected_steps):
-		await _wait_until(func() -> bool: return not field.dialogue_box.is_typing(), 2.0)
+		# 타이핑 대기는 **줄 길이에 비례**해야 한다. 고정 2초는 CPS 40 기준 80자에서
+		# 끝나므로, 대사가 길어지면(@c108=86자) 조용히 타임아웃하고 그 다음 입력이
+		# "스킵"으로 소비돼 진행이 멈춘 것처럼 보였다(2026-09-05 선재 실패의 절반).
+		await _wait_until(func() -> bool: return not field.dialogue_box.is_typing(), 10.0)
 		if not field.dialogue_box.is_open:
 			failures.append("조기 종료 @step %d" % s)
 			break
@@ -81,16 +84,22 @@ func _index_moved(box: DialogueBox, before: int) -> bool:
 	return not box.is_open or box.index != before
 
 
-## interact 탭 — pred가 충족될 때까지 물리 프레임 단위로 홀드한다.
+## interact 탭 — pred가 충족될 때까지 **누르고 떼기를 반복**한다.
+## 홀드가 아니다: 필드(scenes/field.gd `_edge`)는 직전 프레임 대비 상승 엣지로만
+## 입력을 읽으므로, 누른 채로 두면 두 번째 진행 입력이 영영 오지 않는다.
+## 타이핑이 남아 있을 때 첫 입력은 "즉시 완성"으로 소비되고 그 다음 입력이 실제로
+## 스텝을 넘기는 것이 실전 동작이라, 홀드로는 그 두 번째를 흉내낼 수 없었다.
 func _press_until(pred: Callable, max_ticks: int) -> bool:
-	Input.action_press(&"interact")
 	var ok := false
 	for _f in range(max_ticks):
+		Input.action_press(&"interact")
 		await get_tree().physics_frame
-		if pred.call():
+		var hit: bool = pred.call()
+		Input.action_release(&"interact")
+		if hit:
 			ok = true
 			break
-	Input.action_release(&"interact")
+		await get_tree().physics_frame  # 뗀 상태를 필드가 한 번 봐야 다음 엣지가 선다
 	return ok
 
 
