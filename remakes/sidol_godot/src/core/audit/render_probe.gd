@@ -7,9 +7,19 @@ extends RefCounted
 ## "보이지 않는 벽"이 됐지만 validate·smoke·self_check 어디에도 걸리지 않았다.
 ## 이 프루브는 조립된 TileMapLayer를 직접 읽어 그 간극을 본다.
 
-## 원작 SPR 색0(순검정)은 투명이다. 시트를 구판 파이프라인으로 구우면 검은 사각 배경이 남는다.
-const STALE_BLACK_RATIO := 0.15
-const ATLASES := [MapRenderer.GROUND_ATLAS, MapRenderer.OBJECT_ATLAS]
+## 아틀라스가 통째로 불투명한가 — 알파 채널이 아예 죽었는지만 본다.
+##
+## 2026-09-07 정정: 이 자리에는 원래 "불투명 순검정 15% 초과면 FAIL, 색0 키잉 누락"
+## 검사가 있었고 tools/dev/key_color0_transparent.py를 이름으로 권했다. **그 전제가
+## 거짓이었다.** 원작 팔레트에는 RGB(0,0,0)인 인덱스가 9개다 — 투명 키인 0과
+## 외곽선·그림자로 쓰이는 224~231. 순검정 비율은 "구판 파이프라인 산출물"의 지표가
+## 아니라 그냥 **그림에 검정이 많다**는 뜻이고, 권하던 그 도구는 외곽선까지 지워
+## obj 아틀라스 176셀 중 39셀에 구멍을 냈다(불투명 순검정 12,153px 손실).
+## 정본 검사는 원본에서 다시 구워 바이트로 대조하는 tools/dev/spr_alpha_check.py다
+## (run_gates 17단계). 여기서는 화면 조립 층의 눈으로 볼 수 있는 것만 남긴다.
+## 오브젝트 아틀라스가 이 비율을 넘게 불투명하면 알파가 통째로 죽은 것이다
+## (오브젝트는 32px 셀을 다 채우지 않는다 — 지면 아틀라스는 반대로 꽉 차야 정상이라 제외).
+const OBJECT_OPAQUE_LIMIT := 0.90
 
 
 ## 맵 데이터의 모든 오브젝트/지면 셀이 실제 타일로 찍혔는가.
@@ -83,32 +93,34 @@ static func check_invisible_walls(rep: AuditReport, rt: MapRuntime, facable: Dic
 	rep.warn("근거 없는 차단", "%d셀 — 지면만 있고 ATT 1 (예: %s)" % [blind.size(), blind.slice(0, 4)])
 
 
-## 시트가 구판 파이프라인 산출물인지 — 불투명 순검정 비율로 판별.
+## 오브젝트 아틀라스의 알파가 살아 있는가 — 검은 사각 배경이 붙으면 여기가 붉어진다.
+##
+## 픽셀 색으로 "지워야 할 검정"을 판정하지 않는다(원작 팔레트의 검정 인덱스는 9개다).
+## 알파의 정합은 원본 SPR 대조로만 판정할 수 있고 그건 tools/dev/spr_alpha_check.py가 한다.
 static func check_atlas_transparency(rep: AuditReport) -> void:
-	for path: String in ATLASES:
-		var tex: Texture2D = load(path)
-		if tex == null:
-			rep.fail("아틀라스 로드", path)
-			continue
-		var img := tex.get_image()
-		var total := img.get_width() * img.get_height()
-		var black := 0
-		for y in img.get_height():
-			for x in img.get_width():
-				var c := img.get_pixel(x, y)
-				if c.a > 0.0 and c.r == 0.0 and c.g == 0.0 and c.b == 0.0:
-					black += 1
-		var ratio := float(black) / float(maxi(total, 1))
-		if ratio > STALE_BLACK_RATIO:
-			rep.fail(
-				"색0 키잉 누락",
-				(
-					"%s 불투명 순검정 %.1f%% — tools/dev/key_color0_transparent.py 대상"
-					% [path.get_file(), ratio * 100.0]
-				)
+	var path: String = MapRenderer.OBJECT_ATLAS
+	var tex: Texture2D = load(path)
+	if tex == null:
+		rep.fail("아틀라스 로드", path)
+		return
+	var img := tex.get_image()
+	var total := img.get_width() * img.get_height()
+	var opaque := 0
+	for y in img.get_height():
+		for x in img.get_width():
+			if img.get_pixel(x, y).a > 0.0:
+				opaque += 1
+	var ratio := float(opaque) / float(maxi(total, 1))
+	if ratio > OBJECT_OPAQUE_LIMIT:
+		rep.fail(
+			"오브젝트 아틀라스 알파",
+			(
+				"%s 불투명 %.1f%% — 셀 배경이 지워지지 않았다(원본에서 다시 구울 것: %s)"
+				% [path.get_file(), ratio * 100.0, "python tools/dev/remaster_obj_atlas.py"]
 			)
-		else:
-			rep.ok("아틀라스 투명도", "%s 순검정 %.1f%%" % [path.get_file(), ratio * 100.0])
+		)
+	else:
+		rep.ok("오브젝트 아틀라스 알파", "%s 불투명 %.1f%%" % [path.get_file(), ratio * 100.0])
 
 
 ## 인접한 통행 가능 셀 중 하나라도 같은 지면 타일을 쓰는가.

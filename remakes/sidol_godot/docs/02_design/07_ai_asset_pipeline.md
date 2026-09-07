@@ -187,6 +187,25 @@ _category_index.md    # 카테고리 요약 — LLM 에이전트의 작업 대�
 | .VOC 보이스 | **변환 후 그대로 사용**(재생성 아님 — 원작 정체성) |
 | PC스피커 멜로디 배열 | SFX/BGM 프롬프트의 멜로디 힌트 |
 
+### 8.1 알파 규칙 — 투명의 근거는 팔레트 인덱스뿐 (2026-09-07 확정)
+
+원작 SPR 파생 에셋(`<id>_original.png` · `assets/icons/*` · `obj_original_32.png` ·
+`player_original.png`)에서 **알파를 정하는 근거는 팔레트 인덱스 0 하나뿐이다.**
+`spr_extract.parse_spr`가 그것만 alpha 0으로 방출한다.
+
+> **금지**: 구운 뒤에 RGB로 투명을 다시 정하는 모든 사후 처리 — 순검정 일괄 키잉,
+> 테두리 flood-fill, "배경색 추정" 등. 원작 팔레트에는 RGB(0,0,0)인 인덱스가 **9개**
+> 있다(투명 키 0 + 외곽선·그림자 224~231). 팔레트를 잃은 RGB 위에서 이 둘을 가르는 것은
+> **원리적으로 불가능**하다. 실제로 이 규칙을 어긴 도구 셋이 외곽선 204,932px을 지웠다
+> ([R13](../03_plan/02_risk_assessment.md#r13-팔레트-인덱스를-잃은-뒤-rgb로-투명을-정하기-확률-상이미-발생--충격-상)).
+
+- 에셋이 상했으면 사후 보정이 아니라 **원본에서 다시 굽는다**. 빌더가 정본이다.
+- 굽는 레시피는 빌더 안에만 둔다. 관문은 빌더의 `build_*_image()`를 호출해
+  게임 파일과 바이트 비교한다(`tools/dev/spr_alpha_check.py` — run_gates.ps1 마지막 단계).
+  레시피를 관문에 베끼면 소스가 둘로 갈라져 관문 자신이 사문화된다.
+- `assets/originals_ref/bmp_spr/*.bmp`는 **알파가 없는 RGB 중간물**이다. 참고용이지
+  에셋 소스가 아니다(`tools/dev/bake_battle_sheets.py`도 같은 경고를 달고 있다).
+
 ## 9. DoD (Definition of Done)
 
 - [ ] `spec/` 전체가 JSON Schema 통과 + `render_specs.py`로 MD 재렌더 시 diff 0

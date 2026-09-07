@@ -1,10 +1,33 @@
 """원작 도트 → 표준 스프라이트 시트 일괄 이관 (정책 ①원작 있음→리마스터).
 
-originals_ref/bmp_spr/<group>/frame_*.bmp (원작 크롭 도트, RGB)를 받아
-테두리 배경 제거(extract_sprites.remove_bg_np 재사용) → 4배 nearest 베이크 →
-표준 셀 128(2열×5행) 시트 + 메타 JSON을 assets/sprites/<id>_original.png|.json
-으로 출력한다. SpriteSets 컨벤션(<id>_original.*)에 따라 게임이 즉시 인식하며,
+**알파의 유일한 근거는 팔레트 인덱스 0이다** — 원작 SPR을 직접 읽어(parse_spr)
+인덱스 0만 투명으로 방출한 프레임을 받고, 4배 nearest 베이크 → 표준 셀 128(2열×5행)
+시트 + 메타 JSON을 assets/sprites/<id>_original.png|.json 으로 출력한다.
+SpriteSets 컨벤션(<id>_original.*)에 따라 게임이 즉시 인식하며,
 아트모드 REMAKE 신규 시트 미착용 시 폴백 세트로도 동작한다.
+
+## 왜 bmp_spr을 더 이상 읽지 않는가 (2026-09-07 실측)
+
+이 도구는 원래 `originals_ref/bmp_spr/<group>/frame_*.bmp`(알파 없는 RGB 중간물)를
+읽고 `extract_sprites.remove_bg_np`(테두리 연결 flood-fill)로 배경을 지웠다.
+그런데 **원작 팔레트에는 RGB(0,0,0)인 인덱스가 9개**다 — 투명 키인 0과, 캐릭터
+외곽선·그림자로 쓰이는 224~231. 팔레트가 사라진 RGB 위에서는 이 둘을 구별할 수
+없어서 flood-fill이 배경에 닿은 **외곽선을 통째로 먹었고**, 반대로 스프라이트에
+둘러싸인 배경(인덱스 0)은 flood-fill이 못 닿아 **검은 얼룩으로 남았다**.
+
+실측(현행 시트 vs 원작 SPR 진실값, 알파 마스크 비교):
+
+    id             잃은 외곽선px   남은 배경px
+    mad_eye            14,688           320
+    o_ray              23,296         1,536
+    tutor_dumb          4,320             0   ← 유저 신고 "멍청조교"
+    hellcop                 0           448
+    (14종 합계)       150,326         4,404
+
+tutor_dumb가 잃은 4,320px는 **전부 정확히 RGB(0,0,0)** 이었다.
+같은 결함이 `tools/dev/key_color0_transparent.py`(RGB 순검정 일괄 키잉)와
+`tools/convert/migrate_item_icons.py`에도 있었다. 규칙 하나로 정리한다:
+**팔레트 인덱스를 잃은 뒤에 RGB만 보고 투명을 정하지 않는다.**
 
 레이아웃(원작 mode 0~7 규약 = 아래/위/좌/우 × 2프레임, docs/01_analysis/04_game_systems.md §1.1):
   행0 walk_down=[0,1] · 행1 walk_up=[2,3] · 행2 walk_left=[4,5] · 행3 walk_right=[6,7]
@@ -29,11 +52,13 @@ import sys
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.normpath(os.path.join(HERE, "..", ".."))
 sys.path.insert(0, HERE)
-import extract_sprites as es  # noqa: E402  (remove_bg_np 재사용)
+sys.path.insert(0, os.path.normpath(os.path.join(ROOT, "..", "..", "_shared", "src")))
+sys.path.insert(0, os.path.join(ROOT, "tools", "dev"))
+from spr_extract import parse_spr  # noqa: E402  (알파의 유일한 근거 = 팔레트 인덱스 0)
 
-ROOT = es.ROOT
-REF = es.REF  # originals_ref/bmp_spr
+ORIGINALS = os.path.normpath(os.path.join(ROOT, "..", "..", "originals", "1995_sidol_bsd_dos"))
 OUT_DIR = os.path.join(ROOT, "assets", "sprites")
 CELL = 128
 BAKE = 4  # 원작 24px 도트 → 96px (player_original과 동일 레시피)
@@ -73,10 +98,28 @@ ROWS: list[tuple[str, tuple[int, int], int]] = [
 ]
 
 
+_SPR_CACHE: dict[str, list] = {}
+
+
+def spr_frames(group: str) -> list:
+    """<group>.SPR 전 프레임 — 팔레트 인덱스 0만 alpha 0."""
+    if group not in _SPR_CACHE:
+        path = os.path.join(ORIGINALS, f"{group.upper()}.SPR")
+        if not os.path.exists(path):
+            raise SystemExit(
+                f"원본 없음: {path}\n"
+                "이 도구는 원작 SPR만 읽는다(알파 근거 = 팔레트 인덱스 0). "
+                "bmp_spr의 RGB 중간물로는 외곽선 검정과 배경 검정을 구별할 수 없다."
+            )
+        with open(path, "rb") as fh:
+            _SPR_CACHE[group] = parse_spr(fh.read())[1]
+    return _SPR_CACHE[group]
+
+
 def load_frame(group: str, idx: int) -> Image.Image:
-    """원작 크롭 bmp 1프레임 → 배경 제거 RGBA."""
-    path = os.path.join(REF, group, f"frame_{idx:03d}.bmp")
-    return es.remove_bg_np(Image.open(path))
+    """원작 SPR 1프레임 → RGBA(인덱스 0만 투명)."""
+    w, h, rgba = spr_frames(group)[idx]
+    return Image.frombytes("RGBA", (w, h), rgba)
 
 
 def bake_cell(frame: Image.Image) -> Image.Image:
@@ -93,12 +136,25 @@ def bake_cell(frame: Image.Image) -> Image.Image:
     return cell
 
 
-def build_sheet(asset_id: str, group: str, start: int) -> None:
+def build_sheet_image(asset_id: str) -> Image.Image:
+    """시트 1장을 메모리로만 굽는다 — 관문(tools/dev/spr_alpha_check.py)이 이걸 쓴다.
+
+    "게임에 들어 있는 파일 == 지금 원작 SPR로 구운 것"을 관문이 바이트로 비교할 수
+    있게 굽기와 저장을 나눠 둔다. 레시피를 관문 쪽에 베껴 두면 소스가 둘이 되고,
+    이 저장소가 반복해 겪은 "사문화·갈라짐"이 관문 자신에게 재현된다.
+    """
+    group, start = SOURCES[asset_id]
     frames = [load_frame(group, start + k) for k in range(8)]
     sheet = Image.new("RGBA", (COLS * CELL, len(ROWS) * CELL), (0, 0, 0, 0))
-    for row, (anim, (f0, f1), _fps) in enumerate(ROWS):
+    for row, (_anim, (f0, f1), _fps) in enumerate(ROWS):
         for col, fi in enumerate((f0, f1)):
             sheet.paste(bake_cell(frames[fi]), (col * CELL, row * CELL))
+    return sheet
+
+
+def build_sheet(asset_id: str, group: str, start: int) -> None:
+    frames = [load_frame(group, start + k) for k in range(8)]
+    sheet = build_sheet_image(asset_id)
     out_png = os.path.join(OUT_DIR, f"{asset_id}_original.png")
     sheet.save(out_png)
 

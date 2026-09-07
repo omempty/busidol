@@ -30,7 +30,12 @@ CELL = 128                     # 표준 셀 (24×4=96px 아트 + 발바닥 하�
 W, H = CELL * 2, CELL * 5
 
 
-def main() -> int:
+def build_sheet_bytes() -> bytes:
+    """시트를 메모리로만 굽는다 — 관문(tools/dev/spr_alpha_check.py)이 이걸 쓴다.
+
+    알파의 근거는 parse_spr의 팔레트 인덱스 0뿐이다. 구운 뒤 RGB로 다시 키잉하면
+    원작 팔레트의 검정 인덱스 9개(0 · 224~231)를 구별할 수 없어 외곽선이 사라진다.
+    """
     _, frames = parse_spr((ORIGINALS / "I.SPR").read_bytes())
     if len(frames) < 8:
         raise ValueError(f"I.SPR 프레임 부족: {len(frames)}")
@@ -75,9 +80,12 @@ def main() -> int:
             blit(row, c, s)
     blit(4, 0, 0)   # idle_down: 정지 프레임
     blit(4, 1, 0)
+    return bytes(buf)
 
+
+def main() -> int:
     out_png = ROOT / "assets" / "sprites" / "player_original.png"
-    write_png(out_png, W, H, bytes(buf))
+    write_png(out_png, W, H, build_sheet_bytes())
     meta = {
         "schema_version": 2,
         "source": "I.SPR frames 0-7 (원작 도트 24×24, 4배 nearest 베이크)",

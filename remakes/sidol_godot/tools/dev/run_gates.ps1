@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 2   # +2 = 내보내기 포함 규칙 · 원본 대조(python)
+$total = $gates.Count + 3   # +3 = 내보내기 포함 규칙 · 원본 대조 · SPR 파생 에셋 알파(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -69,6 +69,19 @@ Write-Host ("[{0}/{1}] Originals match..." -f $i, $total)
 python (Join-Path $PSScriptRoot "originals_check.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Originals match"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] SPR sprite alpha..." -f $i, $total)
+# 원작 SPR 파생 에셋(캐릭터 시트 15 · 아이템 아이콘 35 · obj 아틀라스 · 주인공 시트)이
+# "지금 원작에서 다시 구운 것"과 픽셀 단위로 같은가. 2026-09-07에 RGB 순검정 사후 키잉과
+# flood-fill 배경 제거가 외곽선 204,932px를 지운 사고가 있었다(원작 팔레트의 검정 인덱스는
+# 0 하나가 아니라 9개 — 0과 224~231). 구멍 개수 같은 간접 지표는 원작 데이터와 구별이 안 돼
+# 여기서는 원본 재굽기 대조만 쓴다. 원본 없으면 스스로 SKIP.
+python (Join-Path $PSScriptRoot "spr_alpha_check.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** SPR sprite alpha"
     exit 1
 }
 

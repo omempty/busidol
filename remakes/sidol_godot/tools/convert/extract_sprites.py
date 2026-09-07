@@ -23,7 +23,20 @@ CELL = 128
 
 
 def remove_bg_np(img: Image.Image) -> Image.Image:
-    """경계 연결 배경 제거(numpy 벡터화). 내부 검정은 보존."""
+    """경계 연결 배경 제거(numpy 벡터화). **게임에 들어갈 에셋에는 쓰지 말 것.**
+
+    2026-09-07 실측: 원작 팔레트에는 RGB(0,0,0)인 인덱스가 9개다 — 투명 키인 0과
+    외곽선·그림자로 쓰이는 224~231. 알파가 없는 bmp_spr RGB 중간물 위에서는 이 둘을
+    구별할 수 없어서, 이 flood-fill은 **배경에 닿은 외곽선을 통째로 먹고**(캐릭터 시트
+    15종 155,840px · 아이콘 35종 36,939px 손실) 반대로 스프라이트에 둘러싸인 배경은
+    닿지 못해 검은 얼룩으로 남긴다(각각 4,864px · 9,465px).
+
+    그래서 `migrate_original_sheets.py`와 `migrate_item_icons.py`는 이 함수를 버리고
+    원작 SPR을 직접 읽는다(`spr_extract.parse_spr` — 팔레트 인덱스 0만 alpha 0).
+    이 함수는 assets/raw/llm 프롬프트용 참고 이미지 생성에만 남는다. 그쪽 산출물도
+    외곽선이 얇아진 상태이므로 참고 이미지를 다시 뽑을 일이 생기면 parse_spr로 옮길 것.
+    관문: tools/dev/spr_alpha_check.py
+    """
     a = np.asarray(img.convert("RGBA")).copy()
     h, w = a.shape[:2]
     border_colors = np.concatenate([
