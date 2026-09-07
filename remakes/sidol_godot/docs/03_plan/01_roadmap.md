@@ -52,7 +52,7 @@ T-D [아트·오디오]    T-E [시나리오]           T-F [UI/UX]
 - [x] map_convert.py: MAP→JSON 전층 변환(TMJ 내보내기는 Phase 8 콘텐츠 편집 개시 시 이월), 계단/문 데이터화(transitions.json)
 - [x] 층 이동(TransitionGate 페이드), 문(mapy±3 슬라이드), ATT==2 덮개 렌더(Phase 1 선행)
 - [x] MapRuntime 오버라이드 계층(상자 복원은 Phase 4 아이템과 연결)
--[x] 미니맵(Q4) — M키 토글
+-[x] 미니맵(Q4) — M키 토글. **전장의 안개(15차, 2026-09-07)**: 어두운 층(`FloorLighting.is_dark`)에서는 화면에 비친 칸만 기록한다 + 프론티어·탐험률·설정 토글. 밝은 층은 종전대로 전체 공개 — `src/map/fog_of_war.gd`
 - **수용**: 6층 왕복 + 상자 개봉 후 재진입 상태 유지
 
 ## Phase 3 — 말한다: 대화/NPC [M]

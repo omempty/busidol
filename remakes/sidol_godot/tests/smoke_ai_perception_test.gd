@@ -12,6 +12,9 @@ const BATTLE_SCENE := preload("res://scenes/battle.tscn")
 const PerceptionProbe := preload("res://src/core/ai/perception_probe.gd")
 const TIMEOUT := 4.0
 
+## 적 선제 턴을 기다리는 상한(프레임). 4초쯤이면 연출이 아무리 느려도 끝난다.
+const AMBUSH_FRAMES := 240
+
 
 func _ready() -> void:
 	var failures: Array[String] = []
@@ -157,18 +160,54 @@ func _ready() -> void:
 	}
 	var battle_ambush: BattleSceneController = BATTLE_SCENE.instantiate()
 	add_child(battle_ambush)
-	await get_tree().process_frame
-	await get_tree().process_frame
 
-	# 적이 선제 공격을 감행하여 플레이어 HP가 50 미만이거나 턴이 진행되었는지 확인
+	# 기습이 성립했는가 = **적이 선제 턴을 실제로 소비했는가.**
+	#
+	# HP만 보면 안 된다. `_enemy_act`는 `try_special`이 붙으면 통상 공격을 건너뛴다
+	# (`battle_scene_controller.gd:554`). 마비 5종은 **12% 확률**로 그 길을 타고
+	# (`monsters.json` species/*/special), 그 판에서는 HP가 50 그대로다. 그래서 코드가
+	# 멀쩡한데도 관문이 여덟 판에 한 번꼴로 빨개졌다 — 2026-09-07 실측: 관문 묶음에서
+	# `HP 50 -> 50` 실패, 단독 재실행 3회는 3회 모두 40대.
+	# 원래 주석이 적어 둔 의도("HP가 50 미만이거나 **턴이 진행되었는지**")를 코드가 절반만
+	# 구현하고 있었다.
+	#
+	# 상태이상 보유로 대신 판정할 수는 없다. 마비는 `turns: 1`이라 같은 `_resolve_turn`의
+	# `_tick_effects()`에서 곧바로 지워져, 이 자리에 왔을 땐 이미 없다(실측: 확률을 1.0으로
+	# 올려 강제 재현하니 `HP 50 -> 50` · `has_paralysis()` false). **그건 이 테스트가 아니라
+	# 전투 쪽 결함이다** — 별건으로 남긴다(HANDOFF 15차 §다음 세션).
+	var waited := await _await_until(
+		func() -> bool:
+			return battle_ambush.player_combatant.hp < 50 or battle_ambush.controller.turn_count > 0
+	)
 	var player_hp: int = battle_ambush.player_combatant.hp
-	print("[smoke_ai] 적 기습 시 플레이어 HP 50 -> %d" % player_hp)
-	if player_hp >= 50:
-		failures.append("적 기습(Ambush) 시 적 선제 턴 공격 미발동")
+	print(
+		(
+			"[smoke_ai] 적 기습 시 플레이어 HP 50 -> %d · 턴 %d (%d프레임 대기)"
+			% [player_hp, battle_ambush.controller.turn_count, waited]
+		)
+	)
+	if waited < 0:
+		failures.append("적 기습(Ambush) 시 적 선제 턴 미발동 — 피해도 턴 진행도 없다(%d프레임 대기)" % AMBUSH_FRAMES)
 	battle_ambush.queue_free()
 	print("[smoke_ai] 6. 선제 기습 및 피격 전투 연동 검증 완료")
 
 	_finish(failures)
+
+
+## 조건이 설 때까지 기다리고 **걸린 프레임 수**를 돌려준다(못 서면 -1).
+##
+## 원래 이 자리는 `await process_frame`을 두 번 하고 곧바로 단정했다. 지금 기습은 동기로
+## 끝나므로(실측 0프레임) 그것만으로도 돌긴 했지만, 연출 하나만 비동기가 되어도 조용히
+## 깨지는 자리다 — **시간이 아니라 결과를 기다린다.**
+##
+## 걸린 프레임 수를 같이 찍는다. 0에서 커지면 전투 연출이 어딘가 비동기로 바뀐 것이라
+## 그 자체가 보고할 값이다.
+func _await_until(cond: Callable, max_frames: int = AMBUSH_FRAMES) -> int:
+	for i in max_frames:
+		if cond.call():
+			return i
+		await get_tree().process_frame
+	return -1
 
 
 func _finish(failures: Array[String]) -> void:
