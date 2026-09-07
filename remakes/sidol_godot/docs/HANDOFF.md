@@ -1901,6 +1901,8 @@ snow_frost_war/LodeRunner git 저장소화 완료(Lode는 AudioManager 마이그
 | 대사 ID: @t(원문 불변)+@c(신규, 구역별 대역) | 마스터 부록 A |
 | 에셋 공급: 원작 리마스터 우선, AI 생성은 일러스트만 | 07_ai_asset_pipeline |
 | 보스전: 턴제+회피 페이즈 하이브리드 | 05_toolchain §5.3 |
+| 전장의 안개 = **미니맵에만** 건다(필드에 겹치지 않는다) | 필드는 이미 맵의 3.9%만 보인다(뷰포트 960×540·타일 32px → 30×17칸 / 200×65 = 13,000칸). 전지인 표면은 미니맵 하나였다 — `src/map/fog_of_war.gd` |
+| 층 조명은 F0 한정 · 차폐 없는 PointLight2D | `D:\Game\LodeRunner` `scenes/game/game.gd` 방식 이식(CanvasModulate+PointLight2D). `shadow_blob.gd`의 "동적 조명 불사"는 **발밑 그림자**에 대한 판단이라 층 분위기와는 별개로 둔다 — `src/map/floor_lighting.gd` |
 
 ## 6. 주요 파일 빠른 참조
 
@@ -1913,6 +1915,8 @@ snow_frost_war/LodeRunner git 저장소화 완료(Lode는 AudioManager 마이그
 | 인카운터 테이블 | data/monsters.json |
 | 성장 곡선+난이도 | data/growth.json |
 | 대사 테이블 | data/dialogue.json (@t229항목) |
+| 전장의 안개 | src/map/fog_of_war.gd · 표시는 src/ui/minimap.gd · 프루브 src/core/audit/fog_probe.gd |
+| 층 조명(F0) | src/map/floor_lighting.gd (층 추가는 FLOOR_TINT 표 한 곳) |
 | NPC 배치 | data/maps/npcs_f*.json |
 | 계단/게이트 | data/maps/transitions.json |
 | AI 코딩 규칙 | AGENTS.md |

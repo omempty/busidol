@@ -20,6 +20,11 @@ var cutscene_player: CutscenePlayer
 var inventory_panel: InventoryPanel
 var fast_travel: FastTravelPanel
 var shop: ShopUI
+## 층 조명 — 어두운 층(F0)에서만 톤을 낮추고 액터에 광원을 단다. 밝은 층에서는 아무 일도 안 한다.
+var lighting: FloorLighting
+## 안개가 기록할 범위를 정하는 주체. 맵 가장자리에서는 limit이 걸려 주인공이
+## 화면 복판에 없으므로, 주인공이 아니라 **카메라**에게 물어야 한다.
+var _cam: Camera2D
 var _prompt: InteractPrompt
 var _focus: InteractFocus
 var _plates: DoorPlates
@@ -38,6 +43,9 @@ const STAIRS_HINT_SECS := 1.2
 ## 필드 진입 직후 접촉 무시 시간(초) — 전투에서 돌아오자마자 옆에 선 몬스터에게
 ## 다시 끌려가는 사고를 막는다(Q6 현대 편의). 스폰 안전거리로도 못 막는 경우가 있다.
 var _encounter_grace := 0.0
+## 안개를 마지막으로 넓힌 자리 — 칸이 바뀔 때만 다시 센다.
+## 매 프레임 돌리면 21×21칸 × Bresenham을 초당 60번 하게 된다.
+var _fog_cell := Vector2i(-9999, -9999)
 
 
 ## 코드 주입(action_press)과 실입력 모두에서 안정적인 엣지 검출.
@@ -61,6 +69,9 @@ func _ready() -> void:
 	fx = FieldFx.new()
 	add_child(fx)
 
+	lighting = FloorLighting.new()
+	add_child(lighting)
+
 	player = PlayerEntity.new()
 	add_child(player)
 	player.attach_map(runtime, find_spawn(def))
@@ -75,12 +86,13 @@ func _ready() -> void:
 	cam.position_smoothing_enabled = false
 	player.add_child(cam)
 	cam.make_current()
+	_cam = cam
 
 	add_child(HudV0.new())
 
 	minimap = MinimapLayer.new()
 	add_child(minimap)
-	minimap.build(def)
+	minimap.build(runtime)
 	minimap.track(player)
 
 	gate = TransitionGate.new()
@@ -96,6 +108,9 @@ func _ready() -> void:
 
 	enemy_manager = EnemyManager.new()
 	add_child(enemy_manager)
+	# 나중에 태어난 몬스터도 빛을 받아야 한다 — 이 배선이 없으면 첫 무리만 빛나고
+	# 리스폰된 놈은 어두운 층에서 통째로 안 보인다.
+	enemy_manager.enemy_spawned.connect(_on_enemy_spawned)
 
 	_prompt = InteractPrompt.new()
 	add_child(_prompt)
@@ -164,12 +179,20 @@ func _ready() -> void:
 	_encounter_grace = ENCOUNTER_GRACE
 	SaveManager.consume_autosave()
 
+	# **액터가 전부 선 뒤에 켠다.** 조명은 각 액터의 자식으로 붙으므로
+	# 순서가 뒤집히면 그 시점에 없던 액터가 어둠에 묻힌다.
+	lighting.apply(GameState.current_floor, _lit_actors())
+	# 층에 들어선 자리는 바로 밝힌다 — 열자마자 새까만 지도를 보여 주지 않는다.
+	_reveal_fog()
+
 
 func _physics_process(_delta: float) -> void:
 	if player == null:
 		return
 
 	GameState.player_cell = player.mover.grid_pos
+	if player.mover.grid_pos != _fog_cell:
+		_reveal_fog()
 
 	# 개발자 모드 좌표 — F9를 켜면 좌상단에 실시간 셀 좌표.
 	if SettingsManager.developer_mode:
@@ -542,7 +565,7 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	player.attach_map(runtime, landing if landing.x >= 0 else new_anchor)
 	GameState.mark_visited(GameState.current_floor)
 	_encounter_grace = ENCOUNTER_GRACE
-	minimap.build(def)
+	minimap.build(runtime)
 	# 층에 매인 것들을 새 층 것으로 교체한다. 구판은 맵만 갈아끼워
 	# 이전 층의 NPC·몬스터가 그대로 서 있고 트리거도 옛 층 것이 돌았다.
 	_despawn_npcs()
@@ -558,6 +581,11 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 		)
 	if triggers != null:
 		triggers.load_for_floor(GameState.current_floor)
+	# 층이 바뀌면 조명도 그 층 것으로. 액터를 다시 세운 **뒤**여야 한다.
+	if lighting != null:
+		lighting.apply(GameState.current_floor, _lit_actors())
+	_fog_cell = Vector2i(-9999, -9999)
+	_reveal_fog()
 	_talking_npc = null
 	_prompt.visible = false
 	if _focus != null:
@@ -661,6 +689,66 @@ func _spawn_npcs() -> void:
 ## NPC 배치와 달리 자리 다툼을 하지 않는다.
 ## 이 층에 서 있는 액터(고정 NPC + 배회 워커)의 **앵커** — EnemyManager가 "NPC가 사는
 ## 방"을 스폰에서 빼는 데 쓴다. 상자에서 나오는 NPC는 액터가 아니라 여기 없다.
+## 지금 **화면에 비치고 있는 칸**을 지도에 새긴다.
+##
+## 시선 차폐를 걸지 않는 이유는 FogOfWar 주석에 있다 — 이 게임은 탑다운 타일뷰라
+## 카메라 사각형 안은 벽 너머까지 전부 그려진다. 화면에 보이는 방을 지도가
+## "안 가봤다"고 우기면 그건 안개가 아니라 거짓말이다.
+func _reveal_fog() -> void:
+	if player == null or runtime == null:
+		return
+	_fog_cell = player.mover.grid_pos
+	if not _fog_active():
+		return
+	var found := GameState.fog.reveal_rect(
+		GameState.current_floor, runtime.definition, visible_cell_rect()
+	)
+	if not found.is_empty() and minimap != null:
+		minimap.on_revealed()
+
+
+## 이 층에 지금 안개가 끼는가 — **어두운 층에서만**(FloorLighting.is_dark).
+## 설정에서 끄면 어느 층이든 예전처럼 층 전체가 한 번에 보인다.
+func _fog_active() -> bool:
+	return SettingsManager.fog_of_war and FloorLighting.is_dark(GameState.current_floor)
+
+
+## 지금 화면이 덮고 있는 칸 범위. 감사 도구도 이것을 물어 "화면만큼만 밝혔는가"를 잰다.
+func visible_cell_rect() -> Rect2i:
+	var px := get_viewport_rect().size
+	var center := player.position
+	if _cam != null:
+		px /= _cam.zoom
+		# limit이 걸린 가장자리까지 반영된 실제 화면 중심이다.
+		center = _cam.get_screen_center_position()
+	var top_left := center - px * 0.5
+	var t := float(MapDefinition.TILE_PX)
+	var c0 := Vector2i(floori(top_left.x / t), floori(top_left.y / t))
+	var c1 := Vector2i(ceili((top_left.x + px.x) / t), ceili((top_left.y + px.y) / t))
+	return Rect2i(c0, c1 - c0)
+
+
+## 조명을 받을 액터 전부 — 플레이어 · 몬스터 · NPC · 배경 보행자.
+## 상점(식당 아가씨)도 NPC다. 어둠에 묻혀 안 보이는 상점은 없는 상점이다.
+func _lit_actors() -> Array[Node2D]:
+	var out: Array[Node2D] = []
+	if player != null:
+		out.append(player)
+	for n: NpcEntity in npcs:
+		out.append(n)
+	for w: WalkerEntity in walkers:
+		out.append(w)
+	if enemy_manager != null:
+		for e: EnemyEntity in enemy_manager.enemies:
+			out.append(e)
+	return out
+
+
+func _on_enemy_spawned(e: EnemyEntity) -> void:
+	if lighting != null:
+		lighting.attach(e)
+
+
 func _actor_anchors() -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
 	for n: NpcEntity in npcs:

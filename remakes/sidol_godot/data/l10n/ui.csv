@@ -82,6 +82,7 @@ UI_HUD_NEXT_LEVEL,다음까지 %d,%d to next
 UI_HUD_MONEY_UNIT,%s온,%s ON
 UI_MAP_CLOSE,M 닫기,M Close
 UI_MAP_TITLE,%s 지도,%s map
+UI_MAP_EXPLORED,탐험 %d%%,%d%% explored
 UI_FASTTRAVEL_TITLE,계단 — 어디로 갈까,Stairs — where to?
 UI_FASTTRAVEL_HINT,↑↓ 선택   SPACE 이동   ESC 취소,↑↓ Select   SPACE Go   ESC Cancel
 UI_FIELD_OPEN,SPACE 열기,SPACE Open
@@ -162,6 +163,7 @@ UI_OPT_TSPEED_FAST,빠르게,Fast
 UI_OPT_TSPEED_INSTANT,즉시,Instant
 UI_SETTINGS_DIALOGUE_AUTO,대사 자동 진행,Auto-advance text
 UI_SETTINGS_COLORBLIND,색각 대응 무늬,Colorblind patterns
+UI_SETTINGS_FOG,지도 안개,Map fog
 UI_DLGLOG_TITLE,대화 로그,Dialogue log
 UI_DLGLOG_HINT,↑ ↓ 넘기기 | Enter·ESC 닫기,Up/Down scroll | Enter/ESC close
 UI_DLGLOG_EMPTY,아직 오간 말이 없다.,Nothing has been said yet.

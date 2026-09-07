@@ -119,6 +119,9 @@ func _snapshot() -> Dictionary:
 		# 들은 대사 기록 — 이게 빠져 있어서 불러오면 모든 NPC가 첫 만남으로 되돌아갔다.
 		# 13차 세션이 넣은 반복/밈 순환(시퀀스 91종)이 통째로 초기화되던 자리다.
 		"npc_seen_sequences": GameState.npc_seen_sequences.duplicate(),
+		# 안개는 비트맵을 base64로 싣는다 — 층당 1,625바이트(200×65비트).
+		# 옛 세이브에는 이 키가 없다. 없으면 안개가 가득한 채로 시작한다(FogOfWar.restore).
+		"fog": GameState.fog.to_data(),
 	}
 
 
@@ -149,6 +152,7 @@ func _apply(data: Dictionary) -> void:
 			cells[Vector2i(int(parts[0]), int(parts[1]))] = int(chests[floor_str][cell_str])
 		GameState.chest_overrides[int(floor_str)] = cells
 	# 구 세이브(이 키가 없던 시절)는 빈 기록으로 시작한다 — 첫 만남 대사부터 다시.
+	GameState.fog.restore(data.get("fog", {}))
 	var seen_v: Variant = data.get("npc_seen_sequences", {})
 	GameState.npc_seen_sequences = {}
 	if typeof(seen_v) == TYPE_DICTIONARY:

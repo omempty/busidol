@@ -23,6 +23,7 @@ func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(_out_dir)
 	print("[ui_shots] out=%s" % ProjectSettings.globalize_path(_out_dir))
 	await _capture_field()
+	await _capture_floor_lighting()
 	await _capture_battle()
 	print("[ui_shots] done - %d장" % _shots)
 	get_tree().quit(0)
@@ -69,8 +70,11 @@ func _capture_field() -> void:
 	field.inventory_panel.close()
 	await _settle()
 
-	# 미니맵 캡처
+	# 미니맵 캡처 — **안개 켠 것과 끈 것을 같은 자리에서 두 장.**
+	# 한 장만 찍으면 "원래 저만큼만 보이는 지도"와 구분이 안 된다.
+	# F1은 **밝은 층**이라 안개가 없다 — 지도 전체가 보이는 것이 정상이다(대조군).
 	if field.minimap != null:
+		field.minimap.repaint()
 		field.minimap.visible = true
 		await _settle()
 		await _shot("field_minimap", field)
@@ -199,6 +203,75 @@ func _capture_field_interaction(field: Node2D) -> void:
 		await _shot("field_walker", field)
 
 
+## 층 조명(F0) — **켠 것과 끈 것을 같은 자리에서 두 장 찍는다.**
+##
+## 조명은 수치로 판정할 수 있는 것이 아니라 눈으로 봐야 하는 층이다. 한 장만 찍으면
+## "원래 저런 색인가"와 구분이 안 되므로, 톤을 잠시 흰색으로 되돌린 대조군을 같이 남긴다.
+## 이 두 장이 갈라지지 않으면 조명이 죽은 것이다.
+func _capture_floor_lighting() -> void:
+	GameState.reset()
+	GameState.flags["q_f1_opening_seen"] = true
+	GameState.current_floor = 0
+	# 지하 사서 방 앞 — NPC·문·벽이 한 화면에 같이 잡히는 자리(npcs_f0.json librarian @175,50).
+	GameState.player_cell = Vector2i(173, 50)
+
+	var field: Node2D = FIELD_SCENE.instantiate()
+	add_child(field)
+	await _settle()
+	await _shot("field_f0_lit", field)
+
+	# 대조군 — 톤만 흰색으로 되돌린다(광원은 그대로 두어 차이를 톤에 가둔다).
+	var tint: CanvasModulate = field.lighting.get_node_or_null(NodePath(FloorLighting.TINT_NAME))
+	if tint != null:
+		tint.color = Color(1, 1, 1)
+	await _settle()
+	await _shot("field_f0_unlit", field)
+
+	# 톤을 되돌린다 — 아래 지도 캡처는 조명이 켜진 상태에서 찍어야 한다.
+	if tint != null:
+		tint.color = FloorLighting.FLOOR_TINT[0]
+
+	# **안개는 어두운 층에서만 돈다** — 그래서 지도 캡처도 여기서 찍는다.
+	if field.minimap != null:
+		_walk_for_fog(field, 120)
+		field.minimap.repaint()
+		field.minimap.visible = true
+		await _settle()
+		await _shot("field_f0_minimap_fog", field)
+		SettingsManager.fog_of_war = false
+		field.minimap.repaint()
+		await _settle()
+		await _shot("field_f0_minimap_nofog", field)
+		SettingsManager.fog_of_war = true
+		field.minimap.repaint()
+		field.minimap.visible = false
+		await _settle()
+
+	print(
+		(
+			"[ui_shots] f0 조명: tint=%s  광원 %d개 (플레이어 scale %.1f / 액터 %.1f)"
+			% [
+				str(FloorLighting.FLOOR_TINT.get(0)),
+				_count_lights(field),
+				FloorLighting.PLAYER_SCALE,
+				FloorLighting.ACTOR_SCALE,
+			]
+		)
+	)
+	field.queue_free()
+	await _settle()
+
+
+## 이 씬에 실제로 붙은 광원 수 — 배선이 끊기면 0이 나온다.
+func _count_lights(node: Node) -> int:
+	var n := 0
+	if node.get_node_or_null(NodePath(FloorLighting.LIGHT_NAME)) != null:
+		n += 1
+	for c: Node in node.get_children():
+		n += _count_lights(c)
+	return n
+
+
 func _capture_battle() -> void:
 	# 약점 보유 종을 섞는다 — 브레이크 게이지가 그려지는지 보려면 필요하다.
 	GameState.pending_encounter = {"enemies": ["mad_eye", "vulgar"], "on_win_flag": ""}
@@ -234,6 +307,35 @@ func _find_battle_ui(node: Node) -> BattleUI:
 		if found != null:
 			return found
 	return null
+
+
+## 안개를 넓히려고 잠깐 걷는다 — 한 자리에서 찍으면 동그라미 하나라 지도로 판단이 안 된다.
+## 시작점에서 **멀어지는 쪽**을 골라 걷는다(왔다 갔다 하면 같은 칸만 다시 밝힌다).
+func _walk_for_fog(field: Node2D, steps: int) -> void:
+	var start: Vector2i = field.player.mover.grid_pos
+	var cur := start
+	var been := {cur: true}
+	for _i in steps:
+		var best := Vector2i(-1, -1)
+		var best_d := -1
+		for n: Vector2i in ReachProbe.neighbors(field.runtime, cur):
+			if been.has(n):
+				continue
+			var d: int = absi(n.x - start.x) + absi(n.y - start.y)
+			if d > best_d:
+				best_d = d
+				best = n
+		if best.x < 0:
+			break
+		cur = best
+		been[cur] = true
+		field.player.mover.grid_pos = cur
+		# **몸도 옮겨야 한다.** 안개 범위는 카메라가 정하고 카메라는 주인공의 자식이라,
+		# grid_pos만 바꾸면 화면은 제자리에 있고 안개가 한 칸도 늘지 않는다.
+		field.player.position = GridMover.block_center(cur)
+		field.call("_reveal_fog")
+	field.player.mover.grid_pos = cur
+	print("[ui_shots] 안개 걷기 %d칸 -> %s" % [been.size(), str(cur)])
 
 
 func _settle() -> void:

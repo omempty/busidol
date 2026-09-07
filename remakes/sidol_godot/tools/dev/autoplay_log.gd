@@ -41,7 +41,18 @@ func summary_rows() -> Array:
 		"| 연 상자 | %d |" % chests,
 		"| 나눈 대화 | %d |" % dialogues,
 		"| 쓰러져 되살린 횟수 | %d |" % revivals,
+		"| 지도 밝힌 칸 | %s |" % _fog_row(),
 	]
+
+
+## 층별로 지도를 얼마나 밝혔나 — 안개 배선이 살아 있는지 **주행 끝에** 확인하는 자리.
+## world_audit은 "층에 들어선 직후"만 본다. 걸어 다니며 실제로 느는지는 여기서만 보인다.
+## 층당 13,000칸이므로 0이면 배선이 끊긴 것이고 13000이면 안개가 죽은 것이다.
+func _fog_row() -> String:
+	var parts: Array[String] = []
+	for f: int in GameState.fog.floors_with_fog():
+		parts.append("f%d %d" % [f, GameState.fog.seen_cells(f)])
+	return "없음" if parts.is_empty() else " · ".join(parts)
 
 
 func mark_dead(floor_no: int, kind: String, label: String, cell: Vector2i) -> void:

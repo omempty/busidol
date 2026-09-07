@@ -48,6 +48,10 @@ var pending_encounter := {}
 var field_roster := {}
 
 var inventory := Inventory.new()
+## 전장의 안개 — 층별로 "어디를 봤는가". 세이브 대상.
+## 여기 두는 이유는 **전투가 씬 전환**이기 때문이다. 필드가 들고 있으면 전투를
+## 한 판 하고 돌아올 때마다 층이 통째로 다시 어두워진다(field_roster와 같은 사정).
+var fog := FogOfWar.new()
 ## NPC 대화 횟수 및 시퀀스 청취 기록 — 다회차 대화 밈/반복 대사 및 진행도 연동.
 ##
 ## **키는 반드시 String이다**(StringName 아님). 세이브를 거치면 JSON이 키를 String으로
@@ -267,6 +271,7 @@ func reset() -> void:
 	field_roster = {}
 	inventory.clear()
 	npc_seen_sequences.clear()
+	fog.clear()
 	state_changed.emit()
 
 

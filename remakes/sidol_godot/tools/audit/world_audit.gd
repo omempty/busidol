@@ -105,6 +105,8 @@ func _audit_floor(floor_no: int) -> void:
 	var facable := ReachProbe.facable_cells(reach)
 	_rep.ok("도달 앵커", "%d개" % reach.size())
 	ReachProbe.check_connectivity(_rep, rt, reach)
+	# 안개는 **가리되 가두지 않아야** 한다 — 도달 집합을 이미 구한 이 자리가 쌀 곳이다.
+	FogProbe.check_reveal(_rep, rt, floor_no, VIEW.size, reach)
 	RenderProbe.check_invisible_walls(_rep, rt, facable)
 	ReachProbe.check_interactables(_rep, rt, facable)
 	ReachProbe.check_npcs(_rep, facable, field.npcs)

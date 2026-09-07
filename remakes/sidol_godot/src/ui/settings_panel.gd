@@ -32,13 +32,16 @@ const TEXT_SPEED_KEYS := [
 const ROW_TEXT_SPEED := 8
 const ROW_DIALOGUE_AUTO := 9
 const ROW_COLORBLIND := 10
-const ROW_DENSITY := 11
-const ROW_DIFFICULTY := 12
-const ROW_SCREEN := 13
-const ROW_VSYNC := 14
-const ROW_LANGUAGE := 15
-const ROW_CONTROLS := 16
-const ROW_COUNT := 17
+## 지도 안개 — 몬스터 밀도 바로 위. 둘 다 "탐험이 얼마나 고될 것인가"를 정하는 축이라
+## 같이 모아 둔다. 끄면 예전처럼 층 전체가 한 번에 보인다.
+const ROW_FOG := 11
+const ROW_DENSITY := 12
+const ROW_DIFFICULTY := 13
+const ROW_SCREEN := 14
+const ROW_VSYNC := 15
+const ROW_LANGUAGE := 16
+const ROW_CONTROLS := 17
+const ROW_COUNT := 18
 
 var _rows: Array[Label] = []
 var _values: Array[Label] = []
@@ -202,6 +205,8 @@ func _adjust(dir: int) -> void:
 			SettingsManager.dialogue_auto = not SettingsManager.dialogue_auto
 		ROW_COLORBLIND:
 			SettingsManager.colorblind_patterns = not SettingsManager.colorblind_patterns
+		ROW_FOG:
+			SettingsManager.fog_of_war = not SettingsManager.fog_of_war
 		ROW_DENSITY:
 			var values: Array = SettingsManager.EncounterDensity.values()
 			var idx: int = values.find(SettingsManager.encounter_density)
@@ -251,6 +256,7 @@ func _refresh() -> void:
 		tr("UI_SETTINGS_COLORBLIND"),
 		tr(SHAKE_KEYS[0 if SettingsManager.colorblind_patterns else 1])
 	)
+	_set_row(ROW_FOG, tr("UI_SETTINGS_FOG"), tr(SHAKE_KEYS[0 if SettingsManager.fog_of_war else 1]))
 	_set_row(
 		ROW_DENSITY,
 		tr("UI_SETTINGS_DENSITY"),

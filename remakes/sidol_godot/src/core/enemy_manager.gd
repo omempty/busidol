@@ -6,6 +6,11 @@ extends Node
 ## 몬스터도 플레이어와 같은 2×2 몸을 쓴다 — 그리는 크기와 막는 크기를 일치시킨다.
 ## 이동은 GridMover 보간을 거치므로 한 걸음이 STEP_TIME 동안 이어진다(순간이동 금지).
 
+## 개체 하나가 세상에 선 직후. 필드가 층 조명을 붙이는 데 쓴다 —
+## 여기 없으면 리스폰된 놈이 어두운 층에서 빛 없이 태어난다.
+## 조명을 여기서 직접 달지 않는 이유는 순환 참조와 관심사 분리다(이 클래스는 판정만).
+signal enemy_spawned(e: EnemyEntity)
+
 static var rng := RandomNumberGenerator.new()
 
 ## 스폰 시 플레이어와 띄울 최소 거리(셀, 체비셰프) — 층 진입·전투 복귀 직후
@@ -158,6 +163,7 @@ func _make_enemy(entry: Dictionary) -> void:
 	_act_accum[e] = 0.0
 	_entry[e] = entry
 	_occupy(e, cell)
+	enemy_spawned.emit(e)
 
 
 ## 이 개체를 세상에서 지운다 — **명단에서도 뺀다.** 전투가 붙은 개체에 쓴다:

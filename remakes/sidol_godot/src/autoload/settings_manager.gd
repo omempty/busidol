@@ -62,6 +62,9 @@ var text_speed: TextSpeed = TextSpeed.NORMAL
 var dialogue_auto := false
 ## Q9 색각 대응 — HP 게이지에 색과 **함께** 무늬를 넣는다(색만으로 구분하지 않는다).
 var colorblind_patterns := false
+## 전장의 안개(미니맵) — **기본 켜짐.** 끄면 예전처럼 층 전체가 한 번에 보인다.
+## 안전판이다: 탐색이 부담스러운 사람에게서 지도를 뺏지 않는다.
+var fog_of_war := true
 ## 개발자 모드 — 조사 틀 등 디버그 표시의 스위치. **기본 끔, 저장 안 됨(켜고 시작 금지).**
 ## F9(디버그 빌드 한정, DebugPanel이 수신)로 켜고 끈다.
 var developer_mode := false
@@ -172,6 +175,7 @@ func load_settings() -> void:
 	text_speed = tsp_v
 	dialogue_auto = bool(data.get("dialogue_auto", false))
 	colorblind_patterns = bool(data.get("colorblind_patterns", false))
+	fog_of_war = bool(data.get("fog_of_war", true))
 	_apply_all()
 
 
@@ -192,6 +196,7 @@ func save_settings() -> void:
 	data["text_speed"] = int(text_speed)
 	data["dialogue_auto"] = dialogue_auto
 	data["colorblind_patterns"] = colorblind_patterns
+	data["fog_of_war"] = fog_of_war
 	var fh := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
 	if fh == null:
 		push_error("settings.json 저장 실패: %s" % FileAccess.get_open_error())
