@@ -517,12 +517,14 @@ func _resolve_turn() -> void:
 	player_combatant.gain_stamina(int(BattleSetup.stamina_config().get("gain_on_turn", 3)))
 	# **마비 — 이 턴을 잃는다.** `Combatant.has_paralysis()`는 2026-09-06까지 호출부가
 	# 0곳이라, 상태이상 데이터도 진통 파스(마비 해제)도 전부 사문화였다. 적이 마비를
-	# 걸기 시작하면서 여기가 실제 판정이 된다. 지속은 1턴이다 — 여러 턴을 연속으로
-	# 빼앗으면 "내가 하는 게임"이 아니게 된다(고전 RPG가 가장 자주 미움받는 자리).
-	if player_combatant.has_paralysis():
-		_presenter.show_player_note(tr("UI_BATTLE_PARALYZED"))
-		_log(tr("UI_BLOG_PLAYER_PARALYZED"), BattleLog.Kind.DAMAGE)
-		_end_player_defend()
+	# 걸기 시작하면서 여기가 실제 판정이 된다.
+	#
+	# **지속은 데이터에서 `turns: 2`다(2026-09-07).** 1이면 붙자마자 여기 오기 전에
+	# 지워졌다 — `_resolve_turn`이 `_enemy_act` 바로 뒤에 `_tick_effects()`를 부르므로
+	# 마비를 거는 라운드에서 이미 0이 된다. 2가 "정확히 한 턴을 빼앗는" 최솟값이고,
+	# 그보다 길게 잡지 않는 이유는 여러 턴을 연속으로 빼앗으면 "내가 하는 게임"이
+	# 아니게 되기 때문이다(고전 RPG가 가장 자주 미움받는 자리).
+	if _consume_turn_if_paralyzed():
 		return
 	_ui.show_command_menu()
 	if _target_index >= 0 and _target_index < enemies.size():
@@ -573,7 +575,27 @@ func _end_player_defend() -> void:
 		_show_result(&"lose")
 		return
 	controller.begin_player_phase()
+	# **여기서도 마비를 다시 본다.** 이 함수는 "공격하지 않고 턴만 넘기는" 네 경로가
+	# 공유한다(방어 · 도망 실패 · 아이템 · 마비 자신). 그 사이 적 턴에 마비가 새로
+	# 붙으면 지속이 2라 위 `_tick_effects()`를 살아서 넘어오는데, 검사가 없으면
+	# 커맨드 창이 그냥 열려 **걸린 마비가 조용히 무시된다.** 지속 1이던 시절에는
+	# 무조건 지워져서 안 드러나던 구멍이다.
+	# 재귀는 유한하다 — 한 번 돌 때마다 적이 한 대 때리고 지속이 1씩 줄어든다.
+	if _consume_turn_if_paralyzed():
+		return
 	_ui.show_command_menu()
+
+
+## 마비면 알리고 턴을 통째로 넘긴다. 반환: 마비여서 턴을 소비했는가.
+## 플레이어 차례가 열리는 자리가 두 곳(`_resolve_turn` · `_end_player_defend`)이라
+## 판정을 한 함수로 묶는다 — 갈라 두면 한쪽만 고치는 사고가 난다.
+func _consume_turn_if_paralyzed() -> bool:
+	if not player_combatant.has_paralysis():
+		return false
+	_presenter.show_player_note(tr("UI_BATTLE_PARALYZED"))
+	_log(tr("UI_BLOG_PLAYER_PARALYZED"), BattleLog.Kind.DAMAGE)
+	_end_player_defend()
+	return true
 
 
 ## 적 턴 배너 — .translation이 csv보다 stale하면 tr()이 키 그대로를 돌려주고

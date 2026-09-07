@@ -148,7 +148,7 @@
       "special": {
         "kind": "paralysis",
         "chance": 0.12,
-        "turns": 1,
+        "turns": 2,
         "_desc": "스파크 방전 — 감전 마비"
       }
     },
@@ -208,7 +208,7 @@
       "special": {
         "kind": "paralysis",
         "chance": 0.12,
-        "turns": 1,
+        "turns": 2,
         "_desc": "고출력 하울링 — 마비"
       }
     },
@@ -220,7 +220,7 @@
       "special": {
         "kind": "paralysis",
         "chance": 0.12,
-        "turns": 1,
+        "turns": 2,
         "_desc": "전기 곤봉 — 마비"
       }
     },
@@ -244,7 +244,7 @@
       "special": {
         "kind": "paralysis",
         "chance": 0.12,
-        "turns": 1,
+        "turns": 2,
         "_desc": "버스 단락 — 마비"
       }
     },
@@ -268,7 +268,7 @@
       "special": {
         "kind": "paralysis",
         "chance": 0.12,
-        "turns": 1,
+        "turns": 2,
         "_desc": "동전 방전 — 마비"
       }
     },

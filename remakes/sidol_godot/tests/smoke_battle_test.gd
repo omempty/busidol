@@ -264,6 +264,58 @@ func _ready() -> void:
 			failures.append("도구 인벤 차감 오류")
 		GameState.inventory.remove(&"ITEM_MEDICINE", GameState.inventory.count(&"ITEM_MEDICINE"))
 
+	# --- 7) 마비 — 걸린 마비가 플레이어 턴을 실제로 빼앗는가 ---
+	# 2026-09-07까지 마비 5종이 `turns: 1`이라 **붙자마자 사라졌다.** `_resolve_turn`은
+	# 마비를 거는 자리(`_enemy_act`) 바로 뒤에 `_tick_effects()`를 부른다 → 그 라운드에서
+	# turns가 0이 되어 제거되고, 플레이어 차례의 `has_paralysis()`는 언제나 false였다.
+	# 12%로 뽑힌 마비가 아무 일도 하지 않았고, 그래서 진통 파스(마비 해제)를 살 이유도
+	# 없었다. 여기서는 **그 순서를 그대로 재현**한다.
+	#
+	# 지속 값을 코드에 두지 않고 `monsters.json`에서 읽는다 — 1로 되돌리면 이 관문이 빨개진다.
+	# 반대쪽도 막는다: 두 번째 tick에도 남아 있으면 여러 턴을 연속으로 빼앗는다는 뜻이고,
+	# 그건 "내가 하는 게임"이 아니게 되는 자리라 설계 규칙(정확히 한 턴)에 어긋난다.
+	var paralyzers: Array[StringName] = [
+		&"sparker", &"iron_voc", &"hellcop", &"c_bug", &"rogue_vending"
+	]
+	var durations: Array[String] = []
+	for eid: StringName in paralyzers:
+		var spec: Dictionary = Database.get_enemy_def(eid).get("special", {})
+		if str(spec.get("kind", "")) != "paralysis":
+			failures.append("%s의 special이 더 이상 마비가 아니다" % eid)
+			continue
+		var turns := int(spec.get("turns", 0))
+		durations.append("%s %d" % [eid, turns])
+		battle.player_combatant.active_effects.clear()
+		battle.player_combatant.attach_effect(
+			{"kind": &"paralysis", "turns": turns, "magnitude": 0}
+		)
+		battle._tick_effects()  # 마비를 건 그 라운드의 tick
+		if not battle.player_combatant.has_paralysis():
+			failures.append("%s 마비가 걸린 라운드에서 곧바로 지워진다(turns=%d) — 플레이어 턴을 못 뺏는다" % [eid, turns])
+			continue
+		battle._tick_effects()  # 빼앗긴 그 턴이 끝나는 tick
+		if battle.player_combatant.has_paralysis():
+			failures.append("%s 마비가 한 턴을 넘겨 지속된다(turns=%d)" % [eid, turns])
+	battle.player_combatant.active_effects.clear()
+	print("[smoke_battle] 마비 지속(정확히 한 턴): %s" % ", ".join(durations))
+
+	# --- 7-1) 턴만 넘기는 경로(방어·도망 실패·아이템·마비)도 마비를 다시 보는가 ---
+	# `_end_player_defend`는 그 네 경로가 공유하는데, 2026-09-07까지 끝에서 마비를 검사하지
+	# 않고 커맨드 창을 그냥 열었다. 지속이 1이던 시절엔 tick이 무조건 지워 안 드러났지만,
+	# 2로 올리자 **살아 넘어온 마비가 조용히 무시되는** 구멍이 열린다.
+	# 여기서는 지속을 인위적으로 3으로 걸어 그 경로를 강제한다 — 검사가 없으면 한 번만
+	# 소비하고 마비를 남긴 채 돌아오고(잔존 = FAIL), 있으면 다 소진하고 나온다.
+	# 적은 mad_eye(dot 계열)라 이 사이에 마비가 새로 붙지 않는다 — 판정이 결정적이다.
+	battle.player_combatant.max_hp = 9999
+	battle.player_combatant.hp = 9999
+	battle.player_combatant.attach_effect({"kind": &"paralysis", "turns": 3, "magnitude": 0})
+	battle._end_player_defend()
+	await get_tree().process_frame
+	print("[smoke_battle] 턴 넘김 경로 마비 재검사: 잔존=%s" % str(battle.player_combatant.has_paralysis()))
+	if battle.player_combatant.has_paralysis():
+		failures.append("_end_player_defend가 살아 넘어온 마비를 무시하고 커맨드 창을 연다")
+	battle.player_combatant.active_effects.clear()
+
 	_finish(failures, battle)
 
 

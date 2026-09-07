@@ -171,10 +171,10 @@ func _ready() -> void:
 	# 원래 주석이 적어 둔 의도("HP가 50 미만이거나 **턴이 진행되었는지**")를 코드가 절반만
 	# 구현하고 있었다.
 	#
-	# 상태이상 보유로 대신 판정할 수는 없다. 마비는 `turns: 1`이라 같은 `_resolve_turn`의
-	# `_tick_effects()`에서 곧바로 지워져, 이 자리에 왔을 땐 이미 없다(실측: 확률을 1.0으로
-	# 올려 강제 재현하니 `HP 50 -> 50` · `has_paralysis()` false). **그건 이 테스트가 아니라
-	# 전투 쪽 결함이다** — 별건으로 남긴다(HANDOFF 15차 §다음 세션).
+	# 상태이상 보유로 대신 판정하지는 않는다. 그 결함(마비 `turns: 1` → 걸린 라운드에서
+	# 곧바로 소멸)은 2026-09-07에 `turns: 2`로 고쳤고 전용 관문이 생겼으므로
+	# (`smoke_battle_test.gd` §7) 여기서 겹쳐 볼 이유가 없다. 이 테스트가 보는 것은
+	# **적이 선제 턴을 실제로 소비했는가** 하나다.
 	var waited := await _await_until(
 		func() -> bool:
 			return battle_ambush.player_combatant.hp < 50 or battle_ambush.controller.turn_count > 0
