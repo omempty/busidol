@@ -1,0 +1,14 @@
+{
+ "schema_version": 1,
+ "kind": "origin_fx",
+ "source": "originals FIRE.SPR frame 1 — 에너지파 — :613 x=-100 → 200으로 15단계 가로지름",
+ "generator": "tools/dev/bake_battle_sheets.py",
+ "size": [
+  320,
+  200
+ ],
+ "origin_screen": [
+  320,
+  200
+ ]
+}

@@ -43,6 +43,33 @@ const ORIGIN_SCREEN_H := 200.0
 ## 빈사 포즈로 갈리는 HP 비율. 원작은 `EN.Hp <= 15` 절대값이었으나(WARMODE.C:1117)
 ## 리메이크는 적 HP가 층따라 52~444로 스케일되므로 비율로 옮긴다.
 const WOUNDED_RATIO := 0.25
+## 원작 전투 이펙트 — 화면 좌표계(RPut_Spr 좌상단)로 얹는다. bake_battle_sheets.py가 굽는다.
+const ORIGIN_FX_DIR := "res://assets/effects/"
+## 에너지파를 쏘는 종 — 원작 `EnemyAttackAni` WARMODE.C:601 `case 0:1:2:3:6:7`.
+## Iron-Vic(4)·HellCop(5)은 근접만 한다. 이 구분이 종을 가르는 원작의 장치라 그대로 옮긴다.
+const BOLT_SPECIES := [&"mad_eye", &"vulgar", &"dworm", &"ozzy", &"o_ray"]
+## 에너지파 궤적 — 원작 `:613` `for(i=-100;i<200;i+=20)`. 15단계로 화면을 가로지른다.
+const BOLT_FROM := -100.0
+const BOLT_TO := 200.0
+## 원작 `Delay(300)` — 섬광이 뜨고 에너지파가 나가기까지. 그동안 적은 그 자리에 머문다.
+const MUZZLE_HOLD := 0.3
+const BOLT_FLIGHT := 0.5
+
+## 원작 주인공 컷 — assets/battle_cuts/origin_player.png (bake_battle_sheets.py가 굽는다).
+const ORIGIN_PLAYER_CUT := "res://assets/battle_cuts/origin_player.png"
+## 원작 주인공 대치 포즈 오프셋 — WARMODE.C:1129 `RPut_Spr(0,20,&Back[MELoss],0)`.
+const ORIGIN_PLAYER_OFFSET := Vector2(0, 20)
+## **임팩트 게이트가 아닌 평범한 턴에 원작 컷이 나올 확률.**
+##
+## 원작 동작은 공격 3종·회피 3종뿐이다. 매 턴 틀면 몇 분 만에 물리고, 아예 안 틀면
+## 자산이 다시 사문화된다. 그래서 큰 순간(마지막 일격·필살기·브레이크·약점)에는 반드시,
+## 평범한 턴에는 가끔만 나오게 둔다 — 나올 때마다 사건처럼 보이는 빈도가 목표다.
+const ORIGIN_CUT_IDLE_CHANCE := 0.15
+## 원작 화면 논리 폭. 세로는 ORIGIN_SCREEN_H.
+const ORIGIN_SCREEN_W := 320.0
+
+var _last_origin_cut := ""
+var _origin_player_meta_cache: Dictionary = {}
 
 var _idle_clock := 0.0
 ## 적 전투원 참조 — 빈사·사망 포즈를 매 프레임 스스로 맞추기 위한 것.
@@ -710,7 +737,11 @@ func enemy_lunge(index: int) -> void:
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
 	spawn_afterimage(spr, 1.0)
 	if spr.has_meta(&"battle_sheet"):
-		_origin_charge(spr, speed)
+		# 원작은 돌진이 끝난 자리(x=−50)에 **머문 채** 섬광을 뿜고 `Delay(300)` 뒤 에너지파를
+		# 쏜다(WARMODE.C:604-625). 먼저 돌아와 버리면 빔이 허공에서 나오는 것처럼 보인다.
+		var eid := StringName(_enemy_ids[index]) if index < _enemy_ids.size() else &""
+		var hold := MUZZLE_HOLD + (BOLT_FLIGHT if BOLT_SPECIES.has(eid) else 0.0)
+		_origin_charge(spr, speed, hold)
 		return
 	var tw := spr.create_tween()
 	(
@@ -729,7 +760,7 @@ func enemy_lunge(index: int) -> void:
 ## 위로 뜬다. 그 폭(원작 150px = 지금 화면 405px)이 원작 전투의 압박감 자체다 —
 ## 필드 도트 시절의 26px 러지로는 나오지 않는다.
 ## 끝나면 대치 자세로 되돌린다(base_pos는 build_sprites가 심어 둔 그 자리).
-func _origin_charge(spr: Sprite2D, speed: float) -> void:
+func _origin_charge(spr: Sprite2D, speed: float, hold: float = 0.0) -> void:
 	var meta: Dictionary = spr.get_meta(&"sheet_meta", {})
 	var slide: Array = meta.get("attack_slide", [100, -50])
 	var base: Vector2 = spr.get_meta(&"base_pos")
@@ -743,7 +774,207 @@ func _origin_charge(spr: Sprite2D, speed: float) -> void:
 		. set_trans(Tween.TRANS_QUAD)
 		. set_ease(Tween.EASE_IN)
 	)
+	if hold > 0.0:
+		tw.tween_interval(hold / speed)
 	tw.tween_property(spr, "position", base, 0.2 / speed).set_trans(Tween.TRANS_QUAD)
+
+
+## 원작 좌표계 낱장 이펙트 하나를 띄운다. `RPut_Spr(x, y, spr)`와 같은 **좌상단 기준**이다.
+## 반환: 만든 노드(에셋이 없으면 null — 호출부는 조용히 넘어간다).
+func _origin_fx(fx_id: String, at: Vector2) -> Sprite2D:
+	var png := ORIGIN_FX_DIR + fx_id + ".png"
+	if not ResourceLoader.exists(png):
+		return null
+	var tex: Texture2D = load(png)
+	if tex == null:
+		return null
+	var spr := Sprite2D.new()
+	spr.texture = tex
+	spr.centered = false
+	var sc := _origin_scale()
+	spr.scale = Vector2.ONE * sc
+	var w := float(ProjectSettings.get_setting("display/window/size/viewport_width", 960))
+	spr.position = Vector2((w - float(ORIGIN_SCREEN_H) * 1.6 * sc) * 0.5, 0.0) + at * sc
+	spr.z_index = 40
+	_root.add_child(spr)
+	return spr
+
+
+## **원작 공격의 나머지 절반** — 돌진이 끝난 뒤 섬광이 터지고 에너지파가 화면을 가로지른다.
+##
+## `WARMODE.C:599-625`. 돌진(`_origin_charge`)만 옮기고 여기서 멈춰 있었다 —
+## 유저 지적("적 무기/에너지파등 발사 등이 있는걸로 기억됨")이 가리킨 자리다.
+## 발사 종이 아니면(Iron-Vic·HellCop) 섬광까지만 하고 끝난다 — 원작이 그렇다.
+func origin_attack_fx(impact: bool = false) -> void:
+	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
+		return
+	# 돌진은 적의 공격 동작 자체라 늘 나가지만(그게 없으면 적이 가만히 있는다),
+	# **섬광과 에너지파는 임팩트 순간에만** 터뜨린다 — 매 턴이면 화면이 시끄럽고 물린다.
+	if not impact and EnemyManager.rng.randf() >= ORIGIN_CUT_IDLE_CHANCE:
+		return
+	# 대형 시트를 쓰는 적일 때만 — 필드 도트 종은 기존 리메이크 연출로 간다(하이브리드).
+	var idx := target_index
+	if idx < 0 or idx >= enemy_sprites.size() or not enemy_sprites[idx].has_meta(&"battle_sheet"):
+		return
+	var enemy_id := StringName(_enemy_ids[idx]) if idx < _enemy_ids.size() else &""
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	var muzzle := _origin_fx("origin_muzzle", Vector2.ZERO)
+	if muzzle != null:
+		var mt := muzzle.create_tween()
+		mt.tween_interval(MUZZLE_HOLD / speed)
+		mt.tween_property(muzzle, "modulate:a", 0.0, 0.12 / speed)
+		mt.tween_callback(muzzle.queue_free)
+	if not BOLT_SPECIES.has(enemy_id):
+		return
+	# Iron-Vic만 전용 투사체를 대각선으로 끌고 온다(`:280` `RPut_Spr(i,i,&Eff[0],0)`) —
+	# 다만 그 종은 위에서 이미 걸러졌으므로 여기 오는 것은 공용 에너지파뿐이다.
+	var bolt := _origin_fx("origin_bolt", Vector2(BOLT_FROM, 0.0))
+	if bolt == null:
+		return
+	var sc := _origin_scale()
+	var bt := bolt.create_tween()
+	bt.tween_interval(MUZZLE_HOLD / speed)
+	(
+		bt
+		. tween_property(
+			bolt, "position:x", bolt.position.x + (BOLT_TO - BOLT_FROM) * sc, BOLT_FLIGHT / speed
+		)
+		. set_trans(Tween.TRANS_LINEAR)
+	)
+	bt.tween_callback(bolt.queue_free)
+
+
+## **주인공 원작 대형 컷 — 임팩트 순간에만.**
+##
+## 원작 주인공은 320×200 전체 화면이었다(`MyAttackAni` :370). 그런데 동작이 공격 3종·
+## 회피 3종뿐이라 매 턴 틀면 금방 물린다 — 그래서 상시 대형인 적과 달리 **끊고 들어오는
+## 컷**으로 둔다. 평소 주인공은 96px 도트 그대로다(하이브리드, 유저 판단 2026-09-07).
+##
+## 원작이 고르는 방식과 확률을 그대로 옮긴다(`:390` `random(6)`):
+##   5 → `rise`(a5, 승룡권 패러디 — y 200→0) · 0~3 → `swing`(a1 4종 — x −50→150)
+##   4 → `flurry`(a3, 백열 장수 패러디 — 두 프레임을 20회 교대하며 점점 빨라진다)
+## 다만 **직전에 쓴 것은 다시 안 고른다** — 셋뿐이라 연속으로 같은 게 나오면 티가 크다.
+##
+## 반환: 실제로 컷이 떴는가(에셋이 없으면 false — 호출부는 기존 연출로 간다).
+func play_origin_player_cut() -> bool:
+	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
+		return false
+	if not ResourceLoader.exists(ORIGIN_PLAYER_CUT):
+		return false
+	var meta := _origin_player_meta()
+	var anims: Dictionary = meta.get("animations", {})
+	var picks: Array[String] = []
+	for i in 4:
+		picks.append("swing:%d" % i)  # 원작 4/6 확률 — select 0~3
+	picks.append("flurry:0")
+	picks.append("rise:0")
+	var pick := str(picks[EnemyManager.rng.randi_range(0, picks.size() - 1)])
+	if pick == _last_origin_cut and picks.size() > 1:
+		pick = str(picks[(picks.find(pick) + 1) % picks.size()])
+	_last_origin_cut = pick
+	var parts := pick.split(":")
+	var row_name := parts[0]
+	var col := int(parts[1])
+	if not anims.has(row_name):
+		return false
+	var row := int((anims[row_name] as Dictionary).get("row", 0))
+
+	var spr := _make_origin_cut_sprite(row, col)
+	if spr == null:
+		return false
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	match row_name:
+		"rise":
+			# `:301` `for(i=200;i>=0;i-=25)` — 아래에서 솟아오른다.
+			_origin_cut_move(spr, Vector2(0, 200), Vector2(0, 0), 0.42 / speed)
+		"flurry":
+			# `:347` 두 프레임 20회 교대 + 점점 빨라짐. 위치는 고정.
+			_origin_cut_flurry(spr, row, speed)
+		_:
+			# `:322` `for(i=-50;i<=150;i+=30)` — 왼쪽에서 오른쪽으로 파고든다.
+			_origin_cut_move(spr, Vector2(-50, 0), Vector2(150, 0), 0.40 / speed)
+	origin_hit_spark()
+	return true
+
+
+## 컷 스프라이트 한 장 — 시트의 (행, 칸)을 잘라 원작 화면 좌표계에 얹는다.
+func _make_origin_cut_sprite(row: int, col: int) -> Sprite2D:
+	var tex: Texture2D = load(ORIGIN_PLAYER_CUT)
+	if tex == null:
+		return null
+	var at := AtlasTexture.new()
+	at.atlas = tex
+	at.region = Rect2(
+		float(col) * ORIGIN_SCREEN_W, float(row) * ORIGIN_SCREEN_H, ORIGIN_SCREEN_W, ORIGIN_SCREEN_H
+	)
+	var spr := Sprite2D.new()
+	spr.texture = at
+	spr.centered = false
+	spr.scale = Vector2.ONE * _origin_scale()
+	spr.z_index = 50  # 적 대형 시트(기본 0)보다 앞 — 컷은 화면을 끊고 들어오는 것이다.
+	_root.add_child(spr)
+	return spr
+
+
+## 컷을 원작 좌표 a → b로 밀고 지운다.
+func _origin_cut_move(spr: Sprite2D, from: Vector2, to: Vector2, dur: float) -> void:
+	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET + from)
+	var target := spr.position + (to - from) * _origin_scale()
+	var tw := spr.create_tween()
+	tw.tween_property(spr, "position", target, dur).set_trans(Tween.TRANS_LINEAR)
+	tw.tween_property(spr, "modulate:a", 0.0, 0.12)
+	tw.tween_callback(spr.queue_free)
+
+
+## 백열 장수 — 두 프레임을 교대하며 점점 빨라진다(`:347` Delay 200 → 100 → 0).
+func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float) -> void:
+	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET)
+	var at := spr.texture as AtlasTexture
+	if at == null:
+		return
+	var tw := spr.create_tween()
+	for i in 14:
+		var col := i % 2 + 1  # 원작 `S[i%2+1]` — 0번은 배경 프레임이라 건너뛴다
+		var gap := (0.2 if i < 4 else (0.1 if i < 8 else 0.045)) / speed
+		tw.tween_callback(
+			func() -> void:
+				if is_instance_valid(spr) and at != null:
+					at.region.position.x = float(col) * ORIGIN_SCREEN_W
+		)
+		tw.tween_interval(gap)
+	tw.tween_property(spr, "modulate:a", 0.0, 0.14)
+	tw.tween_callback(spr.queue_free)
+
+
+## 원작 `RPut_Spr(x, y, spr)`와 같은 좌상단 기준 배치.
+func _place_origin_topleft(spr: Sprite2D, at: Vector2) -> void:
+	var sc := _origin_scale()
+	var w := float(ProjectSettings.get_setting("display/window/size/viewport_width", 960))
+	spr.position = Vector2((w - ORIGIN_SCREEN_W * sc) * 0.5, 0.0) + at * sc
+
+
+func _origin_player_meta() -> Dictionary:
+	if not _origin_player_meta_cache.is_empty():
+		return _origin_player_meta_cache
+	var path := ORIGIN_PLAYER_CUT.replace(".png", ".json")
+	if FileAccess.file_exists(path):
+		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if typeof(raw) == TYPE_DICTIONARY:
+			_origin_player_meta_cache = raw
+	return _origin_player_meta_cache
+
+
+## 히트 스파크 — 원작 `AttackEffect(x, y)`(`:220`). 주인공이 때린 자리에 터진다.
+func origin_hit_spark(at: Vector2 = Vector2(100, 60)) -> void:
+	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
+		return
+	var spark := _origin_fx("origin_spark", at)
+	if spark == null:
+		return
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	var tw := spark.create_tween()
+	tw.tween_property(spark, "modulate:a", 0.0, 0.28 / speed)
+	tw.tween_callback(spark.queue_free)
 
 
 ## 피격 플래시 — 타겟이 빨갛게 깜빡임.
@@ -752,6 +983,10 @@ func hurt_flash(spr: Sprite2D) -> void:
 	knockback(spr, 1.0 if spr == player_sprite else -1.0)
 	if spr != null and is_instance_valid(spr):
 		play_anim(spr, "hurt", "" if spr == player_sprite else _sprite_asset_id(spr))
+		# 원작은 주인공이 때리면 `AttackEffect(100,60)`으로 붉은 스파크를 터뜨렸다
+		# (`EnemyAvoid` 매 단계). 대형 시트를 쓰는 적에게만 얹는다 — 하이브리드 규칙.
+		if spr != player_sprite and spr.has_meta(&"battle_sheet"):
+			origin_hit_spark()
 	if spr == null or not is_instance_valid(spr):
 		return
 	var f := SettingsManager.battle_speed_factor()

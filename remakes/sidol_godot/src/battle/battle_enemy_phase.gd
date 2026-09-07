@@ -63,6 +63,11 @@ static func regular_attack(
 	# 적 시트에 attack 행이 있으면 그 동작으로 때린다(없으면 기존 연출 그대로).
 	presenter.play_enemy_anim(presenter.target_index, "attack")
 	presenter.enemy_lunge(presenter.target_index)
+	# **원작 공격의 나머지 절반** — 돌진 뒤 섬광이 터지고 에너지파가 화면을 가로지른다
+	# (WARMODE.C:599-625). 대형 시트를 쓰는 적에게만 붙고, 발사 종이 아니면 섬광까지다.
+	# 임팩트 = 이 일격이 주인공을 쓰러뜨렸거나 빈사로 몰았을 때. 그 밖에는 가끔만.
+	var lethal := player.is_down() or float(player.hp) <= float(maxi(player.max_hp, 1)) * 0.25
+	presenter.origin_attack_fx(lethal)
 	presenter.show_damage_number(actual, true)
 	BattleLog.push(
 		TranslationServer.translate("UI_BLOG_ENEMY_HIT") % [attacker.display_name, actual],

@@ -423,6 +423,20 @@ func _on_choreo_damage_frame() -> void:
 			_presenter.play_screen_kf({"shake": 2.5})
 	else:
 		_log(tr("UI_BLOG_HIT") % [who, int(pop["amount"])], BattleLog.Kind.DAMAGE)
+
+	# **원작 주인공 대형 컷은 여기서만 터진다.**
+	#
+	# 원작 동작은 공격 3종뿐이라 매 턴 틀면 몇 분 만에 물린다(유저 판단 2026-09-07).
+	# 그래서 "이 한 방이 컸다"는 순간에만 화면을 끊고 들어오게 한다 —
+	# 쓰러뜨린 일격(페이탈리티) · 브레이크 · 크리티컬 · 약점 적중 · 필살기(기력 스킬).
+	# 그 밖에는 아주 가끔만(ORIGIN_CUT_IDLE_CHANCE) — 아예 안 나오면 자산이 다시 사문화된다.
+	# 한 액션에 여러 번 때리는 기술도 있으므로 **마지막 타격에서 한 번만** 판정한다.
+	if _pending_pops.is_empty():
+		var finisher := idx < enemies.size() and enemies[idx].is_down()
+		var skill_used := StringName(str(_last_action.get("kind", ""))) == &"skill"
+		var impact := finisher or broke or crit or weak or skill_used
+		if impact or EnemyManager.rng.randf() < BattlePresenter.ORIGIN_CUT_IDLE_CHANCE:
+			_presenter.play_origin_player_cut()
 		AudioManager.play_sfx(&"sfx_hit_enemy")
 	if idx < _presenter.enemy_sprites.size():
 		_presenter.hurt_flash(_presenter.enemy_sprites[idx])

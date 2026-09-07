@@ -1,0 +1,14 @@
+{
+ "schema_version": 1,
+ "kind": "origin_fx",
+ "source": "originals E5-1.SPR frame 0 — Iron-Vic 전용 투사체 — :280 RPut_Spr(i,i,&Eff[0],0)",
+ "generator": "tools/dev/bake_battle_sheets.py",
+ "size": [
+  101,
+  71
+ ],
+ "origin_screen": [
+  320,
+  200
+ ]
+}

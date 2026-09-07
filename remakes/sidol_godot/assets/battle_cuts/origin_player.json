@@ -1,61 +1,63 @@
 {
  "schema_version": 3,
  "kind": "battle",
- "source": "originals E*.SPR — Iron-Vic — 원작 SprNum 4",
+ "actor": "player",
+ "source": "originals lth/a5/a1/a3/d3/d2/d1.SPR — WARMODE.C:295-536 · :1129",
  "generator": "tools/dev/bake_battle_sheets.py",
  "cell": 320,
  "cell_w": 320,
  "cell_h": 200,
- "cols": 2,
+ "cols": 5,
  "scale": 1.0,
  "origin_screen": [
   320,
   200
  ],
  "draw_offset": [
-  30,
-  10
+  0,
+  20
  ],
- "attack_slide": [
-  100,
-  -50
- ],
- "hue_shift": 0,
  "animations": {
-  "idle": {
+  "pose": {
    "row": 0,
    "frames": 2,
    "fps": 2,
    "loop": true
   },
-  "wounded": {
+  "rise": {
    "row": 1,
-   "frames": 2,
-   "fps": 2,
-   "loop": true
+   "frames": 1,
+   "fps": 6,
+   "loop": false
   },
-  "attack": {
+  "swing": {
    "row": 2,
+   "frames": 4,
+   "fps": 8,
+   "loop": false
+  },
+  "flurry": {
+   "row": 3,
+   "frames": 3,
+   "fps": 12,
+   "loop": false
+  },
+  "avoid_a": {
+   "row": 4,
+   "frames": 3,
+   "fps": 8,
+   "loop": false
+  },
+  "avoid_b": {
+   "row": 5,
    "frames": 2,
    "fps": 6,
    "loop": false
   },
-  "hurt": {
-   "row": 3,
-   "frames": 2,
-   "fps": 8,
-   "loop": false
-  },
-  "death": {
-   "row": 4,
-   "frames": 2,
-   "fps": 4,
-   "loop": false
-  },
-  "special": {
-   "row": 2,
-   "frames": 1,
-   "fps": 5,
+  "avoid_c": {
+   "row": 6,
+   "frames": 5,
+   "fps": 6,
    "loop": false
   }
  }

@@ -1,0 +1,14 @@
+{
+ "schema_version": 1,
+ "kind": "origin_fx",
+ "source": "originals EFFECT.SPR frame 0 — 히트 스파크 — AttackEffect(x,y) (:220)",
+ "generator": "tools/dev/bake_battle_sheets.py",
+ "size": [
+  121,
+  101
+ ],
+ "origin_screen": [
+  320,
+  200
+ ]
+}

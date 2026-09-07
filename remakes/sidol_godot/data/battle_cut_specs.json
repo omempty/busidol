@@ -5,17 +5,36 @@
   "_refs": "원작 프레임: assets/raw/llm/00_reference/{a1,a2,a3,a5,d1,d2,d3}/frame_*.png (320×200) · 대형 PCX 컷: assets/originals_ref/bmp/{attack*,def*,ready*}.bmp",
   "species": [
     {
+      "id": "origin_player",
+      "actor": "player",
+      "source": "originals",
+      "_desc": "원작 주인공 대형 컷 — lth(대치·빈사) · a5(승룡권) · a1 4종(기본 타격) · a3(백열 장수) · d3/d2/d1(회피 3종)을 320×200 격자로 구운 것. tools/dev/bake_battle_sheets.py가 원작 SPR에서 직접 굽는다. 신규 의뢰 불필요.",
+      "_gate": "임팩트 순간에만 재생한다 — 쓰러뜨린 일격 · 브레이크 · 크리티컬 · 약점 · 필살기. 그 밖엔 ORIGIN_CUT_IDLE_CHANCE(15%)로만. 동작이 3종뿐이라 매 턴 틀면 물린다."
+    },
+    {
       "id": "player_attack_swing",
       "name_ko": "주인공 스트레이트",
       "sheet_cell": 512,
       "align": "bottom_center",
       "actor": "player",
       "trigger": "기본 공격",
-      "reference": ["a1"],
-      "pcx_refs": ["attack1", "attack1-", "attack2"],
+      "reference": [
+        "a1"
+      ],
+      "pcx_refs": [
+        "attack1",
+        "attack1-",
+        "attack2"
+      ],
       "token": "흰 셔츠 소매를 걷은 공대생 주인공이 허리를 틀어 스트레이트를 뻗는다. 원작 A1 시퀀스 계승 — 준비 자세 → 체중 이동 → 주먹 뻗음(팔이 화면 밖으로 나갈 만큼) → 복귀. 청바지, 헝클어진 검은 머리",
       "animations": {
-        "play": { "row": 0, "frames": 4, "fps": 14, "loop": false, "_desc": "준비 → 체중 이동 → 임팩트 → 복귀" }
+        "play": {
+          "row": 0,
+          "frames": 4,
+          "fps": 14,
+          "loop": false,
+          "_desc": "준비 → 체중 이동 → 임팩트 → 복귀"
+        }
       }
     },
     {
@@ -25,11 +44,25 @@
       "align": "bottom_center",
       "actor": "player",
       "trigger": "연속 펀치 스킬",
-      "reference": ["a2", "a3"],
-      "pcx_refs": ["attack3", "attack32", "attack4", "attack42"],
+      "reference": [
+        "a2",
+        "a3"
+      ],
+      "pcx_refs": [
+        "attack3",
+        "attack32",
+        "attack4",
+        "attack42"
+      ],
       "token": "같은 주인공이 몸을 낮추고 좌우 연타를 넣는다. 프레임마다 상체 각도와 팔이 확실히 달라야 한다(원작 A2·A3처럼 포즈 차이를 크게). 잔상선 1~2줄 허용",
       "animations": {
-        "play": { "row": 0, "frames": 4, "fps": 16, "loop": false, "_desc": "좌 훅 → 우 훅 → 어퍼 → 되돌림" }
+        "play": {
+          "row": 0,
+          "frames": 4,
+          "fps": 16,
+          "loop": false,
+          "_desc": "좌 훅 → 우 훅 → 어퍼 → 되돌림"
+        }
       }
     },
     {
@@ -39,11 +72,25 @@
       "align": "bottom_center",
       "actor": "player",
       "trigger": "필살기(finisher_ember)",
-      "reference": ["a5", "a4"],
-      "pcx_refs": ["attack5", "attack6a", "attack6b", "attack8"],
+      "reference": [
+        "a5",
+        "a4"
+      ],
+      "pcx_refs": [
+        "attack5",
+        "attack6a",
+        "attack6b",
+        "attack8"
+      ],
       "token": "주인공이 부싯돌을 그어 불꽃을 일으키고 그대로 내지른다. 마지막 두 프레임은 화염이 팔을 감싼다 — 흰-노랑 코어/주황/진홍 3단 밴딩, 검은 연기 금지(남보라). 필살기이므로 포즈가 가장 크다",
       "animations": {
-        "play": { "row": 0, "frames": 5, "fps": 12, "loop": false, "_desc": "부싯돌 그음 → 점화 → 도약 → 내지름 → 잔화" }
+        "play": {
+          "row": 0,
+          "frames": 5,
+          "fps": 12,
+          "loop": false,
+          "_desc": "부싯돌 그음 → 점화 → 도약 → 내지름 → 잔화"
+        }
       }
     },
     {
@@ -53,11 +100,24 @@
       "align": "bottom_center",
       "actor": "player",
       "trigger": "적 공격 적중",
-      "reference": ["d2", "d3"],
-      "pcx_refs": ["def1", "def3", "def5"],
+      "reference": [
+        "d2",
+        "d3"
+      ],
+      "pcx_refs": [
+        "def1",
+        "def3",
+        "def5"
+      ],
       "token": "주인공이 맞고 상체가 젖혀진다. 표정은 이를 악문 쪽. 원작 DEF 시퀀스처럼 **넘어지지는 않는다** — 버티는 자세로 되돌아온다",
       "animations": {
-        "play": { "row": 0, "frames": 3, "fps": 12, "loop": false, "_desc": "충격 → 젖혀짐 → 버팀" }
+        "play": {
+          "row": 0,
+          "frames": 3,
+          "fps": 12,
+          "loop": false,
+          "_desc": "충격 → 젖혀짐 → 버팀"
+        }
       }
     },
     {
@@ -67,12 +127,26 @@
       "align": "bottom_center",
       "actor": "player",
       "trigger": "회피 성공",
-      "reference": ["d1"],
-      "pcx_refs": ["def2", "def2s", "def4", "def4s"],
+      "reference": [
+        "d1"
+      ],
+      "pcx_refs": [
+        "def2",
+        "def2s",
+        "def4",
+        "def4s"
+      ],
       "token": "주인공이 상체를 뒤로 젖혀 공격을 흘린다(매트릭스식 과장 금지 — 몸싸움 감각). 마지막 프레임에 반격 준비 자세",
       "animations": {
-        "play": { "row": 0, "frames": 4, "fps": 15, "loop": false, "_desc": "감지 → 젖힘 → 흘림 → 반격 준비" }
+        "play": {
+          "row": 0,
+          "frames": 4,
+          "fps": 15,
+          "loop": false,
+          "_desc": "감지 → 젖힘 → 흘림 → 반격 준비"
+        }
       }
     }
-  ]
+  ],
+  "_origin_note": "아래 player_* 5종은 **신규 의뢰 계약**이고 origin_player는 **원작 이식분**이다. 둘은 배타적이지 않다 — 원작 컷이 임팩트 순간을 맡고, 신규 컷이 오면 더 세분화할 수 있다. 다만 신규 의뢰의 우선순위는 origin_player가 자리를 메운 만큼 내려갔다(2026-09-07)."
 }

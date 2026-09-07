@@ -40,10 +40,10 @@
    "fps": 6,
    "loop": false
   },
-  "special": {
+  "hurt": {
    "row": 3,
    "frames": 2,
-   "fps": 5,
+   "fps": 8,
    "loop": false
   },
   "death": {
@@ -52,10 +52,10 @@
    "fps": 4,
    "loop": false
   },
-  "hurt": {
-   "row": 1,
+  "special": {
+   "row": 2,
    "frames": 1,
-   "fps": 6,
+   "fps": 5,
    "loop": false
   }
  }

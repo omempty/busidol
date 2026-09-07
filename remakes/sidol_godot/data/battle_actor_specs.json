@@ -69,7 +69,7 @@
     }
   ],
   "_enemy_comment": "적 전투 대형 시트 계약 — 2026-09-07 신설. 원작 전투는 320×200 전체 화면 프레임 시퀀스였고(WARMODE.C) 그 프레임이 저장소에 있었는데 게임 코드가 로드하는 곳이 0곳이었다. 적이 화면 높이의 13~21%밖에 안 돼 원작(52~73%)의 압박감이 통째로 빠져 있었다. 설치 규약: assets/sprites/<id>_battle.png + .json. SpriteSets.battle_sheet가 필드 도트보다 우선한다.",
-  "_enemy_frames": "프레임 의미는 원작 소스가 확정한다 — 0 평상(ENLoss=0) · 1 빈사(HP<=15, ENLoss=1) · 2 사망(EN.Life==0) · 3 공격(EnemyAttackAni가 x=100->-50 슬라이드). 4·5는 원작이 로드조차 하지 않는다 — 리메이크는 그 사문화 프레임을 특수 공격(상태이상)에 배정했다.",
+  "_enemy_frames": "프레임 의미는 원작 소스가 확정한다 — 0 평상(ENLoss=0) · 1 빈사(HP<=15, ENLoss=1) · 2 사망(EN.Life==0) · 3 공격(EnemyAttackAni가 x=100->-50 슬라이드) · 4·5 피격 반응(EnemyAvoid가 Snum=6으로 0~5를 로드하고 random(3)==0?4:5로 고른다). 정정 2026-09-07: 처음엔 4·5를 '원작 미사용'으로 적었으나 틀렸다 — 세 번째 로드 지점인 EnemyAvoid를 놓쳤다.",
   "enemies": [
     {
       "id": "sparker",
@@ -176,5 +176,6 @@
       "origin_spr": null,
       "_desc": "보스 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
     }
-  ]
+  ],
+  "_enemy_fx": "원작 공격은 돌진에서 끝나지 않는다(WARMODE.C:599-625). 발사 종(SprNum 0·1·2·3·6·7 = mad_eye·vulgar·dworm·ozzy·o_ray)은 돌진 뒤 fire.spr[0] 섬광 → Delay(300) → fire.spr[1]을 x=-100→200으로 15단계 날린다. Iron-Vic(4)·HellCop(5)은 근접만 한다. 주인공이 때리면 EnemyAvoid가 effect.spr 스파크를 AttackEffect(100,60)로 터뜨린다. 이펙트는 assets/effects/origin_*.png로 굽는다(낱장 · 화면 좌표계 좌상단 기준)."
 }

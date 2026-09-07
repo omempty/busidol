@@ -1,0 +1,14 @@
+{
+ "schema_version": 1,
+ "kind": "origin_fx",
+ "source": "originals FIRE.SPR frame 0 — 적 돌진 끝의 충돌 섬광 — WARMODE.C:607 RPut_Spr(0,0,&Fire[0],0)",
+ "generator": "tools/dev/bake_battle_sheets.py",
+ "size": [
+  320,
+  200
+ ],
+ "origin_screen": [
+  320,
+  200
+ ]
+}

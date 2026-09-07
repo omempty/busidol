@@ -19,10 +19,27 @@
 | 1 | **빈사**(HP 1~15) | `:1117` `else if (EN.Hp > 0 && EN.Hp <= 15) ENLoss = 1` |
 | 2 | **사망** | `:1119` `if (EN.Life == 0) ENLoss = 2` |
 | 3 | **공격** | `:537 EnemyAttackAni()` — `S[Snum-1]`(=S[3])을 x=100 → -50으로 슬라이드 |
-| 4·5 | **원작이 로드조차 안 한다** | `:678 Load_Spr(0,2,...)` · `:559 Load_Spr(0,Snum-1=3,...)` |
+| 4·5 | **피격 반응** | `:235 EnemyAvoid()` — `Snum=6`으로 0~5를 로드하고 `random(3)==0 ? 4 : 5` |
 
-프레임 4·5는 파일에 있는데 원작이 한 번도 안 쓴 사문화 에셋이다. 리메이크는
-**특수 공격(상태이상)**에 배정한다 — 원작에 없던 전투룰이니 원작이 안 쓴 그림을 준다.
+> **정정(2026-09-07).** 처음엔 "4·5는 원작이 로드조차 안 한다"고 적었다. **틀렸다.**
+> `LoadSprites`(`:678`)와 `EnemyAttackAni`(`:559`)만 보고 내린 판정이었는데, 세 번째
+> 로드 지점인 `EnemyAvoid()`가 여섯 장을 전부 읽는다. 그 함수는 **주인공이 때렸을 때
+> 적이 보이는 반응**이고(`MyAttackAni` → `:411 EnemyAvoid()`), 4와 5 중 하나를 무작위로
+> 골라 x=100 → −50으로 밀며 `AttackEffect(100,60)`으로 히트 스파크를 얹는다.
+> 그래서 4·5는 사문화가 아니라 **피격 반응**이고, 이 도구도 `hurt` 두 프레임으로 굽는다.
+
+## 원작 공격은 돌진에서 끝나지 않는다 — 섬광과 에너지파가 붙는다
+
+`EnemyAttackAni`(`:590~625`)의 전체 순서:
+
+1. 프레임 3을 x=100 → −50으로 8단계 슬라이드
+2. **발사 종에 한해**(`SprNum` 0·1·2·3·6·7 — Iron-Vic(4)·HellCop(5)은 제외):
+   `fire.spr[0]` 섬광을 (0,0)에 얹고 `Delay(300)` →
+   **`fire.spr[1]`을 x=−100 → 200으로 15단계 날린다**(화면을 가로지르는 에너지파)
+3. `MyAvoid()` — 주인공 피격 반응
+
+`EnemyAvoid`의 Iron-Vic은 `e5-1.spr`을 `(i,i)` 대각선으로 함께 끌고 온다.
+이펙트 원본 크기: `fire.spr` 320×200 ×3 · `effect.spr` 121×101 · `e5-1.spr` 101×71.
 
 ## 종 ↔ SPR 매핑 — 이것도 소스로 확정
 
@@ -81,11 +98,25 @@ ROWS = [
     ("idle", [0, 0], 2, True),
     ("wounded", [1, 1], 2, True),
     ("attack", [3, 3], 6, False),
-    ("special", [5, 3], 5, False),
+    # 원작 `EnemyAvoid()`가 4·5 중 하나를 무작위로 고른다 — 두 장을 이어 붙여 굽는다.
+    ("hurt", [4, 5], 8, False),
     ("death", [2, 2], 4, False),
 ]
-# 빈사 행을 피격 순간에도 재사용한다(별도 행을 굽지 않는다).
-ALIAS = {"hurt": ("wounded", 1, 6, False)}
+# 특수 공격은 **원작에 없는 개념**이라 전용 그림이 없다. 돌진(프레임 3)을 그대로 쓰고
+# 리메이크 이펙트(속성색)로 가른다 — 없는 그림을 지어내기보다 있는 그림을 재배치한다.
+ALIAS = {"special": ("attack", 1, 5, False)}
+
+# 원작 전투 이펙트 — 화면 좌표계(RPut_Spr 좌상단 기준)로 그대로 얹는다.
+# (파일명, SPR, 프레임, 설명)
+FX = [
+    ("origin_muzzle", "fire", 0, "적 돌진 끝의 충돌 섬광 — WARMODE.C:607 RPut_Spr(0,0,&Fire[0],0)"),
+    ("origin_bolt", "fire", 1, "에너지파 — :613 x=-100 → 200으로 15단계 가로지름"),
+    ("origin_spark", "effect", 0, "히트 스파크 — AttackEffect(x,y) (:220)"),
+    ("origin_bolt_ironvoc", "e5-1", 0, "Iron-Vic 전용 투사체 — :280 RPut_Spr(i,i,&Eff[0],0)"),
+]
+# 에너지파를 쏘는 종 — 원작 `EnemyAttackAni` :601 `case 0:1:2:3:6:7`.
+# Iron-Vic(4) · HellCop(5)은 근접만 한다. 이 구분이 종을 가르는 원작의 장치다.
+FIRES_BOLT = ["mad_eye", "vulgar", "dworm", "ozzy", "o_ray"]
 
 # 리메이크 종 → (원작 SPR 세트, 색상환 회전°, 설명)
 SPECIES = {
@@ -181,6 +212,140 @@ def bake(species: str, set_id: str, degrees: int, desc: str, check: bool) -> boo
     return True
 
 
+# ── 주인공 전투 시트 ────────────────────────────────────────────────────────
+# 원작은 주인공도 320×200 대형이었다. `lth.spr`이 대치/빈사 포즈이고(`:1129`
+# `RPut_Spr(0,20,&Back[MELoss],0)` — MELoss는 HP로 갈린다), 공격·회피는 별도 SPR이다.
+#
+# | 행 | 원작 | 무엇 | 움직임(원작 루프) |
+# |---|---|---|---|
+# | 0 `pose`    | lth 1·2      | 대치 · 빈사        | 고정 (0,20) |
+# | 1 `rise`    | a5 0         | 승룡권 패러디      | `:301` y 200 → 0, 9단계 |
+# | 2 `swing`   | a1 0~3       | 기본 타격 4종      | `:322` x −50 → 150, 8단계 |
+# | 3 `flurry`  | a3 0·1·2     | 백열 장수 패러디   | `:347` 1·2를 20회 교대, 점점 빨라짐 |
+# | 4 `avoid_a` | d3 0~2       | 회피 3종           | `:424` x 0 → 40, 9단계 + 스파크 |
+# | 5 `avoid_b` | d2 0·1       | 회피 1종           | `:444` x 0 → 50, 3단계 + 마무리 포즈 |
+# | 6 `avoid_c` | d1 0~4       | 회피 2종           | `:471` 0·1을 1초씩 → 2+3 겹쳐 x −20 → 60 |
+#
+# 선택 확률도 원작 그대로다 — 공격 `random(6)`: 5→rise · 0~3→swing[select] · 4→flurry,
+# 회피 `random(6)`: 0~2→avoid_a[n] · 3→avoid_b · 4·5→avoid_c (`:390`·`:516`).
+#
+# 실측 프레임 수: lth 3 · a5 **1** · a1 4 · a3 3 · d3 **3** · d2 2 · d1 5.
+# a5와 d3은 원작이 `Load_Spr(0,1,…)`·`Load_Spr(0,3,…)`로 **한 칸씩 더 요청**하는데
+# 파일에 없다 — [[originals-confirm-map-and-obj-quirks]]에 적힌 그 습관이다
+# (OBJ.SPR 173 vs MAX_OBJ 174 · ITEM.SPR 35 vs NUM_ITEM 37). 실제 사용분만 굽는다.
+PLAYER_ROWS = [
+    ("pose", "lth", [1, 2], 2, True),
+    ("rise", "a5", [0], 6, False),
+    ("swing", "a1", [0, 1, 2, 3], 8, False),
+    ("flurry", "a3", [0, 1, 2], 12, False),
+    ("avoid_a", "d3", [0, 1, 2], 8, False),
+    ("avoid_b", "d2", [0, 1], 6, False),
+    ("avoid_c", "d1", [0, 1, 2, 3, 4], 6, False),
+]
+## 원작 주인공 대치 포즈 그리기 오프셋 — `:1129` `RPut_Spr(0,20,&Back[MELoss],0)`.
+PLAYER_POSE_OFFSET = [0, 20]
+
+
+def bake_player(check: bool) -> bool:
+    # **적과 달리 상시 대형이 아니다.** 원작 주인공 동작은 공격 3종·회피 3종뿐이라
+    # 매 턴 터지면 금방 물린다(유저 판단 2026-09-07). 그래서 상시 표현이 아니라
+    # **임팩트 순간에만 끊고 들어오는 컷**으로 쓴다 — 저장소에 이미 그 용도로 만들어 둔
+    # `assets/battle_cuts/` + `BattlePresenter.play_cut` 계열의 자리다.
+    # 평소 주인공은 지금처럼 96px 도트로 남는다(하이브리드).
+    out = ROOT / "assets" / "battle_cuts"
+    out.mkdir(parents=True, exist_ok=True)
+    png = out / "origin_player.png"
+    meta_path = out / "origin_player.json"
+    if check:
+        print("  %-14s %s" % ("origin_player", "있음" if png.exists() else "**없음**"))
+        return png.exists()
+
+    cols = max(len(idx) for _, _, idx, _, _ in PLAYER_ROWS)
+    sheet = Image.new("RGBA", (cols * CELL_W, len(PLAYER_ROWS) * CELL_H), (0, 0, 0, 0))
+    anims: dict[str, dict] = {}
+    for row, (name, spr_id, idx, fps, loop) in enumerate(PLAYER_ROWS):
+        frames = load_frames(spr_id)
+        if len(frames) <= max(idx):
+            print(f"  {'origin_player':14s} SKIP — {spr_id} 프레임 부족({len(frames)})")
+            return False
+        for col, frame_no in enumerate(idx):
+            sheet.paste(frames[frame_no], (col * CELL_W, row * CELL_H))
+        anims[name] = {"row": row, "frames": len(idx), "fps": fps, "loop": loop}
+    sheet.save(png)
+    meta_path.write_text(
+        json.dumps(
+            {
+                "schema_version": 3,
+                "kind": "battle",
+                "actor": "player",
+                "source": "originals lth/a5/a1/a3/d3/d2/d1.SPR — WARMODE.C:295-536 · :1129",
+                "generator": "tools/dev/bake_battle_sheets.py",
+                "cell": CELL_W,
+                "cell_w": CELL_W,
+                "cell_h": CELL_H,
+                "cols": cols,
+                "scale": 1.0,
+                "origin_screen": [CELL_W, CELL_H],
+                "draw_offset": PLAYER_POSE_OFFSET,
+                "animations": anims,
+            },
+            ensure_ascii=False,
+            indent=1,
+        )
+        + chr(10),
+        encoding="utf-8",
+    )
+    print(f"  {'origin_player':14s} lth+a5+a1+a3+d3+d2+d1  {sheet.width}x{sheet.height} 저장")
+    return True
+
+
+def bake_fx(check: bool) -> int:
+    """원작 전투 이펙트 — 화면 좌표계 그대로 낱장으로 굽는다.
+
+    적 시트와 달리 셀 격자에 넣지 않는다. 원작이 `RPut_Spr(x, y, spr)`로 **좌상단 기준**
+    자유 좌표에 얹었고(에너지파는 x가 −100에서 200까지 움직인다), 크기도 제각각이라
+    (320×200 · 121×101 · 101×71) 한 격자에 억지로 맞추면 그 좌표 규약이 깨진다.
+    """
+    out = ROOT / "assets" / "effects"
+    out.mkdir(parents=True, exist_ok=True)
+    ok = 0
+    for name, spr_id, frame_no, desc in FX:
+        png = out / f"{name}.png"
+        if check:
+            print("  %-22s %s" % (name, "있음" if png.exists() else "**없음**"))
+            ok += 1 if png.exists() else 0
+            continue
+        spr = ORIGINALS / f"{spr_id.upper()}.SPR"
+        if not spr.exists():
+            print(f"  {name:22s} SKIP — {spr.name} 없음")
+            continue
+        _palette, raw = parse_spr(spr.read_bytes())
+        if frame_no >= len(raw):
+            print(f"  {name:22s} SKIP — 프레임 {frame_no} 없음(총 {len(raw)})")
+            continue
+        w, h, rgba = raw[frame_no]
+        Image.frombytes("RGBA", (w, h), bytes(rgba)).save(png)
+        (out / f"{name}.json").write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "kind": "origin_fx",
+                    "source": f"originals {spr_id.upper()}.SPR frame {frame_no} — {desc}",
+                    "generator": "tools/dev/bake_battle_sheets.py",
+                    "size": [w, h],
+                    "origin_screen": [CELL_W, CELL_H],
+                },
+                ensure_ascii=False,
+                indent=1,
+            )
+            + chr(10),
+            encoding="utf-8",
+        )
+        print(f"  {name:22s} {spr_id}[{frame_no}]  {w}x{h} 저장")
+        ok += 1
+    return ok
+
+
 def main() -> int:
     check = "--check" in sys.argv
     if not ORIGINALS.exists():
@@ -192,8 +357,15 @@ def main() -> int:
     for species, (set_id, degrees, desc) in SPECIES.items():
         if bake(species, set_id, degrees, desc, check):
             ok += 1
-    print(f"[bake_battle] {ok}/{len(SPECIES)}종")
-    return 0 if ok == len(SPECIES) else 1
+    print("[bake_battle] 주인공 전투 시트")
+    player_ok = bake_player(check)
+    print("[bake_battle] 원작 전투 이펙트")
+    fx_ok = bake_fx(check)
+    print(
+        "[bake_battle] 적 %d/%d종 · 주인공 %s · 이펙트 %d/%d"
+        % (ok, len(SPECIES), "ok" if player_ok else "실패", fx_ok, len(FX))
+    )
+    return 0 if (ok == len(SPECIES) and player_ok and fx_ok == len(FX)) else 1
 
 
 if __name__ == "__main__":
