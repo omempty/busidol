@@ -316,6 +316,72 @@ func _ready() -> void:
 		failures.append("_end_player_defend가 살아 넘어온 마비를 무시하고 커맨드 창을 연다")
 	battle.player_combatant.active_effects.clear()
 
+	# --- 8) 적 전투 대형 시트 — 계약대로 서고, 행들이 실제로 재생되는가 ---
+	# 원작 전투는 320×200 전체 화면 프레임 시퀀스였고 그 프레임이 저장소에 있었는데
+	# **게임 코드가 로드하는 곳이 0곳**이었다(2026-09-07). 적이 화면 높이의 13~21%뿐이라
+	# 원작(52~73%)의 압박감이 통째로 빠져 있었다. 되돌아가지 않게 세 가지를 못 박는다.
+	#
+	# (a) 계약(`battle_actor_specs.json` enemies·status=baked)과 실제 파일이 일치하는가
+	# (b) 전투 화면이 그 시트를 **실제로 골랐는가** — 필드 도트로 조용히 새면 여기서 걸린다
+	# (c) 굽기만 하고 아무도 안 읽는 행이 없는가 — 이 저장소의 지배적 결함이 그것이다
+	# 계약 파일은 지금까지 python 도구만 읽었다(저장소 전체에서 GDScript 참조 0곳).
+	# 게임 쪽 관문이 같은 파일을 읽어야 계약과 실물이 갈라지는 것을 잡는다.
+	var spec_raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://data/battle_actor_specs.json")
+	)
+	var baked: Array[String] = []
+	if typeof(spec_raw) == TYPE_DICTIONARY:
+		for e: Variant in (spec_raw as Dictionary).get("enemies", []):
+			if typeof(e) == TYPE_DICTIONARY and str((e as Dictionary).get("status", "")) == "baked":
+				baked.append(str((e as Dictionary).get("id", "")))
+	if baked.is_empty():
+		failures.append("battle_actor_specs.json에 status=baked인 적이 하나도 없다")
+	for eid: String in baked:
+		# **원본 파일을 직접 본다.** `SpriteSets.battle_sheet`는 `ResourceLoader.exists`를
+		# 쓰는데 그것은 임포트 캐시(.godot/imported)를 보므로, 원본 PNG를 지워도 계속
+		# "있다"고 답한다 — 실제로 이 관문이 그 대조군을 놓쳤다(2026-09-07 실측).
+		# 여기서 보려는 것은 "계약과 저장소 파일이 일치하는가"이지 로드 가능성이 아니다.
+		for ext: String in ["png", "json"]:
+			var path := "res://assets/sprites/%s_battle.%s" % [eid, ext]
+			if not FileAccess.file_exists(path):
+				failures.append("%s는 계약상 baked인데 %s가 없다 — bake_battle_sheets.py를 돌려라" % [eid, path])
+		if str(SpriteSets.battle_sheet(StringName(eid))["sheet"]).is_empty():
+			failures.append("%s _battle 시트를 SpriteSets가 못 찾는다" % eid)
+	print("[smoke_battle] 전투 대형 시트 계약 %d종: %s" % [baked.size(), ", ".join(baked)])
+
+	if not baked.is_empty():
+		GameState.pending_encounter = {"enemies": [baked[0]]}
+		var big: BattleSceneController = BATTLE_SCENE.instantiate()
+		add_child(big)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		var spr: Sprite2D = (
+			big._presenter.enemy_sprites[0] if not big._presenter.enemy_sprites.is_empty() else null
+		)
+		if spr == null or not spr.has_meta(&"battle_sheet"):
+			failures.append("%s 전투가 대형 시트를 안 세웠다 — 필드 도트로 샜다" % baked[0])
+		else:
+			# 셀이 곧 원작 화면이므로 화면 높이만큼 서야 한다(원작 구도 1:1 이식).
+			var cell: Vector2i = spr.get_meta(&"anim_cell")
+			var on_screen := float(cell.y) * spr.scale.y
+			var view_h := float(
+				ProjectSettings.get_setting("display/window/size/viewport_height", 540)
+			)
+			print(
+				(
+					"[smoke_battle] %s 대형 시트 셀 %dx%d · 배율 %.2f · 화면상 %.0fpx / 뷰포트 %.0f"
+					% [baked[0], cell.x, cell.y, spr.scale.y, on_screen, view_h]
+				)
+			)
+			if absf(on_screen - view_h) > 1.0:
+				failures.append("대형 시트가 원작 배율로 안 섰다 — 화면상 %.0fpx, 뷰포트 %.0f" % [on_screen, view_h])
+			# 구운 행에 전부 호출부가 있는가 — 재생이 false면 그 행은 사문화다.
+			for anim: String in ["attack", "special", "hurt", "death", "wounded"]:
+				if not big._presenter.play_anim(spr, anim, baked[0]):
+					failures.append("%s 대형 시트에 '%s' 행이 없다(계약 위반)" % [baked[0], anim])
+		big.queue_free()
+		await get_tree().process_frame
+
 	_finish(failures, battle)
 
 

@@ -142,6 +142,8 @@ func _setup_presentation() -> void:
 	add_child(_presenter)
 	_presenter.setup(self)
 	_presenter.build_sprites(_enemy_ids)
+	# 빈사·사망 포즈를 프리젠터가 스스로 보게 참조를 넘긴다(원작 WARMODE.C:1116-1127 규칙).
+	_presenter.enemy_combatants = enemies
 
 	_runner = ChoreographyRunner.new()
 	add_child(_runner)

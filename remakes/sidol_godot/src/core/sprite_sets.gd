@@ -9,6 +9,10 @@ class_name SpriteSets
 const SPRITE_DIR := "res://assets/sprites/"
 const LEGACY_TAG := "original"
 const REMAKE_TAG := "remake"
+## 전투 전용 대형 시트 — 원작 E*.SPR의 320×200 전체 화면 프레임을 구운 것.
+## 필드 도트(_original/_remake)와 **규격이 다르다**(셀이 정사각이 아니고 화면만 하다).
+## 아트 모드를 타지 않는다 — 원작 프레임 자체라 "레거시/리메이크" 구분이 성립하지 않는다.
+const BATTLE_TAG := "battle"
 
 
 ## 캐릭터 시트 경로 조회 — {"sheet": String, "meta": String}. 부재 시 빈 문자열.
@@ -26,6 +30,19 @@ static func character_sheet(asset_id: StringName, quiet := false) -> Dictionary:
 			}
 	if not quiet:
 		push_error("SpriteSets: '%s' 시트 없음 — %s/%s 태그 모두 부재" % [asset_id, order[0], order[1]])
+	return {"sheet": "", "meta": ""}
+
+
+## 전투 대형 시트 조회 — {"sheet": String, "meta": String}. 부재 시 빈 문자열.
+##
+## 있으면 전투 화면이 필드 도트 대신 이것을 쓴다. 원작 전투는 적이 화면 높이의 52~73%를
+## 차지했는데(WARMODE.C의 320×200 프레임 시퀀스) 리메이크는 필드 보행 도트를 96px로
+## 정규화해 13~21%였다 — 압박감이 통째로 빠져 있었다.
+## 굽는 도구: tools/dev/bake_battle_sheets.py (원작 SPR 직접 읽기).
+static func battle_sheet(asset_id: StringName) -> Dictionary:
+	var sheet := "%s%s_%s.png" % [SPRITE_DIR, asset_id, BATTLE_TAG]
+	if ResourceLoader.exists(sheet) or FileAccess.file_exists(sheet):
+		return {"sheet": sheet, "meta": "%s%s_%s.json" % [SPRITE_DIR, asset_id, BATTLE_TAG]}
 	return {"sheet": "", "meta": ""}
 
 

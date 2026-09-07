@@ -39,7 +39,11 @@ static func try_special(
 	var turns := int(spec.get("turns", 3))
 	var magnitude := maxi(1, attacker.attack_stat() / 12)
 	player.attach_effect({"kind": kind, "turns": turns, "magnitude": magnitude})
-	presenter.play_enemy_anim(presenter.target_index, "attack")
+	# 특수는 통상 공격과 다른 그림을 쓴다 — 원작이 **로드조차 안 한** 프레임 5를
+	# 여기 배정했다(tools/dev/bake_battle_sheets.py). 대형 시트가 없으면 `special` 행이
+	# 없으므로 false가 돌아오고, 그때만 통상 공격 동작으로 간다.
+	if not presenter.play_enemy_anim(presenter.target_index, "special"):
+		presenter.play_enemy_anim(presenter.target_index, "attack")
 	presenter.enemy_lunge(presenter.target_index)
 	var key := "UI_BLOG_ENEMY_PARALYZE" if kind == &"paralysis" else "UI_BLOG_ENEMY_DOT"
 	BattleLog.push(

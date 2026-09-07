@@ -37,8 +37,18 @@ const IDLE_FPS := 2.0  ## 전투 중 idle 프레임 순환 속도
 ## 전투 화면 플레이어 실효 셀(px) — 구형(64셀 × 1.5배)과 동일.
 ## 노드 배율을 cell×scale로 정규화해 시트 교체(아트 모드·해상도 무관)에도 구도 보존.
 const BATTLE_PLAYER_CELL_PX := 96.0
+## 원작 전투 화면의 논리 해상도. 전투 대형 시트의 셀이 곧 이 화면이라,
+## 배율을 여기서 한 번만 도출하면 구도가 원작 그대로 옮겨진다.
+const ORIGIN_SCREEN_H := 200.0
+## 빈사 포즈로 갈리는 HP 비율. 원작은 `EN.Hp <= 15` 절대값이었으나(WARMODE.C:1117)
+## 리메이크는 적 HP가 층따라 52~444로 스케일되므로 비율로 옮긴다.
+const WOUNDED_RATIO := 0.25
 
 var _idle_clock := 0.0
+## 적 전투원 참조 — 빈사·사망 포즈를 매 프레임 스스로 맞추기 위한 것.
+## 컨트롤러가 갱신 시점마다 불러 주는 방식은 부르는 곳을 하나 빠뜨리면 조용히 죽는다.
+## 이 저장소의 지배적 결함이 그것이라, 여기서는 폴링으로 둔다(적 최대 3체).
+var enemy_combatants: Array[Combatant] = []
 
 var target_index := 0  ## 현재 타겟 적 인덱스 — 컨트롤러가 move 재생 전 설정
 var is_player_low_hp := false  ## 빈사 상태 여부 — 호흡 연출(헐떡임 가속) 연동
@@ -102,28 +112,51 @@ func build_sprites(enemy_ids: Array[String]) -> void:
 	for i in enemy_ids.size():
 		var es := Sprite2D.new()
 		var node_scale := 1.5  # 폴백(64px 사각형) 기본 배율 — 기존 값 유지
-		var paths := SpriteSets.character_sheet(StringName(enemy_ids[i]), true)
+		var eid := StringName(enemy_ids[i])
+		# 전투 대형 시트가 있으면 그것이 우선 — 원작 구도를 그대로 쓰는 길이다.
+		var battle := SpriteSets.battle_sheet(eid)
+		var is_battle := not str(battle["sheet"]).is_empty()
+		var paths: Dictionary = battle if is_battle else SpriteSets.character_sheet(eid, true)
+		var pos := Vector2(600 + i * 100, 180)
 		if not str(paths["sheet"]).is_empty():
 			var meta: Dictionary = {}
 			var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(str(paths["meta"])))
 			if typeof(raw) == TYPE_DICTIONARY:
 				meta = raw
-			var cell := float(meta.get("cell_w", meta.get("cell", 64)))
+			var cell_w := float(meta.get("cell_w", meta.get("cell", 64)))
+			var cell_h := float(meta.get("cell_h", meta.get("cell", cell_w)))
 			var meta_scale := maxf(float(meta.get("scale", 1.0)), 0.01)
 			var tex: Texture2D = load(str(paths["sheet"]))
 			if tex != null:
 				var eat := AtlasTexture.new()
 				eat.atlas = tex
-				eat.region = Rect2(0, 0, cell, cell)  # 행 0 = 정면(walk_down) 1프레임
+				eat.region = Rect2(0, 0, cell_w, cell_h)  # 행 0 = 대치 포즈 1프레임
 				es.texture = eat
-				es.set_meta(&"anim_cell", Vector2i(int(cell), int(cell)))
-				# 실효 크기 정규화 — 셀×스케일 무관하게 화면상 크기 일관
-				node_scale = BATTLE_PLAYER_CELL_PX / (cell * meta_scale)
+				es.set_meta(&"anim_cell", Vector2i(int(cell_w), int(cell_h)))
+				if is_battle:
+					es.set_meta(&"battle_sheet", true)
+					es.set_meta(&"sheet_meta", meta)
+					node_scale = _origin_scale()
+					# 원작은 언제나 1대1이었고 지금도 실플레이는 그렇다(필드 인카운터 1체,
+					# 컷신 강제 전투 2건도 단일 — battle_scene_controller._enemy_act 경고).
+					# 2체 이상은 계측 도구에서만 서므로 겹쳐 보이지만 않게 밀어 둔다.
+					pos = (
+						Vector2(float(i) * 110.0, 0.0)
+						+ _origin_point(
+							Vector2(
+								meta.get("draw_offset", [0, 0])[0],
+								meta.get("draw_offset", [0, 0])[1]
+							)
+						)
+					)
+				else:
+					# 실효 크기 정규화 — 셀×스케일 무관하게 화면상 크기 일관
+					node_scale = BATTLE_PLAYER_CELL_PX / (cell_w * meta_scale)
 		if es.texture == null:
 			var img := Image.create(64, 64, false, Image.FORMAT_RGBA8)
 			img.fill(Color(randf_range(0.5, 1.0), randf_range(0.2, 0.6), randf_range(0.2, 0.5)))
 			es.texture = ImageTexture.create_from_image(img)
-		es.position = Vector2(600 + i * 100, 180)
+		es.position = pos
 		es.scale = Vector2.ONE * node_scale
 		es.set_meta(&"base_pos", es.position)
 		es.set_meta(&"base_scale", es.scale)
@@ -189,6 +222,11 @@ func _player_cell_size() -> Vector2i:
 func _attach_ground_shadow(spr: Sprite2D) -> void:
 	if spr.texture == null:
 		return
+	# 전투 대형 시트는 셀이 곧 원작 화면(320×200)이라 텍스처 하단이 발밑이 아니다 —
+	# 여기서 계산하는 half_h가 화면 밖을 가리킨다. 원작 프레임에는 그림자가 이미
+	# 그려져 있으므로(e5·e6의 발밑 타원) 얹지 않는 것이 맞다.
+	if spr.has_meta(&"battle_sheet"):
+		return
 	var half_h := spr.texture.get_size().y * spr.scale.y * 0.5
 	var blob := Sprite2D.new()
 	blob.texture = ShadowBlob.shadow_texture(BATTLE_SHADOW_ALPHA)
@@ -197,6 +235,24 @@ func _attach_ground_shadow(spr: Sprite2D) -> void:
 	blob.z_index = spr.z_index - 1
 	_root.add_child(blob)
 	_root.move_child(blob, maxi(spr.get_index(), 0))
+
+
+## 원작 화면(320×200) → 지금 화면 배율. 세로를 기준으로 잡아 정사각 픽셀을 유지한다.
+## 가로로 맞추면(960/320=3.0) 원작이 4:3 화면에서 세로로 늘어나 보이던 것까지 흉내내게
+## 되는데, 그건 CRT 왜곡이지 그림의 규격이 아니다 — 셰이더가 따로 담당한다.
+func _origin_scale() -> float:
+	var h := float(ProjectSettings.get_setting("display/window/size/viewport_height", 540))
+	return h / ORIGIN_SCREEN_H
+
+
+## 원작 화면 좌표계의 그리기 오프셋 → 지금 화면의 스프라이트 중심 위치.
+## 원작은 320×200 화면 위 (offset) 자리에 프레임 전체를 얹었다(WARMODE.C `RPut_Spr`).
+## 셀이 화면 전체이므로 중심은 화면 중앙 + 오프셋×배율이 된다.
+func _origin_point(offset: Vector2) -> Vector2:
+	var s := _origin_scale()
+	var w := float(ProjectSettings.get_setting("display/window/size/viewport_width", 960))
+	var h := float(ProjectSettings.get_setting("display/window/size/viewport_height", 540))
+	return Vector2(w * 0.5, h * 0.5) + offset * s
 
 
 ## 아트 해상도와 게임 내 크기 분리 — 메타 scale (기본 1)
@@ -267,6 +323,12 @@ func _sheet_meta(spr: Sprite2D, asset_id: String) -> Dictionary:
 	if _sheet_meta_cache.has(key):
 		return _sheet_meta_cache[key]
 	var meta: Dictionary = {}
+	# 대형 시트는 build_sprites에서 메타를 통째로 들려 보냈다 — 경로로 다시 찾으면
+	# `character_sheet`(필드 도트)로 새어 나가 attack/wounded 행을 못 찾는다.
+	if spr.has_meta(&"sheet_meta"):
+		meta = spr.get_meta(&"sheet_meta")
+		_sheet_meta_cache[key] = meta
+		return meta
 	var path := ""
 	if spr == player_sprite:
 		path = str(_resolved_player()["meta"])
@@ -647,6 +709,9 @@ func enemy_lunge(index: int) -> void:
 	var base: Vector2 = spr.get_meta(&"base_pos")
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
 	spawn_afterimage(spr, 1.0)
+	if spr.has_meta(&"battle_sheet"):
+		_origin_charge(spr, speed)
+		return
 	var tw := spr.create_tween()
 	(
 		tw
@@ -655,6 +720,30 @@ func enemy_lunge(index: int) -> void:
 		. set_ease(Tween.EASE_OUT)
 	)
 	tw.tween_property(spr, "position", base, 0.14 / speed).set_trans(Tween.TRANS_BACK)
+
+
+## 원작 돌진 — 적이 화면을 가로질러 덮쳐 온다.
+##
+## `WARMODE.C:590` `for(i=100;i>=-50;i-=20)` — 공격 프레임을 원작 화면 x=+100에서
+## -50까지 20씩 밀며 8단계로 그렸다. 오프셋 y는 0이라 대치 자세의 (30,10)보다 살짝
+## 위로 뜬다. 그 폭(원작 150px = 지금 화면 405px)이 원작 전투의 압박감 자체다 —
+## 필드 도트 시절의 26px 러지로는 나오지 않는다.
+## 끝나면 대치 자세로 되돌린다(base_pos는 build_sprites가 심어 둔 그 자리).
+func _origin_charge(spr: Sprite2D, speed: float) -> void:
+	var meta: Dictionary = spr.get_meta(&"sheet_meta", {})
+	var slide: Array = meta.get("attack_slide", [100, -50])
+	var base: Vector2 = spr.get_meta(&"base_pos")
+	spr.position = _origin_point(Vector2(float(slide[0]), 0.0))
+	var tw := spr.create_tween()
+	(
+		tw
+		. tween_property(
+			spr, "position", _origin_point(Vector2(float(slide[1]), 0.0)), 0.34 / speed
+		)
+		. set_trans(Tween.TRANS_QUAD)
+		. set_ease(Tween.EASE_IN)
+	)
+	tw.tween_property(spr, "position", base, 0.2 / speed).set_trans(Tween.TRANS_QUAD)
 
 
 ## 피격 플래시 — 타겟이 빨갛게 깜빡임.
@@ -708,6 +797,35 @@ func _process(delta: float) -> void:
 	_advance_effects(delta)
 	_advance_cuts(delta)
 	_advance_anims(delta)
+	_sync_enemy_pose()
+
+
+## 적 상태(빈사·사망)를 대치 포즈에 반영한다.
+##
+## **원작이 이미 하던 것이다.** `WARMODE.C:1116-1127`은 매 그리기마다 HP를 보고
+## 프레임 0(평상)·1(빈사, HP≤15)·2(사망)를 골랐다. 리메이크는 그 세 프레임을 시트에
+## 굽고도 평상 하나만 쓰고 있었다 — 게다가 필드 도트 시트 4종(c_bug·flying_thesis·
+## rogue_vending·null_pointer)이 가진 `death` 행도 **호출부가 0곳**이었다.
+##
+## 컨트롤러가 갱신 때마다 불러 주는 방식을 쓰지 않는 이유: 부르는 곳을 하나 빠뜨리면
+## 조용히 죽고, 그게 이 저장소의 지배적 결함이다. 여기서 스스로 본다(적 최대 3체).
+func _sync_enemy_pose() -> void:
+	for i in enemy_sprites.size():
+		if i >= enemy_combatants.size():
+			break
+		var spr := enemy_sprites[i]
+		if spr == null or not is_instance_valid(spr) or not spr.has_meta(&"anim_cell"):
+			continue
+		var c: Combatant = enemy_combatants[i]
+		if c == null:
+			continue
+		var anims: Dictionary = _sheet_meta(spr, _sprite_asset_id(spr)).get("animations", {})
+		var row := int(spr.get_meta(&"pose_row", 0))
+		if c.is_down() and anims.has("death"):
+			row = int((anims["death"] as Dictionary).get("row", row))
+		elif float(c.hp) <= float(maxi(c.max_hp, 1)) * WOUNDED_RATIO and anims.has("wounded"):
+			row = int((anims["wounded"] as Dictionary).get("row", row))
+		spr.set_meta(&"idle_row", row)
 
 
 ## 애니 메타 보유 스프라이트의 대치 프레임 순환
@@ -742,10 +860,18 @@ func _face_combat_idle(spr: Sprite2D) -> void:
 			var row := int(anims["walk_right"].get("row", 3))
 			spr.set_meta(&"idle_row", row)
 			at.region.position.y = float(row * cell.y)
+	elif spr.has_meta(&"battle_sheet"):
+		# 대형 시트는 원작 화면 구도 자체다 — 좌우를 뒤집으면 조명·그림자까지 뒤집힌다.
+		var row := int((anims.get("idle", {}) as Dictionary).get("row", 0))
+		spr.set_meta(&"idle_row", row)
+		spr.set_meta(&"pose_row", row)
+		at.region.position.y = float(row * cell.y)
+		spr.flip_h = false
 	else:
 		if anims.has("walk_left"):
 			var row := int(anims["walk_left"].get("row", 2))
 			spr.set_meta(&"idle_row", row)
+			spr.set_meta(&"pose_row", row)
 			at.region.position.y = float(row * cell.y)
 			spr.flip_h = false
 		else:

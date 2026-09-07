@@ -100,6 +100,13 @@ def collect() -> list:
         {f[:-4] for f in listdir("assets/portraits")}, "없으면 대화창에 얼굴 없음")
     add("전투 이펙트", "effects", [e["id"] for e in load("data/effect_specs.json").get("species", [])],
         {f[:-4] for f in listdir("assets/effects")}, "없으면 점 파티클 폴백")
+    # 적 전투 대형 시트 — 2026-09-07 신설. 이 줄이 없던 동안 현황판은 "필드 몬스터 12/12 ·
+    # 공백 0"이라고만 말했고, **적의 전투 표현 갭은 숫자에 잡히지도 않았다.**
+    # 원작 대응 7종은 구우면 끝이지만(bake_battle_sheets.py) 신설 5종·보스 2종은 의뢰가 필요하다.
+    add("적 전투 대형 시트", "battle_actors",
+        [e["id"] for e in load("data/battle_actor_specs.json").get("enemies", [])],
+        {f[: -len("_battle.png")] for f in listdir("assets/sprites") if f.endswith("_battle.png")},
+        "없으면 필드 도트를 96px로 축소 — 원작 압박감 없음")
     add("전투 SD 시트", "battle_actors",
         [a["id"] for a in load("data/battle_actor_specs.json").get("species", [])], stems,
         "없으면 주인공이 전투에서 idle만 토글")

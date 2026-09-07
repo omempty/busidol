@@ -6,21 +6,175 @@
     {
       "id": "player_battle",
       "name_ko": "시돌 (전투 시트)",
-      "cell": { "w": 64, "h": 64 },
+      "cell": {
+        "w": 64,
+        "h": 64
+      },
       "source": "placeholder",
       "body_type": "humanoid",
       "pattern": "전투 전용",
       "telegraph_visual": "",
       "token": "1995년 공대생 주인공 '시돌'. 흰 셔츠 소매를 걷고 청바지, 헝클어진 검은 머리. 필드 도트(player_original.png)와 **같은 인물·같은 SD 등신**이며 전투 동작만 새로 그린다. 손에는 부싯돌(작은 라이터형 물건)",
       "animations": {
-        "idle_battle": { "row": 0, "frames": 2, "fps": 3, "loop": true, "_desc": "전투 대기 — 파이팅 포즈로 무게중심 이동" },
-        "attack": { "row": 1, "frames": 4, "fps": 12, "loop": false, "_desc": "앞으로 파고들며 주먹 — 3프레임에서 팔이 가장 뻗는다" },
-        "cast": { "row": 2, "frames": 3, "fps": 10, "loop": false, "_desc": "아이템·기술 사용 — 부싯돌을 들어 그음" },
-        "hurt": { "row": 3, "frames": 2, "fps": 8, "loop": false, "_desc": "피격 — 상체가 젖혀졌다 버팀" },
-        "guard": { "row": 4, "frames": 2, "fps": 6, "loop": false, "_desc": "방어 — 팔을 교차해 막음" },
-        "win": { "row": 5, "frames": 3, "fps": 6, "loop": false, "_desc": "승리 — 주먹을 쥐어 올림(개그 톤 허용)" },
-        "down": { "row": 6, "frames": 3, "fps": 5, "loop": false, "_desc": "패배 — 무릎을 꿇고 쓰러짐" }
+        "idle_battle": {
+          "row": 0,
+          "frames": 2,
+          "fps": 3,
+          "loop": true,
+          "_desc": "전투 대기 — 파이팅 포즈로 무게중심 이동"
+        },
+        "attack": {
+          "row": 1,
+          "frames": 4,
+          "fps": 12,
+          "loop": false,
+          "_desc": "앞으로 파고들며 주먹 — 3프레임에서 팔이 가장 뻗는다"
+        },
+        "cast": {
+          "row": 2,
+          "frames": 3,
+          "fps": 10,
+          "loop": false,
+          "_desc": "아이템·기술 사용 — 부싯돌을 들어 그음"
+        },
+        "hurt": {
+          "row": 3,
+          "frames": 2,
+          "fps": 8,
+          "loop": false,
+          "_desc": "피격 — 상체가 젖혀졌다 버팀"
+        },
+        "guard": {
+          "row": 4,
+          "frames": 2,
+          "fps": 6,
+          "loop": false,
+          "_desc": "방어 — 팔을 교차해 막음"
+        },
+        "win": {
+          "row": 5,
+          "frames": 3,
+          "fps": 6,
+          "loop": false,
+          "_desc": "승리 — 주먹을 쥐어 올림(개그 톤 허용)"
+        },
+        "down": {
+          "row": 6,
+          "frames": 3,
+          "fps": 5,
+          "loop": false,
+          "_desc": "패배 — 무릎을 꿇고 쓰러짐"
+        }
       }
+    }
+  ],
+  "_enemy_comment": "적 전투 대형 시트 계약 — 2026-09-07 신설. 원작 전투는 320×200 전체 화면 프레임 시퀀스였고(WARMODE.C) 그 프레임이 저장소에 있었는데 게임 코드가 로드하는 곳이 0곳이었다. 적이 화면 높이의 13~21%밖에 안 돼 원작(52~73%)의 압박감이 통째로 빠져 있었다. 설치 규약: assets/sprites/<id>_battle.png + .json. SpriteSets.battle_sheet가 필드 도트보다 우선한다.",
+  "_enemy_frames": "프레임 의미는 원작 소스가 확정한다 — 0 평상(ENLoss=0) · 1 빈사(HP<=15, ENLoss=1) · 2 사망(EN.Life==0) · 3 공격(EnemyAttackAni가 x=100->-50 슬라이드). 4·5는 원작이 로드조차 하지 않는다 — 리메이크는 그 사문화 프레임을 특수 공격(상태이상)에 배정했다.",
+  "enemies": [
+    {
+      "id": "sparker",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "리메이크 신설 종 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
+    },
+    {
+      "id": "mad_eye",
+      "status": "baked",
+      "origin_spr": "e1",
+      "origin_spr_num": 0,
+      "origin_name": "Mad Eye",
+      "hue_shift": 0,
+      "_desc": "원작 E1.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+    },
+    {
+      "id": "vulgar",
+      "status": "baked",
+      "origin_spr": "e2",
+      "origin_spr_num": 1,
+      "origin_name": "Vilgur",
+      "hue_shift": 0,
+      "_desc": "원작 E2.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+    },
+    {
+      "id": "dworm",
+      "status": "baked",
+      "origin_spr": "e3",
+      "origin_spr_num": 2,
+      "origin_name": "DWorm",
+      "hue_shift": 0,
+      "_desc": "원작 E3.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+    },
+    {
+      "id": "ozzy",
+      "status": "baked",
+      "origin_spr": "e4",
+      "origin_spr_num": 3,
+      "origin_name": "Ozzy",
+      "hue_shift": 100,
+      "_desc": "원작 E4.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다. e2와 바이트 동일이라 색상환 100° 회전으로 가른다"
+    },
+    {
+      "id": "iron_voc",
+      "status": "baked",
+      "origin_spr": "e5",
+      "origin_spr_num": 4,
+      "origin_name": "Iron-Vic",
+      "hue_shift": 0,
+      "_desc": "원작 E5.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+    },
+    {
+      "id": "hellcop",
+      "status": "baked",
+      "origin_spr": "e6",
+      "origin_spr_num": 5,
+      "origin_name": "HellCop",
+      "hue_shift": 0,
+      "_desc": "원작 E6.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+    },
+    {
+      "id": "o_ray",
+      "status": "baked",
+      "origin_spr": "e7",
+      "origin_spr_num": 6,
+      "origin_name": "O-Rey",
+      "hue_shift": 160,
+      "_desc": "원작 E7.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다. e2와 바이트 동일이라 색상환 160° 회전으로 가른다"
+    },
+    {
+      "id": "c_bug",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "리메이크 신설 종 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
+    },
+    {
+      "id": "flying_thesis",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "리메이크 신설 종 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
+    },
+    {
+      "id": "rogue_vending",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "리메이크 신설 종 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
+    },
+    {
+      "id": "null_pointer",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "리메이크 신설 종 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
+    },
+    {
+      "id": "professor_monster",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "보스 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
+    },
+    {
+      "id": "sys_builder",
+      "status": "needs_art",
+      "origin_spr": null,
+      "_desc": "보스 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
     }
   ]
 }

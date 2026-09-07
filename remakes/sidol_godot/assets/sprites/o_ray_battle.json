@@ -1,0 +1,62 @@
+{
+ "schema_version": 3,
+ "kind": "battle",
+ "source": "originals E*.SPR — O-Rey — 원작 SprNum 6. e2와 바이트 동일 → 광선 청백으로 변주",
+ "generator": "tools/dev/bake_battle_sheets.py",
+ "cell": 320,
+ "cell_w": 320,
+ "cell_h": 200,
+ "cols": 2,
+ "scale": 1.0,
+ "origin_screen": [
+  320,
+  200
+ ],
+ "draw_offset": [
+  30,
+  10
+ ],
+ "attack_slide": [
+  100,
+  -50
+ ],
+ "hue_shift": 160,
+ "animations": {
+  "idle": {
+   "row": 0,
+   "frames": 2,
+   "fps": 2,
+   "loop": true
+  },
+  "wounded": {
+   "row": 1,
+   "frames": 2,
+   "fps": 2,
+   "loop": true
+  },
+  "attack": {
+   "row": 2,
+   "frames": 2,
+   "fps": 6,
+   "loop": false
+  },
+  "special": {
+   "row": 3,
+   "frames": 2,
+   "fps": 5,
+   "loop": false
+  },
+  "death": {
+   "row": 4,
+   "frames": 2,
+   "fps": 4,
+   "loop": false
+  },
+  "hurt": {
+   "row": 1,
+   "frames": 1,
+   "fps": 6,
+   "loop": false
+  }
+ }
+}
