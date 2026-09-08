@@ -105,6 +105,7 @@
   #stage.dropping{outline:2px dashed var(--acc);outline-offset:-6px}
   #view.tool-pencil{cursor:crosshair}
   #view.tool-fill{cursor:copy}
+  #view.tool-erase{cursor:cell}
   #view.tool-select{cursor:default}
 </style>
 
@@ -122,9 +123,16 @@
   <button class="toolbtn" id="tool-select" aria-pressed="true" title="셀 선택 (V)">선택</button>
   <button class="toolbtn" id="tool-pencil" aria-pressed="false" title="1px 연필로 찍기 (B)">연필</button>
   <button class="toolbtn" id="tool-fill" aria-pressed="false" title="닿은 영역 채우기 (G)">채우기</button>
+  <button class="toolbtn" id="tool-erase" aria-pressed="false" title="문질러 지우기 (E) · Shift+드래그=사각 지우기">지우개</button>
   <input type="color" id="brushcolor" value="#0a082e" title="그리기 색(스포이드로도 지정)">
-  <select id="brushsize" title="연필 굵기(px)">
+  <select id="brushsize" title="연필·지우개 굵기(px)">
     <option value="1" selected>1px</option><option value="2">2px</option><option value="3">3px</option>
+    <option value="5">5px</option><option value="8">8px</option><option value="12">12px</option>
+    <option value="20">20px</option><option value="32">32px</option><option value="48">48px</option>
+  </select>
+  <select id="erasemode" title="지우면 무엇이 남는가">
+    <option value="clear" selected>지움 → 투명</option>
+    <option value="magenta">지움 → 마젠타</option>
   </select>
   <button id="undo">되돌리기 (Ctrl+Z)</button>
   <button id="redo">다시</button>
@@ -202,7 +210,7 @@
 
     <section>
       <h2>그리기 <span class="meta">빈 동작 프레임 메우기용</span></h2>
-      <div class="row hint"><kbd>V</kbd>선택 <kbd>B</kbd>연필 <kbd>G</kbd>채우기 · 우클릭=지우개 · <kbd>O</kbd>어니언 토글</div>
+      <div class="row hint"><kbd>V</kbd>선택 <kbd>B</kbd>연필 <kbd>G</kbd>채우기 <kbd>E</kbd>지우개 · 우클릭=어디서나 지우개 · <kbd>O</kbd>어니언</div>
       <div class="row">
         <label class="meta">어니언 불투명도 <input type="range" id="onionalpha" min="10" max="70" value="35"> <span class="meta" id="onionval">35%</span></label>
       </div>
@@ -308,12 +316,14 @@ const TOOL_HINTS = {
   select: "클릭=셀 선택 · Alt+클릭=스포이드 · Shift+드래그=영역 지우기",
   pencil: "드래그=그리기 · 우클릭=지우개 · Alt+클릭=스포이드",
   fill: "클릭=닿은 영역 채우기 · Alt+클릭=스포이드",
+  erase: "드래그=문질러 지우기 · Shift+드래그=사각 지우기 · Alt+클릭=스포이드",
 };
-const TOOL_NAMES = { select: "선택", pencil: "연필", fill: "채우기" };
+const TOOL_NAMES = { select: "선택", pencil: "연필", fill: "채우기", erase: "지우개" };
+const TOOL_KEYS = ["select", "pencil", "fill", "erase"];
 
 function setTool(t) {
   tool = t;
-  for (const k of ["select", "pencil", "fill"]) {
+  for (const k of TOOL_KEYS) {
     const b = $("#tool-" + k);
     if (b) b.setAttribute("aria-pressed", k === t ? "true" : "false");
   }
@@ -331,15 +341,56 @@ function brushRGB() {
 /** 연필 1점 — 굵기 N이면 커서 기준 N×N 정사각형. */
 function paintAt(x, y) {
   const n = Math.max(1, parseInt($("#brushsize").value, 10) || 1);
+  const half = n >> 1;
   const c = brushRGB();
   wctx.fillStyle = `rgb(${c[0]},${c[1]},${c[2]})`;
-  wctx.fillRect(x, y, n, n);
+  wctx.fillRect(x - half, y - half, n, n);   // 굵을 때도 커서가 붓의 중앙이다
 }
 
-/** 우클릭 지우개 1점. */
+/**
+ * 지우개 1점 — 커서 기준 N x N. "지움"의 의미는 배경 규약에 따라 둘이다:
+ *   투명   — alpha 0. 계약이 요구하는 정상 배경.
+ *   마젠타 — 불투명 #FF00FF. 납품이 마젠타 배경으로 왔을 때 그 배경을 유지하며 지운다
+ *            (투명으로 뚫으면 배경에 구멍이 나 키잉 검사에서 두 배경이 섞인다).
+ */
 function eraseAt(x, y) {
   const n = Math.max(1, parseInt($("#brushsize").value, 10) || 1);
-  wctx.clearRect(x, y, n, n);
+  const half = n >> 1;
+  if (($("#erasemode") || {}).value === "magenta") {
+    wctx.fillStyle = "rgb(255,0,255)";
+    wctx.fillRect(x - half, y - half, n, n);
+  } else {
+    wctx.clearRect(x - half, y - half, n, n);
+  }
+}
+
+/** 사각 영역을 지운다 — 지우기 대상 규약을 점 지우개와 공유한다. */
+function eraseRect(x, y, w, h) {
+  if (($("#erasemode") || {}).value === "magenta") {
+    wctx.fillStyle = "rgb(255,0,255)";
+    wctx.fillRect(x, y, w, h);
+  } else {
+    wctx.clearRect(x, y, w, h);
+  }
+}
+
+/**
+ * 두 점 사이를 이어 스탬프를 찍는다(브레젠험).
+ *
+ * 왜: 마우스 이동 이벤트는 픽셀마다 오지 않는다. 빠르게 문지르면 이벤트 사이가 비어
+ * **점선처럼 끊긴 자국**이 남았다 — 지우개는 그 간격이 그대로 지워지지 않은 얼룩이 된다.
+ */
+function strokeLine(x0, y0, x1, y1, stamp) {
+  let dx = Math.abs(x1 - x0), dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  for (;;) {
+    stamp(x0, y0);
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = 2 * err;
+    if (e2 > -dy) { err -= dy; x0 += sx; }
+    if (e2 < dx) { err += dx; y0 += sy; }
+  }
 }
 
 /**
@@ -969,6 +1020,7 @@ $("#autofix").onclick = () => serverOp("autofix", {
 
 // 캔버스 상호작용 — 도구 모드별: 선택 / 연필 / 채우기 (+우클릭 지우개 공통)
 let dragStart = null;
+let lastPt = null;      // 직전 스탬프 위치(스트로크 보간용)
 view.oncontextmenu = e => e.preventDefault();
 view.onmousedown = e => {
   if (!work) return;
@@ -983,14 +1035,24 @@ view.onmousedown = e => {
   if (e.button === 2) {  // 우클릭 지우개 — 도구와 무관하게 동작
     pushUndo();
     eraseAt(x, y);
-    painting = true;
+    painting = true; lastPt = [x, y];
+    redraw();
+    return;
+  }
+  if (tool === "erase") {
+    if (e.shiftKey) { dragStart = { x, y }; return; }   // 사각 지우기
+    pushUndo();
+    eraseAt(x, y);
+    painting = true; lastPt = [x, y];
+    statsStale = true;
     redraw();
     return;
   }
   if (tool === "pencil") {
     pushUndo();
     paintAt(x, y);
-    painting = true;
+    painting = true; lastPt = [x, y];
+    statsStale = true;
     redraw();
     return;
   }
@@ -1015,16 +1077,23 @@ view.onmousemove = e => {
   if (!work) return;
   const [x, y] = evPos(e);
   if (painting) {
-    if (e.buttons === 2 || (e.buttons === 1 && e.shiftKey)) eraseAt(x, y);
-    else if (tool === "pencil") paintAt(x, y);
-    redraw();
+    // 이벤트 사이를 선으로 이어야 빠른 드래그에서 자국이 끊기지 않는다.
+    const erasing = e.buttons === 2 || tool === "erase" || (e.buttons === 1 && e.shiftKey);
+    const stamp = erasing ? eraseAt : (tool === "pencil" ? paintAt : null);
+    if (stamp) {
+      const [px, py] = lastPt || [x, y];
+      strokeLine(px, py, x, y, stamp);
+      lastPt = [x, y];
+      statsStale = true;
+      redraw();
+    }
     return;
   }
   updateStatusPos(x, y);
 };
 view.onmouseleave = () => { painting = false; };
 document.onmouseup = () => {
-  if (painting) { painting = false; statsStale = true; redraw(); log("스트로크 확정"); }
+  if (painting) { painting = false; lastPt = null; statsStale = true; redraw(); log("스트로크 확정"); }
 };
 view.onmouseup = e => {
   if (!dragStart) return;
@@ -1033,8 +1102,10 @@ view.onmouseup = e => {
   const x0 = Math.min(dragStart.x, x), y0 = Math.min(dragStart.y, y);
   const w = Math.abs(x - dragStart.x) + 1, h = Math.abs(y - dragStart.y) + 1;
   pushUndo();
-  wctx.clearRect(x0, y0, w, h);
-  log(`영역 지우기 ${w}×${h} @(${x0},${y0})`);
+  eraseRect(x0, y0, w, h);
+  statsStale = true;
+  log(`영역 지우기 ${w}×${h} @(${x0},${y0})`
+      + (($("#erasemode") || {}).value === "magenta" ? " → 마젠타" : " → 투명"));
   dragStart = null;
   redraw();
 };
@@ -1054,6 +1125,7 @@ document.onkeydown = e => {
     if (k === "v") { setTool("select"); return; }
     if (k === "b") { setTool("pencil"); return; }
     if (k === "g") { setTool("fill"); return; }
+    if (k === "e") { setTool("erase"); return; }
     if (k === "o") { $("#onion").checked = !$("#onion").checked; redraw(); return; }
     if (k === "d") { if (sel && contract.cell) { pushUndo(); dupNext(); redraw(); } return; }
   }
@@ -1100,7 +1172,7 @@ $("#showgrid").onchange = redraw;
 $("#onion").onchange = redraw;
 $("#onionalpha").oninput = () => { $("#onionval").textContent = $("#onionalpha").value + "%"; redraw(); };
 $("#brushcolor").oninput = () => { picked = null; $("#picked").textContent = "브러시 색 사용 중"; };
-for (const k of ["select", "pencil", "fill"]) {
+for (const k of TOOL_KEYS) {
   $("#tool-" + k).onclick = () => setTool(k);
 }
 
