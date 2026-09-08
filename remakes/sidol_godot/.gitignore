@@ -37,3 +37,6 @@ tools/dev/mapshots/
 # UI 캡처 굽기 결과 (tools/dev/ui_shots.tscn이 생성)
 tools/dev/ui_captures/
 
+
+# 바로가기 폴더 산출물(.lnk 절대경로 포함, 로컬 전용)
+바로가기/*.lnk
