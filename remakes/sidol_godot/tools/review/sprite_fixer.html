@@ -384,7 +384,10 @@ function loadImage(src) {
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = e => reject(e);
-    img.src = src.includes("?") ? src : (src + "?t=" + Date.now());
+    // 캐시 무력화 인자는 **파일 URL에만** 붙인다. data: URL 뒤에 "?t=..."를 붙이면
+    // base64 본문의 일부가 되어 디코드가 깨진다("Excess data after padding") —
+    // 서버 연산 결과를 되받는 경로가 통째로 죽는다(2026-09-08 snapall에서 물림).
+    img.src = (src.startsWith("data:") || src.includes("?")) ? src : (src + "?t=" + Date.now());
   });
 }
 
@@ -810,6 +813,12 @@ async function serverOp(op, extra) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ op, params: opParams(extra), png: work.toDataURL("image/png") }),
     });
+    if (!res.ok) {
+      // 404면 서버가 옛 코드다(/api/fixer/op 이전 프로세스). 그 자리에서 알려 준다.
+      log(`연산 실패: HTTP ${res.status}` + (res.status === 404
+          ? " — 서버가 옛 버전이다. 심사 서버 창을 닫고 셀편집기.bat을 다시 실행하라." : ""), "bad");
+      return;
+    }
     const j = await res.json();
     if (j.error) { log("연산 실패: " + j.error, "bad"); return; }
     pushUndo();
@@ -823,7 +832,9 @@ async function serverOp(op, extra) {
     if (j.log) log(j.log, "ok");
     redraw();
   } catch (e) {
-    log("연산 실패(서버 없음?): " + e, "bad");
+    // Event(이미지 디코드 실패)와 예외를 구분해 찍는다 — "[object Event]"로는 못 읽는다.
+    const why = (e && e.type === "error") ? "서버가 준 PNG를 디코드하지 못했다" : (e && e.message) || String(e);
+    log("연산 실패: " + why, "bad");
   } finally {
     btns.forEach(b => { b.disabled = false; });
   }
