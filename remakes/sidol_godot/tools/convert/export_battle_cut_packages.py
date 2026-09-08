@@ -166,6 +166,11 @@ def refs_text(listed: list, start: int) -> str:
 def export_one(sp: dict) -> None:
     cid = sp["id"]
     cell = int(sp.get("sheet_cell", 512))
+    # animations 없는 항목은 시트가 아니라 참조 전용이다(origin_player). 여기서 죽으면
+    # 카테고리 전체 재생성이 멈춘다 — review_server.sheet_contract에서 고친 것과 같은 결함.
+    if not isinstance(sp.get("animations"), dict) or "play" not in sp["animations"]:
+        print(f"  - {sp.get('id')}: animations 없음 — 참조 전용 항목이라 건너뛴다")
+        return
     anim: dict = sp["animations"]["play"]
     frames = int(anim.get("frames", 1))
     sheet_w, sheet_h = frames * cell, cell

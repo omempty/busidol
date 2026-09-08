@@ -29,6 +29,7 @@ from llm_package_common import (
     dominant_colors,
     make_grid_template,
     make_palette_swatch,
+    body_only_note,
     make_subpalette,
     measure_tone,
     prepare_workspace,
@@ -181,7 +182,7 @@ def export_one(sp: dict) -> None:
 
     table_lines = ["| 행 | 애니 | 프레임 | 내용 |", "|---|---|---|---|"]
     for a_name, a in anims:
-        desc = a.get("_desc", "")
+        desc = body_only_note(a.get("_desc", ""))
         table_lines.append(
             f"| {int(a.get('row', 0))} | {a_name} | {int(a.get('frames', 1))}프레임 | {desc} |")
     row_table = "\n".join(table_lines)
@@ -203,7 +204,9 @@ def export_one(sp: dict) -> None:
         dominant_colors(refs, 16), os.path.join(OUT_ROOT, "subpalette.png")
     )
     prompt = PROMPT_TEMPLATE.format(
-        orig_refs=refs_block(listed, 6),
+        # 고정 첨부가 6번까지다 — 여기서 6으로 시작하면 번호가 6,6,7…로 겹친다.
+        # 사람이 "6번 파일"이라고 하면 어느 쪽인지 모르게 된다(실측: 패키지 16건).
+        orig_refs=refs_block(listed, 7),
         style_bible=style_bible_block(),
         subpalette_hex=sub_hex,
         tone_block=tone_block(tone, "원작에서 이관한 캐릭터 시트"),

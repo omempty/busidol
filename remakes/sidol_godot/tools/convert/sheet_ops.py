@@ -232,6 +232,37 @@ def regrid(im: Image.Image, src_cell: int, cell: int, rows: int, cols: int) -> t
     return out, f"{src_cols}×{src_rows}(셀 {sc}) → {cols}×{rows}(셀 {cell})"
 
 
+def autosize(im: Image.Image, cell: int, rows: int, cols: int) -> tuple:
+    """어떤 크기로 와도 계약 캔버스에 맞춘다 — 무엇을 했는지 문장으로 돌려준다.
+
+    웹 LLM은 캔버스 크기를 거의 못 맞춘다(1024x1024, 1536x1024 같은 자기 기본값으로 온다).
+    사람이 재배치/리샘플 중 무엇을 눌러야 하는지 매번 판단하던 자리를 없앤다.
+
+    판단 순서 — 그림을 덜 망가뜨리는 쪽부터:
+      1) 이미 계약 크기 → 아무것도 안 한다
+      2) 가로세로 **비율이 같다** → 전체를 nearest로 균일 확대·축소(격자가 그대로 산다)
+      3) 그 외 → **칸 단위 리샘플**: 원본을 cols x rows로 등분해 각 조각을 셀 크기로 옮긴다.
+         비율이 달라도 칸마다 내용이 보존된다(전체 리샘플은 격자가 어긋난다).
+    """
+    if not (cell and rows and cols):
+        return im, "계약이 없어 크기를 맞출 수 없다"
+    W, H = cols * cell, rows * cell
+    src = im.convert("RGBA")
+    if (src.width, src.height) == (W, H):
+        return src, f"이미 계약 크기 {W}×{H} — 변경 없음"
+    if abs(src.width / max(1, src.height) - W / H) < 0.01:
+        out = src.resize((W, H), Image.NEAREST)
+        return out, f"비율이 같아 균일 리샘플 {src.width}×{src.height} → {W}×{H}"
+    out = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    for r in range(rows):
+        for c in range(cols):
+            box = (round(c * src.width / cols), round(r * src.height / rows),
+                   round((c + 1) * src.width / cols), round((r + 1) * src.height / rows))
+            out.paste(src.crop(box).resize((cell, cell), Image.NEAREST), (c * cell, r * cell))
+    return out, (f"칸 단위 리샘플 {src.width}×{src.height} → {W}×{H} "
+                 f"(원본 칸 {round(src.width/cols)}×{round(src.height/rows)} → {cell}×{cell})")
+
+
 def scale_to(im: Image.Image, w: int, h: int) -> tuple:
     """계약 크기로 nearest 리샘플."""
     return im.convert("RGBA").resize((int(w), int(h)), Image.NEAREST), f"{im.width}×{im.height} → {w}×{h}"
@@ -318,6 +349,9 @@ def apply_op(im: Image.Image, op: str, params: dict) -> tuple:
             return im, "계약이 없어 재배치할 격자를 모른다"
         im, msg = regrid(im, int(p.get("src_cell", 0)), cell, rows, cols)
         return im, "재배치: " + msg
+    if op == "autosize":
+        im, msg = autosize(im, cell, rows, cols)
+        return im, "크기 자동 조절: " + msg
     if op == "scale":
         size = p.get("size") or [im.width, im.height]
         im, msg = scale_to(im, size[0], size[1])
@@ -337,8 +371,10 @@ def apply_op(im: Image.Image, op: str, params: dict) -> tuple:
     if op == "autofix":
         logs = []
         if cell and rows and cols and (im.width, im.height) != (cols * cell, rows * cell):
-            im, msg = regrid(im, int(p.get("src_cell", 0)), cell, rows, cols)
-            logs.append("크기 불일치 — 재배치: " + msg)
+            # 예전에는 regrid(원본 셀 크기를 사람이 입력)였다. 웹에서 받은 시트는 셀 크기를
+            # 모르는 게 보통이라 autosize가 스스로 고른다.
+            im, msg = autosize(im, cell, rows, cols)
+            logs.append("크기 자동 조절: " + msg)
         im, n = key_magenta(im, 40)
         logs.append(f"마젠타 키잉 {n}px")
         if cell:

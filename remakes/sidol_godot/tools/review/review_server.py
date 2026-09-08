@@ -9,6 +9,7 @@ stdlib 전용(http.server + subprocess). 프로젝트 루트를 정적 서빙하
   POST /api/batch   {cat,action,feedback}       전체 승인/전체 반려
   GET  /api/fixer/contract?cat&file            셀 편집기용 그리드 계약(셀 크기·행별 프레임)
   GET  /api/fixer/files[?cat=monsters]         셀 편집기 파일 선택기 목록(대기·반려·승인본)
+  GET  /api/fixer/webprompt?cat&file           웹 챗용 프롬프트(공통 + 시트 상세)
   POST /api/fixer/op   {op,params,png}         시트 픽셀 연산(정본: tools/convert/sheet_ops.py)
   POST /api/fixer/save {cat,file,png,mode}     편집 결과를 다음 버전으로 재납품
 
@@ -546,6 +547,23 @@ def fixer_op(payload: dict) -> dict:
     }
 
 
+def fixer_webprompt(cat: str, fname: str) -> dict:
+    """첨부 없이 웹 챗에 붙여넣는 프롬프트 — 공통 규약 + 이 시트 상세.
+
+    편집기에서 바로 복사하려고 있는 자리다. 텍스트는 `tools/convert/web_prompt.py`가
+    스펙에서 굽는다(손으로 쓴 허브 문서가 규격과 어긋나 있던 전례가 있다).
+    """
+    sys.path.insert(0, os.path.join(ROOT, "tools", "convert"))
+    import web_prompt  # noqa: PLC0415 — 지연 임포트(PIL 계열 의존)
+
+    asset_id = asset_id_of(fname)
+    return {
+        "asset_id": asset_id,
+        "common": web_prompt.common_prompt(),
+        "sheet": web_prompt.sheet_prompt(cat, asset_id),
+    }
+
+
 def fixer_save(payload: dict) -> dict:
     cat = payload.get("cat", "")
     if cat not in CATEGORIES:
@@ -596,6 +614,14 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json(400, {"error": "bad cat/file"})
                 return
             self._json(200, fixer_contract(cat, fname))
+        elif parsed.path == "/api/fixer/webprompt":
+            q = parse_qs(parsed.query)
+            cat = q.get("cat", [""])[0]
+            fname = os.path.basename(q.get("file", [""])[0])
+            if cat not in CATEGORIES or not fname:
+                self._json(400, {"error": "bad cat/file"})
+                return
+            self._json(200, fixer_webprompt(cat, fname))
         elif parsed.path == "/api/fixer/files":
             q = parse_qs(parsed.query)
             self._json(200, {"files": fixer_files(q.get("cat", [""])[0]),

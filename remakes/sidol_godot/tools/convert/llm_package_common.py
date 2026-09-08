@@ -254,6 +254,25 @@ def identity_block(tokens: list) -> str:
 
 
 ## 어떤 카테고리든 공통으로 금지되는 것 — 생성 모델이 습관적으로 넣는 것들.
+## 투사체·비산물을 뜻하는 말. 스펙의 동작 설명은 **게임에서 일어나는 일**을 적은 것이라
+## 그대로 그리라고 주면 셀 안에 캔·빔·파편이 그려진다(캐릭터 실루엣과 겹쳐 경계상자가
+## 커지고, 게임에서는 그 셀이 캐릭터로만 잘려 물체가 몸에 달라붙어 보인다).
+PROJECTILE_WORDS = ("발사", "던", "투척", "날림", "파편", "빔", "레이저", "탄", "충격파", "투사체")
+
+
+def body_only_note(desc: str) -> str:
+    """동작 설명에 투사체가 섞였으면 '몸의 동작으로만' 주석을 붙인다.
+
+    스펙을 고치지 않는다 — 게임 동작으로는 맞는 서술이기 때문이다. 고치는 것은
+    **그림 지시**뿐이다: 무엇이 일어나는지는 알려 주되 무엇을 그릴지는 좁힌다.
+    """
+    if not desc:
+        return desc
+    if any(w in desc for w in PROJECTILE_WORDS):
+        return desc + " — **자세·부위 변형만 그린다**(투사체·파편은 그리지 않는다: effects 담당)"
+    return desc
+
+
 NEGATIVE_RULES = """### 하지 말 것 (하나라도 어기면 반려)
 - 그라데이션·글로우·블러·베벨·드롭섀도 등 후처리 효과
 - 3D 렌더·벡터 일러스트·수채/유화 질감 — **도트(픽셀) 그림만**
@@ -265,6 +284,12 @@ NEGATIVE_RULES = """### 하지 말 것 (하나라도 어기면 반려)
   납품물에 안내선이 남으면 자동 검사가 직선 런으로 잡아낸다
 - 액자·테두리 선·둥근 모서리 마스크
 - 요청한 것 외의 물건을 곁들여 배치하는 것(단품만)
+- **공격·피격 프레임에 소품·무기·투사체를 따로 그려 넣는 것.**
+  공격은 **몸의 동작으로만** 표현한다(자세·팔다리 궤적·부위 변형·자세 예비동작).
+  날아가는 물체, 휘두르는 도구, 튀는 파편, 충격파를 셀 안에 그리면
+  ① 캐릭터 실루엣과 겹쳐 경계상자가 커지고 정렬·크기 검사가 어긋나며
+  ② 게임에서는 그 셀이 캐릭터 스프라이트로만 잘려 나가 물체가 몸에 달라붙어 보인다.
+  타격 이펙트·투사체는 **별도 카테고리(effects)** 에서 따로 만들어 겹쳐 재생한다.
 - 반투명 안티에일리어싱 남발 — 원작 아트의 반투명 픽셀은 **0%**다"""
 
 
@@ -330,6 +355,10 @@ def style_bible_block() -> str:
     marker = "## 스타일 타깃"
     if marker in text:
         text = text[text.index(marker):]
+    # 바이블 본문의 "## ..." 제목을 한 단계 낮춘다. 카테고리 템플릿에도 "## 스타일 타깃"이
+    # 있어 같은 제목의 절이 한 문서에 둘이 되면 어느 쪽이 우선인지 읽는 쪽이 알 수 없다
+    # (실측: 패키지 38건). 바이블은 이 블록 안의 하위 절로 들어가는 것이 맞다.
+    text = chr(10).join(("#" + ln) if ln.startswith("## ") else ln for ln in text.split(chr(10)))
     header = "## 최상위 창작 규칙 (스타일 바이블 — 아래 모든 지시보다 우선)"
     return header + chr(10) + chr(10) + text
 
@@ -390,8 +419,69 @@ def dominant_colors(paths: list, count: int = 16) -> list:
     return [c for c, _ in tally.most_common(count)]
 
 
+_ALLOWED_CACHE = None
+
+
+def allowed_palette() -> list:
+    """의뢰문이 허용할 수 있는 색 = 마스터(256) + 확장(64).
+
+    마스터는 원본 DEFAULT.PAL 그대로라 6비트(0~63)다. 저장소에 6->8비트 변환이 둘
+    공존하므로(<<2 = 252, *255/63 = 255) 양쪽 표기를 모두 넣는다.
+    """
+    global _ALLOWED_CACHE
+    if _ALLOWED_CACHE is not None:
+        return _ALLOWED_CACHE
+    out = []
+    mp = os.path.join(ROOT, "assets", "palette_master.json")
+    if os.path.exists(mp):
+        data = json.load(io.open(mp, encoding="utf-8"))
+        raw6 = str(data.get("format", "")).startswith("raw")
+        for c in data.get("colors", []):
+            v = int(c.lstrip("#"), 16)
+            rgb = ((v >> 16) & 255, (v >> 8) & 255, v & 255)
+            if raw6:
+                out.append(tuple(min(255, x << 2) for x in rgb))
+                out.append(tuple(round(x * 255 / 63) for x in rgb))
+            else:
+                out.append(rgb)
+    ep = os.path.join(ROOT, "assets", "palette_extended.json")
+    if os.path.exists(ep):
+        for c in json.load(io.open(ep, encoding="utf-8")).get("colors", []):
+            v = int(c.lstrip("#"), 16)
+            out.append(((v >> 16) & 255, (v >> 8) & 255, v & 255))
+    _ALLOWED_CACHE = list(dict.fromkeys(out))
+    return _ALLOWED_CACHE
+
+
+def snap_to_palette(colors: list) -> list:
+    """실측 색을 **허용 팔레트의 최근접 색**으로 옮긴다.
+
+    왜: 의뢰문은 "마스터+확장 팔레트 안에서 고르라"고 말하면서, 참조 아트에서 실측한
+    색을 그대로 예시로 줬다. 그 목록에 팔레트 밖 색이 섞이면 지시가 자기모순이 되고
+    (실측: 패키지 37건), 생성 모델은 둘 중 아무거나 따른다. 규칙을 문장이 아니라
+    **데이터가 강제**하게 만든다 — 예시 색 자체를 허용 집합 안으로 스냅한다.
+    """
+    allow = allowed_palette()
+    if not allow:
+        return colors
+    out = []
+    for c in colors:
+        t = tuple(int(v) for v in c)
+        if t in allow:
+            out.append(t)
+            continue
+        best = min(allow, key=lambda q: abs(q[0] - t[0]) + abs(q[1] - t[1]) + abs(q[2] - t[2]))
+        out.append(best)
+    # 스냅으로 겹친 색은 하나로 — 같은 색을 두 번 예시로 줄 이유가 없다.
+    return list(dict.fromkeys(out))
+
+
 def make_subpalette(colors: list, out_path: str, swatch: int = 48) -> str:
-    """상위 색 목록 → 큰 스왑치 PNG. 반환: 프롬프트에 넣을 hex 목록 문자열."""
+    """상위 색 목록 → 큰 스왑치 PNG. 반환: 프롬프트에 넣을 hex 목록 문자열.
+
+    목록은 반드시 허용 팔레트(마스터+확장) 안으로 스냅해서 내보낸다.
+    """
+    colors = snap_to_palette(colors)
     if not colors:
         return ""
     cols = min(8, len(colors))
