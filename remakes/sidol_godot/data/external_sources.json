@@ -1,0 +1,51 @@
+{
+  "_comment": "외부 스탠드인 출처 단일 기록. _remake 설치 시 자동 교체(코드 수정 불필요).",
+  "packs": [
+    {
+      "id": "craftpix_bosses",
+      "author": "CraftPix.net",
+      "license": "OGA-BY 3.0",
+      "page": "https://opengameart.org/content/bosses-pixel-art-sprite-sheet",
+      "file_url": "https://opengameart.org/sites/default/files/bosses-pixel-art-sprite-sheet-pack.zip",
+      "bytes": 54246,
+      "credit": "Boss stand-ins: CraftPix Bosses Pack (OGA-BY 3.0)"
+    },
+    {
+      "id": "ruok_projectiles",
+      "author": "RUOK",
+      "license": "CC0",
+      "page": "https://opengameart.org/content/bright-projectiles-missiles-and-bullets",
+      "file_url": "https://opengameart.org/sites/default/files/ruokprojectilepack.zip",
+      "bytes": 791530,
+      "credit": "Danmaku bullets: RUOK Projectiles (CC0)"
+    }
+  ],
+  "baked_bosses": [
+    {
+      "game_id": "sys_builder",
+      "pack_no": "2",
+      "size": [
+        576,
+        504
+      ]
+    },
+    {
+      "game_id": "professor_monster",
+      "pack_no": "3",
+      "size": [
+        432,
+        504
+      ]
+    }
+  ],
+  "baked_bullets": {
+    "ext_bullet_warm": {
+      "cell": 1,
+      "hue": 19
+    },
+    "ext_bullet_cool": {
+      "cell": 7,
+      "hue": 219
+    }
+  }
+}

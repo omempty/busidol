@@ -1,13 +1,32 @@
 class_name DodgePhase
 extends Node2D
 ## 보스전 회피 페이즈 — 탄막슈팅풍 실시간 회피.
-## 패턴 종류: radial/aimed/wall/spiral/laser_sweep/homing/rain/cross/bounce/ring_collapse/random_burst
+## 패턴 종류: radial/aimed/wall/spiral/laser_sweep/homing/rain/cross/ring_collapse/random_burst
 ## 조합 가능: 한 페이즈에 여러 패턴 동시 발사.
+## (목록에 있던 bounce는 미구현 — 선언만 있고 _fire_pattern 분기가 없다.)
+##
+## 탄 스프라이트: 외부 무료팩(CC0)을 구운 것이 있으면 텍스처로 그리고,
+## 없으면 기존 도형(원+흰심) 폴백. 판정 반경(r)은 그림과 무관하게 유지한다 —
+## 그림이 바뀌어도 난이도가 바뀌면 안 된다. 굽는 도구: tools/dev/bake_external_bosses.py.
 
 signal phase_complete(hit_count: int)
 
 const PLAYER_HITBOX := 5.0
 const ARENA := Rect2(48, 48, 384, 264)  ## 960×540 뷰포트 기준 (구 640×360 1.5배)
+## 외부 탄 텍스처 — 파일이 없으면 폴백 도형으로 그린다(교체 가능성의 역방향).
+const EXT_TEX_WARM := "res://assets/effects/ext_bullet_warm.png"
+const EXT_TEX_COOL := "res://assets/effects/ext_bullet_cool.png"
+
+var _ext_tex: Dictionary = {}
+
+
+func _ready() -> void:
+	for key: String in [EXT_TEX_WARM, EXT_TEX_COOL]:
+		if ResourceLoader.exists(key):
+			var tex: Texture2D = load(key)
+			if tex != null:
+				_ext_tex[key] = tex
+
 
 var duration := 4.0
 var elapsed := 0.0
@@ -116,9 +135,12 @@ func _add_proj(
 	vel: Vector2,
 	r: float = 4.0,
 	color: Color = Color(1.0, 0.4, 0.3),
-	homing_strength: float = 0.0
+	homing_strength: float = 0.0,
+	tex: String = ""
 ) -> void:
-	_projectiles.append({"pos": pos, "vel": vel, "r": r, "color": color, "homing": homing_strength})
+	_projectiles.append(
+		{"pos": pos, "vel": vel, "r": r, "color": color, "homing": homing_strength, "tex": tex}
+	)
 
 
 # ---- 패턴 구현 ----
@@ -131,7 +153,12 @@ func _fire_radial(o: Vector2, pat: Dictionary) -> void:
 	for i in count:
 		var ang := TAU * i / count + offset
 		_add_proj(
-			o, Vector2.from_angle(ang) * speed, 4.0, Color(float(pat.get("cr", 1.0)), 0.4, 0.3)
+			o,
+			Vector2.from_angle(ang) * speed,
+			4.0,
+			Color(float(pat.get("cr", 1.0)), 0.4, 0.3),
+			0.0,
+			EXT_TEX_WARM
 		)
 
 
@@ -142,7 +169,7 @@ func _fire_aimed(o: Vector2, pat: Dictionary) -> void:
 		var spread := (
 			deg_to_rad(float(pat.get("spread_deg", 0))) * (i - (int(pat.get("count", 1)) - 1) / 2.0)
 		)
-		_add_proj(o, dir.rotated(spread) * speed, 4.0, Color(1.0, 0.6, 0.2))
+		_add_proj(o, dir.rotated(spread) * speed, 4.0, Color(1.0, 0.6, 0.2), 0.0, EXT_TEX_WARM)
 
 
 func _fire_wall(pat: Dictionary) -> void:
@@ -154,7 +181,9 @@ func _fire_wall(pat: Dictionary) -> void:
 	var x := ARENA.position.x
 	while x < ARENA.end.x:
 		if not (gap_center - gap_half < x and x < gap_center + gap_half):
-			_add_proj(Vector2(x, y), Vector2(0, speed), 4.0, Color(0.5, 0.7, 1.0))
+			_add_proj(
+				Vector2(x, y), Vector2(0, speed), 4.0, Color(0.5, 0.7, 1.0), 0.0, EXT_TEX_COOL
+			)
 		x += 14.0
 
 
@@ -164,7 +193,7 @@ func _fire_spiral(o: Vector2, pat: Dictionary) -> void:
 	_spiral_angle += deg_to_rad(float(pat.get("rotation_speed", 15)))
 	for i in arms:
 		var ang := _spiral_angle + TAU * i / arms
-		_add_proj(o, Vector2.from_angle(ang) * speed, 3.5, Color(0.8, 0.4, 1.0))
+		_add_proj(o, Vector2.from_angle(ang) * speed, 3.5, Color(0.8, 0.4, 1.0), 0.0, EXT_TEX_COOL)
 
 
 func _fire_laser_sweep(o: Vector2, pat: Dictionary) -> void:
@@ -188,7 +217,14 @@ func _fire_laser_sweep(o: Vector2, pat: Dictionary) -> void:
 func _fire_homing(o: Vector2, pat: Dictionary) -> void:
 	var speed := float(pat.get("speed", 100))
 	var dir := (_player_pos - o).normalized()
-	_add_proj(o, dir * speed, 4.0, Color(1.0, 0.8, 0.0), float(pat.get("homing_strength", 2.0)))
+	_add_proj(
+		o,
+		dir * speed,
+		4.0,
+		Color(1.0, 0.8, 0.0),
+		float(pat.get("homing_strength", 2.0)),
+		EXT_TEX_WARM
+	)
 
 
 func _fire_rain(pat: Dictionary) -> void:
@@ -196,7 +232,14 @@ func _fire_rain(pat: Dictionary) -> void:
 	var count := int(pat.get("count", 3))
 	for i in count:
 		var rx := randf_range(ARENA.position.x + 8, ARENA.end.x - 8)
-		_add_proj(Vector2(rx, ARENA.position.y), Vector2(0, speed), 3.0, Color(0.4, 0.8, 1.0))
+		_add_proj(
+			Vector2(rx, ARENA.position.y),
+			Vector2(0, speed),
+			3.0,
+			Color(0.4, 0.8, 1.0),
+			0.0,
+			EXT_TEX_COOL
+		)
 
 
 func _fire_cross(o: Vector2, pat: Dictionary) -> void:
@@ -204,7 +247,7 @@ func _fire_cross(o: Vector2, pat: Dictionary) -> void:
 	var angle_offset := deg_to_rad(float(pat.get("angle_offset", 0)))
 	for i in 4:
 		var ang := angle_offset + PI / 2 * i
-		_add_proj(o, Vector2.from_angle(ang) * speed, 4.5, Color(1.0, 0.9, 0.3))
+		_add_proj(o, Vector2.from_angle(ang) * speed, 4.5, Color(1.0, 0.9, 0.3), 0.0, EXT_TEX_WARM)
 
 
 func _fire_ring_collapse(pat: Dictionary) -> void:
@@ -216,7 +259,7 @@ func _fire_ring_collapse(pat: Dictionary) -> void:
 		var ang := TAU * i / count
 		var pos := target + Vector2.from_angle(ang) * radius
 		var dir := (target - pos).normalized()
-		_add_proj(pos, dir * speed, 3.5, Color(0.8, 0.3, 1.0))
+		_add_proj(pos, dir * speed, 3.5, Color(0.8, 0.3, 1.0), 0.0, EXT_TEX_COOL)
 
 
 func _fire_random_burst(pat: Dictionary) -> void:
@@ -231,7 +274,9 @@ func _fire_random_burst(pat: Dictionary) -> void:
 			Vector2(px, py),
 			Vector2.from_angle(ang) * spd,
 			3.0,
-			Color(randf_range(0.5, 1.0), randf_range(0.3, 0.6), 1.0)
+			Color(randf_range(0.5, 1.0), randf_range(0.3, 0.6), 1.0),
+			0.0,
+			EXT_TEX_COOL
 		)
 
 
@@ -279,10 +324,18 @@ func _draw() -> void:
 		var end_point: Vector2 = l["start"] + l["dir"] * float(l["length"])
 		draw_line(l["start"], end_point, l["color"], float(l["width"]))
 
-	# 탄막
+	# 탄막 — 외부 텍스처가 있으면 그걸 쓰고, 없으면 도형 폴백.
 	for p in _projectiles:
-		draw_circle(p["pos"], float(p["r"]), p["color"])
-		draw_circle(p["pos"], float(p["r"]) * 0.5, Color(1, 1, 1, 0.6))
+		var tex: Texture2D = _ext_tex.get(str(p.get("tex", "")), null)
+		if tex != null:
+			# 화면상 지름이 판정 지름(r*2)과 같게 — 16px 링이 r=4탄 자리에 그대로 들어간다.
+			var s := float(p["r"]) * 2.0 / maxf(maxf(tex.get_width(), tex.get_height()), 1.0)
+			draw_set_transform(p["pos"], 0.0, Vector2.ONE * s)
+			draw_texture(tex, -Vector2(tex.get_width(), tex.get_height()) * 0.5)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			draw_circle(p["pos"], float(p["r"]), p["color"])
+			draw_circle(p["pos"], float(p["r"]) * 0.5, Color(1, 1, 1, 0.6))
 
 	# 플레이어 히트박스
 	draw_circle(_player_pos, PLAYER_HITBOX, Color(0.3, 1.0, 0.5))

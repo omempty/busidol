@@ -1,0 +1,53 @@
+{
+  "schema_version": 2,
+  "source": "external:craftpix_bosses#3 (OGA-BY 3.0)",
+  "cell": 72,
+  "cell_w": 72,
+  "cell_h": 72,
+  "cols": 6,
+  "scale": 1.0,
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 4,
+      "fps": 4,
+      "loop": true
+    },
+    "walk_right": {
+      "row": 1,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "walk_left": {
+      "row": 2,
+      "frames": 6,
+      "fps": 6,
+      "loop": true
+    },
+    "attack": {
+      "row": 3,
+      "frames": 6,
+      "fps": 10,
+      "loop": false
+    },
+    "special": {
+      "row": 4,
+      "frames": 6,
+      "fps": 10,
+      "loop": false
+    },
+    "hurt": {
+      "row": 5,
+      "frames": 2,
+      "fps": 8,
+      "loop": false
+    },
+    "death": {
+      "row": 6,
+      "frames": 6,
+      "fps": 6,
+      "loop": false
+    }
+  }
+}

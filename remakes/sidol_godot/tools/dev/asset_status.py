@@ -43,6 +43,14 @@ def sheet_stems() -> set:
     return out
 
 
+def external_stems() -> set:
+    """외부 스탠드인(<id>_external.png) — 공백은 공백대로 세되 표시는 구분한다.
+    _remake가 설치되면 로더가 외부팩을 밀어내므로(tools/dev/bake_external_bosses.py),
+    여기의 표시는 '자작 납품이 아직'이라는 뜻이다."""
+    return {f[: -len("_external.png")] for f in listdir("assets/sprites")
+            if f.endswith("_external.png")}
+
+
 def row(label: str, ids: list, have: set, note: str = "") -> tuple:
     missing = [i for i in ids if i not in have]
     print(
@@ -115,6 +123,12 @@ def collect() -> list:
         {f[:-4] for f in listdir("assets/battle_cuts")}, "없으면 공격·피격 컷 없이 도트만")
     add("컷신 키아트", "keyart", [f[:-5] for f in listdir("assets/spec/keyart", ".json")],
         {f[:-4] for f in listdir("assets/keyart")}, "없으면 컷신에 그림 없음")
+    ext = external_stems()
+    if ext:
+        for r in rows:
+            sub = sorted(set(r["missing"]) & ext)
+            if sub:
+                r["note"] += " · 외부 스탠드인 사용중(%s)" % ", ".join(sub)
     return rows
 
 

@@ -9,6 +9,11 @@ class_name SpriteSets
 const SPRITE_DIR := "res://assets/sprites/"
 const LEGACY_TAG := "original"
 const REMAKE_TAG := "remake"
+## 외부 스탠드인 — 무료팩을 구운 것(<id>_external.*). REMAKE 모드에서
+## remake → external → legacy 순으로 고른다. LLM _remake가 설치되는 순간
+## 코드·데이터 수정 없이 외부팩이 밀려나고(역도 성립), 굽는 도구와 출처 기록은
+## tools/dev/bake_external_bosses.py + data/external_sources.json.
+const EXTERNAL_TAG := "external"
 ## 전투 전용 대형 시트 — 원작 E*.SPR의 320×200 전체 화면 프레임을 구운 것.
 ## 필드 도트(_original/_remake)와 **규격이 다르다**(셀이 정사각이 아니고 화면만 하다).
 ## 아트 모드를 타지 않는다 — 원작 프레임 자체라 "레거시/리메이크" 구분이 성립하지 않는다.
@@ -18,9 +23,9 @@ const BATTLE_TAG := "battle"
 ## 캐릭터 시트 경로 조회 — {"sheet": String, "meta": String}. 부재 시 빈 문자열.
 ## quiet=true면 부재를 오류로 기록하지 않는다(선행 조회 용도).
 static func character_sheet(asset_id: StringName, quiet := false) -> Dictionary:
-	var order: Array[String] = [LEGACY_TAG, REMAKE_TAG]
+	var order: Array[String] = [LEGACY_TAG, EXTERNAL_TAG, REMAKE_TAG]
 	if SettingsManager.art_mode == SettingsManager.ArtMode.REMAKE:
-		order = [REMAKE_TAG, LEGACY_TAG]
+		order = [REMAKE_TAG, EXTERNAL_TAG, LEGACY_TAG]
 	for tag in order:
 		var sheet := "%s%s_%s.png" % [SPRITE_DIR, asset_id, tag]
 		if ResourceLoader.exists(sheet) or FileAccess.file_exists(sheet):
