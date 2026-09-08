@@ -1,0 +1,11 @@
+{
+  "id": "f2_spark_warn",
+  "schema_version": 1,
+  "_comment": "F2 PC 과열 함정방 경고 — 백로그 §1.2. 실습실 북쪽 방(36~37,9) 진입 전 1회. 피해는 f2_spark_zap이 준다.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c650" }]
+    }
+  ]
+}

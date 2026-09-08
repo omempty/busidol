@@ -307,12 +307,19 @@
    "legacy_ref": "SOPO",
    "_hint": "PROLOG.CAP 교무과 폭탄"
   },
-  {
-   "id": "ITEM_KEY",
-   "name_ko": "열쇠",
-   "kind": "quest",
-   "_hint": "잠긴 문 개방"
-  },
+   {
+    "id": "ITEM_KEY",
+    "name_ko": "열쇠",
+    "kind": "quest",
+    "_hint": "잠긴 문 개방"
+   },
+   {
+    "id": "ITEM_GASMASK",
+    "name_ko": "방독면",
+    "kind": "quest",
+    "price": 1200,
+    "_hint": "F3 독안개 통행(백로그 §1.2) — 필드 damage op의 protect_item. 소모되지 않는다"
+   },
   {
    "id": "ITEM_BOOK",
    "name_ko": "책(바이러스 프로그래밍)",

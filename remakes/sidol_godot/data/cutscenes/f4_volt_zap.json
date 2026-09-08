@@ -1,0 +1,9 @@
+{
+  "id": "f4_volt_zap",
+  "schema_version": 1,
+  "_comment": "F4 고전압 바닥 — zone 반복 발동. amount=10(F4 진입 시점 HP 성장 감안).",
+  "steps": [
+    { "op": "damage", "args": { "amount": 10, "sfx": "impact_volt" } },
+    { "op": "shake", "power": 6.0, "times": 4 }
+  ]
+}

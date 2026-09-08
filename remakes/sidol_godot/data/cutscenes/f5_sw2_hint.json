@@ -1,0 +1,11 @@
+{
+  "id": "f5_sw2_hint",
+  "schema_version": 1,
+  "_comment": "F5 스위치 2번 순서 어긋남 힌트 — ok 트리거 다음에 두어 앞 스위치 미완일 때만 발동한다.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c657" }]
+    }
+  ]
+}

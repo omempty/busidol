@@ -264,6 +264,8 @@ func _execute(step: Dictionary) -> void:
 			get_tree().change_scene_to_file(str(step.get("path", "")))
 		"actor_move":
 			await _actor_move(step)
+		"damage":
+			_apply_field_damage(step.get("args", {}))
 		"start_battle":
 			GameState.pending_encounter = {
 				"enemies": step.get("enemies", []), "on_win_flag": str(step.get("on_win_flag", ""))
@@ -378,6 +380,31 @@ func _actor_move(step: Dictionary) -> void:
 		Tween.EASE_IN_OUT
 	)
 	await tw.finished
+
+
+## 필드 피해 — 함정·독안개·고전압 바닥(백로그 §1.2 층별 소기믹 공용).
+## 수치·조건은 전부 데이터(args)가 소유한다(AGENTS.md: 소스 하드코딩 금지):
+##   amount:int(>0, 필수) · protect_item:String(선택, 1개 이상 보유 시 무효) ·
+##   sfx:String(선택, 효과음 id).
+## HP는 1에 멈춘다 — 필드 사망 흐름(게임 오버 씬·부활)이 없어 0이 되면 화면만
+## 살아 있고 입력만 막힌 상태가 된다. 독·전류 바닥이 "통행료"가 되는 것이 의도다.
+## 보호 보유 시에는 조용히 통과한다 — zone 트리거가 안에 서 있는 동안 매 틱 발동
+## 하므로(TriggerSystem은 통과 차단이 아니라 발동만 한다), 막았다는 연출을 매 틱
+## 내면 방독면을 쓰고도 독안개를 뚫을 때마다 화면이 떨려 "쓴 게 손해"가 된다.
+func _apply_field_damage(args: Dictionary) -> void:
+	var amount := maxi(int(args.get("amount", 0)), 0)
+	if amount <= 0:
+		push_warning("damage amount 누락/무효: %s" % _cutscene_id)
+		return
+	var protect := StringName(str(args.get("protect_item", "")))
+	if not String(protect).is_empty() and GameState.inventory.count(protect) > 0:
+		return
+	var sfx := StringName(str(args.get("sfx", "")))
+	if not String(sfx).is_empty():
+		AudioManager.play_sfx(sfx)
+	var stats: Dictionary = GameState.player_stats
+	stats["hp"] = maxi(int(stats.get("hp", 1)) - amount, 1)
+	GameState.state_changed.emit()
 
 
 static func load_cutscene(cutscene_id: StringName) -> Dictionary:

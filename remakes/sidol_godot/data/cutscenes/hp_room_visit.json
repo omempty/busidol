@@ -28,6 +28,16 @@
       }
     },
     {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "HP실 개발자 1",
+          "text": "@c663"
+        }
+      ],
+      "_comment": "F3 독안개·방독면 예고(백로그 §1.2) — 방독면 본체는 F2 서쪽 구석 은닉 보상(f2_cache)."
+    },
+    {
       "op": "change_scene",
       "path": "res://scenes/credit_room.tscn"
     },

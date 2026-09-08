@@ -53,6 +53,35 @@
         "cutscene": "f3_allin"
       },
       "_comment": "F3 교수실 열 서쪽 방(x93~104 y15~23). cell_probe f3 실측: (98,19)는 몸이 안 들어가고 (98,18)이 들어간다. [2026-08-30] 해독제 의뢰(Q_F3_CURE_REQ) 선행 조건 추가 — 그전에는 교수를 만나기 전에 시약을 먼저 주울 수 있었다. 그러면 의뢰를 받는 시점에 이미 다 모아 둔 상태라 이야기 순서가 뒤집힌다. f3_quiz_gate가 이미 같은 방식으로 잠겨 있어 규약도 맞는다."
+    },
+    {
+      "id": "f3_fog_warn",
+      "type": "zone",
+      "once": true,
+      "cells": [
+        [97, 23],
+        [103, 23]
+      ],
+      "done_flag": "Q_F3_FOG_WARN",
+      "action": {
+        "cutscene": "f3_fog_warn"
+      },
+      "_comment": "독안개 경고(백로그 §1.2) — 연구실 진입로 y23. choke보다 앞에 둔다. cell_probe f3 실측: 도달 앵커."
+    },
+    {
+      "id": "f3_fog_choke",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [97, 23],
+        [99, 23],
+        [101, 23],
+        [103, 23]
+      ],
+      "action": {
+        "cutscene": "f3_fog_choke"
+      },
+      "_comment": "독안개 구역 — 방독면 보유 시 damage op이 조용히 통과(protect_item). 주 진입로라 막지 않고 통행료만 물린다. cell_probe f3 실측: 4칸 모두 도달 앵커."
     }
   ]
 }

@@ -32,6 +32,48 @@
         "cutscene": "f4_sacrifice"
       },
       "_comment": "레버 희생 — 보상이 「5층 문 개방」이므로 F4→F5 전환 앵커다(transitions.json stairs_center_up_f3 anchor=[100,63], guard 3~4). f1_blast·f2_poster와 같은 논리. cell_probe f4 실측: 설 수 있고 조사도 된다."
+    },
+    {
+      "id": "f4_volt_warn",
+      "type": "zone",
+      "once": true,
+      "cells": [
+        [99, 56],
+        [100, 56]
+      ],
+      "done_flag": "Q_F4_VOLT_WARN",
+      "action": {
+        "cutscene": "f4_volt_warn"
+      },
+      "_comment": "고전압 바닥 경고(백로그 §1.2) — 배터리 게이트(100,58) 북쪽 복도. zap보다 앞에 둔다. cell_probe f4 실측: 도달 앵커."
+    },
+    {
+      "id": "f4_volt_zap",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [99, 54],
+        [100, 54],
+        [99, 55],
+        [100, 55]
+      ],
+      "action": {
+        "cutscene": "f4_volt_zap"
+      },
+      "_comment": "고전압 바닥 — 반복 피해. 막지 않으므로 world_audit 도달성에 영향 없음. cell_probe f4 실측: 4칸 모두 도달 앵커."
+    },
+    {
+      "id": "f4_cache",
+      "type": "interact",
+      "once": true,
+      "cells": [
+        [145, 50]
+      ],
+      "done_flag": "Q_F4_CACHE",
+      "action": {
+        "cutscene": "f4_cache"
+      },
+      "_comment": "은닉 보상(백로그 §1.1) — 동쪽 미로 끝 용접 앞치마. cell_probe f4 실측: 설 수 있고 조사도 된다."
     }
   ]
 }

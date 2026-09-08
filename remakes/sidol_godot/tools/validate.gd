@@ -16,6 +16,7 @@ const KNOWN_OPS := [
 	"grant_item",
 	"grant_skill",
 	"craft",
+	"damage",
 	"illustration",
 	"minigame_quiz",
 	"minigame_battery",
@@ -170,6 +171,16 @@ func _validate_step(file: String, step: Dictionary) -> void:
 				for item_id: String in args.get(section, {}) as Dictionary:
 					if not _item_ids.has(item_id):
 						_err("cutscenes/%s craft 아이템 없음: %s" % [file, item_id])
+		"damage":
+			var dargs: Dictionary = step.get("args", {})
+			if int(dargs.get("amount", 0)) <= 0:
+				_err("cutscenes/%s damage amount 누락/무효(>0이어야)" % file)
+			var protect := str(dargs.get("protect_item", ""))
+			if not protect.is_empty() and not _item_ids.has(protect):
+				_err("cutscenes/%s damage protect_item 없음: %s" % [file, protect])
+			var dsfx := str(dargs.get("sfx", ""))
+			if not dsfx.is_empty() and not _audio_ids.has("sfx/" + dsfx):
+				_err("cutscenes/%s damage SFX 스펙 없음: %s" % [file, dsfx])
 	# dialogue/wait 등 나머지 op는 런타임 기본값으로 안전
 
 
@@ -648,6 +659,37 @@ func _validate_battle_rules() -> void:
 			_err("battle_rules.json flee.%s가 0~1 밖: %s" % [key, v])
 	if float(rules.get("min_chance", 0.0)) >= float(rules.get("max_chance", 1.0)):
 		_err("battle_rules.json flee.min_chance가 max_chance 이상")
+	_validate_defeat_rules()
+
+
+## 패배 대가 스키마 — 기본값 + 난이도별 오버라이드 + 연패 자비.
+## 빠진 키·난이도는 기본값으로 떨어지므로(코드 폴백) 여기서는 범위·형식만 본다.
+func _validate_defeat_rules() -> void:
+	var defeat: Dictionary = (_load_json(DATA + "battle_rules.json") as Dictionary).get(
+		"defeat", {}
+	)
+	if defeat.is_empty():
+		_err("battle_rules.json에 defeat 규칙이 없음")
+		return
+	for key: String in ["hp_ratio", "money_loss"]:
+		if not defeat.has(key):
+			_err("battle_rules.json defeat.%s 누락" % key)
+		elif float(defeat[key]) < 0.0 or float(defeat[key]) > 1.0:
+			_err("battle_rules.json defeat.%s가 0~1 밖: %s" % [key, defeat[key]])
+	for diff: String in defeat.get("by_difficulty", {}) as Dictionary:
+		if diff not in ["easy", "normal", "hard"]:
+			_err("battle_rules.json defeat.by_difficulty 알 수 없는 난이도: %s" % diff)
+			continue
+		var preset: Dictionary = (defeat["by_difficulty"] as Dictionary)[diff]
+		for key: String in ["hp_ratio", "money_loss"]:
+			if preset.has(key) and (float(preset[key]) < 0.0 or float(preset[key]) > 1.0):
+				_err("battle_rules.json defeat.by_difficulty.%s.%s가 0~1 밖" % [diff, key])
+	var mercy: Dictionary = defeat.get("mercy", {})
+	if not mercy.is_empty():
+		if int(mercy.get("streak", 2)) < 2:
+			_err("battle_rules.json defeat.mercy.streak는 2 이상(첫 패배부터 자비면 대가가 없음)")
+		if typeof(mercy.get("waive_money", true)) != TYPE_BOOL:
+			_err("battle_rules.json defeat.mercy.waive_money는 bool")
 
 
 ## 컷신 illustration op ↔ 키아트 스펙·납품물 대조.

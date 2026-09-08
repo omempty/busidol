@@ -1,0 +1,12 @@
+{
+  "id": "f5_sw3_ok",
+  "schema_version": 1,
+  "_comment": "F5 스위치 3번(56,40) 성공 — requires [Q_F5_SW1, Q_F5_SW2]. 캐시(f5_cache)가 열린다.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c658" }]
+    },
+    { "op": "set_flags", "args": { "Q_F5_SW3": true } }
+  ]
+}

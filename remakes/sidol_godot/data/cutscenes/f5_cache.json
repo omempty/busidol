@@ -1,0 +1,12 @@
+{
+  "id": "f5_cache",
+  "schema_version": 1,
+  "_comment": "F5 스위치 퍼즐 보상(50,44) — 순서 3종 완료 시 1회. 결전 준비용 우황청심환 3개.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c660" }]
+    },
+    { "op": "grant_item", "args": { "item": "ITEM_UHWANGCHEONGSIM", "count": 3 } }
+  ]
+}

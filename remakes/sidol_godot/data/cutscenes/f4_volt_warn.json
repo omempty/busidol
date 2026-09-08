@@ -1,0 +1,11 @@
+{
+  "id": "f4_volt_warn",
+  "schema_version": 1,
+  "_comment": "F4 고전압 바닥 경고 — 백로그 §1.2. 배터리 게이트 북쪽 복도(99~100,56) 1회.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c653" }]
+    }
+  ]
+}

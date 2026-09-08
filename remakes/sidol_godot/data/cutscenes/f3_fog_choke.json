@@ -1,0 +1,9 @@
+{
+  "id": "f3_fog_choke",
+  "schema_version": 1,
+  "_comment": "F3 독안개 — zone 반복 발동. 방독면 보유 시 damage op이 조용히 통과(보호). amount=5. 주 진입로라 막지 않고 통행료만 물린다.",
+  "steps": [
+    { "op": "damage", "args": { "amount": 5, "protect_item": "ITEM_GASMASK", "sfx": "alarm_system" } },
+    { "op": "shake", "power": 3.0, "times": 2 }
+  ]
+}

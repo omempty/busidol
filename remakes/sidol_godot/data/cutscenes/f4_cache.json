@@ -1,0 +1,12 @@
+{
+  "id": "f4_cache",
+  "schema_version": 1,
+  "_comment": "§1.1 은닉 보상 — F4 동쪽 미로 끝(145,50) 용접 앞치마. 상점 해금(Q_F3_CURE_DONE)보다 늦게 도달하므로 우회 취득이 아니다.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c662" }]
+    },
+    { "op": "grant_item", "args": { "item": "ITEM_ARMOR_WELDING", "count": 1 } }
+  ]
+}

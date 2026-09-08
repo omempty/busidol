@@ -1,0 +1,9 @@
+{
+  "id": "f2_spark_zap",
+  "schema_version": 1,
+  "_comment": "F2 PC 과열 스파크 — zone 반복 발동(once:false)이라 대사 없이 피해·연출만. 안에 서 있으면 매 틱 맞는다. amount=6(초기 HP 50 기준 통행료).",
+  "steps": [
+    { "op": "damage", "args": { "amount": 6, "sfx": "impact_volt" } },
+    { "op": "shake", "power": 4.0, "times": 3 }
+  ]
+}

@@ -34,6 +34,55 @@
       "requires_flag": "q_f5_ai_battle_won",
       "done_flag": "Q_ENDING",
       "action": { "cutscene": "epilogue" }
+    },
+    {
+      "id": "f5_sw1",
+      "type": "interact",
+      "once": false,
+      "cells": [[44, 40]],
+      "action": { "cutscene": "f5_sw1_ok" },
+      "_comment": "스위치 순서 퍼즐 1번(백로그 §1.2) — 서버실 서쪽. 다시 당기면 뒤가 초기화된다(컷신 set_flags). 주 진행과 무관한 선택 보상 루트라 막히지 않는다. cell_probe f5 실측: 설 수 있고 조사도 된다."
+    },
+    {
+      "id": "f5_sw2_ok",
+      "type": "interact",
+      "once": false,
+      "cells": [[50, 40]],
+      "requires_flag": "Q_F5_SW1",
+      "action": { "cutscene": "f5_sw2_ok" },
+      "_comment": "2번 성공 — hint보다 앞에 둔다(앞 스위치 미완일 때만 hint가 나간다)."
+    },
+    {
+      "id": "f5_sw2_hint",
+      "type": "interact",
+      "once": false,
+      "cells": [[50, 40]],
+      "action": { "cutscene": "f5_sw2_hint" }
+    },
+    {
+      "id": "f5_sw3_ok",
+      "type": "interact",
+      "once": false,
+      "cells": [[56, 40]],
+      "requires_flag": ["Q_F5_SW1", "Q_F5_SW2"],
+      "action": { "cutscene": "f5_sw3_ok" }
+    },
+    {
+      "id": "f5_sw3_hint",
+      "type": "interact",
+      "once": false,
+      "cells": [[56, 40]],
+      "action": { "cutscene": "f5_sw3_hint" }
+    },
+    {
+      "id": "f5_cache",
+      "type": "interact",
+      "once": true,
+      "cells": [[50, 44]],
+      "requires_flag": ["Q_F5_SW1", "Q_F5_SW2", "Q_F5_SW3"],
+      "done_flag": "Q_F5_CACHE",
+      "action": { "cutscene": "f5_cache" },
+      "_comment": "순서 퍼즐 보상 — 서버 캐시. cell_probe f5 실측: 설 수 있고 조사도 된다."
     }
   ]
 }

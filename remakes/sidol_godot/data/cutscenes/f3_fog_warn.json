@@ -1,0 +1,11 @@
+{
+  "id": "f3_fog_warn",
+  "schema_version": 1,
+  "_comment": "F3 독안개 경고 — 백로그 §1.2. 연구실 앞 진입로(97·103,23) 1회. 방독면 힌트 포함.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c652" }]
+    }
+  ]
+}

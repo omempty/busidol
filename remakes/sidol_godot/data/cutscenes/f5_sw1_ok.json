@@ -1,0 +1,12 @@
+{
+  "id": "f5_sw1_ok",
+  "schema_version": 1,
+  "_comment": "F5 스위치 순서 퍼즐 1번(44,40) — 백로그 §1.2. 다시 당기면 뒤 스위치가 초기화된다(순서 강제).",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c655" }]
+    },
+    { "op": "set_flags", "args": { "Q_F5_SW1": true, "Q_F5_SW2": false, "Q_F5_SW3": false } }
+  ]
+}

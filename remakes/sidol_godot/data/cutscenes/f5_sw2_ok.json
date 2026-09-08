@@ -1,0 +1,12 @@
+{
+  "id": "f5_sw2_ok",
+  "schema_version": 1,
+  "_comment": "F5 스위치 2번(50,40) 성공 — 트리거 requires_flag Q_F5_SW1이 순서를 보증한다.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c656" }]
+    },
+    { "op": "set_flags", "args": { "Q_F5_SW2": true } }
+  ]
+}

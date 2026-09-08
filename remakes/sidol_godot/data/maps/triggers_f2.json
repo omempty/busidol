@@ -32,6 +32,46 @@
       },
       "once": false,
       "_comment": "마스터 시나리오 씬 2-3 「3층 계단의 완종이」 — 그 계단이 F2→F3 전환 앵커다(transitions.json stairs_center_up_f2 anchor=[100,63], requires_flag=Q_F2_POSTER).자리표시자 (0,0)은 ATT 2에 도달 불가였다(2026-08-29 cell_probe 실측)."
+    },
+    {
+      "id": "f2_spark_warn",
+      "type": "zone",
+      "once": true,
+      "cells": [
+        [36, 9],
+        [37, 9]
+      ],
+      "done_flag": "Q_F2_TRAP_WARN",
+      "action": {
+        "cutscene": "f2_spark_warn"
+      },
+      "_comment": "PC 과열 함정방 경고(백로그 §1.2) — 실습실 북쪽 방(x33~41 y8~11). zap보다 앞에 둔다: 같은 틱에 둘 다 맞으면 warn이 먼저 나가고, 다음 틱부터 zap이 돈다. cell_probe f2 실측: 둘 다 도달 앵커."
+    },
+    {
+      "id": "f2_spark_zap",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [36, 9],
+        [37, 9]
+      ],
+      "action": {
+        "cutscene": "f2_spark_zap"
+      },
+      "_comment": "PC 과열 스파크 — 반복 피해(대사 없음). done_flag를 달면 한 번 맞고 끝이라 함정이 아니라 통행료 징수 1회가 된다. 막지 않으므로 world_audit 도달성에 영향 없음."
+    },
+    {
+      "id": "f2_cache",
+      "type": "interact",
+      "once": true,
+      "cells": [
+        [3, 4]
+      ],
+      "done_flag": "Q_F2_CACHE",
+      "action": {
+        "cutscene": "f2_cache"
+      },
+      "_comment": "은닉 보상(백로그 §1.1) — 서쪽 구석 방독면. F3 독안개의 획득 경로(상점 F0보다 선행). cell_probe f2 실측: 설 수 있고 조사도 된다."
     }
   ]
 }

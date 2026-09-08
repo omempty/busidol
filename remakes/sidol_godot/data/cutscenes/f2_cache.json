@@ -1,0 +1,12 @@
+{
+  "id": "f2_cache",
+  "schema_version": 1,
+  "_comment": "§1.1 은닉 보상 — F2 서쪽 구석(3,4) 방독면. F3 독안개의 획득 경로다(상점 F0보다 먼저).",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [{ "speaker": "시돌", "text": "@c661" }]
+    },
+    { "op": "grant_item", "args": { "item": "ITEM_GASMASK", "count": 1 } }
+  ]
+}
