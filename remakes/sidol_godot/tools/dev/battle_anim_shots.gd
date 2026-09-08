@@ -23,6 +23,13 @@ var _shots := 0
 
 
 func _ready() -> void:
+	# 헤드리스는 뷰포트 텍스처가 비어 나오는데 frame_post_draw 대기가 영원히
+	# 안 풀려 프로세스가 끝나지 않는다(2026-09-08 실측: 300초 타임아웃).
+	# 빈 PNG를 양산하느니 들어가기 전에 끝낸다 — 이 도구는 창 모드 전용이다.
+	if DisplayServer.get_name() == "headless":
+		print("[battle_anim] skip — 창 모드 필요 (헤드리스는 빈 화면만 나온다)")
+		get_tree().quit(0)
+		return
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
 	var args := OS.get_cmdline_user_args()
 	var eid := str(args[0]) if args.size() > 0 else "hellcop"
