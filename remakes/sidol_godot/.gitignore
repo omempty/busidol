@@ -40,3 +40,6 @@ tools/dev/ui_captures/
 
 # 바로가기 폴더 산출물(.lnk 절대경로 포함, 로컬 전용)
 바로가기/*.lnk
+
+# Claude Code — 개인 경로(절대경로)라 커밋하지 않는다. 명령 허용목록은 .claude/settings.json(커밋 대상).
+.claude/settings.local.json

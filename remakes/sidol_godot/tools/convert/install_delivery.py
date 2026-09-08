@@ -49,6 +49,7 @@ import numpy as np
 from PIL import Image
 
 import delivery_checks as dc
+import sheet_ops as so
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PROCESSED = os.path.join(ROOT, "assets", "raw", "llm", "20_processed")
@@ -98,86 +99,10 @@ def unique_colors(im: Image.Image) -> int:
     return len({tuple(c) for c in a[:, :, :3][mask]})
 
 
-def quantize(im: Image.Image, colors: int) -> Image.Image:
-    """불투명 픽셀만 N색으로 몰고 알파는 0/255로 이진화한다.
-
-    알파를 함께 median-cut에 넣으면 반투명 경계색이 팔레트 한 칸을 먹고
-    투명 배경이 색으로 굳는다 — RGB만 양자화하고 알파는 따로 씌운다.
-
-    **안내선 색(마젠타·청록) 픽셀은 팔레트 계산에서 뺀다.** 남은 잔선이 어두운 외곽선과
-    한 상자에 묶이면 평균이 자주색이 되어 스프라이트에 분홍 테두리가 생긴다(실측).
-    뺀 픽셀은 양자화 뒤 최근접 색으로 흡수돼 구멍이 나지 않는다.
-    """
-    src = im.convert("RGBA")
-    a = np.asarray(src).astype(np.uint8).copy()
-    alpha = (a[:, :, 3] > 127).astype(np.uint8) * 255
-    rgb = a[:, :, :3].astype(int)
-    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-    tainted = (
-        ((np.abs(r - b) < 40) & (g + 40 < np.minimum(r, b)) & (np.maximum(r, b) > 40))
-        | ((np.abs(g - b) < 40) & (r + 40 < np.minimum(g, b)) & (np.maximum(g, b) > 40))
-    ) & (alpha > 0)
-    clean = a[:, :, :3].copy()
-    if tainted.any() and (~tainted & (alpha > 0)).any():
-        # 팔레트 산출용 이미지에서 오염 픽셀을 흔한 그림색으로 임시 치환한다.
-        fill = clean[(~tainted) & (alpha > 0)].mean(axis=0).astype(np.uint8)
-        clean[tainted] = fill
-    q = Image.fromarray(clean, "RGB").quantize(
-        colors=colors, method=Image.MEDIANCUT, dither=Image.NONE
-    ).convert("RGB")
-    out = np.dstack([np.asarray(q), alpha]).astype(np.uint8)
-    out[alpha == 0] = 0  # 투명 픽셀의 RGB를 0으로 — 키잉 잔색 방지
-    return Image.fromarray(out, "RGBA")
-
-
-def clean_guides(im: Image.Image, cell: int) -> tuple:
-    """안내선 잔선을 지우고 **그 주변 2px의 오염 픽셀만** 이웃 그림색으로 메운다.
-
-    범위를 안 좁히면 그림을 먹는다 — 전 마젠타/청록 픽셀을 오염으로 보면 청록 유령
-    `null_pointer`는 불투명 83,786px 중 45,959px이 대상이 됐다(실측). 오염은 안내선이
-    지나간 자리에만 생기므로 마스크를 팽창시킨 띠 안으로 한정한다.
-    반환: (이미지, 지운 잔선 px, 메운 오염 px).
-    """
-    a = np.asarray(im.convert("RGBA")).astype(np.uint8).copy()
-    line = dc.guide_line_mask(im, cell, cell)
-    removed = int(line.sum())
-    if not removed:
-        return im, 0, 0
-    a[line] = 0
-    h, w = line.shape
-    band = np.zeros_like(line)
-    for dy in range(-2, 3):
-        for dx in range(-2, 3):
-            band |= np.roll(np.roll(line, dy, axis=0), dx, axis=1)
-    vis = a[:, :, 3] > 8
-    rgb = a[:, :, :3].astype(int)
-    r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
-    hue = (
-        ((np.abs(r - b) < 40) & (g + 40 < np.minimum(r, b)) & (np.maximum(r, b) > 40))
-        | ((np.abs(g - b) < 40) & (r + 40 < np.minimum(g, b)) & (np.maximum(g, b) > 40))
-    )
-    bad = hue & vis & band
-    filled_total = int(bad.sum())
-    for _ in range(2):
-        ys, xs = np.nonzero(bad)
-        if ys.size == 0:
-            break
-        moved = 0
-        for y, x in zip(ys, xs):
-            cand = []
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    ny, nx = y + dy, x + dx
-                    if (dy or dx) and 0 <= ny < h and 0 <= nx < w and vis[ny, nx] and not bad[ny, nx]:
-                        cand.append(tuple(a[ny, nx, :3]))
-            if not cand:
-                continue
-            a[y, x, :3] = max(set(cand), key=cand.count)
-            bad[y, x] = False
-            moved += 1
-        if not moved:
-            break
-    return Image.fromarray(a, "RGBA"), removed, filled_total
+## 픽셀 규칙(양자화·안내선 정리)은 sheet_ops.py가 정본이다 — 검증기·편집기와 같은 함수를
+## 써야 "편집기에서 통과시킨 시트가 설치에서 어긋나는" 갈라짐이 안 생긴다.
+quantize = so.quantize
+clean_guides = so.clean_guides
 
 
 def sheet_meta(sp: dict, cols: int, source: str, cell: int = CELL) -> dict:
@@ -256,11 +181,20 @@ def latest_versions(cat_dir: str) -> dict:
     return {k: v[1] for k, v in best.items()}
 
 
+## 평면 카테고리의 셀 크기 — 안내선 판정은 셀 단위로 훑으므로 값이 있어야 한다.
+## (검증기·편집기의 FLAT_CONTRACTS와 같은 수. keyart는 격자가 없어 이미지 자체가 한 칸이다.)
+FLAT_CELL = {"portraits": 256, "items": 96, "effects": 128, "battle_cuts": 512}
+
+
 def install_flat(cat: str, asset_id: str, fname: str, colors: int, dry: bool) -> tuple:
     src = os.path.join(PROCESSED, cat, fname)
     dst_dir = FLAT_TARGETS[cat]
     im = Image.open(src).convert("RGBA")
     before = unique_colors(im)
+    # cell을 안 넘겨 NameError로 죽던 자리 — 평면 카테고리 설치가 통째로 예외였다.
+    # 이펙트·전투컷은 스펙의 sheet_cell이 정본이고, 나머지는 고정 규격을 쓴다.
+    sp_flat, _ = load_spec(asset_id)
+    cell = int(sp_flat.get("sheet_cell") or 0) or FLAT_CELL.get(cat) or min(im.width, im.height)
     im, lines, tainted = clean_guides(im, cell)
     if colors:
         im = quantize(im, colors)

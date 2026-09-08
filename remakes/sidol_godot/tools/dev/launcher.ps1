@@ -43,13 +43,12 @@ function Menu-Review {
 }
 
 function Menu-Fixer {
+  # 기동 로직은 fixer_launch.ps1 하나에만 둔다(셀편집기.bat과 단일 소스).
+  # 파일명은 이제 선택 — 비우면 편집기 안의 선택기에서 고른다.
   $cat = (Read-Host "  카테고리 [monsters]").Trim()
   if (-not $cat) { $cat = "monsters" }
-  $file = (Read-Host "  파일명 (예: c_bug_v3.png)").Trim()
-  if (-not $file) { Write-Host "  파일명을 입력해야 한다." -ForegroundColor Yellow; return }
-  Ensure-Server 8643 "review-server" "python tools\\review\\review_server.py 8643"
-  $u = "http://127.0.0.1:8643/tools/review/sprite_fixer.html?cat=$([uri]::EscapeDataString($cat))&file=$([uri]::EscapeDataString($file))"
-  Open-Url $u
+  $file = (Read-Host "  파일명 (예: c_bug_v3.png · 비우면 편집기에서 고름)").Trim()
+  & (Join-Path $ROOT "tools\\review\\fixer_launch.ps1") -Cat $cat -File $file
 }
 
 function Menu-Gates {

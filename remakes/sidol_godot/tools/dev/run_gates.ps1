@@ -1,4 +1,4 @@
-<#
+﻿<#
 관문 실행 단일 소스 — 로컬(검증실행.bat)과 CI(.github/workflows/verify.yml)가 같은 목록을 쓴다.
 목록이 두 군데로 갈라지면 "로컬은 녹색, CI는 빨강"(또는 그 반대)이 생기므로 여기 한 곳에서만 정의한다.
 
@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 3   # +3 = 내보내기 포함 규칙 · 원본 대조 · SPR 파생 에셋 알파(python)
+$total = $gates.Count + 4   # +4 = 내보내기 포함 규칙 · 원본 대조 · SPR 알파 · 시트 연산(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -82,6 +82,17 @@ Write-Host ("[{0}/{1}] SPR sprite alpha..." -f $i, $total)
 python (Join-Path $PSScriptRoot "spr_alpha_check.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** SPR sprite alpha"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Sheet ops..." -f $i, $total)
+# 시트 픽셀 연산(sheet_ops.py)의 실측 시험. 이 규칙은 검증기·설치기·셀 편집기가 함께
+# 쓰는 정본이라 조용히 어긋나면 "편집기는 깨끗한데 관문은 반려"가 난다.
+# 부정 시험(일부러 어긋난 시트로 계측이 빨개지는지)까지 포함한다.
+python (Join-Path $PSScriptRoot "..\convert\test_sheet_ops.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Sheet ops"
     exit 1
 }
 

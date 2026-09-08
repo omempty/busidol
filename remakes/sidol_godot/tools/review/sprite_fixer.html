@@ -10,8 +10,24 @@
   서버(review_server.py)가 계약을 알려 주고, 편집 결과는 **다음 버전 번호로**
   10_submitted에 다시 들어가 기존 심사 흐름(검증 → 승인 → 설치)을 그대로 탄다.
 
-  열기: 심사 보드의 [셀 편집] 버튼, 또는
+  열기: 셀편집기.bat(단독 실행 — 인자 없이 열면 파일 선택기가 뜬다),
+        심사 보드의 [셀 편집] 버튼, 또는
         http://127.0.0.1:8643/tools/review/sprite_fixer.html?cat=monsters&file=c_bug_v3.png
+
+  불러오기 경로는 셋이다:
+    1) 서버 목록 — 헤더의 카테고리·파일 드롭다운(10_submitted / _rejected / 20_processed)
+    2) 로컬 파일 — [파일 열기] 버튼 · 캔버스에 드래그&드롭 · Ctrl+V(클립보드 이미지)
+    3) URL 인자 — ?cat=&file=
+  로컬에서 연 그림은 파이프라인 밖이라 저장 시 카테고리·파일명을 직접 정해야 한다.
+
+  ## 규칙은 여기 없다 (2026-09-08)
+
+  안내선 판정·키잉·이진화·양자화·정렬 스냅 같은 **픽셀 규칙은 전부 서버가 한다**
+  (`POST /api/fixer/op` → `tools/convert/sheet_ops.py`). 예전에는 같은 규칙이 이 파일에도
+  구현돼 있었고, 그 사본이 검증기(`delivery_checks.py`)와 갈라지면 "편집기에서는 깨끗한데
+  검증기는 반려하는" 상태가 조용히 생긴다 — 이 저장소가 반복해 물린 결함 유형이다.
+  이 파일에 남은 것은 **조작**뿐이다: 그리기·선택·복제·행 이동·확대·어니언·저장 흐름.
+  계측 패널의 '격자 잔선'도 서버 응답값이며, 손으로 그린 뒤에는 [재계측]으로 갱신한다.
 -->
 <style>
   :root{--bg:#14141b;--panel:#1c1c26;--line:#2e2e3d;--fg:#e8e6f2;--dim:#9a94b8;
@@ -64,6 +80,26 @@
   select{background:#101018;color:var(--fg);border:1px solid var(--line);border-radius:5px;padding:3px 5px}
   kbd{background:#262633;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;
       padding:0 4px;font-size:11px;font-family:inherit}
+  #picker{position:fixed;inset:0;background:rgba(8,8,14,.86);z-index:20;display:flex;
+          align-items:center;justify-content:center}
+  #picker[hidden]{display:none}
+  .pickbox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;
+           width:min(680px,92vw);max-height:80vh;display:flex;flex-direction:column}
+  .pickbox h2{margin:0 0 8px}
+  #pklist{overflow:auto;border:1px solid var(--line);border-radius:6px}
+  #pklist .item{display:flex;gap:8px;align-items:center;padding:5px 8px;cursor:pointer;
+                border-bottom:1px solid #24242f}
+  #pklist .item:hover{background:#262633}
+  #pklist .item .nm{flex:1;font-family:ui-monospace,Consolas,monospace}
+  #pklist .item img{width:40px;height:40px;object-fit:contain;image-rendering:pixelated;background:#0e0e14}
+  .tag{font-size:10px;padding:1px 6px;border-radius:8px;border:1px solid var(--line);color:var(--dim)}
+  .tag.submitted{color:var(--warn);border-color:var(--warn)}
+  .tag.rejected{color:var(--bad);border-color:var(--bad)}
+  .tag.processed{color:var(--ok);border-color:var(--ok)}
+  details#promptbox pre{background:#101018;border:1px solid var(--line);border-radius:6px;padding:6px;
+        max-height:340px;overflow:auto;font-size:11px;white-space:pre-wrap;margin:6px 0 0}
+  details#promptbox summary{cursor:pointer;color:var(--acc);font-size:12px}
+  #stage.dropping{outline:2px dashed var(--acc);outline-offset:-6px}
   #view.tool-pencil{cursor:crosshair}
   #view.tool-fill{cursor:copy}
   #view.tool-select{cursor:default}
@@ -71,6 +107,11 @@
 
 <header>
   <h1>셀 편집기</h1>
+  <select id="pickcat" title="카테고리"></select>
+  <select id="pickfile" title="편집할 납품 파일 (서버 목록)"><option value="">— 파일 —</option></select>
+  <button id="openlocal" title="디스크의 PNG를 연다 (드래그&드롭·Ctrl+V도 가능)">파일 열기</button>
+  <input type="file" id="localfile" accept="image/png,image/*" hidden>
+  <button id="reload" title="편집 전 원본을 다시 불러온다">원본 복구</button>
   <span class="meta" id="title">불러오는 중…</span>
   <span id="badge" class="meta">대기</span>
   <span class="meta" id="contract"></span>
@@ -90,8 +131,24 @@
   </select></label>
   <label class="meta"><input type="checkbox" id="showgrid" checked> 격자</label>
   <label class="meta" title="선택 셀에 이전/다음 프레임 겹쳐 보기 (O)"><input type="checkbox" id="onion"> 어니언</label>
+  <button id="download" title="편집본을 내 PC로 내려받는다(서버 저장 없이)">PNG 내려받기</button>
+  <button id="saveas" title="카테고리·파일명을 직접 정해 납품 폴더에 저장">다른 이름으로…</button>
   <button id="save" class="primary">다음 버전으로 저장</button>
 </header>
+
+<!-- 파일이 지정되지 않은 채 열렸을 때(단독 실행) 뜨는 선택기. -->
+<div id="picker" hidden>
+  <div class="pickbox">
+    <h2>편집할 시트 고르기</h2>
+    <div class="row">
+      <select id="pkcat"></select>
+      <input type="search" id="pkq" placeholder="파일명 검색…">
+      <button id="pklocal">디스크에서 열기…</button>
+    </div>
+    <div id="pklist"></div>
+    <p class="hint">드래그&드롭·Ctrl+V로도 열 수 있다. 목록은 10_submitted · _rejected · 20_processed 전부를 담는다.</p>
+  </div>
+</div>
 
 <main>
   <div id="stage"><canvas id="view"></canvas>
@@ -99,8 +156,21 @@
   </div>
   <aside>
     <section>
+      <!-- 왜 여기에: 무엇을 어떻게 그리라고 시켰는지가 없으면 "고친다"의 기준이 없다.
+           심사 보드와 같은 prompt.md를 서버가 계약과 함께 실어 준다. -->
+      <details id="promptbox">
+        <summary>📝 이 시트의 의뢰문 (prompt.md)</summary>
+        <pre id="promptmd">(불러오는 중)</pre>
+      </details>
+    </section>
+
+    <section>
       <h2>계측 (계약 대조)</h2>
       <table class="stat" id="stats"></table>
+      <div class="row" style="margin-top:6px">
+        <button data-op="measure">재계측</button>
+        <span class="hint">격자 잔선은 서버(검증기와 같은 판정)가 잰다 — 손으로 그린 뒤엔 다시 눌러라</span>
+      </div>
     </section>
 
     <section>
@@ -190,8 +260,12 @@
 <script>
 "use strict";
 const qs = new URLSearchParams(location.search);
-const CAT = qs.get("cat") || "monsters";
-const FILE = qs.get("file") || "";
+let CAT = qs.get("cat") || "monsters";
+let FILE = qs.get("file") || "";
+let LOCAL = null;          // 디스크/클립보드에서 연 경우의 원래 이름(파이프라인 밖)
+let dirty = false;         // 저장 안 한 편집이 있는가 — 창 닫기·파일 전환 경고용
+const FALLBACK_CATS = ["portraits", "keyart", "monsters", "npcs", "sprites",
+                       "items", "effects", "battle_cuts", "battle_actors"];
 const $ = s => document.querySelector(s);
 const view = $("#view"), vctx = view.getContext("2d");
 
@@ -203,6 +277,8 @@ let clip = null;          // 셀 클립보드 ImageData
 let picked = null;        // 스포이드 색 [r,g,b]
 let tool = "select";      // select | pencil | fill
 let painting = false;     // 연필 스트로크 진행 중
+let serverStats = null;   // 마지막 /api/fixer/op 응답의 계측값(격자 잔선은 서버가 정본)
+let statsStale = false;   // 그 뒤로 손으로 그렸는가 — 계측이 낡았음을 표시
 const undoStack = [], redoStack = [];
 
 const TOOL_HINTS = {
@@ -289,9 +365,15 @@ function updateStatusPos(x, y) {
   $("#st-sel").textContent = sel ? `r${sel.r}c${sel.c}` : "셀 없음";
 }
 
+function esc(s) {
+  return String(s).replace(/[&<>]/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+}
+
 function log(msg, cls) {
   const el = $("#log");
-  el.innerHTML += `<span class="${cls || ""}">${msg}</span>\n`;
+  // 파일명·검증기 출력이 그대로 들어오므로 이스케이프한다 — 그러지 않으면 <, & 가 든
+  // 문자열에서 기록이 깨지거나 태그로 해석된다.
+  el.innerHTML += `<span class="${cls || ""}">${esc(msg)}</span>\n`;
   el.scrollTop = el.scrollHeight;
 }
 
@@ -306,77 +388,181 @@ function loadImage(src) {
   });
 }
 
-async function boot() {
-  if (!FILE) { $("#title").textContent = "?cat=…&file=… 인자가 필요하다"; return; }
+/** 캔버스를 이미지 하나로 갈아끼운다(불러오기 경로 셋이 모두 여기로 모인다). */
+function adoptImage(img) {
+  work = document.createElement("canvas");
+  work.width = img.naturalWidth || img.width;
+  work.height = img.naturalHeight || img.height;
+  wctx = work.getContext("2d", { willReadFrequently: true });
+  wctx.imageSmoothingEnabled = false;
+  wctx.drawImage(img, 0, 0);
+  undoStack.length = 0; redoStack.length = 0;
+  sel = null; dirty = false;
+  $("#cellinfo").textContent = "(없음)";
+}
+
+/** 계약만 다시 받아 격자·계측 기준을 바꾼다(로컬 파일의 카테고리 전환용). */
+async function applyContract(cat, file) {
+  contract = null;
   try {
-    const res = await fetch(`/api/fixer/contract?cat=${encodeURIComponent(CAT)}&file=${encodeURIComponent(FILE)}`);
-    if (res.ok) {
-      contract = await res.json();
-    }
-  } catch (e) {
-    console.warn("API 호출 실패, 기본 계약 적용:", e);
-  }
-
-  if (!contract) {
-    const isPortrait = CAT === "portraits";
-    const isIcon = CAT === "items";
-    const isKeyart = CAT === "keyart";
-    const cell = isPortrait ? 256 : isIcon ? 96 : isKeyart ? 0 : 128;
-    const cols = isPortrait ? 3 : isIcon || isKeyart ? 1 : 2;
-    const rows = isPortrait ? 1 : isIcon || isKeyart ? 1 : 5;
-    contract = {
-      asset_id: FILE.replace(/_v\d+\.png$/i, "").replace(/\.png$/i, ""),
-      cat: CAT,
-      file: FILE,
-      cell: cell,
-      cols: cols,
-      rows: rows,
-      size: [cols * (cell || 1920), rows * (cell || 1080)],
-      align: isPortrait || isIcon || isKeyart ? "none" : "bottom_center",
-      layout: Array.from({ length: rows }, (_, r) => ({ row: r, name: `행 ${r + 1}`, frames: cols })),
-      web: `/assets/raw/llm/10_submitted/${CAT}/${FILE}`
-    };
-  }
-
-  $("#title").textContent = `${contract.asset_id} · ${CAT}/${FILE}`;
+    const res = await fetch(`/api/fixer/contract?cat=${encodeURIComponent(cat)}&file=${encodeURIComponent(file)}`);
+    if (res.ok) contract = await res.json();
+  } catch (e) { console.warn("계약 API 실패:", e); }
+  if (!contract) contract = fallbackContract(cat, file);
+  $("#promptmd").textContent = contract.prompt_md || "(의뢰문 없음 — 서버 없이 연 파일이거나 패키지에 prompt.md가 없다)";
+  $("#title").textContent = (LOCAL ? `[로컬] ${LOCAL} → ` : "") + `${contract.asset_id} · ${cat}/${file}`;
   $("#contract").textContent = contract.cell
     ? `계약 ${contract.size[0]}×${contract.size[1]} · 셀 ${contract.cell} · ${contract.rows}행 ${contract.cols}열 · 정렬 ${contract.align}`
     : "계약 없음(자유 규격)";
+}
 
+function fallbackContract(cat, file) {
+  const isPortrait = cat === "portraits";
+  const isIcon = cat === "items";
+  const isKeyart = cat === "keyart";
+  const cell = isPortrait ? 256 : isIcon ? 96 : isKeyart ? 0 : 128;
+  const cols = isPortrait ? 3 : isIcon || isKeyart ? 1 : 2;
+  const rows = isPortrait ? 1 : isIcon || isKeyart ? 1 : 5;
+  return {
+    asset_id: (file || "untitled").replace(/_v\d+\.png$/i, "").replace(/\.png$/i, ""),
+    cat, file, cell, cols, rows,
+    size: [cols * (cell || 1920), rows * (cell || 1080)],
+    align: isPortrait || isIcon || isKeyart ? "none" : "bottom_center",
+    layout: Array.from({ length: rows }, (_, r) => ({ row: r, name: `행 ${r + 1}`, frames: cols })),
+    next_file: (file || "untitled.png").replace(/\.png$/i, "") + "_fixed.png",
+    web: `/assets/raw/llm/10_submitted/${cat}/${file}`
+  };
+}
+
+/** 서버 목록에서 고른 파일(또는 URL 인자)을 연다. */
+async function openServerFile(cat, file, opts) {
+  if (!(opts && opts.force) && !confirmDiscard()) return false;
+  CAT = cat; FILE = file; LOCAL = null;
+  const u = new URL(location.href);
+  u.searchParams.set("cat", cat); u.searchParams.set("file", file);
+  history.replaceState(null, "", u);
+  await applyContract(cat, file);
+  const ok = await loadFromCandidates(cat, file);
+  if (ok) { syncPickers(); redraw(); }
+  return ok;
+}
+
+/** 디스크·클립보드에서 온 이미지를 연다 — 카테고리는 현재 드롭다운 값을 쓴다. */
+async function openLocalImage(src, name) {
+  if (!confirmDiscard()) return;
+  try {
+    const img = await loadImage(src);
+    LOCAL = name || "clipboard.png";
+    FILE = LOCAL.replace(/[^A-Za-z0-9_.\-]/g, "_");
+    CAT = $("#pickcat").value || CAT;
+    await applyContract(CAT, FILE);
+    adoptImage(img);
+    redraw();
+    log(`로컬에서 불러옴: ${LOCAL} · ${work.width}×${work.height} (카테고리 ${CAT} 계약 적용)`, "ok");
+    log("저장은 [다른 이름으로…] — 파이프라인 밖 파일이라 버전 번호를 서버가 모른다", "warn");
+    $("#picker").hidden = true;
+  } catch (e) {
+    log("로컬 파일을 읽지 못했다: " + e, "bad");
+  }
+}
+
+function confirmDiscard() {
+  if (!dirty) return true;
+  return confirm("저장하지 않은 편집이 있다. 버리고 다른 파일을 열까?");
+}
+
+async function loadFromCandidates(cat, file) {
   const candidateUrls = [
     contract.web,
-    `/assets/raw/llm/10_submitted/${CAT}/${FILE}`,
-    `/assets/raw/llm/10_submitted/_rejected/${CAT}/${FILE}`,
-    `/assets/raw/llm/20_processed/${CAT}/${FILE}`,
-    `../../assets/raw/llm/10_submitted/${CAT}/${FILE}`,
-    `../../assets/raw/llm/10_submitted/_rejected/${CAT}/${FILE}`,
-    `../../assets/raw/llm/20_processed/${CAT}/${FILE}`,
-    `../../assets/raw/llm/${CAT}/${FILE}`,
-    `../../assets/portraits/${FILE}`,
-    `../../assets/sprites/${FILE}`
+    `/assets/raw/llm/10_submitted/${cat}/${file}`,
+    `/assets/raw/llm/10_submitted/_rejected/${cat}/${file}`,
+    `/assets/raw/llm/20_processed/${cat}/${file}`,
+    `../../assets/raw/llm/10_submitted/${cat}/${file}`,
+    `../../assets/raw/llm/10_submitted/_rejected/${cat}/${file}`,
+    `../../assets/raw/llm/20_processed/${cat}/${file}`,
+    `../../assets/raw/llm/${cat}/${file}`,
+    `../../assets/portraits/${file}`,
+    `../../assets/sprites/${file}`
   ].filter(Boolean);
-
-  let loaded = false;
   for (const url of candidateUrls) {
     try {
       const img = await loadImage(url);
-      work = document.createElement("canvas");
-      work.width = img.naturalWidth || img.width;
-      work.height = img.naturalHeight || img.height;
-      wctx = work.getContext("2d", { willReadFrequently: true });
-      wctx.imageSmoothingEnabled = false;
-      wctx.drawImage(img, 0, 0);
+      adoptImage(img);
       log(`불러옴: ${work.width}×${work.height} (${url})`, "ok");
-      redraw();
-      loaded = true;
-      break;
-    } catch (err) {
-      // 다음 후보 경로 시도
-    }
+      return true;
+    } catch (err) { /* 다음 후보 경로 시도 */ }
   }
+  log(`이미지를 불러오지 못했다. 대상 경로: ${contract.web}`, "bad");
+  return false;
+}
 
-  if (!loaded) {
-    log(`이미지를 불러오지 못했습니다. 대상 경로: ${contract.web}`, "bad");
+// ------------------------------------------------------- 파일 선택기(서버 목록)
+let FILE_INDEX = [];   // [{cat,file,status,web,...}]
+
+async function fetchFiles() {
+  try {
+    const res = await fetch("/api/fixer/files");
+    if (!res.ok) throw new Error(res.status);
+    const j = await res.json();
+    FILE_INDEX = j.files || [];
+    return j.categories || FALLBACK_CATS;
+  } catch (e) {
+    log("서버 목록을 못 받았다(서버 없이 연 듯) — 로컬 파일 열기만 쓸 수 있다", "warn");
+    FILE_INDEX = [];
+    return FALLBACK_CATS;
+  }
+}
+
+function fillSelect(el, values, cur) {
+  el.innerHTML = values.map(v => `<option value="${v}"${v === cur ? " selected" : ""}>${v}</option>`).join("");
+}
+
+/** 헤더 드롭다운을 현재 카테고리/파일 상태에 맞춘다. */
+function syncPickers() {
+  $("#pickcat").value = CAT;
+  const files = FILE_INDEX.filter(f => f.cat === CAT);
+  const opts = ['<option value="">— 파일 —</option>'].concat(
+    files.map(f => `<option value="${f.file}"${f.file === FILE && !LOCAL ? " selected" : ""}>${f.file} [${f.status}]</option>`));
+  $("#pickfile").innerHTML = opts.join("");
+  if (!LOCAL) $("#pickfile").value = FILE;
+}
+
+function renderPickList() {
+  const cat = $("#pkcat").value, q = ($("#pkq").value || "").toLowerCase();
+  const rows = FILE_INDEX.filter(f => f.cat === cat && f.file.toLowerCase().includes(q));
+  $("#pklist").innerHTML = rows.length
+    ? rows.map(f => `<div class="item" data-cat="${f.cat}" data-file="${f.file}">
+         <img src="${f.web}" loading="lazy" alt="">
+         <span class="nm">${f.file}</span>
+         <span class="tag ${f.status}">${f.status}</span></div>`).join("")
+    : `<div class="item"><span class="nm" style="color:var(--dim)">이 카테고리에 파일이 없다 — 다른 카테고리를 고르거나 디스크에서 열어라</span></div>`;
+  $("#pklist").querySelectorAll(".item[data-file]").forEach(el => {
+    el.onclick = async () => {
+      $("#picker").hidden = true;
+      await openServerFile(el.dataset.cat, el.dataset.file, { force: true });
+    };
+  });
+}
+
+async function boot() {
+  const cats = await fetchFiles();
+  fillSelect($("#pickcat"), cats, CAT);
+  fillSelect($("#pkcat"), cats, CAT);
+  syncPickers();
+  if (!FILE) {
+    // 단독 실행(셀편집기.bat) — 무엇을 열지 여기서 고른다.
+    $("#title").textContent = "파일을 고르라";
+    $("#promptmd").textContent = "(파일을 열면 그 시트의 의뢰문이 여기 붙는다)";
+    renderPickList();
+    $("#picker").hidden = false;
+    return;
+  }
+  const ok = await openServerFile(CAT, FILE, { force: true });
+  if (!ok) {
+    // 인자로 받은 파일을 못 열었다(오타·이동·삭제). 빈 화면으로 멈추지 말고 고르게 한다.
+    log("인자로 받은 파일을 열지 못해 선택기를 연다", "warn");
+    renderPickList();
+    $("#picker").hidden = false;
   }
 }
 
@@ -454,62 +640,6 @@ function isCyanHue(r, g, b) {
   return Math.abs(g - b) < 40 && r + 40 < Math.min(g, b) && Math.max(g, b) > 40;
 }
 
-/**
- * 격자 안내선 판정 — 게이트(delivery_checks.py)와 **같은 세 조건**을 쓴다.
- *   밀도 ≥30% · 단색(채널 폭 ≤40) · 두께 ≤3px
- * 셋을 다 걸어야 그림과 구분된다. 하나라도 빼면 원작 도트의 음영이나 아이콘의
- * 평면 채색이 선으로 잡혀 그림을 지워 버린다(실측으로 확인한 순서다).
- * 반환: 지워야 할 픽셀 인덱스 배열.
- */
-function guideLinePixels(d) {
-  const { width: w, height: h, data } = d;
-  const cell = contract.cell || Math.min(w, h);
-  const DENSITY = 0.3, SPREAD = 40, MAX_T = 3;
-  const hit = new Uint8Array(w * h);
-  for (let i = 0, p = 0; i < data.length; i += 4, p++) {
-    if (data[i + 3] <= 8) continue;
-    const r = data[i], g = data[i + 1], b = data[i + 2];
-    if (isMagentaHue(r, g, b) || isCyanHue(r, g, b)) hit[p] = 1;
-  }
-  const out = [];
-  const rows = Math.max(1, Math.floor(h / cell)), cols = Math.max(1, Math.floor(w / cell));
-  for (let cr = 0; cr < rows; cr++) for (let cc = 0; cc < cols; cc++) {
-    const x0 = cc * cell, y0 = cr * cell;
-    const cw = Math.min(cell, w - x0), ch = Math.min(cell, h - y0);
-    for (const horiz of [true, false]) {
-      const n = horiz ? ch : cw, m = horiz ? cw : ch;
-      const flags = new Array(n).fill(false), pix = [];
-      for (let i = 0; i < n; i++) {
-        let cnt = 0, lo = [255, 255, 255], hi = [0, 0, 0];
-        const idx = [];
-        for (let j = 0; j < m; j++) {
-          const p = horiz ? (y0 + i) * w + x0 + j : (y0 + j) * w + x0 + i;
-          if (!hit[p]) continue;
-          cnt++; idx.push(p);
-          const q = p * 4;
-          for (let c = 0; c < 3; c++) {
-            if (data[q + c] < lo[c]) lo[c] = data[q + c];
-            if (data[q + c] > hi[c]) hi[c] = data[q + c];
-          }
-        }
-        pix.push(idx);
-        flags[i] = cnt >= m * DENSITY && Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) <= SPREAD;
-      }
-      let i = 0;
-      while (i < n) {
-        if (!flags[i]) { i++; continue; }
-        let j = i;
-        while (j < n && flags[j]) j++;
-        if (j - i <= MAX_T) for (let k = i; k < j; k++) out.push(...pix[k]);
-        i = j;
-      }
-    }
-  }
-  return out;
-}
-
-function guideRuns(d) { return guideLinePixels(d); }
-
 function stats(d) {
   const { data } = d;
   let semi = 0, opaque = 0, black = 0;
@@ -523,7 +653,9 @@ function stats(d) {
       if (!data[i] && !data[i + 1] && !data[i + 2]) black++;
     }
   }
-  return { semi, opaque, black, colors: colors.size, runs: guideLinePixels(d).length };
+  // 안내선 판정은 서버(sheet_ops/delivery_checks)가 정본이다 — 여기서 다시 세지 않는다.
+  // 마지막 서버 응답의 값을 그대로 쓰고, 편집으로 그림이 바뀌면 '재계측'으로 갱신한다.
+  return { semi, opaque, black, colors: colors.size, runs: serverStats ? serverStats.guides : null };
 }
 
 /** 셀 안의 불투명 픽셀 경계상자(마젠타 배경 제외). 없으면 null. */
@@ -551,7 +683,9 @@ function updateStats() {
   line("캔버스", `${work.width}×${work.height}` + (contract.cell ? ` / 계약 ${contract.size[0]}×${contract.size[1]}` : ""), sizeOk ? "ok" : "bad");
   line("고유색", `${s.colors}` + ` / 계약 48 이하`, s.colors <= 48 ? "ok" : (s.colors > 4096 ? "bad" : "warn"));
   line("반투명 픽셀", s.semi, s.semi ? "bad" : "ok");
-  line("격자 잔선", s.runs + "px", s.runs ? "bad" : "ok");
+  line("격자 잔선",
+       s.runs === null ? "미측정 — [재계측]" : s.runs + "px" + (statsStale ? " (편집 후 변동 가능)" : ""),
+       s.runs === null ? "warn" : (s.runs ? "bad" : "ok"));
   line("순수 검정", s.black + "px", s.black > s.opaque * 0.005 ? "warn" : "ok");
 
   if (contract.cell && sizeOk) {
@@ -585,6 +719,8 @@ function updateStats() {
   const badge = $("#badge");
   if (badge) {
     const fail = !sizeOk || s.runs > 0 || s.semi > 0 || (window.__cellBad || 0) > 0;
+    // 안내선을 아직 안 재 봤으면 PASS라고 단정하지 않는다(모르는 것을 통과로 보이면 안 된다).
+    if (s.runs === null && !fail) { badge.textContent = "미측정"; badge.className = "warn"; return; }
     const warn = !fail && (s.colors > 48 || s.black > s.opaque * 0.005);
     badge.textContent = fail ? "FAIL" : (warn ? "WARN" : "PASS");
     badge.className = fail ? "bad" : (warn ? "warn" : "ok");
@@ -594,198 +730,10 @@ function updateStats() {
 
 // ---------------------------------------------------------------- 편집 연산
 function pushUndo() {
+  dirty = true;
   undoStack.push(imageData());
   if (undoStack.length > 24) undoStack.shift();
   redoStack.length = 0;
-}
-
-function opKeyMagenta(d, tol) {
-  const data = d.data; let n = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (Math.abs(data[i] - 255) + data[i + 1] + Math.abs(data[i + 2] - 255) <= tol * 3) {
-      data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0; n++;
-    }
-  }
-  return n;
-}
-
-/**
- * 안내선 색 오염 정리 — 지운 잔선 **주변 2px 안**의 마젠타/청록 픽셀만 이웃 그림색으로 메운다.
- *
- * 범위를 안 좁히면 그림을 먹는다: 청록 유령 `null_pointer`는 전 마젠타/청록 픽셀을
- * 오염으로 보면 불투명 83,786px 중 45,959px이 대상이 됐다(실측). 오염은 안내선이 지나간
- * 자리에만 생긴다. 또 색 공간 최근접으로 메우면 어두운 마젠타가 살구색 손가락에 붙어
- * 외곽선이 분홍이 된다 — **공간적으로**(이웃 최빈색) 메운다.
- */
-function opDetaint(d, seeds) {
-  const { width: w, height: h, data } = d;
-  if (!seeds || !seeds.length) return 0;
-  const band = new Set();
-  for (const p of seeds) {
-    const x = p % w, y = (p - x) / w;
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
-      const nx = x + dx, ny = y + dy;
-      if (nx >= 0 && ny >= 0 && nx < w && ny < h) band.add(ny * w + nx);
-    }
-  }
-  let mark = [];
-  for (const p of band) {
-    const q = p * 4;
-    if (data[q + 3] <= 8) continue;
-    if (isMagentaHue(data[q], data[q + 1], data[q + 2]) || isCyanHue(data[q], data[q + 1], data[q + 2])) mark.push(p);
-  }
-  const total = mark.length;
-  const bad = new Set(mark);
-  for (let pass = 0; pass < 2 && mark.length; pass++) {
-    const next = [];
-    for (const p of mark) {
-      const x = p % w, y = (p - x) / w;
-      const tally = new Map();
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        const np = ny * w + nx;
-        if (bad.has(np)) continue;
-        const q = np * 4;
-        if (data[q + 3] <= 8) continue;
-        const key = (data[q] << 16) | (data[q + 1] << 8) | data[q + 2];
-        tally.set(key, (tally.get(key) || 0) + 1);
-      }
-      if (!tally.size) { next.push(p); continue; }
-      let best = 0, bestN = -1;
-      for (const [k, n] of tally) if (n > bestN) { bestN = n; best = k; }
-      const q = p * 4;
-      data[q] = (best >> 16) & 255; data[q + 1] = (best >> 8) & 255; data[q + 2] = best & 255;
-      bad.delete(p);
-    }
-    mark = next;
-  }
-  return total;
-}
-
-/** 격자 잔선 제거 — guideLinePixels가 고른 픽셀만 투명으로. 그림 픽셀은 건드리지 않는다. */
-function opRemoveGuides(d) {
-  const data = d.data;
-  const px = guideLinePixels(d);
-  for (const p of px) {
-    const q = p * 4;
-    data[q] = data[q + 1] = data[q + 2] = data[q + 3] = 0;
-  }
-  return px.length;
-}
-
-function opBinarize(d) {
-  const data = d.data; let n = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const a = data[i + 3];
-    if (a === 0 || a === 255) continue;
-    n++;
-    if (a >= 128) data[i + 3] = 255;
-    else { data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0; }
-  }
-  return n;
-}
-
-/**
- * median-cut 양자화 — 불투명 픽셀만. 설치 단계(install_delivery.py)와 같은 방식.
- *
- * 팔레트 계산에서 **안내선 색(마젠타·청록) 픽셀을 뺀다.** 넣고 돌리면 잔여 마젠타가
- * 어두운 외곽선과 같은 상자에 묶여 평균이 자주색이 되고, 스프라이트 전체에 분홍 테두리가
- * 생긴다(실측: c_bug 자동 정리 결과). 뺀 픽셀은 마지막에 **그림 팔레트의 최근접 색**으로
- * 흡수시킨다 — 지우면 외곽선에 구멍이 난다.
- */
-function opQuantize(d, n) {
-  const data = d.data;
-  const px = [], tainted = [];
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] <= 8) continue;
-    if (isMagentaHue(data[i], data[i + 1], data[i + 2]) || isCyanHue(data[i], data[i + 1], data[i + 2])) tainted.push(i);
-    else px.push(i);
-  }
-  if (!px.length) return 0;
-  let boxes = [px];
-  while (boxes.length < n) {
-    boxes.sort((a, b) => boxRange(data, b) - boxRange(data, a));
-    const big = boxes.shift();
-    if (!big || big.length < 2 || boxRange(data, big) === 0) { if (big) boxes.push(big); break; }
-    const ch = widestChannel(data, big);
-    big.sort((a, b) => data[a + ch] - data[b + ch]);
-    const mid = big.length >> 1;
-    boxes.push(big.slice(0, mid), big.slice(mid));
-  }
-  const palette = [];
-  for (const box of boxes) {
-    let r = 0, g = 0, b = 0;
-    for (const i of box) { r += data[i]; g += data[i + 1]; b += data[i + 2]; }
-    r = Math.round(r / box.length); g = Math.round(g / box.length); b = Math.round(b / box.length);
-    palette.push([r, g, b]);
-    for (const i of box) { data[i] = r; data[i + 1] = g; data[i + 2] = b; }
-  }
-  for (const i of tainted) {
-    let best = 0, bestD = 1e9;
-    for (let k = 0; k < palette.length; k++) {
-      const p = palette[k];
-      const dd = Math.abs(data[i] - p[0]) + Math.abs(data[i + 1] - p[1]) + Math.abs(data[i + 2] - p[2]);
-      if (dd < bestD) { bestD = dd; best = k; }
-    }
-    data[i] = palette[best][0]; data[i + 1] = palette[best][1]; data[i + 2] = palette[best][2];
-  }
-  return boxes.length;
-}
-function widestChannel(data, box) {
-  const lo = [255, 255, 255], hi = [0, 0, 0];
-  for (const i of box) for (let c = 0; c < 3; c++) {
-    const v = data[i + c]; if (v < lo[c]) lo[c] = v; if (v > hi[c]) hi[c] = v;
-  }
-  const spans = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]];
-  return spans.indexOf(Math.max(...spans));
-}
-function boxRange(data, box) {
-  const c = widestChannel(data, box);
-  let lo = 255, hi = 0;
-  for (const i of box) { const v = data[i + c]; if (v < lo) lo = v; if (v > hi) hi = v; }
-  return hi - lo;
-}
-
-function opDeblack(d) {
-  const data = d.data; let n = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] > 8 && !data[i] && !data[i + 1] && !data[i + 2]) {
-      data[i] = 0x0a; data[i + 1] = 0x08; data[i + 2] = 0x2e; n++;  // 짙은 남색(#0A082E)
-    }
-  }
-  return n;
-}
-
-function opEraseColor(d, rgb, tol) {
-  const data = d.data; let n = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    if (data[i + 3] === 0) continue;
-    if (Math.abs(data[i] - rgb[0]) + Math.abs(data[i + 1] - rgb[1]) + Math.abs(data[i + 2] - rgb[2]) <= tol * 3) {
-      data[i] = data[i + 1] = data[i + 2] = data[i + 3] = 0; n++;
-    }
-  }
-  return n;
-}
-
-/** 셀 내용을 계약 정렬 위치로 옮긴다. */
-function snapCell(r, c) {
-  const cell = contract.cell;
-  const d = wctx.getImageData(c * cell, r * cell, cell, cell);
-  const bb = bboxOf(d);
-  if (!bb) return false;
-  const cx = (bb.x0 + bb.x1) / 2;
-  let dx = Math.round(cell / 2 - cx), dy;
-  if (contract.align === "center") dy = Math.round(cell / 2 - (bb.y0 + bb.y1) / 2);
-  else dy = (cell - 1 - Math.floor(cell * 0.04)) - bb.y1;   // 하단 여백 4%로 접지
-  if (!dx && !dy) return false;
-  wctx.clearRect(c * cell, r * cell, cell, cell);
-  const tmp = document.createElement("canvas");
-  tmp.width = cell; tmp.height = cell;
-  tmp.getContext("2d").putImageData(d, 0, 0);
-  wctx.drawImage(tmp, c * cell + dx, r * cell + dy);
-  return true;
 }
 
 function bboxOf(d) {
@@ -832,74 +780,88 @@ function dupNext() {
   log(`r${sel.r}c${t - 1} → r${sel.r}c${t} 복제 (이어서 방향키로 1px씩 손봐라)`);
 }
 
-/** 임의 셀 크기로 그려 온 시트를 계약 격자에 재배치한다(크기 불일치 납품 구제). */
-function regrid(srcCell) {
-  const cell = contract.cell;
-  const sc = srcCell || Math.round(work.width / contract.cols);
-  const srcRows = Math.floor(work.height / sc), srcCols = Math.floor(work.width / sc);
-  const out = document.createElement("canvas");
-  out.width = contract.size[0]; out.height = contract.size[1];
-  const octx = out.getContext("2d");
-  octx.imageSmoothingEnabled = false;
-  for (let r = 0; r < Math.min(srcRows, contract.rows); r++) {
-    const frames = (contract.layout[r] || {}).frames ?? contract.cols;
-    for (let c = 0; c < Math.min(srcCols, frames); c++) {
-      octx.drawImage(work, c * sc, r * sc, sc, sc, c * cell, r * cell, cell, cell);
-    }
-  }
-  work.width = out.width; work.height = out.height;
-  wctx = work.getContext("2d", { willReadFrequently: true });
-  wctx.imageSmoothingEnabled = false;
-  wctx.drawImage(out, 0, 0);
-  return `${srcCols}×${srcRows}(셀 ${sc}) → ${contract.cols}×${contract.rows}(셀 ${cell})`;
+// ------------------------------------------------- 시트 연산(서버 = 규칙 정본)
+
+/** 계약을 서버 연산 인자로 — 셀·행·열·정렬·행별 프레임 수. */
+function opParams(extra) {
+  return Object.assign({
+    cell: contract.cell || 0,
+    rows: contract.rows || 0,
+    cols: contract.cols || 0,
+    align: contract.align || "bottom_center",
+    layout: contract.layout || [],
+    size: contract.size || [work.width, work.height],
+    colors: parseInt($("#ncolors").value, 10) || 48,
+  }, extra || {});
 }
 
-function scaleToContract() {
-  const out = document.createElement("canvas");
-  out.width = contract.size[0]; out.height = contract.size[1];
-  const octx = out.getContext("2d");
-  octx.imageSmoothingEnabled = false;
-  octx.drawImage(work, 0, 0, out.width, out.height);
-  work.width = out.width; work.height = out.height;
+/**
+ * 시트 전체 연산은 전부 여기를 지난다 — 판정·수정 규칙은 파이썬(sheet_ops.py) 하나뿐이고
+ * 브라우저는 캔버스와 입력만 맡는다. 예전에는 같은 규칙이 이 파일에도 있어서
+ * "편집기는 깨끗하다는데 검증기는 반려하는" 갈라짐이 구조적으로 가능했다.
+ */
+async function serverOp(op, extra) {
+  if (!work) return;
+  const btns = document.querySelectorAll("button");
+  btns.forEach(b => { b.disabled = true; });
+  log(`서버 연산 ${op}…`);
+  try {
+    const res = await fetch("/api/fixer/op", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ op, params: opParams(extra), png: work.toDataURL("image/png") }),
+    });
+    const j = await res.json();
+    if (j.error) { log("연산 실패: " + j.error, "bad"); return; }
+    pushUndo();
+    const img = await loadImage(j.png);
+    const keepSel = sel;
+    adoptImageKeepHistory(img);
+    sel = keepSel;
+    serverStats = j.stats;
+    statsStale = false;
+    dirty = true;
+    if (j.log) log(j.log, "ok");
+    redraw();
+  } catch (e) {
+    log("연산 실패(서버 없음?): " + e, "bad");
+  } finally {
+    btns.forEach(b => { b.disabled = false; });
+  }
+}
+
+/** adoptImage와 달리 undo 스택·선택을 유지한다(서버 연산 결과 반영용). */
+function adoptImageKeepHistory(img) {
+  work.width = img.naturalWidth || img.width;
+  work.height = img.naturalHeight || img.height;
   wctx = work.getContext("2d", { willReadFrequently: true });
   wctx.imageSmoothingEnabled = false;
-  wctx.drawImage(out, 0, 0);
+  wctx.clearRect(0, 0, work.width, work.height);
+  wctx.drawImage(img, 0, 0);
 }
 
 // ---------------------------------------------------------------- 조작 배선
 const OPS = {
-  key: () => { const d = imageData(); const n = opKeyMagenta(d, 40); putImageData(d); log(`마젠타 키잉 ${n}px`); },
-  guides: () => {
-    const d = imageData();
-    const seeds = guideLinePixels(d);
-    const n = opRemoveGuides(d);
-    const t = opDetaint(d, seeds);
-    putImageData(d);
-    log(`격자 잔선 제거 ${n}px · 가장자리 오염 정리 ${t}px`, n || t ? "ok" : "");
-  },
-  binarize: () => { const d = imageData(); const n = opBinarize(d); putImageData(d); log(`알파 이진화 ${n}px`); },
-  quantize: () => {
-    const n = parseInt($("#ncolors").value, 10) || 48;
-    const d = imageData(); const k = opQuantize(d, n); putImageData(d); log(`색 양자화 → ${k}색`);
-  },
-  deblack: () => { const d = imageData(); const n = opDeblack(d); putImageData(d); log(`순수검정 치환 ${n}px`); },
+  // 시트 전체 — 규칙이 걸린 연산은 전부 서버로 보낸다.
+  key: () => serverOp("key", { tol: 40 }),
+  guides: () => serverOp("guides"),
+  binarize: () => serverOp("binarize"),
+  quantize: () => serverOp("quantize"),
+  deblack: () => serverOp("deblack"),
   erasecolor: () => {
     if (!picked) return log("스포이드로 색을 먼저 찍어라", "warn");
-    const d = imageData();
-    const n = opEraseColor(d, picked, parseInt($("#tol").value, 10) || 0);
-    putImageData(d); log(`색 삭제 ${n}px`);
+    serverOp("erasecolor", { rgb: picked, tol: parseInt($("#tol").value, 10) || 0 });
   },
-  regrid: () => log("재배치: " + regrid(parseInt($("#srccell").value, 10) || 0)),
-  scale: () => { scaleToContract(); log(`리샘플 → ${work.width}×${work.height}`); },
-  snap: () => { if (sel) log(snapCell(sel.r, sel.c) ? `r${sel.r}c${sel.c} 정렬` : "이동 불필요"); },
-  snapall: () => {
-    let n = 0;
-    for (let r = 0; r < contract.rows; r++)
-      for (let c = 0; c < ((contract.layout[r] || {}).frames ?? contract.cols); c++)
-        if (snapCell(r, c)) n++;
-    log(`전 셀 정렬 스냅 ${n}칸`);
+  regrid: () => serverOp("regrid", { src_cell: parseInt($("#srccell").value, 10) || 0 }),
+  scale: () => serverOp("scale"),
+  snap: () => {
+    if (!sel) return log("셀을 먼저 선택하라", "warn");
+    serverOp("snap", { cell_rc: [sel.r, sel.c] });
   },
-  clear: () => { if (sel) { wctx.clearRect(sel.c * contract.cell, sel.r * contract.cell, contract.cell, contract.cell); log(`r${sel.r}c${sel.c} 비움`); } },
+  snapall: () => serverOp("snapall"),
+  measure: () => serverOp("measure"),
+
+  // 셀 조작 — 규칙이 아니라 손놀림이다. 왕복 없이 로컬에서 즉시 반영한다.
+  clear: () => { if (sel) { wctx.clearRect(sel.c * contract.cell, sel.r * contract.cell, contract.cell, contract.cell); statsStale = true; log(`r${sel.r}c${sel.c} 비움`); } },
   flip: () => {
     if (!sel) return;
     const cell = contract.cell;
@@ -908,45 +870,36 @@ const OPS = {
     wctx.clearRect(sel.c * cell, sel.r * cell, cell, cell);
     wctx.save(); wctx.translate(sel.c * cell + cell, sel.r * cell); wctx.scale(-1, 1);
     wctx.drawImage(tmp, 0, 0); wctx.restore();
+    statsStale = true;
     log(`r${sel.r}c${sel.c} 좌우 반전`);
   },
   copy: () => { if (sel) { clip = wctx.getImageData(sel.c * contract.cell, sel.r * contract.cell, contract.cell, contract.cell); log("셀 복사"); } },
-  paste: () => { if (sel && clip) { wctx.putImageData(clip, sel.c * contract.cell, sel.r * contract.cell); log(`r${sel.r}c${sel.c}에 붙여넣기`); } },
+  paste: () => { if (sel && clip) { wctx.putImageData(clip, sel.c * contract.cell, sel.r * contract.cell); statsStale = true; log(`r${sel.r}c${sel.c}에 붙여넣기`); } },
   dupnext: () => dupNext(),
-  rowleft: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, -s, 0); log(`행${sel.r} ←${s}px`); } },
-  rowright: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, s, 0); log(`행${sel.r} →${s}px`); } },
-  rowup: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, 0, -s); log(`행${sel.r} ↑${s}px`); } },
-  rowdown: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, 0, s); log(`행${sel.r} ↓${s}px`); } },
+  rowleft: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, -s, 0); statsStale = true; log(`행${sel.r} ←${s}px`); } },
+  rowright: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, s, 0); statsStale = true; log(`행${sel.r} →${s}px`); } },
+  rowup: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, 0, -s); statsStale = true; log(`행${sel.r} ↑${s}px`); } },
+  rowdown: (e) => { if (sel) { const s = e && e.shiftKey ? 8 : 1; nudgeRow(sel.r, 0, s); statsStale = true; log(`행${sel.r} ↓${s}px`); } },
 };
+
+// 서버가 도맡는 연산 — 되돌리기 스냅숏은 serverOp이 직접 찍으므로 버튼 배선에서 빼야
+// undo가 두 번 쌓인다.
+const SERVER_OPS = new Set(["key", "guides", "binarize", "quantize", "deblack", "erasecolor",
+                            "regrid", "scale", "snap", "snapall", "measure"]);
 
 document.querySelectorAll("[data-op]").forEach(b => {
   b.onclick = (e) => {
     if (!work) return;
+    if (SERVER_OPS.has(b.dataset.op)) { OPS[b.dataset.op](e); return; }
     pushUndo();
     OPS[b.dataset.op](e);
     redraw();
   };
 });
 
-$("#autofix").onclick = () => {
-  if (!work) return;
-  pushUndo();
-  if (contract.cell && (work.width !== contract.size[0] || work.height !== contract.size[1])) {
-    log("크기 불일치 — 계약 격자로 재배치부터", "warn");
-    log("재배치: " + regrid(parseInt($("#srccell").value, 10) || 0));
-  }
-  const d = imageData();
-  log(`마젠타 키잉 ${opKeyMagenta(d, 40)}px`);
-  const seeds = guideLinePixels(d);
-  log(`격자 잔선 제거 ${opRemoveGuides(d)}px`);
-  log(`가장자리 오염 정리 ${opDetaint(d, seeds)}px`);
-  log(`알파 이진화 ${opBinarize(d)}px`);
-  log(`색 양자화 → ${opQuantize(d, parseInt($("#ncolors").value, 10) || 48)}색`);
-  putImageData(d);
-  if (contract.cell) OPS.snapall();
-  redraw();
-  log("자동 정리 완료 — 계측 패널을 확인하라", "ok");
-};
+$("#autofix").onclick = () => serverOp("autofix", {
+  src_cell: parseInt($("#srccell").value, 10) || 0,
+});
 
 // 캔버스 상호작용 — 도구 모드별: 선택 / 연필 / 채우기 (+우클릭 지우개 공통)
 let dragStart = null;
@@ -1005,7 +958,7 @@ view.onmousemove = e => {
 };
 view.onmouseleave = () => { painting = false; };
 document.onmouseup = () => {
-  if (painting) { painting = false; redraw(); log("스트로크 확정"); }
+  if (painting) { painting = false; statsStale = true; redraw(); log("스트로크 확정"); }
 };
 view.onmouseup = e => {
   if (!dragStart) return;
@@ -1024,6 +977,7 @@ document.onkeydown = e => {
   if (!work) return;
   if (e.ctrlKey && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; }
   if (e.ctrlKey && e.key.toLowerCase() === "y") { e.preventDefault(); redo(); return; }
+  if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); $("#save").onclick(); return; }
   const tag = (e.target && e.target.tagName) || "";
   if (!e.ctrlKey && !e.metaKey && (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA")) {
     if (e.key === "Escape") e.target.blur();
@@ -1063,6 +1017,7 @@ function undo() {
   work.width = d.width; work.height = d.height;
   wctx = work.getContext("2d", { willReadFrequently: true });
   putImageData(d); redraw(); log("되돌림");
+  if (!undoStack.length) dirty = false;   // 원본까지 되돌아왔으면 미저장 편집이 없다
 }
 function redo() {
   if (!redoStack.length) return;
@@ -1083,23 +1038,130 @@ for (const k of ["select", "pencil", "fill"]) {
   $("#tool-" + k).onclick = () => setTool(k);
 }
 
-$("#save").onclick = async () => {
+// ---------------------------------------------------------------- 저장
+/** 서버 저장 공통 — 저장 직후 같은 검증기를 돌려 결과를 그 자리에서 보여 준다. */
+async function saveTo(cat, out) {
   if (!work) return;
-  const out = contract.next_file;
-  $("#save").disabled = true;
-  $("#save").textContent = "저장 중…";
-  const res = await fetch("/api/fixer/save", {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ cat: CAT, file: FILE, out, png: work.toDataURL("image/png") }),
-  });
-  const j = await res.json();
-  $("#save").disabled = false;
-  $("#save").textContent = "다음 버전으로 저장";
-  if (j.error) return log("저장 실패: " + j.error, "bad");
-  log("저장: " + j.saved, "ok");
-  const v = j.validation || {};
-  log((v.pass ? "검증 PASS" : "검증 FAIL") + "\n" + (v.lines || []).join("\n"), v.pass ? "ok" : "bad");
+  const btn = $("#save"), label = btn.textContent;
+  btn.disabled = true; btn.textContent = "저장 중…";
+  try {
+    const res = await fetch("/api/fixer/save", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cat, file: FILE, out, png: work.toDataURL("image/png") }),
+    });
+    const j = await res.json();
+    if (j.error) { log("저장 실패: " + j.error, "bad"); return; }
+    log("저장: " + j.saved, "ok");
+    const v = j.validation || {};
+    log((v.pass ? "검증 PASS" : "검증 FAIL") + "\n" + (v.lines || []).join("\n"), v.pass ? "ok" : "bad");
+    dirty = false;
+    // 방금 저장한 파일이 목록에 없으면(신규 버전) 드롭다운을 갱신한다.
+    await fetchFiles(); syncPickers();
+  } catch (e) {
+    log("저장 실패(서버 없음?): " + e + " — [PNG 내려받기]로 빼낼 수 있다", "bad");
+  } finally {
+    btn.disabled = false; btn.textContent = label;
+  }
+}
+
+$("#save").onclick = () => {
+  if (!work) return;
+  if (LOCAL) return log("로컬에서 연 파일은 [다른 이름으로…]로 저장하라(버전 번호 근거가 없다)", "warn");
+  saveTo(CAT, contract.next_file);
 };
+
+$("#saveas").onclick = () => {
+  if (!work) return;
+  const cat = prompt("저장할 카테고리", CAT);
+  if (!cat) return;
+  const suggest = (contract.next_file) || (FILE.replace(/\.png$/i, "") + "_v2.png");
+  const out = prompt(`파일명 (10_submitted/${cat}/ 아래에 저장된다)`, suggest);
+  if (!out) return;
+  saveTo(cat, out.endsWith(".png") ? out : out + ".png");
+};
+
+$("#download").onclick = () => {
+  if (!work) return;
+  const a = document.createElement("a");
+  a.download = (contract.next_file || FILE || "sheet.png");
+  a.href = work.toDataURL("image/png");
+  a.click();
+  log("내려받기: " + a.download);
+};
+
+// ---------------------------------------------------------------- 불러오기 배선
+$("#pickcat").onchange = async () => {
+  CAT = $("#pickcat").value;
+  syncPickers();
+  if (work && LOCAL) {          // 로컬 파일은 카테고리만 바꿔 계약을 갈아끼운다
+    await applyContract(CAT, FILE);
+    redraw();
+    log(`계약 전환 → ${CAT}`);
+  }
+};
+$("#pickfile").onchange = async () => {
+  const f = $("#pickfile").value;
+  if (!f) return;
+  const ok = await openServerFile($("#pickcat").value, f);
+  if (!ok) syncPickers();
+};
+$("#openlocal").onclick = () => $("#localfile").click();
+$("#pklocal").onclick = () => $("#localfile").click();
+$("#localfile").onchange = e => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => openLocalImage(rd.result, f.name);
+  rd.readAsDataURL(f);
+  e.target.value = "";
+};
+$("#reload").onclick = async () => {
+  if (LOCAL) return log("로컬 파일은 원본 복구를 할 수 없다 — 다시 열어라", "warn");
+  if (!FILE) return;
+  if (!confirmDiscard()) return;
+  await openServerFile(CAT, FILE, { force: true });
+  log("원본을 다시 불러왔다");
+};
+$("#pkcat").onchange = renderPickList;
+$("#pkq").oninput = renderPickList;
+$("#picker").onclick = e => { if (e.target.id === "picker" && work) $("#picker").hidden = true; };
+
+// 드래그&드롭 — 캔버스 어디에 떨궈도 열린다.
+const stage = $("#stage");
+["dragenter", "dragover"].forEach(t => stage.addEventListener(t, e => {
+  e.preventDefault(); stage.classList.add("dropping");
+}));
+["dragleave", "drop"].forEach(t => stage.addEventListener(t, e => {
+  e.preventDefault(); stage.classList.remove("dropping");
+}));
+stage.addEventListener("drop", e => {
+  const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => openLocalImage(rd.result, f.name);
+  rd.readAsDataURL(f);
+});
+
+// 클립보드 붙여넣기 — 다른 도구에서 잘라 온 시트를 바로 얹는다.
+document.addEventListener("paste", e => {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (const it of items) {
+    if (it.type && it.type.startsWith("image/")) {
+      const f = it.getAsFile();
+      const rd = new FileReader();
+      rd.onload = () => openLocalImage(rd.result, "clipboard.png");
+      rd.readAsDataURL(f);
+      e.preventDefault();
+      return;
+    }
+  }
+});
+
+window.addEventListener("beforeunload", e => {
+  if (!dirty) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
 
 setTool("select");
 boot();

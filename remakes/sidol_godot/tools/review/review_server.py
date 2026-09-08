@@ -8,6 +8,8 @@ stdlib 전용(http.server + subprocess). 프로젝트 루트를 정적 서빙하
   POST /api/review  {cat,file,action,feedback}  승인(20_processed 이동 + assets 설치)/반려(피드백 md)
   POST /api/batch   {cat,action,feedback}       전체 승인/전체 반려
   GET  /api/fixer/contract?cat&file            셀 편집기용 그리드 계약(셀 크기·행별 프레임)
+  GET  /api/fixer/files[?cat=monsters]         셀 편집기 파일 선택기 목록(대기·반려·승인본)
+  POST /api/fixer/op   {op,params,png}         시트 픽셀 연산(정본: tools/convert/sheet_ops.py)
   POST /api/fixer/save {cat,file,png,mode}     편집 결과를 다음 버전으로 재납품
 
 반려 시 10_submitted/_feedback/<cat>/<file>.md 에 재요청 패키지가 생성된다:
@@ -407,9 +409,17 @@ def sheet_contract(asset_id: str) -> dict:
         for sp in json.load(io.open(path, encoding="utf-8")).get("species", []):
             if sp.get("id") != asset_id:
                 continue
+            # animations 없는 항목은 시트가 아니다(battle_cut_specs의 origin_player 같은
+            # 참조 전용 항목). sp["animations"]로 바로 들어가면 KeyError가 나고 편집기의
+            # 계약 API가 통째로 죽어 **기본 계약(셀 128·2열 5행)으로 조용히 대체**된다 —
+            # 격자와 정렬 판정이 전부 엉뚱해지므로 여기서 걸러 낸다.
+            if not isinstance(sp.get("animations"), dict) or not sp["animations"]:
+                continue
             anims = sorted(sp["animations"].items(), key=lambda kv: int(kv[1].get("row", 0)))
             cols = max(int(a.get("frames", 1)) for _, a in anims)
-            cell = int(sp.get("sheet_cell", 128))
+            # sheet_cell = 납품 시트의 셀(그리는 크기). sp["cell"]은 게임 내 프레임
+            # 크기({w,h})라 서로 다른 값이다 — 섞으면 안 된다.
+            cell = int(sp.get("sheet_cell") or 128)
             return {
                 "cell": cell,
                 "cols": cols,
@@ -457,6 +467,83 @@ def fixer_contract(cat: str, fname: str) -> dict:
         "prompt_md": read_prompt_md(cat, asset_id),
     })
     return contract
+
+
+def fixer_files(cat: str = "") -> list:
+    """셀 편집기 파일 선택기용 목록 — 납품 대기·반려·승인본을 한데 모은다.
+
+    보드를 거치지 않고 편집기를 단독으로 띄우는 경로(셀편집기.bat) 때문에 필요하다.
+    편집 대상은 10_submitted에만 있는 게 아니다: 반려본을 되살려 고치는 경우와
+    승인본을 손보는 경우가 실제로 있어 세 스테이지를 모두 싣는다.
+    """
+    cats = [cat] if cat in CATEGORIES else list(CATEGORIES)
+    out = []
+    stages = (
+        ("submitted", lambda c: safe_path("10_submitted", c), "/assets/raw/llm/10_submitted/{c}/{f}"),
+        ("rejected", lambda c: safe_path("10_submitted", "_rejected", c), "/assets/raw/llm/10_submitted/_rejected/{c}/{f}"),
+        ("processed", lambda c: safe_path("20_processed", c), "/assets/raw/llm/20_processed/{c}/{f}"),
+    )
+    for c in cats:
+        for status, dir_of, web_fmt in stages:
+            d = dir_of(c)
+            if not os.path.isdir(d):
+                continue
+            for fname in sorted(os.listdir(d)):
+                if not fname.lower().endswith(".png"):
+                    continue
+                p = os.path.join(d, fname)
+                out.append({
+                    "cat": c,
+                    "file": fname,
+                    "asset_id": asset_id_of(fname),
+                    "status": status,
+                    "web": web_fmt.format(c=c, f=fname),
+                    "size": os.path.getsize(p),
+                    "mtime": int(os.path.getmtime(p)),
+                })
+    return out
+
+
+def fixer_op(payload: dict) -> dict:
+    """셀 편집기의 시트 연산 — 규칙은 sheet_ops.py 하나에만 있다.
+
+    편집기(자바스크립트)가 같은 판정을 다시 구현하고 있었다. 그러면 한쪽만 튜닝됐을 때
+    "편집기에서는 깨끗한데 검증기는 반려하는" 상태가 조용히 생긴다 — 이 저장소가 반복해
+    물린 중복 로직 결함이다. 그래서 픽셀을 만지는 일은 전부 서버(=파이썬 정본)가 한다.
+
+    PIL/numpy는 여기서만 **지연 임포트**한다: 서버 자체는 stdlib으로 뜨고, 픽셀 연산을
+    처음 누를 때 비로소 필요해진다(설치되지 않은 환경에서도 심사 보드는 그대로 돈다).
+    """
+    sys.path.insert(0, os.path.join(ROOT, "tools", "convert"))
+    from PIL import Image  # noqa: PLC0415 — 지연 임포트(위 주석)
+    import sheet_ops  # noqa: PLC0415
+
+    data_url = str(payload.get("png", ""))
+    if "," not in data_url:
+        raise ValueError("png 데이터가 없다")
+    raw = base64.b64decode(data_url.split(",", 1)[1])
+    im = Image.open(io.BytesIO(raw)).convert("RGBA")
+    params = payload.get("params") or {}
+    op = str(payload.get("op", ""))
+    if op == "measure":
+        log = ""
+    else:
+        im, log = sheet_ops.apply_op(im, op, params)
+    buf = io.BytesIO()
+    im.save(buf, format="PNG")
+    stats = sheet_ops.measure(
+        im,
+        cell=int(params.get("cell") or 0),
+        rows=int(params.get("rows") or 0),
+        cols=int(params.get("cols") or 0),
+        layout=params.get("layout") or [],
+        align=str(params.get("align") or "bottom_center"),
+        budget=int(params.get("budget") or 48),
+    )
+    return {
+        "ok": True, "log": log, "stats": stats,
+        "png": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode(),
+    }
 
 
 def fixer_save(payload: dict) -> dict:
@@ -509,6 +596,10 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json(400, {"error": "bad cat/file"})
                 return
             self._json(200, fixer_contract(cat, fname))
+        elif parsed.path == "/api/fixer/files":
+            q = parse_qs(parsed.query)
+            self._json(200, {"files": fixer_files(q.get("cat", [""])[0]),
+                             "categories": list(CATEGORIES)})
         elif parsed.path == "/api/list":
             cat = parse_qs(parsed.query).get("cat", [""])[0]
             if cat not in CATEGORIES:
@@ -520,13 +611,15 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
-        if urlparse(self.path).path not in ("/api/review", "/api/batch", "/api/fixer/save"):
+        if urlparse(self.path).path not in ("/api/review", "/api/batch", "/api/fixer/save", "/api/fixer/op"):
             self._json(404, {"error": "not found"})
             return
         try:
             length = int(self.headers.get("Content-Length", 0))
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
-            if urlparse(self.path).path == "/api/fixer/save":
+            if urlparse(self.path).path == "/api/fixer/op":
+                self._json(200, fixer_op(payload))
+            elif urlparse(self.path).path == "/api/fixer/save":
                 self._json(200, fixer_save(payload))
             elif urlparse(self.path).path == "/api/batch":
                 results = []
