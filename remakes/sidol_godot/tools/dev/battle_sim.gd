@@ -58,6 +58,8 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 	var dealt_total := 0
 	var dealt_count := 0
 	var enemy_hp_total := 0
+	var specials_total := 0
+	var lost_total := 0
 	var names: Dictionary = {}
 
 	for i in runs:
@@ -74,6 +76,8 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 		dealt_total += int(result["dealt_sum"])
 		dealt_count += int(result["swings"])
 		enemy_hp_total += int(result["enemy_hp"])
+		specials_total += int(result.get("specials", 0))
+		lost_total += int(result.get("lost", 0))
 
 	var avg_turns := float(turns_total) / float(runs)
 	var avg_hit := float(hit_total) / float(maxi(hit_count, 1))
@@ -99,10 +103,24 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 			]
 		)
 	)
+	# 상태이상 집계 — 기존 표는 그대로 두고 한 줄만 덧붙인다(파서 호환).
+	print(
+		(
+			"      └ 특수 %d회(전투당 %.2f·턴당 %.1f%%) · 마비 턴상실 %d회"
+			% [
+				specials_total,
+				float(specials_total) / float(maxi(runs, 1)),
+				100.0 * float(specials_total) / float(maxi(turns_total, 1)),
+				lost_total,
+			]
+		)
+	)
 
 
-## 전투 1회 — 플레이어는 기본 공격만, 적은 통상 공격만.
+## 전투 1회 — 플레이어는 기본 공격만, 적은 특수(상태이상)→통상 순서.
 ## 판정은 실제 전투와 같은 BattleController를 쓴다(약점·브레이크·방어 규칙까지 포함).
+## 턴 순서는 실전 _resolve_turn을 따른다: 적 특수→통상 뒤 라운드당 1회 tick_effects,
+## 마비면 플레이어 공격을 통째로 스킵한다(_consume_turn_if_paralyzed).
 func _simulate(enemy_id: String, level: int) -> Dictionary:
 	var built_player := _player_at(level)
 	var player := Combatant.new(
@@ -115,7 +133,19 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 	var enemies: Array[Combatant] = []
 	enemies.assign(built["combatants"])
 	if enemies.is_empty():
-		return {"turns": 0, "win": false, "hp_lost": 0, "hit_sum": 0, "hits": 0, "broke": false}
+		return {
+			"turns": 0,
+			"win": false,
+			"hp_lost": 0,
+			"hit_sum": 0,
+			"hits": 0,
+			"broke": false,
+			"dealt_sum": 0,
+			"swings": 0,
+			"enemy_hp": 0,
+			"specials": 0,
+			"lost": 0
+		}
 
 	var ctrl := BattleController.new()
 	add_child(ctrl)
@@ -130,29 +160,43 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 	var hit_sum := 0
 	var broke := false
 	var win := false
+	var specials := 0
+	var lost := 0
 	ctrl.battle_finished.connect(func(result: StringName) -> void: win = result == &"win")
 
 	# 무한 루프 방지 — 30턴이면 이미 "긴 전투"라 판정에 충분하다.
 	while turns < 30 and not player.is_down() and ctrl.state != BattleController.TurnState.FINISHED:
 		turns += 1
-		var enemy_before := enemies[0].hp
-		ctrl.submit_player_command(
-			{"type": &"attack", "ap": player.attack_stat(), "target": enemies[0]}
-		)
-		dealt_sum += enemy_before - enemies[0].hp
-		swings += 1
-		if enemies[0].is_broken():
-			broke = true
+		if player.has_paralysis():
+			lost += 1
+		else:
+			var enemy_before := enemies[0].hp
+			ctrl.submit_player_command(
+				{"type": &"attack", "ap": player.attack_stat(), "target": enemies[0]}
+			)
+			dealt_sum += enemy_before - enemies[0].hp
+			swings += 1
+			if enemies[0].is_broken():
+				broke = true
+			if ctrl.state == BattleController.TurnState.FINISHED:
+				break
 		if ctrl.state == BattleController.TurnState.FINISHED:
 			break
 		var before := player.hp
-		ctrl.enemy_turn()
+		var eres := ctrl.enemy_turn(enemy_id)
+		if eres.has("special"):
+			specials += 1
 		# 씬 흐름과 같은 규약 — 적 페이즈가 끝나면 판정 상태를 플레이어 차례로 되돌린다.
 		ctrl.begin_player_phase()
 		var taken := before - player.hp
 		if taken > 0:
 			hits += 1
 			hit_sum += taken
+		# 라운드당 1회 tick — 실전 _resolve_turn._tick_effects와 같은 자리.
+		# DoT 피해는 hp에 직접 들어가 hp_lost에 합산된다.
+		player.tick_effects()
+		for e in enemies:
+			e.tick_effects()
 	ctrl.queue_free()
 	return {
 		"turns": turns,
@@ -164,6 +208,8 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 		"hit_sum": hit_sum,
 		"hits": hits,
 		"broke": broke,
+		"specials": specials,
+		"lost": lost,
 	}
 
 
@@ -213,25 +259,34 @@ func _streak_avg(floor_no: int, level: int, dp: int, runs: int) -> float:
 
 
 ## 한 판 — 플레이어 HP를 이어서 쓴다. 반환: 이겼는가.
+## 실전과 같은 순서(특수→통상·마비 스킵·라운드당 1회 tick)를 쓴다.
 func _fight_once(player: Combatant, enemy_id: String) -> bool:
 	var built := BattleSetup.build_enemies({"enemies": [enemy_id]})
 	var enemies: Array[Combatant] = []
 	enemies.assign(built["combatants"])
 	if enemies.is_empty():
 		return false
+	# 판 사이 상태이상 이월 금지 — 실전은 전투마다 Combatant를 새로 만든다.
+	player.active_effects.clear()
 	var ctrl := BattleController.new()
 	add_child(ctrl)
 	ctrl.start(player, enemies)
 	var turns := 0
 	while turns < 30 and not player.is_down() and ctrl.state != BattleController.TurnState.FINISHED:
 		turns += 1
-		ctrl.submit_player_command(
-			{"type": &"attack", "ap": player.attack_stat(), "target": enemies[0]}
-		)
+		if not player.has_paralysis():
+			ctrl.submit_player_command(
+				{"type": &"attack", "ap": player.attack_stat(), "target": enemies[0]}
+			)
+			if ctrl.state == BattleController.TurnState.FINISHED:
+				break
 		if ctrl.state == BattleController.TurnState.FINISHED:
 			break
-		ctrl.enemy_turn()
+		ctrl.enemy_turn(enemy_id)
 		ctrl.begin_player_phase()
+		player.tick_effects()
+		for e in enemies:
+			e.tick_effects()
 	ctrl.queue_free()
 	return enemies[0].is_down() and not player.is_down()
 

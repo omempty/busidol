@@ -382,6 +382,53 @@ func _ready() -> void:
 		big.queue_free()
 		await get_tree().process_frame
 
+	# --- 9) 패배 대가 — 난이도별 차등 + 연패 자비 ---
+	# 전투를 통째로 지게 만들지 않고 결과 반영만 직접 구동한다 — apply는
+	# GameState·BattleLog·print만 만진다(씬 전환은 _show_result 몫이라 여기 없다).
+	# 되돌리면 빨개진다: 기본 25%·자비 면제·하드 40%·승리 리셋을 전부 잰다.
+	var diff_before: int = SettingsManager.difficulty
+	GameState.current_floor = 1
+	GameState.defeat_streak = 0
+	GameState.defeat_floor = -1
+	GameState.player_stats["money"] = 4000
+	var full_hp := GameState.max_hp()
+	SettingsManager.difficulty = SettingsManager.Difficulty.NORMAL
+	BattleRewards.apply(&"lose", {}, 0, "")
+	if int(GameState.player_stats["money"]) != 3000:
+		failures.append("보통 패배 소지금 4000→%d (기대 3000)" % int(GameState.player_stats["money"]))
+	if int(GameState.player_stats["hp"]) != maxi(1, int(round(full_hp * 0.5))):
+		failures.append("보통 패배 HP 회복 비율 이탈")
+	if GameState.defeat_streak != 1:
+		failures.append("첫 패배 streak 미집계")
+	# 같은 층 연패 2회째 — 자비로 소지금 면제(HP는 깎임).
+	BattleRewards.apply(&"lose", {}, 0, "")
+	if int(GameState.player_stats["money"]) != 3000:
+		failures.append("연패 자비 미적용 — 소지금이 또 깎였다(%d)" % int(GameState.player_stats["money"]))
+	if GameState.defeat_streak != 2:
+		failures.append("연패 streak 미집계")
+	# 층을 옮기면 1부터 다시 — 자비 없이 깎인다.
+	GameState.current_floor = 2
+	BattleRewards.apply(&"lose", {}, 0, "")
+	if int(GameState.player_stats["money"]) != 2250:
+		failures.append("층 이동 후 패배 소지금 3000→%d (기대 2250)" % int(GameState.player_stats["money"]))
+	if GameState.defeat_streak != 1:
+		failures.append("층 이동 후 streak 미초기화")
+	# 도전 난이도 — 40% 손실.
+	GameState.player_stats["money"] = 4000
+	GameState.current_floor = 3
+	SettingsManager.difficulty = SettingsManager.Difficulty.HARD
+	BattleRewards.apply(&"lose", {}, 0, "")
+	if int(GameState.player_stats["money"]) != 2400:
+		failures.append("도전 패배 소지금 4000→%d (기대 2400)" % int(GameState.player_stats["money"]))
+	if int(GameState.player_stats["hp"]) != maxi(1, int(round(full_hp * 0.35))):
+		failures.append("도전 패배 HP 회복 비율 이탈")
+	# 승리하면 연패가 끊긴다.
+	BattleRewards.apply(&"win", {"exp": 0, "money": 0}, 10, "")
+	if GameState.defeat_streak != 0 or GameState.defeat_floor != -1:
+		failures.append("승리 후 자비 카운터 미초기화")
+	SettingsManager.difficulty = diff_before
+	print("[smoke_battle] 패배 대가 §9 — 보통/자비/층이동/도전/승리리셋 확인")
+
 	_finish(failures, battle)
 
 

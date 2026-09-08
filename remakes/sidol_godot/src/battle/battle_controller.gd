@@ -51,12 +51,20 @@ func _end_player_phase() -> void:
 	state = TurnState.ENEMY_TURN
 
 
-func enemy_turn() -> Dictionary:
+func enemy_turn(enemy_id: String = "") -> Dictionary:
 	if state != TurnState.ENEMY_TURN:
 		return {}
 	var enemy := _current_enemy()
 	if enemy == null or enemy.is_down():
 		return _advance_enemy()
+	# 종별 특수(상태이상)를 먼저 굴린다 — 실전 _enemy_act와 같은 순서.
+	# sim이 적 ID를 넘길 때만 동작하고, 빈 문자열이면 기존 통상 경로 그대로다.
+	if not enemy_id.is_empty():
+		var rolled := BattleEnemyPhase.roll_special(
+			enemy, player_combatant, enemy_id, EnemyManager.rng
+		)
+		if not rolled.is_empty():
+			return {"special": rolled, "attacker": enemy}
 	var raw := DamageCalculator.enemy_hit(enemy.ap, EnemyManager.rng)
 	player_combatant.take_damage(raw)
 	return {"damage": raw, "attacker": enemy}

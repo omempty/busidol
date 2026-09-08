@@ -122,6 +122,9 @@ func _snapshot() -> Dictionary:
 		# 안개는 비트맵을 base64로 싣는다 — 층당 1,625바이트(200×65비트).
 		# 옛 세이브에는 이 키가 없다. 없으면 안개가 가득한 채로 시작한다(FogOfWar.restore).
 		"fog": GameState.fog.to_data(),
+		# 연패 기록 — 패배 자비용. 없으면 0/-1로 시작한다(아래 _apply).
+		"defeat_streak": GameState.defeat_streak,
+		"defeat_floor": GameState.defeat_floor,
 	}
 
 
@@ -153,6 +156,8 @@ func _apply(data: Dictionary) -> void:
 		GameState.chest_overrides[int(floor_str)] = cells
 	# 구 세이브(이 키가 없던 시절)는 빈 기록으로 시작한다 — 첫 만남 대사부터 다시.
 	GameState.fog.restore(data.get("fog", {}))
+	GameState.defeat_streak = int(data.get("defeat_streak", 0))
+	GameState.defeat_floor = int(data.get("defeat_floor", -1))
 	var seen_v: Variant = data.get("npc_seen_sequences", {})
 	GameState.npc_seen_sequences = {}
 	if typeof(seen_v) == TYPE_DICTIONARY:

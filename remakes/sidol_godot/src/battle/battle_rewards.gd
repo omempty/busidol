@@ -39,18 +39,50 @@ static func apply(
 		# 그렇다고 HP 0으로 돌려보내면 다음 접촉이 곧바로 다시 패배라 무한 패배가
 		# 된다(2026-08-29 자동 주행 한 판에 17회 관측). 그 사이를 데이터로 정한다 —
 		# 절반 남짓 회복하고 소지금 일부를 잃는다. 되돌아갈 수는 있되 공짜는 아니다.
+		# 2026-09-08 확장: 난이도별 차등 + 연패 자비. 세이브 복귀형이 아니라
+		# 소지금 손실형을 쓰는 이유(탐험 처벌 방지·전진 운동량)는 로드맵 §6 결정.
 		var rules: Dictionary = Database.defeat_rules()
 		var hp_ratio := float(rules.get("hp_ratio", 0.5))
 		var money_loss := float(rules.get("money_loss", 0.25))
+		var preset: Dictionary = (rules.get("by_difficulty", {}) as Dictionary).get(
+			SettingsManager.difficulty_key(), {}
+		)
+		hp_ratio = float(preset.get("hp_ratio", hp_ratio))
+		money_loss = float(preset.get("money_loss", money_loss))
+		# 연패 집계 — 같은 층에서 진 것만 잇는다. 층을 옮기면 1부터 다시 센다.
+		if GameState.defeat_floor == GameState.current_floor:
+			GameState.defeat_streak += 1
+		else:
+			GameState.defeat_streak = 1
+			GameState.defeat_floor = GameState.current_floor
+		# 연패 자비 — streak회째부터 소지금은 안 깎는다(HP는 깎인다).
+		# 빈곤 나선(연패→빈털터리)을 막는 "봐준다"는 신호다.
+		var mercy: Dictionary = rules.get("mercy", {})
+		var spared: bool = (
+			bool(mercy.get("waive_money", false))
+			and GameState.defeat_streak >= int(mercy.get("streak", 2))
+		)
 		GameState.player_stats["hp"] = maxi(1, int(round(GameState.max_hp() * hp_ratio)))
-		var lost := int(round(float(GameState.player_stats["money"]) * money_loss))
-		GameState.player_stats["money"] = maxi(0, int(GameState.player_stats["money"]) - lost)
+		var lost := 0
+		if not spared:
+			lost = int(round(float(GameState.player_stats["money"]) * money_loss))
+			GameState.player_stats["money"] = maxi(0, int(GameState.player_stats["money"]) - lost)
 		if lost > 0:
 			print("[battle] 패배 — 소지금 %d 손실" % lost)
+			BattleLog.push(
+				TranslationServer.translate("UI_BLOG_DEFEAT_TOLL") % lost, BattleLog.Kind.DAMAGE
+			)
+		elif spared:
+			BattleLog.push(
+				TranslationServer.translate("UI_BLOG_DEFEAT_MERCY"), BattleLog.Kind.ACCENT
+			)
 	else:
 		GameState.player_stats["hp"] = player_hp
 	var growth := {}
 	if result == &"win":
+		# 승리하면 연패가 끊긴다 — 자비 카운터 리셋(도망은 유지, 승도 패도 아니라서).
+		GameState.defeat_streak = 0
+		GameState.defeat_floor = -1
 		GameState.player_stats["money"] = (
 			int(GameState.player_stats["money"]) + int(rewards["money"])
 		)

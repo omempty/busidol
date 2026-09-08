@@ -183,6 +183,8 @@ UI_BLOG_BREAK,%s 브레이크!,%s break!
 UI_BLOG_ENEMY_HIT,%s의 공격 %d,%s attacks for %d
 UI_BLOG_DODGE_HIT,피격 %d회 %d,%d hits taken for %d
 UI_BLOG_RESULT,%s,%s
+UI_BLOG_DEFEAT_TOLL,소지금 %d온을 잃었다,Lost %d ON.
+UI_BLOG_DEFEAT_MERCY,연패 자비 — 소지금은 그대로,Mercy for the losing streak - money kept.
 UI_BLOG_CRIT,%s에게 치명타! %d,Critical hit on %s! %d
 UI_BLOG_GUARD,방어 태세 (피해 경감 + 소량 회복),Guarding (Reduce damage + small heal)
 UI_BLOG_ADVANTAGE,선제 기습 성공! (적 방어 압박),Surprise attack! (Enemy defense broken)

@@ -4,7 +4,30 @@ extends RefCounted
 ## 씬 컨트롤러의 표현 계층 위임분(로직 판정은 DamageCalculator).
 
 
-## 종별 특수 행동 — 통상공격 대신 상태이상을 건다. 반환: 걸었는가.
+## 종별 특수 판정(연출 없음) — 확률 롤·저항 검사·attach_effect만 한다.
+## presenter·BattleLog·TranslationServer 호출은 두지 않는다 — sim이 같은 주사위를 굴리게.
+## 반환: 불발={} / 발동={"kind","turns","magnitude","resisted"}.
+static func roll_special(
+	attacker: Combatant, player: Combatant, enemy_id: String, rng: RandomNumberGenerator
+) -> Dictionary:
+	var edef := Database.get_enemy_def(StringName(enemy_id))
+	var spec: Dictionary = edef.get("special", {})
+	if spec.is_empty():
+		return {}
+	if rng.randf() > float(spec.get("chance", 0.0)):
+		return {}
+	var kind := StringName(str(spec.get("kind", "")))
+	var turns := int(spec.get("turns", 3))
+	var magnitude := maxi(1, attacker.attack_stat() / 12)
+	# 상태 저항(신경 안정제)이 걸려 있으면 attach_effect가 조용히 튕겨 낸다 —
+	# 그래도 턴은 소모된다. 저항을 산 보람이 그 자리다.
+	if player.has_status_resist():
+		return {"kind": kind, "turns": turns, "magnitude": magnitude, "resisted": true}
+	player.attach_effect({"kind": kind, "turns": turns, "magnitude": magnitude})
+	return {"kind": kind, "turns": turns, "magnitude": magnitude, "resisted": false}
+
+
+## 종별 특수 행동 — 통상공격 대신 상태이상을 건다. 반환: 걸었는가(저항 소모 포함).
 ##
 ## **왜 생겼나(2026-09-06).** 그 전까지 적 행동은 통상공격 1종뿐이었다. 그래서
 ## `attach_effect` 호출자가 전부 플레이어 쪽이었고, 상비약 5종(진통 파스·해열제·
@@ -20,25 +43,18 @@ static func try_special(
 	presenter: BattlePresenter,
 	rng: RandomNumberGenerator
 ) -> bool:
-	var edef := Database.get_enemy_def(StringName(enemy_id))
-	var spec: Dictionary = edef.get("special", {})
-	if spec.is_empty():
+	var rolled := roll_special(attacker, player, enemy_id, rng)
+	if rolled.is_empty():
 		return false
-	if rng.randf() > float(spec.get("chance", 0.0)):
-		return false
-	# 상태 저항(신경 안정제)이 걸려 있으면 attach_effect가 조용히 튕겨 낸다 —
-	# 그래도 턴은 소모된다. 저항을 산 보람이 그 자리다.
-	if player.has_status_resist():
+	if bool(rolled.get("resisted", false)):
 		BattleLog.push(
 			TranslationServer.translate("UI_BLOG_STATUS_RESIST") % attacker.display_name,
 			BattleLog.Kind.ACCENT
 		)
 		presenter.show_player_note(TranslationServer.translate("UI_BATTLE_STATUS_RESISTED"))
 		return true
-	var kind := StringName(str(spec.get("kind", "")))
-	var turns := int(spec.get("turns", 3))
-	var magnitude := maxi(1, attacker.attack_stat() / 12)
-	player.attach_effect({"kind": kind, "turns": turns, "magnitude": magnitude})
+	var kind: StringName = rolled["kind"]
+	var magnitude := int(rolled["magnitude"])
 	# 특수는 통상 공격과 다른 그림을 쓴다 — 원작이 **로드조차 안 한** 프레임 5를
 	# 여기 배정했다(tools/dev/bake_battle_sheets.py). 대형 시트가 없으면 `special` 행이
 	# 없으므로 false가 돌아오고, 그때만 통상 공격 동작으로 간다.
