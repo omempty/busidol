@@ -85,9 +85,10 @@ P-D에서도 외부 의존이 없던 2건(CRT 셰이더 · 원작 VOC 보이스)
 ## 2. 다음 세션 첫 명령
 
 ```powershell
-검증실행.bat                 # 관문 22단계 (12=AI 인지, 17=파싱, 18=world_audit,
+검증실행.bat                 # 관문 24단계 (12=AI 인지, 17=파싱, 18=world_audit,
                             #             19=자동 주행, 20=내보내기 규칙, 21=원본 대조,
-                            #             22=SPR 알파 대조 ← 16차 신설)
+                            #             22=소품 덧층, 23=SPR 알파, 24=시트 연산)
+                            # 정본은 tools/dev/run_gates.ps1 하나다 — 단계 수는 늘어난다
                             # 16차 실측: ALL GATES PASSED (world_audit FAIL 0 / WARN 4)
 ```
 
@@ -1025,7 +1026,7 @@ F1에서 3층을 가리켰다. `quests_v2.json`의 `requires` 사슬 기반으�
 | 적턴 식별 안 됨 | TURN N 라벨만, 적 연출 약함 | 적턴 배너(UI_BATTLE_ENEMY_TURN) + stale 번역 폴백(`_enemy_turn_text`) + 적 돌진(`enemy_lunge`+잔상) + 피해비례 shake/hitstop + 플레이어 hurt행 재생 |
 | 계단 둘 다 지하? | 설계 실측: 위 2개=Q_F1_BLAST 잠금, 동쪽 아래만 지하행, **중앙 아래는 F0 도착점이 벽이라 dead**(guard 2-5) | 행선 알약(▲▼+층 이름+잠김 표기) + `stairs_locked`/`stairs_dead` 신호 → 1.2초 메시지 |
 | `[100,63]` SPACE가 빠른 이동만 | interact 트리거보다 빠른 이동이 먼저 → 폭파/희생 컷신 영영 불발 | 트리거 우선 + **계단 위에선 발밑 앵커도 판정**(영향 셋 다 앵커 한정) |
-| 소포 위치 모름 | zone 트리거라 소품이 없음(창고 [12,32]·우편물실 [163,18]) | — (좌표를 개발자 모드로 확인) |
+| 소포 위치 모름 | zone 트리거라 소품이 없음(창고 [12,32]·우편물실 [163,18]) | **해소(2026-09-09)** — 우편함(`f1_mail_lockers`)·사물함(`f1_storage_lockers`)을 **조사하면** 난다(zone→interact). 좌표를 외울 필요가 없고, 자리가 어긋나면 `PropsProbe.check_event_alignment`가 잡는다 |
 | 적이 안 달려듦 | F1 몹에 chase 없음(의도) | **근접 어그로**: 일반몹(비보스) 2칸 내 돌진 + alerted 처리(기습 보너스 제외) |
 | 달리기 없음 | — | Shift/패드R숄더 2배속(`mover.step_time`), 도움말 행 추가 |
 | 방 문패 | 타일 동결 | `door_plates.json`+근접 렌더러(7칸·최대 6). 시드: 우편물실/창고/HP실/서고. **F3~F5 미정** |
@@ -2472,7 +2473,7 @@ snow_frost_war/LodeRunner git 저장소화 완료(Lode는 AudioManager 마이그
 
 2. **전 층(F0~F5) 시나리오 이벤트 체인 및 NPC 전수 검토 & 정규화**:
    - **대사 고유화**: F0 수위(`guard_f0`, 서고 힌트 `@c004`/`@c005`), 2F 구출 여학생(`f2_rescue_girl`, HP실/완종 힌트 `@c204`/`@c205`), 2F 완종 괴물(`f2_poster.json` 씬 2-3 `@c212`~`@c215`), ATT 97/98 ("왼쪽 사람", "오른쪽 사람" 명칭 및 5회 힌트 기믹 `@t207`) 정규화.
-   - **NPC 생동감 부여**: `npcs_f0.json` ~ `npcs_f4.json` 전원 `idle_anim: "squash"` 및 배회 반경(`wander_range: 1`) 적용.
+   - **NPC 생동감 부여**: `npcs_f0.json` ~ `npcs_f4.json` 전원 `idle_anim: "squash"` 및 배회 반경(`wander_range: 1`) 적용. **→ 2026-09-09 정정: `squash`는 이 배율에서 못 쓰는 값이라 폐기하고 계약을 `bob`/`none` 둘로 확정, 데이터 11건 교체(19차 §1.4).**
    - **게이트/트리거 정합성**: F4→F5 계단 guard 4 분리 및 `requires_flag: "Q_F4_SACRIFICE"` 잠금. F1 철문 폭파 트리거(`f1_blast`)에 `"requires_flag": ["Q_F1_SOPO", "Q_F1_GAS"]` 및 `guard_flag: "Q_F1_BLAST"` 연동으로 선행 재료 수집 순서 보장.
    - **전 층 통합 이벤트 검증기**: `tests/smoke_all_floors_events.gd` & `.tscn` 신설 (F0~F5 NPC 25명, Walker 보행, 퀘스트 사슬 F1→F2→F3→F0→F4→F5→Ending 자동 검증) 및 관문 공식 등록.
 

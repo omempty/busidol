@@ -201,7 +201,7 @@ _category_index.md    # 카테고리 요약 — LLM 에이전트의 작업 대�
 
 - 에셋이 상했으면 사후 보정이 아니라 **원본에서 다시 굽는다**. 빌더가 정본이다.
 - 굽는 레시피는 빌더 안에만 둔다. 관문은 빌더의 `build_*_image()`를 호출해
-  게임 파일과 바이트 비교한다(`tools/dev/spr_alpha_check.py` — run_gates.ps1 마지막 단계).
+  게임 파일과 바이트 비교한다(`tools/dev/spr_alpha_check.py` — run_gates.ps1의 파이썬 단계 중 하나, 23/24).
   레시피를 관문에 베끼면 소스가 둘로 갈라져 관문 자신이 사문화된다.
 - `assets/originals_ref/bmp_spr/*.bmp`는 **알파가 없는 RGB 중간물**이다. 참고용이지
   에셋 소스가 아니다(`tools/dev/bake_battle_sheets.py`도 같은 경고를 달고 있다).

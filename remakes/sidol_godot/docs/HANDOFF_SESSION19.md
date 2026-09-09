@@ -36,16 +36,19 @@
 `[19/24]`가 3~5회에 1~3회 실패한다. **기준선에서도 같은 지문으로 재현되므로 이 세션의
 회귀가 아니다.** 다만 관문이 흔들리면 앞으로의 모든 작업이 그 아래 묻힌다 — 먼저 잡는 것을 권한다.
 
-### 1.2 소품 — 그림과 조사가 아직 없다
-지금 소품은 **통행 판정만 산다**(실측: F1에서 22칸의 ATT가 실제로 바뀐다).
-- **그림**: `assets/spec/sprites/tileset_campus.json`은 생성 스펙일 뿐 obj 아틀라스 인덱스가 없다.
-  타일 납품이 와야 정해진다. 붙일 자리는 `renderer.set_object(cell, id)`
-  (`scenes/field.gd`가 열린 상자에 쓰는 그 함수).
-- **조사(SPACE)**: `props_f1.json`의 `inspect`를 읽는 코드가 없다. `field.gd:451 _talk_in_front()`
-  옆에 `_prop_in_front()`를 만들고 상자 → 원작 마커 다음 순위로 넣으면 된다.
-- **통로 차단 관문**: `props_check.py`는 스키마·겹침·원본 ATT만 본다. 도달 가능성은
-  `Placement.blocks_passage()`/`CHOKE_RADIUS`가 정본이라 **GDScript 쪽에서 봐야 하는데
-  아직 안 붙였다.** `world_audit`에 소품 얹은 뒤의 연결성 검사를 추가할 자리다.
+### 1.2 소품 — **그림만 남았다** (조사·차단 관문은 2026-09-09 완료)
+- ~~**조사(SPACE)**~~ → 배선 완료(`ce8ea3c`). `PropsLayer.inspect_steps()` → `field._prop_in_front()`
+  → `_start_inspect()`가 원작 마커와 같은 대사창을 연다. 우선순위는 트리거 → 계단 → NPC →
+  워커 → 원작 마커 → 상자 → **소품**. `inspect.requires_flag`는 "그 플래그가 서야 그 대사를
+  쓴다"로 규약 확정(안 서면 조사 대상에서 빠진다).
+- ~~**통로 차단 관문**~~ → `PropsProbe.check_choke` + `Placement.blocks_cells()`로 완료(`00aef1a`).
+  소품이 **실제로 막는 칸**만 놓고 묻는다(윗칸이 머리 위로 지나가는 모양을 과잉 판정하지 않게).
+- **그림**: 여전히 미배선. `assets/spec/sprites/tileset_campus.json`은 생성 스펙일 뿐 obj 아틀라스
+  인덱스가 없고, 타일 납품이 와야 정해진다. 붙일 자리는 `renderer.set_object(cell, id)`
+  (`scenes/field.gd`가 열린 상자에 쓰는 그 함수). 그때까지 시각 단서는 조사 알약 + 몸 셀 하이라이트뿐이다.
+- **덤으로 드러난 것**: 이벤트 두 개(`f1_sopo`·`f1_gas`)가 소품에서 4칸 떨어진 빈 좌표를 밟는
+  구조였다. `zone` → `interact`로 바꿔 우편함·사물함 조사로 나게 했고, 어긋남은
+  `PropsProbe.check_event_alignment`가 잰다.
 
 ### 1.3 대형 인물 스프라이트 — 범위 미확정
 유저 요청("기존 시돌이를 비롯한 스프라이트 / 대형 인물 스프라이트를 원본 기반 리터칭")에서
@@ -97,6 +100,13 @@
 | `prompt_audit` 확장 | 주인공 정본(`assets/spec/sprites/*.json`)도 대조 + **(카테고리, id)로 색인** | `python tools/review/prompt_audit.py` |
 | `test_sheet_ops` 68건 | 묶음 정렬·계측, align=none, 채움 비율, 행 단위 재배치 | run_gates `[24/24]` |
 | `fixer_probe` 22+23건 | 셀 편집기 실조작(부동 이동·묶음·서버 왕복) | `python tools/review/fixer_probe.py --server` |
+| `ActorProbe.check_idle_anim_coverage` | 데이터가 선언한 `idle_anim`에 실제 동작이 붙어 있는가 | world_audit |
+| `PropsProbe.check_inspect_reach` | 앞에 설 자리가 없어 대사가 죽는 소품 | world_audit |
+| `PropsProbe.check_event_alignment` | 플래그로 묶인 트리거와 소품의 자리 어긋남 | world_audit |
+| `PropsProbe.check_choke` | 소품이 길을 끊는가(`Placement.blocks_cells`) | world_audit |
+
+> `props_check.py` 행에 **플래그 사슬**이 더해졌다(`8c0d3e9`): 소품이 기대는 `open_flag`·
+> `requires_flag`를 아무도 안 세우면 FAIL. 오타 한 글자로 소품이 영영 죽는 자리였다.
 
 ### 2.1 부정 시험을 꼭 같이 넣었다
 정상만 보는 관문은 고장 나도 초록이다. 예: "묶음을 모르면 소품이 부서진다"(상자 폭 56 → 60),

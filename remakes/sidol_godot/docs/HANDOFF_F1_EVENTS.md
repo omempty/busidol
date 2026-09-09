@@ -184,9 +184,9 @@ ERROR: [autoplay] 걸어서 닿은 층 3 < 요구 5 — 층 전환이 막혔다
 정전 사슬이 실제로 도는 것도 같은 보고서에서 확인된다(다른 판, 정전 중에 자료실을 먼저 들른 순서):
 
 ```
-| 1 | f1_gas@12,32              | 트리거(zone)     | f1_gas |
+| 1 | f1_gas@12,32              | 트리거(zone)     | f1_gas |   ← 2026-09-09 이후 interact(11,30)
 | 1 | f1_blackout_cache@27,38   | 트리거(interact) | f1_blackout_cache |   ← 이제 발동한다
-| 1 | f1_sopo@163,18            | 트리거(zone)     | f1_sopo |
+| 1 | f1_sopo@163,18            | 트리거(zone)     | f1_sopo |   ← 2026-09-09 이후 interact(157,15)
 | 1 | f1_power@190,26           | 트리거(interact) | f1_power |
 | 1 | f1_blast@100,63           | 트리거(interact) | f1_blast |
 | 1 | stairs_center_up_f1       | 계단             | f1 → f2 |
@@ -210,7 +210,7 @@ powershell -File tools/dev/run_gates.ps1 -Godot <godot>
 ```
 
 ```
-[1/23] Import...        …  [18/23] World audit...
+[1/24] Import...        …  [18/24] World audit...   ※ 총 24단계(22=소품 덧층이 뒤에 끼었다)
 [world_audit] done - FAIL 0 / WARN 4
 [19/23] Autoplay...
 === 자동 주행 끝: 예산 소진 (240초) ===
@@ -221,14 +221,15 @@ powershell -File tools/dev/run_gates.ps1 -Godot <godot>
 ```
 
 **1~18단계는 전부 통과**했고 19단계 Autoplay에서 멈췄다 — 물리 초당 48(정상 240)인
-느린 판이었다. 스위트가 거기서 종료돼 **20~23단계(export-pack·원본 대조·SPR 알파·sheet_ops)는
+느린 판이었다. 스위트가 거기서 종료돼 **20~24단계(export-pack·원본 대조·소품 덧층·SPR 알파·sheet_ops)는
 안 돌았다.** 다음 세션이 반드시 다시 돌려야 한다.
 
 ---
 
 ## 4. 아직 안 끝난 것 (다음 세션이 이어받을 순서)
 
-1. **전체 관문 스위트 재실행.** 20~23단계가 한 번도 안 돌았다.
+1. ~~**전체 관문 스위트 재실행.**~~ **해소(2026-09-09)** — `ALL GATES PASSED (24/24)`,
+   `[19/24]` 걸음 6843 / 층 6. 아래 주의사항은 그대로 참고할 것.
    `tools/convert/sheet_ops.py`/`test_sheet_ops.py`는 유저가 동시에 편집 중이라
    23단계가 그 영향으로 빨갈 수 있다 — 유저 작업이 끝난 뒤 돌릴 것.
 2. **Autoplay를 「물리 초당 240」인 판에서 한 번 더 확인**해 스위트 전체 초록을 실측으로 남길 것.

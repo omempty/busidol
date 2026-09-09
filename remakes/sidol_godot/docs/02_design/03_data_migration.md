@@ -88,6 +88,7 @@ ffmpeg ────────────────────────�
 | move_enemy 층별 난수 범위 | enemies.json stats_by_floor |
 | store() 가격/HP 표 | shop.json |
 | Quiz_Man quiz 배열 | events/quiz.json |
+| **(원본 대응 없음 — 리메이크 신규)** | **maps/props_f\<N\>.json — 소품 덧층.** 원작 맵을 건드리지 않고 사물을 얹는 계층(01_oop_redesign §3.5) |
 | **마스터 시나리오 §4.2 플래그표** | **quests_v2.json — Q_F1_START~Q_ENDING 18종 + 서브퀘스트
   해금 카드(Q_QUIZ_ALL/Q_QUAN_DONE/Q_HP_ALL). 원본은 수기 문서이므로 수동 작성 후
   Validator가 코드/컷신 참조와 일치 검사** |

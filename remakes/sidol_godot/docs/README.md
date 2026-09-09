@@ -85,3 +85,5 @@ docs/
 
 
 - [HANDOFF_SESSION19.md](HANDOFF_SESSION19.md) — 19차 인수인계(도구·AI·에셋 계약, 오토플레이 관문 미결)
+- [HANDOFF_F1_EVENTS.md](HANDOFF_F1_EVENTS.md) — F1 정전·전자잠금 이벤트 인계
+- [HANDOFF_CELL_EDITOR.md](HANDOFF_CELL_EDITOR.md) — 셀 편집기 인계

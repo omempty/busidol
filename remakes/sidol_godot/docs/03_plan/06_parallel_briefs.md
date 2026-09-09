@@ -69,7 +69,10 @@ P0-01(전투 메뉴 잘림)·P0-03(폰트)·P0-04(전투 배경)·P1-08(결과 �
 - **종 추가·삭제보다 순서·구성 조정을 우선**한다. 종을 새로 넣으면 시트가 없어
   플레이스홀더가 하나 더 늘어난다(현재 8종 — 05 로드맵 §5.1).
 - `pattern` 값은 `MovementPattern.NAME_TO_KIND`에 있는 이름만 쓴다:
-  `wander · chase · dash · burrow · zigzag · patrol · pulse · teleport · ambusher · phaser · ranged`
+  `wander · chase · dash · burrow · zigzag · patrol · pulse · teleport · ambusher · phaser`
+  (`ranged`는 2026-09-09에 제거됐다 — 필드에 발사체 수단이 없어 배정하면 조용히 배회로 떨어졌다.
+  `monster_anim_specs.json`의 `crt_overseer`가 아직 `"pattern": "ranged"`지만 그것은 **아트 의뢰용
+  스펙**이라 `.gd`가 읽지 않는다. 그 종을 `monsters.json` 층에 올리는 순간 관문이 FAIL로 잡는다.)
 
 ### A-4. 판단이 필요한 것 (고치지 말고 보고할 것)
 
