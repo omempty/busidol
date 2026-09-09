@@ -267,7 +267,8 @@ func close() -> void:
 ## 대화창도 '열려 있는 창'이다 — ESC가 메뉴로 새지 않게 ModalFrame과 같은 그룹에 든다.
 ## (대화창은 ModalFrame 껍데기를 쓰지 않아 자동으로 걸리지 않는다.)
 func _sync_modal_group() -> void:
-	if is_open and is_visible_in_tree():
+	# DialogueBox는 CanvasLayer라 is_visible_in_tree()가 없다(그건 CanvasItem의 것이다).
+	if is_open and visible:
 		if not is_in_group(ModalFrame.MODAL_GROUP):
 			add_to_group(ModalFrame.MODAL_GROUP)
 	elif is_in_group(ModalFrame.MODAL_GROUP):

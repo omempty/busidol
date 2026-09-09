@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 10  # +10 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 웹 프롬프트 · 초상 배선 · 소품 덧층(python)
+$total = $gates.Count + 11  # +11 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 웹 프롬프트 · 초상 배선 · 심사보드 · 소품 덧층(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -158,6 +158,17 @@ Write-Host ("[{0}/{1}] Portrait speakers..." -f $i, $total)
 python (Join-Path $PSScriptRoot "portrait_speakers_check.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Portrait speakers"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Review board..." -f $i, $total)
+# 심사보드를 서버째 띄워 브라우저로 눌러 본다(삭제). 코드를 읽어서는 멀쩡한데 실제로는
+# 안 되는 것처럼 보이던 자리다 — 목록 재읽기가 3.9초 걸려 카드가 남아 있었고, 서버를
+# 재시작하지 않으면 옛 프로세스가 "알 수 없는 액션"을 돌려줬다. playwright가 없으면 건너뛴다.
+python (Join-Path $PSScriptRoot "..eviewoard_probe.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Review board"
     exit 1
 }
 

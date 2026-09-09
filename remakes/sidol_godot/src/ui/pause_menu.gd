@@ -82,8 +82,15 @@ func _build_root() -> void:
 ## 이벤트를 소비하지 않고 그냥 빠진다 — 그래야 진짜 주인(로그창 등)이 받아서 닫는다.
 func _other_modal_open() -> bool:
 	for node in get_tree().get_nodes_in_group(ModalFrame.MODAL_GROUP):
-		if node is CanvasItem and (node as CanvasItem).is_visible_in_tree():
-			if not is_ancestor_of(node):
+		if node == self or is_ancestor_of(node):
+			continue  # 내 껍데기는 '다른 창'이 아니다
+		# 모달은 두 종류다: ModalFrame은 Control(CanvasItem), 대화창은 CanvasLayer.
+		# CanvasLayer에는 is_visible_in_tree()가 없으므로 타입별로 본다.
+		if node is CanvasItem:
+			if (node as CanvasItem).is_visible_in_tree():
+				return true
+		elif node is CanvasLayer:
+			if (node as CanvasLayer).visible:
 				return true
 	return false
 
