@@ -7,7 +7,8 @@ stdlib 전용(http.server + subprocess). 프로젝트 루트를 정적 서빙하
   GET  /api/list?cat=portraits             납품 목록(+검증 결과·피드백 md·참조 경로)
   POST /api/review  {cat,file,action,feedback}  승인(20_processed 이동 + assets 설치)/반려(피드백 md)
   POST /api/batch   {cat,action,feedback}       전체 승인/전체 반려
-  GET  /api/fixer/contract?cat&file            셀 편집기용 그리드 계약(셀 크기·행별 프레임)
+  GET  /api/fixer/contract?cat&file[&asset]    셀 편집기용 그리드 계약(셀 크기·행별 프레임)
+  GET  /api/fixer/assets[?cat=monsters]        계약이 있는 에셋 목록(편집기 [계약] 드롭다운)
   GET  /api/fixer/files[?cat=monsters]         셀 편집기 파일 선택기 목록(대기·반려·승인본)
   GET  /api/fixer/webprompt?cat&file           웹 챗용 프롬프트(공통 + 시트 상세)
   POST /api/fixer/op   {op,params,png}         시트 픽셀 연산(정본: tools/convert/sheet_ops.py)
@@ -393,6 +394,14 @@ SHEET_SPEC_FILES = (
     "battle_cut_specs.json",
     "battle_actor_specs.json",
 )
+## 스펙 파일이 어느 카테고리의 계약을 담고 있는가 — 계약 목록 API가 쓴다.
+SPEC_FILE_CAT = {
+    "monster_anim_specs.json": "monsters",
+    "npc_anim_specs.json": "npcs",
+    "effect_specs.json": "effects",
+    "battle_cut_specs.json": "battle_cuts",
+    "battle_actor_specs.json": "battle_actors",
+}
 ## 평면 카테고리의 고정 규격 — 검증기(validate_submission.py)와 같은 수를 쓴다.
 FLAT_CONTRACTS = {
     "portraits": {"cell": 256, "cols": 3, "rows": 1, "align": "none"},
@@ -432,12 +441,108 @@ def sheet_contract(asset_id: str) -> dict:
                     for n, a in anims
                 ],
             }
+    # 시트 스펙에 없으면 타일셋 스펙(assets/spec/sprites/*.json, kind=tileset)을 본다.
+    tc = _tileset_module()
+    if tc:
+        con = tc.contract(asset_id)
+        if con:
+            return con
     return {}
 
 
-def fixer_contract(cat: str, fname: str) -> dict:
-    asset_id = asset_id_of(fname)
-    contract = sheet_contract(asset_id)
+def _tileset_module():
+    """타일셋 계약 정본(`tools/convert/tileset_contract.py`)을 지연 임포트한다.
+
+    계약 도출을 여기서 다시 구현하지 않는다 — 의뢰문·검증기·편집기가 같은 배치를 봐야
+    하고, 두 벌이 되는 순간 한쪽만 고쳐져 좌표가 갈라진다(이 저장소가 반복해 물린 결함).
+    순수 stdlib이라 서버 기동을 막지 않는다.
+    """
+    try:
+        sys.path.insert(0, os.path.join(ROOT, "tools", "convert"))
+        import tileset_contract  # noqa: PLC0415 — 지연 임포트(위 주석)
+        return tileset_contract
+    except Exception:  # noqa: BLE001 — 계약 하나가 없다고 심사 보드가 죽으면 안 된다
+        return None
+
+
+def next_version_name(cat: str, asset_id: str) -> str:
+    """`<asset>_v<n+1>.png` — n은 **디스크에 실제로 있는** 최대 버전.
+
+    예전에는 열어 둔 파일명에서 뽑았다. 그래서 v2를 열어 고치면 v3로 저장되는데 이미 v3가
+    있으면 조용히 덮어썼다. 계약을 직접 고르는 경로(웹에서 받은 임의 파일명)에서는 더 나빠서
+    v2로 떨어져 v4를 밀어낼 수 있었다. 세 스테이지를 전부 훑어 가장 큰 번호 다음을 쓴다.
+    """
+    best = 0
+    for parts in (("10_submitted", cat), ("10_submitted", "_rejected", cat),
+                  ("20_processed", cat)):
+        d = safe_path(*parts)
+        if not os.path.isdir(d):
+            continue
+        for f in os.listdir(d):
+            m = VERSION_RE.match(f)
+            if m and m.group("id") == asset_id:
+                best = max(best, int(m.group("n")))
+    return f"{asset_id}_v{best + 1}.png"
+
+
+def fixer_assets(cat: str = "") -> list:
+    """계약이 있는 에셋 전부 — 셀 편집기의 [계약] 드롭다운이 쓴다.
+
+    왜 필요한가: 편집기는 **파일명에서** asset_id를 뽑아 계약을 찾는다
+    (`flying_thesis_v4.png` → `flying_thesis`). 그래서 웹 챗에서 받아
+    `ChatGPT Image ....png` 같은 이름으로 내려받은 그림을 열면 계약이 하나도 안 잡히고
+    **크기 자동 조절도 격자도 통째로 죽는다** — "제일 기본이 안 된다"의 정체다.
+    이 목록으로 사람이 대상 에셋을 직접 고를 수 있게 한다.
+    """
+    out = []
+    for name in SHEET_SPEC_FILES:
+        c = SPEC_FILE_CAT.get(name, "")
+        if cat and c != cat:
+            continue
+        path = os.path.join(ROOT, "data", name)
+        if not os.path.exists(path):
+            continue
+        for sp in json.load(io.open(path, encoding="utf-8")).get("species", []):
+            aid = str(sp.get("id") or "")
+            con = sheet_contract(aid) if aid else {}
+            if not con:
+                continue
+            out.append({"cat": c, "asset_id": aid,
+                        "name": str(sp.get("name_ko") or aid),
+                        "cell": con["cell"], "rows": con["rows"], "cols": con["cols"],
+                        "size": con["size"]})
+    tc = _tileset_module()
+    if tc and (not cat or cat == "sprites"):
+        for aid in tc.tileset_ids():
+            con = tc.contract(aid)
+            if not con:
+                continue
+            out.append({"cat": "sprites", "asset_id": aid,
+                        "name": f"{aid} (타일셋 {len(con['groups'])}묶음)",
+                        "cell": con["cell"], "rows": con["rows"], "cols": con["cols"],
+                        "size": con["size"]})
+    for c, flat in FLAT_CONTRACTS.items():
+        if cat and c != cat:
+            continue
+        cell = int(flat.get("cell", 0))
+        size = flat.get("size") or [cell * int(flat["cols"]), cell * int(flat["rows"])]
+        out.append({"cat": c, "asset_id": f"__flat__{c}", "name": f"{c} 공통 규격",
+                    "cell": cell, "rows": int(flat["rows"]), "cols": int(flat["cols"]),
+                    "size": size})
+    out.sort(key=lambda a: (a["cat"], a["name"]))
+    return out
+
+
+def fixer_contract(cat: str, fname: str, asset: str = "") -> dict:
+    """asset을 명시하면 파일명 대신 그것으로 계약을 찾는다(웹에서 받은 임의 파일명 대응)."""
+    asset_id = asset or asset_id_of(fname)
+    if asset_id.startswith("__flat__"):
+        # 카테고리 공통 규격을 고른 경우 — 계약은 FLAT_CONTRACTS가 주고,
+        # 이름(저장 파일명)은 원래대로 파일명에서 뽑는다.
+        contract = {}
+        asset_id = asset_id_of(fname)
+    else:
+        contract = sheet_contract(asset_id)
     if not contract and cat in FLAT_CONTRACTS:
         contract = dict(FLAT_CONTRACTS[cat])
         cell = int(contract.get("cell", 0))
@@ -445,8 +550,6 @@ def fixer_contract(cat: str, fname: str) -> dict:
         contract["layout"] = [{"row": 0, "name": cat, "frames": int(contract["cols"])}]
     if not contract:
         contract = {"cell": 0, "cols": 1, "rows": 1, "size": [0, 0], "align": "none", "layout": []}
-    m = VERSION_RE.match(fname)
-
     # 실제 파일이 위치한 경로를 역추적하여 올바른 웹 서빙 경로 부여
     web = f"/assets/raw/llm/10_submitted/{cat}/{fname}"
     if not os.path.exists(safe_path("10_submitted", cat, fname)):
@@ -464,7 +567,7 @@ def fixer_contract(cat: str, fname: str) -> dict:
         "file": fname,
         "asset_id": asset_id,
         "web": web,
-        "next_file": f"{asset_id}_v{int(m.group('n')) + 1 if m else 2}.png",
+        "next_file": next_version_name(cat, asset_id),
         "prompt_md": read_prompt_md(cat, asset_id),
     })
     return contract
@@ -540,6 +643,8 @@ def fixer_op(payload: dict) -> dict:
         layout=params.get("layout") or [],
         align=str(params.get("align") or "bottom_center"),
         budget=int(params.get("budget") or 48),
+        # 묶음을 안 넘기면 다중 타일 소품의 조각이 전부 "가로 중앙 이탈"로 잡힌다.
+        groups=params.get("groups") or [],
     )
     return {
         "ok": True, "log": log, "stats": stats,
@@ -578,6 +683,12 @@ def fixer_save(payload: dict) -> dict:
         raise ValueError("파일명이 .png가 아니다")
     dst = safe_path("10_submitted", cat, out_name)
     os.makedirs(os.path.dirname(dst), exist_ok=True)
+    # 있는 파일을 조용히 덮지 않는다 — 심사 대기 중인 납품을 지우는 사고가 난다.
+    # 원본을 그 자리에서 고쳐 넣는 경우(같은 파일을 열어 저장)만 예외로 허용한다.
+    if os.path.exists(dst) and out_name != src_name:
+        bumped = next_version_name(cat, asset_id_of(out_name))
+        dst = safe_path("10_submitted", cat, bumped)
+        out_name = bumped
     io.open(dst, "wb").write(raw)
     # 편집 직후 같은 검증기를 돌려 결과를 그대로 돌려준다 — 고쳤는지 그 자리에서 안다.
     return {"ok": True, "saved": f"10_submitted/{cat}/{out_name}",
@@ -606,6 +717,9 @@ class Handler(SimpleHTTPRequestHandler):
                 )
                 cats[cat] = n
             self._json(200, {"categories": cats})
+        elif parsed.path == "/api/fixer/assets":
+            q = parse_qs(parsed.query)
+            self._json(200, {"assets": fixer_assets(q.get("cat", [""])[0])})
         elif parsed.path == "/api/fixer/contract":
             q = parse_qs(parsed.query)
             cat = q.get("cat", [""])[0]
@@ -613,7 +727,7 @@ class Handler(SimpleHTTPRequestHandler):
             if cat not in CATEGORIES or not fname:
                 self._json(400, {"error": "bad cat/file"})
                 return
-            self._json(200, fixer_contract(cat, fname))
+            self._json(200, fixer_contract(cat, fname, q.get("asset", [""])[0]))
         elif parsed.path == "/api/fixer/webprompt":
             q = parse_qs(parsed.query)
             cat = q.get("cat", [""])[0]
