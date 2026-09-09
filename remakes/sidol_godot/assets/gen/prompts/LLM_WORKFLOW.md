@@ -2,6 +2,7 @@
 
 > 이 문서가 **경로·규격·검증의 권위**다. 실행 순서만 필요하면
 > [LLM_REQUEST_GUIDE.md](LLM_REQUEST_GUIDE.md)를 본다(그쪽이 이 문서를 참조한다).
+> 도구 하나하나를 "어떻게 돌리나"는 [`docs/TOOLS.md`](../../../docs/TOOLS.md)에 있다.
 >
 > `assets/raw/llm/`은 gitignored 임시 작업区다. 버전 관리 대상은 최종 채택 후
 > `res://assets/sprites/`(또는 `res://assets/icons/`)로 패킹된 것만.
@@ -15,6 +16,12 @@
 
 [2] 의뢰   패키지 생성기가 prompt.md + 첨부물을 만든다 (§2 표)
            -> 유저가 이미지 LLM에 프롬프트 전문 + 첨부물 전량 투입
+
+[2-웹] 첨부를 못 주는 브라우저 챗용 경로 — tools/convert/web_prompt.py
+           [2]의 prompt.md는 첨부 5~8장을 전제로 쓰여 있어, 챗에 붙이면 절반이
+           "없는 파일을 가리키는 문장"이 된다. 그래서 같은 스펙에서 첨부 없는
+           프롬프트를 따로 굽는다(공통 규약 1장 + 시트 상세 1장씩).
+           -> assets/gen/prompts/WEB_PROMPT_COMMON.md · web/<cat>__<id>.md (실측 130개)
 
 [3] 납품   받은 파일을 10_submitted/<카테고리>/<id>_v<n>.png 로 저장 (§3)
 
@@ -35,22 +42,29 @@
 
 | 카테고리 | 패키지 생성기 | 패키지 산출 위치 | 납품 규격 | 검증기 |
 |---|---|---|---|---|
-| `portraits` | `export_portrait_packages.py` (16종) | `raw/llm/portraits/<id>/` | 768×256, 3셀(표정 3종) | `validate_submission.py portrait` |
-| `keyart` | `export_keyart_packages.py` (6종) | `raw/llm/keyart/<id>/` | 1920×1080 (480×270 nearest 축소 전제) | `validate_submission.py keyart` |
-| `monsters` | `export_monster_packages.py` (11종) | `raw/llm/monsters/<id>/` | 그리드 계약 자동 산출(행별 프레임) | `validate_monster_sheet.py` |
-| `npcs` | `export_npc_packages.py` (4종) | `raw/llm/npcs/<id>/` | 몬스터와 같은 128 격자 | `validate_monster_sheet.py` |
-| `items` | `export_item_icon_packages.py` (40종) | `raw/llm/items/<ID>/` | 96×96 1장 | `validate_submission.py icon` |
-| `effects` | `export_effect_packages.py` (5종) | `raw/llm/effects/<id>/` | 셀 128 × 프레임, **중앙 정렬** | `validate_monster_sheet.py` |
-| `battle_cuts` | `export_battle_cut_packages.py` (5종) | `raw/llm/battle_cuts/<id>/` | 셀 **512** × 프레임, 배우만 | `validate_monster_sheet.py` |
-| `sprites` | `export_player_sheet.py`(리터치) · `export_player_gen_package.py`(신규) | **`assets/gen/prompts/`** | 표준 셀 128 그리드 계약 | `validate_retouch_sheet.py` |
+| `portraits` | `export_portrait_packages.py` | `raw/llm/portraits/<id>/` (25) | 768×256, 3셀(표정 3종) | `validate_submission.py portrait` |
+| `keyart` | `export_keyart_packages.py` | `raw/llm/keyart/<id>/` (6) | 1920×1080 (480×270 nearest 축소 전제) | `validate_submission.py keyart` |
+| `monsters` | `export_monster_packages.py` · `export_monster_remaster_packages.py` | `raw/llm/monsters/<id>/` (19) | 그리드 계약 자동 산출(행별 프레임) | `validate_monster_sheet.py` |
+| `npcs` | `export_npc_packages.py` | `raw/llm/npcs/<id>/` (4) | 몬스터와 같은 128 격자 | `validate_monster_sheet.py` |
+| `items` | `export_item_icon_packages.py` | `raw/llm/items/<ID>/` (43) | 96×96 1장 | `validate_submission.py icon` |
+| `effects` | `export_effect_packages.py` | `raw/llm/effects/<id>/` (6) | 셀 128 × 프레임, **중앙 정렬** | `validate_monster_sheet.py` |
+| `battle_cuts` | `export_battle_cut_packages.py` | `raw/llm/battle_cuts/<id>/` (7) | 셀 **512** × 프레임, 배우만 | `validate_monster_sheet.py` |
+| `battle_actors` | `export_battle_actor_packages.py` | `raw/llm/battle_actors/<id>/` (1) | 필드와 같은 셀 128 격자(전투 전용 SD) | `validate_monster_sheet.py` |
+| `sprites` | `export_player_remaster_package.py`(리터칭 — 원작 기반) | **`assets/raw/llm/sprites/<id>/`** (1) | 정본 `assets/spec/sprites/player_sidol.json` · 셀 128 · 4열 × 8행 | `validate_retouch_sheet.py` |
+
+> 괄호 안은 **생성기가 만들 수 있는 종 수가 아니라 지금 디스크에 있는 패키지 폴더 수**다
+> (2026-09-09 실측 — `python tools/dev/asset_status.py`의 「의뢰 패키지 생성 현황」과 같은 수).
+> 예전 판은 여기에 생성기의 종 수를 적어 뒀는데 폴더가 늘어도 문서가 안 따라와 갈라졌다.
+> **세려면 문서를 읽지 말고 `asset_status.py`를 돌려라.**
 
 - **공용 참조는 카테고리 루트에 1부**만 둔다(`style_ref.png`·`scale_ref.png`·`subpalette.png`·
   `orig_*.png`, 아이템은 `_kind/<분류>/`). 패키지 폴더에는 그 패키지에서만 쓰는 것
   (`prompt.md`·`grid_template.png`·`grid_guide.png`·`<id>_source.png`)만 남는다.
   프롬프트의 "입력 (첨부)" 목록이 경로의 단일 근거다.
 - `sprites`만 패키지 산출 위치가 다르다 — git 추적 대상이라 `raw/llm/`(gitignored) 밖에 둔다.
-- 카테고리 이름 4종은 `tools/review/review_server.py`의 `CATEGORIES`가 권위다.
-  **여기 없는 이름으로 폴더를 만들면 심사 보드가 무시한다.**
+- 카테고리 이름 **9종**은 `tools/review/review_server.py`의 `CATEGORIES`가 권위다
+  (`portraits`·`keyart`·`monsters`·`npcs`·`sprites`·`items`·`effects`·`battle_cuts`·`battle_actors`
+  — 2026-09-09 실측). **여기 없는 이름으로 폴더를 만들면 심사 보드가 무시한다.**
 - 원작 리소스는 LLM 경유 없이 코드로 이관(정책 ①):
   `migrate_original_sheets.py`(몬스터 8 + NPC 7), `migrate_item_icons.py`(아이콘 24).
   **신규 창작 대상만 LLM에 위탁한다.**
@@ -62,7 +76,7 @@
 assets/raw/llm/10_submitted/<카테고리>/<id>_v<n>.png
 ```
 
-- **`<카테고리>`는 §2의 4종 중 하나.** 스프라이트도 `10_submitted/sprites/` 하위다
+- **`<카테고리>`는 §2의 9종 중 하나.** 스프라이트도 `10_submitted/sprites/` 하위다
   (과거 문서가 하위 폴더 없이 적었으나 오기 — 그렇게 두면 보드에 뜨지 않는다).
 - **`<id>`는 패키지 폴더명과 글자 단위로 동일해야 한다.** 보드는 `<id>_v<n>` 패턴에서
   `<id>`를 떼어 `raw/llm/<cat>/<id>/`의 `prompt.md`·`<id>_source.png`·`style_ref.png`·

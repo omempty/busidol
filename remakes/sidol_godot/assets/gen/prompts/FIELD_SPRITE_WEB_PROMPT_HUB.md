@@ -1,3 +1,24 @@
+> ## ⚠️ 이 문서는 대체되었다 → `python tools/convert/web_prompt.py`
+>
+> 손으로 쓴 허브라 정본과 갈라진다. 같은 계열 문서인
+> [`MONSTER_WEB_PROMPT_HUB.md`](MONSTER_WEB_PROMPT_HUB.md)에서 실제로 그 사고가 났다
+> (`mad_eye`를 `320×512(셀 64)`로 적었으나 정본은 `640×1024(셀 128)` — 그대로 그린
+> 납품이 크기 위반으로 자동 반려됐다). **NPC 4종의 수치는 여기 적지 않고 정본에서 뽑는다:**
+>
+> ```
+> python tools/convert/web_prompt.py npcs dev1     # dev2 · lab_student · afterschool_student도 같은 자리
+> ```
+>
+> 2026-09-09 실측으로는 NPC 4종이 전부 **256×640px · 셀 128 · 2열 × 5행**
+> (0~3행 walk_down/up/left/right 각 2칸 · 4행 idle_down 2칸)이다.
+> 이 값은 **바뀔 수 있으니 그리기 직전에 위 명령으로 다시 확인하라.**
+>
+> - 공통 규약: [`WEB_PROMPT_COMMON.md`](WEB_PROMPT_COMMON.md) — 대화 맨 앞에 한 번
+> - 시트 상세: [`web/npcs__<id>.md`](web/)
+> - 사용법 전반: [`docs/TOOLS.md`](../../../docs/TOOLS.md)
+>
+> 아래 본문은 **콘셉트 서술과 화풍 지침 참고용**으로 남긴다.
+
 # 🏃 BSD 시돌이의 모험 — 필드 스프라이트 (주인공 & NPC) 웹 프롬프트 허브
 
 > **웹 브라우저의 생성형 AI(ChatGPT-4o / Claude 3.5 Sonnet / Midjourney v6 / Gemini Web)** 에
@@ -29,8 +50,21 @@
 
 ### 1. 🧑‍🎓 주인공: 부싯돌 (SIDOL)
 - **콘셉트**: 1995년 한국 공대 새내기 남학생. 잿빛 자켓 교복, 청바지, 흰 운동화, 손에 쥔 부싯돌.
-- **전용 의뢰서**: [player_retouch_prompt.md](player_retouch_prompt.md)
-- **규격**: 128×320px (셀 64px) 또는 256×640px (셀 128px, 2열 × 5행)
+- **규격 정본**: `assets/spec/sprites/player_sidol.json` — **셀 128 · 4열 × 8행 = 512×1024**
+  (walk 4방향 × 4프레임 + idle 4방향 × 2프레임).
+
+  2026-09-09에 정리했다. 그전에는 선언이 셋으로 갈라져 있었고 그중 둘이 틀렸다:
+  낡은 `player_retouch_prompt.md`(2열 × 5행)와 `export_player_gen_package.py`
+  독스트링(셀 64 · 256×512)이다. 굽던 생성기 둘은 지웠다 —
+  하나는 **실행하면 죽었고**(`int(spec["cell"])`에 딕셔너리), 하나는 틀린 계약을 찍어 냈다.
+
+- **의뢰 패키지 만들기**:
+  ```
+  python tools/convert/export_player_remaster_package.py
+    -> assets/raw/llm/sprites/player_sidol/ (prompt.md + 원판 + 원작 프레임 8장 + 격자 + 서브팔레트)
+  ```
+  **신규 창작이 아니라 리터칭** 계약이다. `python tools/review/prompt_audit.py` 가
+  이 패키지의 선언 숫자를 정본 스펙과 대조한다(108건 FAIL 0 · WARN 0 실측).
 
 ---
 

@@ -1,8 +1,13 @@
 # 프롬프팅 퀵가이드 (1장짜리 참조용)
 
 > 상세는 [LLM_REQUEST_GUIDE.md](LLM_REQUEST_GUIDE.md)(운영 절차) ·
-> [LLM_WORKFLOW.md](LLM_WORKFLOW.md)(경로·규격 단일 출처).
+> [LLM_WORKFLOW.md](LLM_WORKFLOW.md)(경로·규격 단일 출처) ·
+> [`docs/TOOLS.md`](../../../docs/TOOLS.md)(도구별 실행 명령·통과 판정).
 > 이 문서는 **작업하면서 곁눈질로 보는 요약**이다.
+>
+> 수치를 문서에서 베끼지 마라. 손으로 쓴 허브가 정본과 갈라져 납품이 통째로 반려된
+> 전례가 있다([MONSTER_WEB_PROMPT_HUB.md](MONSTER_WEB_PROMPT_HUB.md) 머리말).
+> 규격이 필요하면 **도구를 돌려서 받아라.**
 
 ## 0. 한눈에 보기 — 현황판
 
@@ -41,6 +46,7 @@ python tools/convert/export_portrait_packages.py   # 대화 초상     → asset
 python tools/convert/export_keyart_packages.py     # 컷신 키아트   → assets/raw/llm/keyart/
 python tools/convert/export_effect_packages.py     # 전투 이펙트   → assets/raw/llm/effects/
 python tools/convert/export_battle_cut_packages.py # 전투 대형 컷  → assets/raw/llm/battle_cuts/
+python tools/convert/export_battle_actor_packages.py # 전투 SD 시트 → assets/raw/llm/battle_actors/
 ```
 
 - 뒤에 **id를 붙이면 그것만** 만든다: `export_item_icon_packages.py ITEM_ARMOR_GOWN`
@@ -60,6 +66,22 @@ python tools/convert/export_battle_cut_packages.py # 전투 대형 컷  → asse
 프롬프트에는 이미 아래가 **자동으로** 들어 있다 — 따로 덧붙이지 마라:
 스타일 바이블 전문 · 실측 베이스라인(원작 수치 ↔ 리메이크 타깃) · 서브팔레트(hex 목록) ·
 격자 템플릿 · 크기/정렬 계약 · 금지 목록 · 자기검증 체크리스트.
+
+## 3-1. 첨부를 못 주는 곳(브라우저 챗)에 의뢰할 때
+
+위 §3은 **첨부 5~8장을 줄 수 있을 때**의 이야기다. ChatGPT·Gemini 웹 창에 그냥
+붙여넣을 때는 그 첨부가 없어 프롬프트의 절반이 "없는 파일을 가리키는 문장"이 된다.
+그래서 같은 스펙에서 **첨부 없는 프롬프트**를 따로 굽는다:
+
+```powershell
+python tools/convert/web_prompt.py --common            # 공통 규약 — 대화 맨 앞에 한 번만
+python tools/convert/web_prompt.py monsters c_bug      # 그 시트 상세 — 그림마다 하나
+python tools/convert/web_prompt.py --write             # 둘 다 파일로 (실측 산출 130개)
+```
+
+- 산출: `assets/gen/prompts/WEB_PROMPT_COMMON.md` · `assets/gen/prompts/web/<cat>__<id>.md`
+- 카테고리 8종(monsters·npcs·battle_actors·effects·battle_cuts·portraits·items·keyart)
+- 셀 편집기(`셀편집기.bat`)의 **🌐 웹 챗용 프롬프트** 패널에서 버튼으로 복사할 수도 있다
 
 ## 4. 진행 순서
 
@@ -141,6 +163,8 @@ assets/raw/llm/10_submitted/<카테고리>/<id>_v1.png     # 재납품은 v2, v3
 | 컷신 키아트 | 1920×1080 | 불투명 |
 | 전투 이펙트 | 셀 128 × 프레임 수 (1행), **셀 중앙 정렬** | 투명 / 마젠타 |
 | 전투 대형 컷 | 셀 **512** × 프레임 수 (1행), 하단 중앙 정렬 · 배우만 | 투명 / 마젠타 |
+| 전투 SD 시트 | 셀 128 × (열×행) — `player_battle`은 512×896(4열 × 7행) | 투명 / 마젠타 |
+| 타일셋 | `python tools/convert/tileset_contract.py` — `tileset_campus`는 256×288(타일 32 · 8열 × 9행) | 투명 / 마젠타 |
 
 공통: 안티에일리어싱 금지(반투명 픽셀 0%) · 외곽선 1px 다크(순수 블랙 금지) ·
 명암 4~6단 + 색조 그림자 · **고유색 48색 이하** · 캔버스 안 글자/워터마크 금지 ·

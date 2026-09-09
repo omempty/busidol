@@ -33,13 +33,20 @@ import sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 LLM = os.path.join(ROOT, "assets", "raw", "llm")
-SPEC_FILES = (
-    "monster_anim_specs.json",
-    "npc_anim_specs.json",
-    "effect_specs.json",
-    "battle_cut_specs.json",
-    "battle_actor_specs.json",
-)
+## 스펙 파일 → 카테고리. review_server.SPEC_FILE_CAT과 같은 표다.
+##
+## **왜 카테고리가 필요한가 (2026-09-09).** 예전에는 asset_id만으로 색인해서
+## `specs["prof_chem"]`이 카테고리를 가리지 않고 아무 패키지에나 적용됐다. 초상은 NPC에
+## `npc_` 접두를 붙이는데(`npc_girl`·`npc_guard`) **교수만 `prof_chem`**이라, 시트 스펙에
+## 같은 id가 생기는 순간 `portraits/prof_chem` 의뢰문이 "선언 768×256 ≠ 정본 512×1024"로
+## 반려되기 시작했다. 잠복해 있던 결함이고 items·keyart에도 같은 구조가 있었다.
+SPEC_FILES = {
+    "monster_anim_specs.json": "monsters",
+    "npc_anim_specs.json": "npcs",
+    "effect_specs.json": "effects",
+    "battle_cut_specs.json": "battle_cuts",
+    "battle_actor_specs.json": "battle_actors",
+}
 ## 시트가 아닌 카테고리의 고정 규격 — review_server.FLAT_CONTRACTS와 같은 수다.
 FLAT = {
     "portraits": (768, 256),
@@ -63,7 +70,7 @@ HEAD_RE = re.compile(r"^## (.+)$", re.M)
 def load_specs() -> dict:
     """asset_id → 정본 그리드 계약. review_server.sheet_contract와 같은 규칙."""
     out = {}
-    for name in SPEC_FILES:
+    for name, cat in SPEC_FILES.items():
         path = os.path.join(ROOT, "data", name)
         if not os.path.exists(path):
             continue
@@ -74,12 +81,56 @@ def load_specs() -> dict:
             rows = sorted(anims.items(), key=lambda kv: int(kv[1].get("row", 0)))
             cell = int(sp.get("sheet_cell") or 128)
             cols = max(int(a.get("frames", 1)) for _, a in rows)
-            out[sp["id"]] = {
+            out[(cat, sp["id"])] = {
                 "cell": cell, "cols": cols, "rows": len(rows),
                 "size": (cols * cell, len(rows) * cell),
                 "layout": [(n, int(a.get("row", 0)), int(a.get("frames", 1))) for n, a in rows],
                 "spec": name,
             }
+    out.update(_sprite_specs())
+    return out
+
+
+def _sprite_specs() -> dict:
+    """`assets/spec/sprites/*.json` 의 캐릭터 시트 계약.
+
+    왜 따로 읽나: 주인공(`player_sidol`)의 정본은 `data/*_specs.json`이 아니라 여기 있다.
+    그래서 감사가 "정본 스펙에 player_sidol 없음 — 대조 근거가 없다"고 답하고 있었다.
+    주인공은 화면에 가장 오래 보이는 그림인데 **의뢰문의 숫자를 아무도 대조하지 않던 자리**다.
+
+    이쪽 스펙은 `cell`이 `{w,h}` 딕셔너리이고 격자가 `grid{cols,rows}`로 따로 적힌다 —
+    data/ 계열과 모양이 달라 변환해서 같은 표에 넣는다.
+    """
+    out = {}
+    d = os.path.join(ROOT, "assets", "spec", "sprites")
+    if not os.path.isdir(d):
+        return out
+    for fname in sorted(os.listdir(d)):
+        if not fname.endswith(".json"):
+            continue
+        try:
+            spec = json.load(io.open(os.path.join(d, fname), encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if str(spec.get("kind")) != "character_sheet":
+            continue
+        anims = spec.get("animations")
+        grid = spec.get("grid") or {}
+        cell_d = spec.get("cell") or {}
+        if not isinstance(anims, dict) or not anims or not grid or not cell_d:
+            continue
+        rows_sorted = sorted(anims.items(), key=lambda kv: int(kv[1].get("row", 0)))
+        cell = int(cell_d.get("w", 128))
+        cols = int(grid.get("cols", 1))
+        rows_n = int(grid.get("rows", len(rows_sorted)))
+        out[("sprites", str(spec.get("asset_id") or fname[:-5]))] = {
+            "cell": cell, "cols": cols, "rows": rows_n,
+            "size": (cols * cell, rows_n * cell),
+            "layout": [
+                (n, int(a.get("row", 0)), int(a.get("frames", 1))) for n, a in rows_sorted
+            ],
+            "spec": "assets/spec/sprites/%s" % fname,
+        }
     return out
 
 
@@ -100,7 +151,14 @@ def palette_master() -> tuple:
         v = int(c.lstrip("#"), 16)
         rgb = ((v >> 16) & 255, (v >> 8) & 255, v & 255)
         if raw6:
-            rgb = tuple(min(255, x << 2) for x in rgb)
+            # 저장소에 6->8비트 변환이 **두 가지** 공존한다:
+            #   v << 2      (63 -> 252 = #FCFCFC)  — 스프라이트 계열
+            #   v * 255/63  (63 -> 255 = #FFFFFF)  — PCX 유래 전투컷 참조 계열
+            # 같은 원본 색인데 표기가 갈리는 것뿐이라 둘 다 마스터로 인정한다.
+            # (안 그러면 #FFFFFF·#C3C3C3 같은 원작 색이 "팔레트 밖"으로 잡힌다 — 실측)
+            out.add("#%02X%02X%02X" % tuple(min(255, x << 2) for x in rgb))
+            out.add("#%02X%02X%02X" % tuple(round(x * 255 / 63) for x in rgb))
+            continue
         out.add("#%02X%02X%02X" % rgb)
     # 스타일 바이블이 약속한 확장 팔레트(+64색). 있으면 허용 집합에 더한다.
     ext_path = None
@@ -144,12 +202,12 @@ def audit_one(cat: str, asset_id: str, pkg: str, specs: dict, palette: set, has_
     # --- 1. 선언 크기 ------------------------------------------------------
     sizes = [(int(a), int(b)) for a, b in SIZE_RE.findall(md)]
     declared = sizes[0] if sizes else None
-    truth = specs.get(asset_id, {}).get("size") or FLAT.get(cat)
+    truth = specs.get((cat, asset_id), {}).get("size") or FLAT.get(cat)
     if not declared:
         out.append(("FAIL", "출력 크기 선언(**W×H PNG**)을 못 찾았다"))
     elif truth and declared != tuple(truth):
         out.append(("FAIL", f"선언 크기 {declared[0]}×{declared[1]} ≠ 정본 {truth[0]}×{truth[1]}"
-                            f" ({specs.get(asset_id, {}).get('spec', '고정 규격')})"))
+                            f" ({specs.get((cat, asset_id), {}).get('spec', '고정 규격')})"))
     elif not truth:
         out.append(("WARN", f"정본 스펙에 {asset_id} 없음 — 선언 {declared[0]}×{declared[1]}만 있고 대조 근거가 없다"))
     if len(set(sizes)) > 1:
@@ -163,13 +221,13 @@ def audit_one(cat: str, asset_id: str, pkg: str, specs: dict, palette: set, has_
         if declared and (cols * cell, rows * cell) != declared:
             out.append(("FAIL", f"격자 선언(셀 {cell}·{cols}열×{rows}행 = {cols*cell}×{rows*cell})이"
                                 f" 선언 크기 {declared[0]}×{declared[1]}와 안 맞는다"))
-        sp = specs.get(asset_id)
+        sp = specs.get((cat, asset_id))
         if sp and (cell, cols, rows) != (sp["cell"], sp["cols"], sp["rows"]):
             out.append(("FAIL", f"격자 선언(셀 {cell}·{cols}열×{rows}행) ≠ 정본"
                                 f"(셀 {sp['cell']}·{sp['cols']}열×{sp['rows']}행)"))
 
     # --- 3. 행 표 vs 정본 애니메이션 --------------------------------------
-    sp = specs.get(asset_id)
+    sp = specs.get((cat, asset_id))
     table = [(int(r), n, int(f)) for r, n, f in ROW_RE.findall(md)]
     if sp:
         if not table and sp["rows"] == 1:
