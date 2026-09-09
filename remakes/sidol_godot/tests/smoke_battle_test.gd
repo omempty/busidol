@@ -429,6 +429,31 @@ func _ready() -> void:
 	SettingsManager.difficulty = diff_before
 	print("[smoke_battle] 패배 대가 §9 — 보통/자비/층이동/도전/승리리셋 확인")
 
+	# --- 히트스톱이 씬 전환에 살아남는가 (부정 시험) ---
+	#
+	# hitstop()은 Engine.time_scale을 5%로 떨어뜨리고 **await 뒤에서** 되돌린다.
+	# 호출부 둘(battle_scene_controller · battle_enemy_phase)은 await 없이 던지고,
+	# 이 노드는 전투 씬의 자식이다. 타이머가 울리기 전에 씬이 갈리면 코루틴이 노드와
+	# 함께 사라져 되돌리는 줄에 도달하지 못하고 **배율이 5%에 영영 남는다**
+	# (그 판 내내 20배 느려진다 — 자동 주행 관문이 회차마다 느려지던 지문이 이 모양이다).
+	#
+	# 시험은 그 경주를 손으로 만든다: 절대 안 울릴 만큼 긴 히트스톱을 걸고 트리에서 뺀다.
+	# **기다리지 않는다** — await를 쓰면 이 시험 자체가 5% 배율에 갇혀 관문이 매달린다
+	# (2026-09-09에 그렇게 19분을 날렸다). _exit_tree는 remove_child에서 즉시 돈다.
+	var scale_before := Engine.time_scale
+	var hs_probe := BattlePresenter.new()
+	add_child(hs_probe)
+	hs_probe.hitstop(9.0)
+	if is_equal_approx(Engine.time_scale, scale_before):
+		failures.append("hitstop이 시간 배율을 낮추지 않았다(%f)" % Engine.time_scale)
+	remove_child(hs_probe)  # 씬이 갈리는 것과 같은 일 — 안전망이 여기서 돌아야 한다
+	if not is_equal_approx(Engine.time_scale, scale_before):
+		failures.append("씬이 갈린 뒤 시간 배율이 안 돌아왔다: %f (기대 %f)" % [Engine.time_scale, scale_before])
+		Engine.time_scale = scale_before
+	else:
+		print("[smoke_battle] 히트스톱 복구 OK — 배율 %.2f 유지" % Engine.time_scale)
+	hs_probe.queue_free()
+
 	_finish(failures, battle)
 
 

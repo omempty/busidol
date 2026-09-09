@@ -88,6 +88,9 @@ var _shake_power := 0.0
 var _root_base := Vector2.ZERO
 var _was_shaken := false
 var _hitstop_busy := false
+## 히트스톱이 낮추기 직전의 Engine.time_scale. 음수면 "지금 낮춰 둔 것이 없다"는 뜻이다.
+## 코루틴이 죽어도 _exit_tree가 이 값으로 되돌린다(hitstop 주석 참조).
+var _hitstop_prev_scale := -1.0
 var _player_paths: Dictionary = {}
 ## 적 종 id — 시트 메타 조회(애니 행)에 필요하다.
 var _enemy_ids: Array[String] = []
@@ -996,18 +999,45 @@ func hurt_flash(spr: Sprite2D) -> void:
 
 
 ## 히트스톱 — 임팩트 순간 시간 감속.
+## 히트스톱 — 타격 순간 시간을 5%로 떨어뜨렸다가 되돌린다.
+##
+## **되돌리는 일을 코루틴에만 맡기면 안 된다**(2026-09-09 실측). 되돌리는 줄은 await
+## 뒤에 있고, 이 노드는 전투 씬의 자식이다. 타이머가 울리기 전에 씬이 갈리면
+## (`change_scene_to_file`) 노드와 함께 코루틴이 사라져 **그 줄에 영영 도달하지 못하고
+## Engine.time_scale이 5%에 남는다.** 그러면 그 판이 끝날 때까지 게임 전체가 20배 느려진다.
+##
+## 호출부 둘(battle_scene_controller._on_choreo_finished · battle_enemy_phase)은 await
+## 없이 던져 놓으므로 아무도 그것을 기다리지 않는다. 자동 주행처럼 배율을 120으로
+## 올려 둔 상태에서는 결과 연출의 0.9초 타이머가 실시간 7.5ms라 히트스톱 타이머
+## (최소 20ms)를 앞질러 이기는 **경주 조건**이 된다 — 관문 [19/24]가 회차마다 느려지던
+## 지문(걸음 초당 44~47 → 7~15)이 이 모양이다.
+##
+## 그래서 되돌릴 값을 필드에 남기고 _exit_tree에서도 되돌린다. 어느 쪽이 먼저 오든 한 번만 돈다.
 func hitstop(duration: float = 0.06) -> void:
 	if _hitstop_busy:
 		return
 	_hitstop_busy = true
 	# **되돌릴 값은 1.0이 아니라 「직전 값」이다.** 밖에서 시간을 빨리 감아 둔 경우
 	# (자동 주행의 배율 30) 1.0으로 덮으면 첫 타격 이후 빨리 감기가 영영 꺼진다.
-	var previous_scale := Engine.time_scale
-	Engine.time_scale = previous_scale * HITSTOP_SCALE
+	_hitstop_prev_scale = Engine.time_scale
+	Engine.time_scale = _hitstop_prev_scale * HITSTOP_SCALE
 	var scaled := maxf(duration / SettingsManager.battle_speed_factor(), 0.02)
 	await get_tree().create_timer(scaled, true, false, true).timeout
-	Engine.time_scale = previous_scale
+	restore_time_scale()
+
+
+## 히트스톱으로 낮춘 배율을 되돌린다. 두 번 불러도 한 번만 돈다.
+func restore_time_scale() -> void:
+	if _hitstop_prev_scale < 0.0:
+		return
+	Engine.time_scale = _hitstop_prev_scale
+	_hitstop_prev_scale = -1.0
 	_hitstop_busy = false
+
+
+## 씬이 갈리는 순간의 안전망 — 위 주석의 그 경주에서 코루틴이 진 경우가 여기다.
+func _exit_tree() -> void:
+	restore_time_scale()
 
 
 func _process(delta: float) -> void:
