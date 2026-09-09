@@ -5,28 +5,28 @@
       "op": "dialogue",
       "steps": [
         {
-          "speaker": "시돌",
-          "text": "@c317"
+          "speaker": "남앵골 교수",
+          "text": "@c347"
         },
         {
           "speaker": "시돌",
-          "text": "@c318"
+          "text": "@c348"
+        },
+        {
+          "speaker": "권영칠 교수",
+          "text": "@c349"
         },
         {
           "speaker": "시돌",
-          "text": "@c319"
+          "text": "@c350"
         },
         {
-          "speaker": "시돌",
-          "text": "@c320"
+          "speaker": "권영칠 교수",
+          "text": "@c351"
         },
         {
-          "speaker": "시돌",
-          "text": "@c321"
-        },
-        {
-          "speaker": "시돌",
-          "text": "@c322"
+          "speaker": "남앵골 교수",
+          "text": "@c352"
         }
       ]
     },

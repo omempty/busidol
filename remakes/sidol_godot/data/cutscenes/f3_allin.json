@@ -5,28 +5,28 @@
       "op": "dialogue",
       "steps": [
         {
-          "speaker": "시돌",
-          "text": "@c323"
+          "speaker": "대학원생",
+          "text": "@c353"
         },
         {
           "speaker": "시돌",
-          "text": "@c324"
+          "text": "@c354"
+        },
+        {
+          "speaker": "대학원생",
+          "text": "@c355"
         },
         {
           "speaker": "시돌",
-          "text": "@c325"
+          "text": "@c356"
         },
         {
-          "speaker": "시돌",
-          "text": "@c326"
+          "speaker": "(상황)",
+          "text": "@c357"
         },
         {
-          "speaker": "시돌",
-          "text": "@c327"
-        },
-        {
-          "speaker": "시돌",
-          "text": "@c328"
+          "speaker": "대학원생",
+          "text": "@c358"
         }
       ]
     },
