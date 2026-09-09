@@ -153,6 +153,36 @@ static func check_actor_clearance(rep: AuditReport, npcs: Array, enemies: Array)
 ## 선언(enum·기본값·텔레그래프)만 있고 decide()에 분기가 없으면 그 종은 조용히 배회만
 ## 한다 — 화면상으로는 "가만히 안 있고 움직이니" 정상으로 보여서 눈으로는 절대 안 잡힌다.
 ## 실제로 PATROL·PULSE 두 패턴이 그 상태로 남아 있었다(2026-09-09).
+## 데이터가 선언한 idle_anim에 **실제로 도는 동작이 붙어 있는가.**
+##
+## 왜 이 관문이 필요한가 (2026-09-09 실측): npcs_f*.json 5파일 11명 전원이
+## `idle_anim: "squash"`를 달고 있었는데 그 키를 읽는 코드가 **0곳**이었다.
+## 게임은 정상이고 관문도 초록이었다 — 선언한 연출이 실제로 도는지 아무도 재지 않았기 때문이다.
+## 이동 패턴에서 PATROL·PULSE가 같은 방식으로 죽어 있던 것(MovementPattern 주석)과 같은 결이다.
+static func check_idle_anim_coverage(rep: AuditReport) -> void:
+	var seen: Dictionary = {}
+	var bad: Array[String] = []
+	var total := 0
+	for floor_idx in range(0, 6):
+		var path := "res://data/maps/npcs_f%d.json" % floor_idx
+		if not FileAccess.file_exists(path):
+			continue
+		var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+		if typeof(raw) != TYPE_DICTIONARY:
+			rep.fail("NPC 데이터 파손", path)
+			continue
+		for n: Dictionary in (raw as Dictionary).get("npcs", []):
+			total += 1
+			var name := str(n.get("idle_anim", NpcEntity.DEFAULT_IDLE_ANIM))
+			seen[name] = int(seen.get(name, 0)) + 1
+			if not NpcEntity.is_idle_anim_implemented(name):
+				bad.append("%s (f%d %s)" % [name, floor_idx, str(n.get("id", "?"))])
+	for b in bad:
+		rep.fail("idle_anim 미구현", "%s — 읽는 코드가 없어 연출이 조용히 사라진다" % b)
+	if bad.is_empty():
+		rep.ok("idle_anim 계약", "NPC %d명이 쓰는 %d종 전부 구현됨" % [total, seen.size()])
+
+
 static func check_pattern_coverage(rep: AuditReport) -> void:
 	var missing: Array[String] = []
 	var seen := {}

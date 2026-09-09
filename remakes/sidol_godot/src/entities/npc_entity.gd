@@ -30,6 +30,26 @@ var wander_range := 0
 ## 관문·스크린샷 도구가 프레임 0 정지 상태를 보장받아야 할 때 false로 둔다.
 var idle_motion := true
 
+## 데이터 계약 `idle_anim`(data/maps/npcs_f*.json) → 실제 연출.
+##
+## 왜 값이 둘뿐인가 — 데이터가 원래 달고 있던 `"squash"`는 이 배율에서 **쓸 수 없는 값**이다
+## (파일 머리 주석의 리샘플 실측: ×1.035면 85행 중 73행이 다른 원본 행을 집는다).
+## 스케일·회전을 건드리지 않는 연출만 계약에 남긴다.
+##
+## 실측 근거(2026-09-09): npcs_f*.json 5파일 11명 **전원**이 `idle_anim: "squash"`를 달고
+## 있었는데 그 키를 읽는 코드는 0곳이었다. 선언은 있고 읽는 쪽이 없는 그 유형이라,
+## 값을 고치는 것만으로는 다시 죽는다 — 그래서 읽는 자리(set_idle_anim)와
+## 재는 자리(ActorProbe.check_idle_anim_coverage)를 같이 붙인다.
+const IDLE_ANIMS := {
+	&"bob": true,  # 정수 픽셀 호흡 + 간헐 무게중심 이동(_update_breathing)
+	&"none": false,  # 연출 없음 — 프레임 0으로 세워 둔다
+}
+const DEFAULT_IDLE_ANIM := &"bob"
+
+## 이 NPC에 적용된 계약 이름. idle_motion은 그것을 옮긴 결과다 —
+## 관문·스크린샷 도구가 idle_motion을 직접 꺼도 계약 이름은 남는다.
+var idle_anim := DEFAULT_IDLE_ANIM
+
 var _paths: Dictionary = {}
 var _meta: Dictionary = {}
 var _runtime: MapRuntime
@@ -104,6 +124,20 @@ func setup(
 	z_index = 15
 	_build_visual()
 	_wander_wait = randf_range(3.0, 7.0)
+
+
+static func is_idle_anim_implemented(name: String) -> bool:
+	return IDLE_ANIMS.has(StringName(name))
+
+
+## 데이터 계약을 동작으로 옮긴다. 알 수 없는 이름은 기본값으로 떨어뜨리되 **조용히는 아니다** —
+## 같은 것을 world_audit이 FAIL로 잡는다(런타임은 굴러가되 관문이 빨개진다).
+func set_idle_anim(name: StringName) -> void:
+	if not IDLE_ANIMS.has(name):
+		push_warning("알 수 없는 idle_anim %s (%s) — %s로 떨어진다" % [name, npc_id, DEFAULT_IDLE_ANIM])
+		name = DEFAULT_IDLE_ANIM
+	idle_anim = name
+	idle_motion = bool(IDLE_ANIMS[name])
 
 
 func resolve_sequence() -> StringName:

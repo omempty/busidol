@@ -151,6 +151,39 @@ func _ready() -> void:
 			else:
 				print("[smoke_field] ESC 재입력 -> PauseMenu 닫힘 확인 OK")
 
+	# --- 5) idle_anim 계약이 데이터에서 엔티티까지 실제로 건너오는가 ---
+	#
+	# 왜 여기서 재나: 이 계약은 2026-09-09까지 **선언만 있고 읽는 코드가 0곳**이었다.
+	# 값을 고치는 것만으로는 다시 죽으므로, 정상 경로와 부정 경로를 같이 세워 둔다.
+	for npc: NpcEntity in field.npcs:
+		if not NpcEntity.is_idle_anim_implemented(String(npc.idle_anim)):
+			failures.append("NPC %s의 idle_anim이 미구현: %s" % [npc.npc_id, npc.idle_anim])
+		elif npc.idle_motion != bool(NpcEntity.IDLE_ANIMS[npc.idle_anim]):
+			# 계약 이름만 갈아 끼우고 동작은 안 바뀌는 것 — 사문화가 되살아나는 정확한 모양이다.
+			failures.append(
+				"NPC %s: 계약 %s인데 idle_motion=%s" % [npc.npc_id, npc.idle_anim, npc.idle_motion]
+			)
+	if not field.npcs.is_empty():
+		var probe: NpcEntity = field.npcs[0]
+		var keep: StringName = probe.idle_anim
+
+		# 부정 시험 ①: 모르는 이름은 조용히 다른 연출이 되지 않고 기본값으로 떨어진다.
+		if NpcEntity.is_idle_anim_implemented("squash"):
+			failures.append("못 쓰는 값 squash가 구현 목록에 들어 있다")
+		probe.set_idle_anim(&"squash")
+		if probe.idle_anim != NpcEntity.DEFAULT_IDLE_ANIM or not probe.idle_motion:
+			failures.append("모르는 idle_anim이 기본값으로 안 떨어짐: %s" % probe.idle_anim)
+
+		# 부정 시험 ②: "none"은 이름만 받는 것이 아니라 **연출이 실제로 멈춰야** 한다.
+		probe.set_idle_anim(&"none")
+		probe.sprite.position.y = -1.0
+		probe._update_breathing(0.5)
+		if probe.idle_motion or not is_zero_approx(probe.sprite.position.y):
+			failures.append("idle_anim=none인데 연출이 계속 돈다(y=%s)" % probe.sprite.position.y)
+
+		probe.set_idle_anim(keep)
+		print("[smoke_field] idle_anim 계약 %d명 확인(%s)" % [field.npcs.size(), keep])
+
 	_finish(failures)
 
 

@@ -47,6 +47,7 @@ func _ready() -> void:
 	_rep.scope("")
 	MotionProbe.check_contact_symmetry(_rep)
 	ActorProbe.check_pattern_coverage(_rep)
+	ActorProbe.check_idle_anim_coverage(_rep)
 	RenderProbe.check_atlas_transparency(_rep)
 
 	for f: int in FLOORS:

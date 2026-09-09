@@ -22,7 +22,7 @@
           "repeat_sequence_id": "f4_afterschool_student_f4_repeat"
         }
       ],
-      "idle_anim": "squash",
+      "idle_anim": "bob",
       "wander_range": 1,
       "tint": [
         0.8,

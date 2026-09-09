@@ -693,6 +693,10 @@ func _spawn_npcs() -> void:
 			runtime,
 			n.get("repeat_sequence_id", null)
 		)
+		# 데이터 계약 idle_anim을 실제 연출로 옮긴다(NpcEntity.IDLE_ANIMS).
+		# setup() 뒤에 부르는 이유: 관문·스크린샷 도구가 나중에 idle_motion을 직접 꺼도
+		# 그쪽이 이기게 하기 위함이다.
+		npc.set_idle_anim(StringName(str(n.get("idle_anim", NpcEntity.DEFAULT_IDLE_ANIM))))
 		npcs.append(npc)
 		# 고정 액터는 실체가 있어야 한다 — 통과해 지나가지 못하게 몸 셀을 막는다.
 		# Placement가 문간과 길목을 피해 자리를 골랐으므로 통로는 끊기지 않는다.
