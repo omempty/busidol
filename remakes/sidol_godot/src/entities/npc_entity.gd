@@ -2,7 +2,19 @@ class_name NpcEntity
 extends Node2D
 ## 필드 NPC — 2×2 셀 점유, 상호작용 시 DialogueBox로 시퀀스 재생.
 ## 전용 시트(<npc_id>_original/_remake)를 쓰고, 없을 때만 플레이어 시트 플레이스홀더.
-## 제자리 호흡 아이들(Squash & Stretch) 및 필요 시 소폭 배회(wander_range) 지원.
+## 제자리 아이들(정수 픽셀 호흡 + 간헐 무게중심 이동) 및 필요 시 소폭 배회(wander_range) 지원.
+##
+## 아이들 연출이 왜 "정수 픽셀 오프셋"뿐인가 — 2026-09-09 시트 실측 근거:
+## 고정 NPC 11명이 쓰는 시트는 전부 128×128 · scale 0.6667 → 화면 85.34px다.
+## 이 배율이 **이미 비정수**라, 여기에 스케일 스쿼시를 곱하면 최근접 샘플링
+## (project.godot: default_texture_filter=0)이 통째로 어긋난다. 실측:
+##   ×1.035 → 85행 중 73행(86%)이 **다른 원본 행**을 집는다
+##   ×1.010 → 53행(62%) · ×1.005 → 53행(62%)
+## 즉 숨을 쉴 때마다 스프라이트 전체 도트가 끓는다. 예전 코드가 쓰던 0.035가 바로 그 값이다.
+## 회전도 같은 이유로 불가: 0.09rad(5.16°)면 85px 높이 스프라이트의 윗변이 아랫변보다
+## 7.70px 밀려 축에 남는 픽셀 행이 하나도 없다. assets/style_bible.md 28행 "AA 금지"의 취지에 어긋난다.
+## 남는 수단은 정수 픽셀 오프셋 하나뿐이고, 1px = 32px 타일의 3.12% · 85px 몸의 1.17%로
+## 리샘플이 정확히 0이다. 카메라 zoom=1 · 뷰포트 960×540이라 1 world px = 1 viewport px.
 
 var npc_id := &""
 var display_name := ""
@@ -14,6 +26,9 @@ var sequence_variants: Array = []
 var cell := Vector2i.ZERO
 var sprite := AnimatedSprite2D.new()
 var wander_range := 0
+## 제자리 아이들 on/off. 연출을 통째로 끄고 재기 위한 스위치 —
+## 관문·스크린샷 도구가 프레임 0 정지 상태를 보장받아야 할 때 false로 둔다.
+var idle_motion := true
 
 var _paths: Dictionary = {}
 var _meta: Dictionary = {}
@@ -25,14 +40,41 @@ const LOOK_MAX := 6.4
 const WANDER_STEP_TIME := 0.38
 const FACINGS: Array[StringName] = [&"down", &"left", &"right", &"up"]
 
+## 정지 포즈에서 프레임 0을 세워 둘 것인가.
+## 실측(2026-09-09): 전용 시트 7종(cafeteria_girl · guard_idle · librarian · nothing_man ·
+## prof_chem · rescue_girl · tutor_dumb) **전부** idle_down 행(row 4)이 walk_down 행(row 0)과
+## **바이트 단위로 동일**하다. 즉 "아이들"이라고 이름만 붙은 걷기 사이클이라, play()하면
+## fps=2로 제자리 행진을 한다. 플레이스홀더로 쓰는 player_original은 idle_down의 두 프레임이
+## 서로 같아서 play()가 아무 일도 안 한다 — 어느 쪽이든 세워 두는 것이 맞다.
+## 걷기 행의 복사본이 아닌 **진짜 정지 애니**를 그려 넣는 날 이 값을 false로 되돌린다.
+const HOLD_RESTING_FRAME := true
+
+## 호흡 진폭(px). 반드시 정수 — 위 파일 주석의 리샘플 실측 근거 참조.
+## 1px은 85px 몸의 1.17%. 2px(2.34%)로 올리면 호흡이 아니라 위아래로 튀는 것으로 읽힌다.
+const BREATH_AMP_PX := 1
+## 호흡 1주기(초). 성인 안정시 호흡은 ~14회/분(4.3초)이지만 그대로 쓰면 게임 화면에서
+## 멈춰 있는 것과 구분이 안 된다. 3초 = 절반인 1.5초 동안 1px 떠 있는 사각파.
+const BREATH_PERIOD := 3.0
+
+## 간헐 무게중심 이동 — 두 번째 walk 프레임을 한 박자만 보여 준다.
+## 실측(2026-09-09): 각 방향 walk 행의 frame 1은 frame 0을 옮겨 그린 것이 아니라
+## 몸 전체를 다시 그린 **별개 포즈**다(최적 정수 시프트를 먹여도 차이가 0~56%밖에 안 줄고,
+## cafeteria_girl은 0%다). 즉 "정지 그림 한 장"이라는 전제가 틀렸고, 방향마다 쓸 수 있는
+## 두 번째 포즈가 이미 시트에 있다. 짧게 스치면 무게중심 옮기기로 읽히고,
+## 길게 끌면 걷다 만 자세로 굳는다 — 그래서 0.22초다.
+const FIDGET_HOLD := 0.22
+const FIDGET_MIN := 3.5
+const FIDGET_MAX := 7.5
+## 포즈를 바꾸는 순간 1px 내려앉는다. 그림만 갈리면 깜빡임으로 보이는데,
+## 같은 박자에 몸이 내려가면 체중을 옮긴 것으로 읽힌다. 정수라 리샘플 0.
+const FIDGET_DIP_PX := 1
+
 var _look_wait := 0.0
 var _wander_wait := 0.0
 var _facing := &"down"
-var _base_scale := Vector2.ONE
-var _base_offset := Vector2.ZERO
 var _breath_phase := 0.0
 var _fidget_wait := 0.0
-var _fidget_duration := 0.0
+var _fidget_hold := 0.0
 var _is_talking := false
 var _is_wandering := false
 
@@ -112,14 +154,47 @@ func _build_visual() -> void:
 	if not _meta.is_empty():
 		sprite.scale = Vector2.ONE * float(_meta.get("scale", 1.0))
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(_meta))
-	_base_scale = sprite.scale
-	_base_offset = sprite.offset
 	sprite.animation = &"idle"
-	sprite.play()
+	_hold_resting_frame()
 	add_child(sprite)
 	_look_wait = randf_range(0.0, LOOK_MAX)
-	_breath_phase = randf_range(0.0, PI * 2.0)
-	_fidget_wait = randf_range(2.5, 5.5)
+
+	# 위상은 randf가 아니라 **npc_id 해시**로 흩는다.
+	# 이유 둘: (1) 여럿이 같은 박자로 숨 쉬면 기계처럼 보인다 —
+	# 한 방에 dev1·dev2가 나란히 서 있어서 실제로 눈에 띈다.
+	# (2) 해시는 결정적이라 세이브·층 재입장 후에도 같은 NPC가 같은 박자를 유지한다.
+	# randf였다면 문을 드나들 때마다 호흡 위상이 튀어 다른 사람처럼 보인다.
+	var h := _scatter(npc_id)
+	_breath_phase = float(h % 1000) / 1000.0 * TAU
+	_fidget_wait = FIDGET_MIN + float((h / 1000) % 1000) / 1000.0 * (FIDGET_MAX - FIDGET_MIN)
+
+
+## npc_id → 잘 흩어진 양수. 위상 분산 전용.
+##
+## 왜 hash()를 그대로 안 쓰나 — 실측(2026-09-09, 실제 id 11개로 측정):
+## hash("dev1")과 hash("dev2")는 **6밖에 차이나지 않는다**. 이대로 %1000을 하면 위상이
+## 1.489 / 1.495 rad(0.003초 차)가 되어, f2에 나란히 선 두 NPC가 한 몸처럼 숨 쉰다 —
+## 위상을 흩으려던 목적이 정확히 그 자리에서 무너진다. 한 글자만 다른 문자열이 인접한 값을
+## 받는 것은 문자열 해시의 정상 동작이라 hash를 바꿔서는 못 고친다. 섞어야 한다.
+## splitmix32 finalizer(곱셈+xorshift)를 먹이면 dev1·dev2 간격이 0.006 → 2.902 rad,
+## 즉 주기의 46%(거의 역위상)로 벌어진다. 한 층에 같이 서는 NPC들 중 최악 간격도
+## 0.472 rad = 3초 주기의 0.23초로, 눈으로 갈라 보인다(f2 nothing_man·dev1).
+## 마스킹은 GDScript int가 64비트 부호형이라 곱셈 오버플로가 음수로 돌면
+## `>>`가 산술 시프트로 바뀌어 비트가 안 섞이는 것을 막기 위함이다.
+static func _scatter(seed_id: StringName) -> int:
+	var x := absi(hash(seed_id)) & 0x7fffffff
+	x = ((x ^ (x >> 16)) * 0x45d9f3b) & 0x7fffffff
+	x = ((x ^ (x >> 16)) * 0x45d9f3b) & 0x7fffffff
+	return (x ^ (x >> 16)) & 0x7fffffff
+
+
+## 정지 포즈 고정 — HOLD_RESTING_FRAME 근거는 상수 주석 참조.
+func _hold_resting_frame() -> void:
+	if HOLD_RESTING_FRAME:
+		sprite.stop()
+		sprite.frame = 0
+	else:
+		sprite.play()
 
 
 func _process(delta: float) -> void:
@@ -143,40 +218,52 @@ func _process(delta: float) -> void:
 		_apply_facing(next)
 
 
+## 제자리 아이들 — 정수 픽셀 호흡 + 간헐 무게중심 이동.
+## 이름은 예전 그대로 둔다(tests/smoke_f1_events.gd가 이 이름으로 직접 부른다).
+## 스케일·회전은 건드리지 않는다 — 파일 머리 주석의 리샘플 실측이 그 이유다.
 func _update_breathing(delta: float) -> void:
-	if _is_wandering:
-		sprite.scale = _base_scale
-		sprite.position = Vector2.ZERO
+	# 멈춰야 하는 세 경우:
+	# - 배회 중: 진짜로 걷는 중이라 제자리 연출을 겹치면 걸음이 떤다.
+	# - 대화 중: 말하는 상대가 계속 까딱거리면 시선이 대사창에서 떨어진다.
+	#   (예전 코드는 호흡만은 대화 중에도 계속 돌았다 — 여기서 함께 막는다.)
+	# - 스위치 off: 관문·스크린샷이 프레임 0 정지 상태를 보장받아야 할 때.
+	if _is_wandering or _is_talking or not idle_motion:
+		sprite.position.y = 0.0
+		_fidget_hold = 0.0
+		if HOLD_RESTING_FRAME and sprite.frame != 0:
+			sprite.frame = 0
 		return
-	_breath_phase += delta * 2.8
-	var breath := sin(_breath_phase) * 0.035
-	sprite.position.y = sin(_breath_phase) * 2.2
-	sprite.scale.y = _base_scale.y * (1.0 + breath)
-	sprite.scale.x = _base_scale.x * (1.0 - breath * 0.5)
 
-	# 고정 NPC 주기적 미세 움직임: 단방향 1프레임 시트에서도 보이도록
-	# 발돋움 홉(offset — 호흡과 채널이 달라 묻히지 않는다) + 고개 까딱(회전).
-	# 프레임 복구는 idle 계열 포함(예전 조건은 idle에서 frame 1에 stuck됐다).
-	if not _is_talking:
+	_breath_phase = fmod(_breath_phase + delta * TAU / BREATH_PERIOD, TAU)
+
+	var dip := 0
+	if _fidget_hold > 0.0:
+		_fidget_hold -= delta
+		if _fidget_hold <= 0.0:
+			if HOLD_RESTING_FRAME:
+				sprite.frame = 0
+		else:
+			dip = FIDGET_DIP_PX
+	else:
 		_fidget_wait -= delta
 		if _fidget_wait <= 0.0:
-			_fidget_wait = randf_range(3.5, 6.5)
-			_fidget_duration = 0.18
+			_fidget_wait = randf_range(FIDGET_MIN, FIDGET_MAX)
+			# 프레임 0을 세워 두는 모드에서만 손댄다 — 애니가 도는 중에 frame을 찍으면
+			# 다음 틱에 재생기가 덮어써서 아무 일도 안 일어난다.
 			if (
-				sprite.sprite_frames != null
+				HOLD_RESTING_FRAME
+				and sprite.sprite_frames != null
 				and sprite.sprite_frames.has_animation(sprite.animation)
+				and sprite.sprite_frames.get_frame_count(sprite.animation) > 1
 			):
-				if sprite.sprite_frames.get_frame_count(sprite.animation) > 1:
-					sprite.frame = 1
-			var fg := create_tween().set_parallel(true)
-			fg.tween_property(sprite, "offset:y", _base_offset.y - 5.0, 0.09)
-			fg.tween_property(sprite, "rotation", 0.09, 0.09)
-			fg.chain().tween_property(sprite, "offset:y", _base_offset.y, 0.12)
-			fg.parallel().tween_property(sprite, "rotation", 0.0, 0.12)
-		elif _fidget_duration > 0.0:
-			_fidget_duration -= delta
-			if _fidget_duration <= 0.0:
-				sprite.frame = 0
+				_fidget_hold = FIDGET_HOLD
+				sprite.frame = 1
+				dip = FIDGET_DIP_PX
+
+	# 위로만 뜬다(0 또는 -1). 아래로도 내려가게 하면 발이 그림자(ShadowBlob, 고정 위치)를
+	# 파고들어 바닥에 가라앉는 것처럼 보인다. 사각파라 중간값이 없고, 따라서 리샘플도 없다.
+	var rise := -BREATH_AMP_PX if sin(_breath_phase) > 0.0 else 0
+	sprite.position.y = float(rise + dip)
 
 
 func _apply_facing(next: StringName) -> void:
@@ -185,15 +272,12 @@ func _apply_facing(next: StringName) -> void:
 		return
 	_facing = next
 	sprite.animation = anim
-	if String(anim).begins_with("idle_"):
-		sprite.play()
-	else:
-		sprite.stop()
-		sprite.frame = 0
-	# 단방향 시트는 방향을 바꿔도 같은 그림이라, 고개 돌림을 까딱으로 보여 준다.
-	var nod := create_tween()
-	nod.tween_property(sprite, "rotation", 0.08, 0.08)
-	nod.tween_property(sprite, "rotation", 0.0, 0.10)
+	_fidget_hold = 0.0  # 방향이 바뀌면 이전 방향의 두 번째 포즈가 남아 있으면 안 된다
+	_hold_resting_frame()
+	# 예전에는 여기서 회전 트윈(0.08rad)으로 "고개 까딱"을 넣었다. 뺐다 —
+	# 0.08rad(4.58°)이면 85px 높이 스프라이트의 윗변이 아랫변보다 6.84px 밀려
+	# 축에 정렬된 픽셀 행이 하나도 남지 않는다(파일 머리 주석 참조).
+	# 방향 전환 자체가 이미 몸 전체가 다시 그려지는 큰 변화라 덧댈 것이 없다.
 
 
 func _try_wander_step() -> bool:

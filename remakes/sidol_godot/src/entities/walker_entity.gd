@@ -124,12 +124,19 @@ func _process(delta: float) -> void:
 	_step_once()
 
 
+## 호흡 — **정수 1px 왕복만.** 스케일도 소수 오프셋도 쓰지 않는다.
+##
+## 왜 (2026-09-09 실측): 시트는 셀 128을 scale 0.6667로 그려 화면 85.34px가 되는데,
+## 여기에 스케일을 1.02배만 얹어도 85행 중 대다수가 **다른 원본 행을 집는다** —
+## 숨 쉴 때마다 도트 줄이 끓어오른다(픽셀 크롤링). 소수 y 오프셋(sin*1.5)도 같은 이유로
+## 반올림 경계에서 그림이 한 줄씩 튄다. 안티에일리어싱 금지가 스타일 규약인 프로젝트에서
+## 가장 눈에 띄는 어긋남이라, 고정 NPC와 같은 규칙으로 맞춘다(npc_entity.gd 참조).
+##
+## 위로만 뜬다(0 또는 -1): 아래로 내리면 고정 위치인 ShadowBlob을 파고들어 바닥에 가라앉아 보인다.
 func _update_breathing(delta: float) -> void:
 	_breath_phase += delta * 2.8
-	var breath := sin(_breath_phase) * 0.02
-	sprite.position.y = sin(_breath_phase) * 1.5
-	sprite.scale.y = _base_scale.y * (1.0 + breath)
-	sprite.scale.x = _base_scale.x * (1.0 - breath * 0.5)
+	sprite.position.y = -1.0 if sin(_breath_phase) > 0.0 else 0.0
+	sprite.scale = _base_scale
 
 
 ## 한 스텝 판정 — _process에서만 호출. 막히면 다리를 한 칸만 넘기고 쉰다
