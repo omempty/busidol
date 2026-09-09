@@ -42,6 +42,28 @@ SPLIT_SIZE_RATIO = 0.6
 SPLIT_MIN_GAP = 4
 SPLIT_MIN_PIXELS = 300
 ## 고유색 계약 — 프롬프트가 박는 값(24~48)의 상한. 넘으면 그라데이션 유입.
+##
+## ## 48이 어디서 온 숫자인가 (2026-09-09, 원작 실측)
+##
+## "48색이면 너무 적은 것 아닌가"는 원작을 재 보면 답이 나온다. 대상 하나짜리
+## 에셋은 원작이 그보다 훨씬 적게 쓴다 — 48은 오히려 두 배 이상 여유다.
+##
+##   캐릭터 시트(*_original.png, 20종)  9 ~ 37색 (중앙값 19)
+##     null_pointer 9 · flying_thesis 12 · c_bug 18 · mad_eye 25 · guard_idle 37
+##   원작 얼굴(originals_ref/face*.png) 27 ~ 35색
+##   아이콘(설치본 64종)                 4 ~ 20색 (중앙값 6)
+##   이펙트(originals_ref/effect.png)    9색
+##
+## 반면 **여러 대상이 한 장에 든** 에셋은 원작이 훨씬 많이 쓴다. 그런 카테고리가
+## 생기면 이 값을 그대로 쓰면 안 된다(근거로 쓰라고 수치를 남긴다):
+##
+##   소품·오브젝트 모음(obj_original_32.png)      131색
+##   타일셋·필드(remastered/tile_32, i_field_64)  132 ~ 138색
+##   원작 화면 UI(hp.png, store.png)               76 ~ 138색
+##
+## 지금은 소품·타일셋 납품 경로가 없어(CATEGORIES에도 스펙 파일에도 없다) 카테고리별
+## 표를 두지 않는다 — 쓰지 않는 표는 이 저장소가 반복해 물린 '사문화 데이터'가 된다.
+## 키아트·초상은 이미 validate_submission이 allow_rich_colors로 완화해 받는다.
 COLOR_BUDGET = 48
 ## 후처리 양자화로도 살리기 어려운 수준 — 이 위는 사실상 리샘플된 풀컬러 이미지다.
 COLOR_HARD_CAP = 4096
@@ -325,6 +347,50 @@ def check_frame_border(im: Image.Image, cell_w: int, cell_h: int) -> list:
     ]
 
 
+## 본체가 셀 내용에서 차지해야 할 최소 비율 — 미만이면 '본체가 없다'고 본다.
+## 검증기·계측·정렬 스냅이 **같은 값**을 써야 한다(아래 align_anchor 주석 참고).
+MAIN_BLOB_MIN = 0.5
+
+
+def align_anchor(mask: np.ndarray, min_ratio: float = MAIN_BLOB_MIN) -> tuple:
+    """정렬을 무엇에 맞출지 한 곳에서 정한다 — (bbox, 흩어짐?, 본체비율).
+
+    ## 왜 한 곳인가 (2026-09-09)
+
+    같은 그림을 검증기는 **본체 덩어리**로, 편집기 계측·정렬 스냅은 **셀 전체 bbox**로
+    재고 있었다. 그래서 flying_thesis death r2c2에서 이런 일이 났다(실측):
+
+      - 소멸 프레임이 30조각으로 흩어져 본체가 내용의 15%뿐
+      - 검증기는 그 15%짜리 종잇조각을 본체로 골라 중심 x=38 · 바닥 66px → [ERR] 2건
+      - 같은 파일에 편집기 계측은 cell_issues 없음 (전체 bbox로 재면 x=63 · 바닥 5px)
+      - [정렬 스냅]을 눌러도 전체 bbox 기준으로 1px 옮길 뿐이라 판정은 그대로 [ERR]
+        → 자동보정을 눌러도 FAIL이 안 없어지는 무한루프
+
+    잣대가 둘이면 자동보정이 수렴하지 않는다. 그래서 판정·계측·보정이 모두 이 함수를 쓴다.
+
+    ## 무엇을 고르나
+
+    - 본체가 min_ratio 이상 → **본체 bbox**. 잔선·파편·액자가 경계를 부풀려 어긋난 배치가
+      되레 '정상'으로 보이던 것을 막는다(mad_eye·sparker 리마스터 첫 납품이 그렇게 통과했다).
+    - 본체가 min_ratio 미만 → **내용 전체 bbox**. 소멸·폭발 프레임은 본체가 없는 것이
+      정상이고, 이때 최대 조각은 본체가 아니라 파편 하나라 그걸 기준 삼으면 틀린다.
+    """
+    total = int(mask.sum())
+    if not total:
+        return None, False, 0.0
+    parts = blobs(mask)
+    if not parts:
+        return None, False, 0.0
+    main = parts[0]
+    ratio = main["n"] / float(total)
+    if ratio >= min_ratio:
+        return main, False, ratio
+    ys, xs = np.where(mask)
+    whole = {"n": total, "x0": int(xs.min()), "x1": int(xs.max()),
+             "y0": int(ys.min()), "y1": int(ys.max())}
+    return whole, True, ratio
+
+
 def blobs(mask: np.ndarray) -> list:
     """8방향 연결 덩어리 목록(큰 것부터). 각 항목 {n, x0, x1, y0, y1}.
 
@@ -475,12 +541,47 @@ def check_flat_placeholder(im: Image.Image) -> list:
     ]
 
 
+## 내용 대비 반투명 비율이 이 값을 넘으면 AA가 아니라 **그림 자체가 소프트 알파**다.
+## 그런 시트를 이진화하면 가장자리 정리가 아니라 형태가 바뀐다(아래 실측 참고).
+SEMI_SOFT_ART = 0.5
+
+
 def check_semi_alpha(im: Image.Image) -> list:
-    """반투명 픽셀 — 계약은 0%(픽셀은 켜지거나 꺼진다)."""
+    """반투명 픽셀 — 계약은 0%(픽셀은 켜지거나 꺼진다).
+
+    ## 왜 두 코드로 가르나 (2026-09-09)
+
+    캔버스 전체 대비 비율만 재면 두 가지가 한 코드로 뭉뚱그려진다:
+
+      1. **AA 유입** — 도트 그림의 가장자리에만 반투명이 낀 것. 이진화가 정답이다.
+      2. **소프트 알파 그림** — 렌더링된 그림이 통째로 반투명인 것. 이진화하면
+         가장자리 정리가 아니라 **그림이 깎인다**.
+
+    flying_thesis_v8 실측: attack r1c0의 내용 6177px 중 반투명이 6169px(99.9%).
+    이진화하니 내용이 5439px로 줄고(-12%) 본체가 92%→66%로 쪼개졌으며 중심이
+    74.0→82.5로 밀려, **없던 [ERR] 2건이 생겼다**. 자동보정이 그림을 망친 셈이다.
+
+    그래서 내용(alpha>8) 대비 비율로 갈라 코드를 다르게 낸다. `semi_alpha`만
+    편집기의 자동보정 표에 있고, `semi_alpha_soft`는 사람 몫으로 남는다.
+    """
     _, alpha = _rgba(im)
-    ratio = float(((alpha > 0) & (alpha < 255)).mean())
+    semi = (alpha > 0) & (alpha < 255)
+    ratio = float(semi.mean())
     if ratio <= 0.001:
         return []
+    # 내용(alpha>8) 안에서의 반투명 비율. semi 전체를 내용으로 나누면 alpha 1~8인
+    # 픽셀이 분자에만 들어가 100%를 넘는다(실측에서 143%가 찍혔다).
+    content_mask = alpha > 8
+    content = int(content_mask.sum())
+    share = float((semi & content_mask).sum()) / content if content else 0.0
+    if share > SEMI_SOFT_ART:
+        return [Finding(
+            "semi_alpha_soft",
+            "반투명 픽셀 %.2f%% — 내용의 %.0f%%가 반투명이다. AA가 아니라 그림 자체가 "
+            "소프트 알파라, 이진화하면 형태가 깎인다 — 도트로 다시 받아야 한다"
+            % (ratio * 100, share * 100),
+            ratio,
+        )]
     return [Finding("semi_alpha", "반투명 픽셀 %.2f%% — 계약 0%%(AA 유입)" % (ratio * 100), ratio)]
 
 

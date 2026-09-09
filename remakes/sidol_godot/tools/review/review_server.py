@@ -98,7 +98,33 @@ def run_validator(cat: str, abs_path: str) -> dict:
     try:
         proc = subprocess.run(args, capture_output=True, text=True, encoding="utf-8", timeout=60)
         lines = [l for l in (proc.stdout or "").strip().splitlines() if l.strip()]
-        res = {"pass": proc.returncode == 0, "lines": lines[-8:]}
+        # 검증기가 마지막에 찍는 기계용 줄 "[codes] a,b,c" — 사람이 읽는 목록에서는 빼고
+        # 편집기에 따로 넘긴다. 편집기는 이 코드로 [지적 자동보정]이 돌릴 연산을 고른다.
+        codes: list[str] = []
+        waived_codes: list[str] = []
+        keep = []
+        for l in lines:
+            if l.startswith("[codes]"):
+                codes = [c for c in l[len("[codes]"):].strip().split(",") if c]
+            elif l.startswith("[waived]"):
+                waived_codes = [c for c in l[len("[waived]"):].strip().split(",") if c]
+            else:
+                keep.append(l)
+        # 자동보정 계획은 **서버가 정한다** — 표가 편집기에도 있으면 두 벌이 되고,
+        # 두 벌은 갈라진다(이 저장소가 반복해 물린 결함). 편집기는 실행만 한다.
+        sys.path.insert(0, os.path.join(ROOT, "tools", "convert"))
+        import autofix_plan  # noqa: PLC0415 — 지연 임포트
+
+        import waivers  # noqa: PLC0415 — 지연 임포트
+
+        res = {"pass": proc.returncode == 0, "lines": keep[-8:], "codes": codes,
+               "waived": waived_codes,
+               # 면제할 수 없는 지적을 편집기가 미리 알아야 버튼을 잘못 내주지 않는다.
+               "non_waivable": sorted(waivers.NON_WAIVABLE),
+               "waivers": waivers.for_asset(waivers.asset_id_of(abs_path))}
+        # 계획은 **아직 남아 있는** 지적만 대상으로 짠다 — 면제한 것을 또 고치려 들면
+        # 사람이 "넘기기로 한" 결정을 기계가 뒤집는다.
+        res.update(autofix_plan.plan_for([c for c in codes if c not in waived_codes]))
     except Exception as exc:  # noqa: BLE001 — 검증기 크래시도 배지로 표시
         res = {"pass": False, "lines": [f"검증기 오류: {exc}"]}
     _VALIDATION_CACHE[abs_path] = (mtime, res)
@@ -695,6 +721,28 @@ def fixer_save(payload: dict) -> dict:
             "validation": run_validator(cat, dst)}
 
 
+def fixer_waive(payload: dict) -> dict:
+    """지적 하나를 면제하거나 해제한다 — **파일이 아니라 지적 단위**다.
+
+    파일 통째로 통과시키면 오탐과 진짜 결함이 같이 넘어간다(flying_thesis_v8은
+    [ERR] 3건 중 2건이 오탐, 1건이 진짜였다). 그래서 코드를 콕 집어 건다.
+    키는 에셋 id라 다음 버전에서도 유지된다.
+    """
+    sys.path.insert(0, os.path.join(ROOT, "tools", "convert"))
+    import waivers  # noqa: PLC0415
+
+    asset = waivers.asset_id_of(str(payload.get("file", "")))
+    code = str(payload.get("code", ""))
+    if payload.get("undo"):
+        removed = waivers.remove(asset, code)
+        return {"ok": True, "removed": removed, "asset": asset,
+                "waivers": waivers.for_asset(asset)}
+    rec = waivers.add(asset, code, str(payload.get("reason", "")),
+                      str(payload.get("by", "")))
+    return {"ok": True, "added": rec, "asset": asset,
+            "waivers": waivers.for_asset(asset)}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def _json(self, code: int, obj: dict) -> None:
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
@@ -751,7 +799,8 @@ class Handler(SimpleHTTPRequestHandler):
             super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
-        if urlparse(self.path).path not in ("/api/review", "/api/batch", "/api/fixer/save", "/api/fixer/op"):
+        if urlparse(self.path).path not in ("/api/review", "/api/batch", "/api/fixer/save",
+                                            "/api/fixer/op", "/api/fixer/waive"):
             self._json(404, {"error": "not found"})
             return
         try:
@@ -759,6 +808,8 @@ class Handler(SimpleHTTPRequestHandler):
             payload = json.loads(self.rfile.read(length).decode("utf-8"))
             if urlparse(self.path).path == "/api/fixer/op":
                 self._json(200, fixer_op(payload))
+            elif urlparse(self.path).path == "/api/fixer/waive":
+                self._json(200, fixer_waive(payload))
             elif urlparse(self.path).path == "/api/fixer/save":
                 self._json(200, fixer_save(payload))
             elif urlparse(self.path).path == "/api/batch":

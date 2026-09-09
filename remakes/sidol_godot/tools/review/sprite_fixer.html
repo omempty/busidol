@@ -337,6 +337,19 @@
     <section>
       <h2>시트 전체</h2>
       <div class="row">
+        <button data-op="fixcodes" id="fixcodes">지적 자동보정</button>
+        <span class="meta" id="fixcodeswhat">저장하면 활성화</span>
+      </div>
+      <div class="row hint">검증기가 낸 지적 중 <b>기계가 고칠 수 있는 것만</b> 골라 돌린다.
+        본체 흩어짐·빈 칸·플레이스홀더처럼 사람이 봐야 하는 것은 손대지 않는다.</div>
+      <div class="row">
+        <select id="waivecode"></select>
+        <input type="text" id="waivereason" placeholder="면제 사유(필수)" size="24">
+        <button id="waive">지적 면제</button>
+      </div>
+      <div class="row hint" id="waivelist">면제는 <b>지적 하나씩</b> 걸리고 에셋에 남는다 —
+        다음 버전(v9…)에서도 유지된다. 크기·스펙·빈 칸처럼 계약이 어긋난 것은 면제할 수 없다.</div>
+      <div class="row">
         <button data-op="key">마젠타 키잉</button>
         <button data-op="guides">격자 잔선 제거</button>
         <button data-op="binarize">알파 이진화</button>
@@ -1517,7 +1530,80 @@ function adoptImageKeepHistory(img) {
 }
 
 // ---------------------------------------------------------------- 조작 배선
+/** 자동보정 계획은 **서버가 준다**(tools/convert/autofix_plan.py가 정본).
+ *
+ * 예전 계획: 이 표를 여기에도 두는 것. 그러면 파이썬 쪽 표와 두 벌이 되고, 두 벌은
+ * 반드시 갈라진다 — "편집기는 깨끗한데 검증기는 반려한다"가 이 저장소의 단골 결함이다.
+ * 그래서 편집기는 무엇을 돌릴지 **정하지 않고**, 서버가 내려 준 계획을 실행만 한다.
+ *
+ * 저장 응답 validation에 실려 온다:
+ *   plan    순서대로 돌릴 연산 이름들
+ *   vetoed  {연산: [그것을 막은 지적…]} — 돌리면 그림이 깎이는 것들
+ *   manual  기계가 손댈 수 없는 지적
+ */
+let lastCodes = [];      // 마지막 검증의 지적 코드
+let lastPlan = [];       // 서버가 정한 실행 계획
+let lastVetoed = {};     // 막힌 연산과 그 이유
+let lastManual = [];     // 사람 몫
+let lastWaived = [];     // 이미 면제된 지적 코드
+let lastNonWaivable = [];// 면제할 수 없는 지적 코드
+let lastWaivers = [];    // 이 에셋에 걸린 면제 기록(사유 포함)
+
+/** 면제 UI 갱신 — 지금 남은 지적 중 **면제할 수 있는 것만** 고르게 한다. */
+function syncWaive() {
+  const sel = $("#waivecode"), list = $("#waivelist"), btn = $("#waive");
+  if (!sel || !list || !btn) return;
+  const open = lastCodes.filter(c => !lastWaived.includes(c) && !lastNonWaivable.includes(c));
+  sel.innerHTML = "";
+  for (const c of open) {
+    const o = document.createElement("option");
+    o.value = c; o.textContent = c;
+    sel.appendChild(o);
+  }
+  btn.disabled = open.length === 0;
+  const parts = [];
+  if (!open.length && lastCodes.length) parts.push("면제할 수 있는 지적이 없다");
+  const blocked = lastCodes.filter(c => lastNonWaivable.includes(c));
+  if (blocked.length) parts.push("면제 불가(계약): " + blocked.join(", "));
+  if (lastWaivers.length) {
+    parts.push("걸린 면제 — " + lastWaivers.map(w =>
+      `${w.code}: ${w.reason} (${w.by || "?"} ${w.at || ""}) [해제하려면 코드를 고르고 Alt+클릭]`).join(" | "));
+  }
+  list.textContent = parts.join(" · ") || "면제는 지적 하나씩 걸리고 에셋에 남는다 — 다음 버전에서도 유지된다.";
+}
+
+/** 버튼에 **무엇을 할지**를 적어 둔다 — 눌러 보기 전에 알 수 있어야 한다. */
+function syncAutofix() {
+  const btn = $("#fixcodes"), what = $("#fixcodeswhat");
+  if (!btn || !what) return;
+  btn.disabled = lastPlan.length === 0;
+  if (!lastCodes.length) { what.textContent = "저장하면 활성화"; return; }
+  const parts = [lastPlan.length ? "고칠 것: " + lastPlan.join(" → ") : "기계가 고칠 지적 없음"];
+  const blocked = Object.keys(lastVetoed);
+  if (blocked.length) {
+    parts.push("막힘: " + blocked.map(op => op + "(" + lastVetoed[op].join(",") + ")").join(" "));
+  }
+  if (lastManual.length) parts.push("사람 몫: " + lastManual.join(", "));
+  what.textContent = parts.join(" · ");
+  syncWaive();
+}
+
 const OPS = {
+  // 검증기 지적 중 기계가 고칠 수 있는 것만 순서대로 돌린다. 고칠 게 없으면 아무것도
+  // 안 하고 **왜 안 했는지 말한다** — 눌렀는데 조용한 버튼이 이 저장소의 지배적 결함이다.
+  fixcodes: async () => {
+    if (!lastCodes.length) return log("먼저 저장해서 검증 지적을 받아라", "warn");
+    for (const op of Object.keys(lastVetoed)) {
+      log(`${op}은 돌리지 않는다 — ${lastVetoed[op].join(",")} 때문에 그림이 깎인다`, "warn");
+    }
+    if (!lastPlan.length) {
+      return log("이 지적들은 기계가 못 고친다: " + lastCodes.join(", ")
+                 + " — 그림을 손보거나 다시 받아야 한다", "warn");
+    }
+    log("지적 자동보정 " + lastPlan.length + "단계: " + lastPlan.join(" → "));
+    for (const op of lastPlan) await OPS[op]();
+    log("자동보정 끝 — 다시 저장하면 남은 지적을 알 수 있다", "ok");
+  },
   // 시트 전체 — 규칙이 걸린 연산은 전부 서버로 보낸다.
   key: () => serverOp("key", { tol: 40 }),
   // 배경은 색만 보고 지우면 그림 안쪽이 뚫린다 — 서버가 가장자리 연결성으로 판정한다.
@@ -1580,7 +1666,8 @@ const OPS = {
 // undo가 두 번 쌓인다.
 const SERVER_OPS = new Set(["key", "guides", "binarize", "quantize", "deblack", "erasecolor",
                             "regrid", "scale", "snap", "snapall", "measure",
-                            "autosize", "autokey", "pixelize", "refit", "rowfit"]);
+                            "autosize", "autokey", "pixelize", "refit", "rowfit",
+                            "fixcodes"]);
 // 부동 이동 — 되돌리기 스냅숏을 **제스처당 하나** 스스로 찍는다. 버튼 래퍼가 또 찍으면
 // 1px 누를 때마다 undo가 쌓여 되돌리기가 사실상 못 쓰게 된다.
 const FLOAT_OPS = new Set(["rowleft", "rowright", "rowup", "rowdown",
@@ -1790,6 +1877,15 @@ async function saveTo(cat, out) {
     if (j.error) { log("저장 실패: " + j.error, "bad"); return; }
     log("저장: " + j.saved, "ok");
     const v = j.validation || {};
+    // 지적 코드를 갈무리해 [지적 자동보정]이 무엇을 돌릴지 정한다.
+    lastCodes = v.codes || [];
+    lastPlan = v.plan || [];
+    lastVetoed = v.vetoed || {};
+    lastManual = v.manual || [];
+    lastWaived = v.waived || [];
+    lastNonWaivable = v.non_waivable || [];
+    lastWaivers = v.waivers || [];
+    syncAutofix();
     log((v.pass ? "검증 PASS" : "검증 FAIL") + "\n" + (v.lines || []).join("\n"), v.pass ? "ok" : "bad");
     // 저장 사실과 검증 결과를 **한 알림에** 담는다. 따로 띄우면 뒤엣것이 앞엣것을 덮어
     // "저장은 됐나?"가 다시 안 보인다(2026-09-08에 실제로 그렇게 났다).
@@ -1820,6 +1916,44 @@ $("#save").onclick = () => {
                + " [다른 이름으로…]로 저장하라", "warn");
   }
   saveTo(CAT, contract.next_file);
+};
+
+/** 지적 면제 — 사유를 반드시 받는다. Alt+클릭이면 해제.
+ *
+ * 파일 통째로 통과시키는 FORCE OK는 두지 않았다. flying_thesis_v8이 그 이유다:
+ * [ERR] 3건 중 2건은 검증기 오탐, 1건은 진짜 결함이었다. 파일 단위로 넘겼다면
+ * 진짜 결함(고유색 36702)도 같이 통과했을 것이다.
+ */
+$("#waive").onclick = async (e) => {
+  const code = $("#waivecode").value;
+  if (!code) return log("면제할 지적을 고르라", "warn");
+  const undo = e.altKey;
+  const reason = $("#waivereason").value.trim();
+  if (!undo && !reason) {
+    return log("사유를 적어라 — 이유 없는 면제는 나중에 아무도 못 되짚는다", "warn");
+  }
+  try {
+    const res = await fetch("/api/fixer/waive", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file: FILE, code, reason, undo }),
+    });
+    const j = await res.json();
+    if (j.error) return log("면제 실패: " + j.error, "bad");
+    lastWaivers = j.waivers || [];
+    if (undo) {
+      lastWaived = lastWaived.filter(c => c !== code);
+      log(`면제 해제: ${code} — 다시 지적된다`, "ok");
+    } else {
+      lastWaived = lastWaived.concat([code]);
+      $("#waivereason").value = "";
+      log(`면제: ${code} — ${reason}`, "ok");
+    }
+    syncAutofix();
+    toast("면제 " + (undo ? "해제" : "등록") + " → " + code
+          + "\n다시 저장하면 검증 결과에 반영된다", "ok", 6000);
+  } catch (err) {
+    log("면제 실패(서버 없음?): " + err, "bad");
+  }
 };
 
 $("#saveas").onclick = () => {

@@ -380,6 +380,32 @@ def cell_bbox(a: np.ndarray, cell: int, r: int, c: int):
     return {"x0": int(xs.min()), "y0": int(ys.min()), "x1": int(xs.max()), "y1": int(ys.max())}
 
 
+def _vis_mask(a: np.ndarray, cell: int, r: int, c: int, w: int = 1, h: int = 1):
+    """상자 안의 '그림' 마스크(마젠타 배경 제외). 비었으면 None."""
+    sub = a[r * cell:(r + h) * cell, c * cell:(c + w) * cell]
+    if sub.size == 0:
+        return None
+    rgb = sub[:, :, :3].astype(int)
+    exact_magenta = (rgb[:, :, 0] == 255) & (rgb[:, :, 1] == 0) & (rgb[:, :, 2] == 255)
+    vis = (sub[:, :, 3] > 8) & ~exact_magenta
+    return vis if vis.any() else None
+
+
+def align_bbox(a: np.ndarray, cell: int, r: int, c: int, w: int = 1, h: int = 1):
+    """정렬을 맞출 기준 상자 — (bbox, 흩어짐?). 판정과 보정이 **같은 것**을 봐야 한다.
+
+    예전에는 계측·정렬 스냅이 `cell_bbox`(내용 전체)로, 검증기가 본체 덩어리로 재서
+    잣대가 둘이었다. 그래서 [정렬 스냅]을 눌러도 검증기 [ERR]이 그대로 남는 상태가
+    가능했다(실측: flying_thesis death r2c2 — 스냅이 1칸 옮겼는데 판정 그대로 ERR).
+    자동보정이 수렴하려면 둘이 같아야 하므로 여기서 dc.align_anchor로 모은다.
+    """
+    mask = _vis_mask(a, cell, r, c, w, h)
+    if mask is None:
+        return None, False
+    bb, scattered, _ = dc.align_anchor(mask)
+    return bb, scattered
+
+
 def box_bbox(a: np.ndarray, cell: int, r: int, c: int, w: int, h: int):
     """여러 칸에 걸친 상자 안 그림의 경계상자(상자 좌상단 기준). 없으면 None.
 
@@ -468,7 +494,7 @@ def snap_cells(im: Image.Image, cell: int, rows: int, cols: int,
             continue
         done.add(key)
         gw, gh = int(g.get("w", 1)), int(g.get("h", 1))
-        bb = box_bbox(a, cell, key[0], key[1], gw, gh)
+        bb, _ = align_bbox(a, cell, key[0], key[1], gw, gh)
         if not bb:
             continue
         dx, dy = _align_delta(bb, gw * cell, gh * cell)
@@ -481,7 +507,7 @@ def snap_cells(im: Image.Image, cell: int, rows: int, cols: int,
     for (r, c) in targets:
         if (int(r), int(c)) in in_group:      # 묶음 칸은 위에서 상자로 처리했다
             continue
-        bb = cell_bbox(a, cell, r, c)
+        bb, _ = align_bbox(a, cell, r, c)
         if not bb:
             continue
         dx, dy = _align_delta(bb, cell, cell)
@@ -782,15 +808,20 @@ def measure(im: Image.Image, cell: int = 0, rows: int = 0, cols: int = 0,
                     # 정렬이 없는 계약(타일셋·아이콘·초상)은 칸을 가득 채우는 것이 정상이라
                     # 중앙 이탈이라는 개념이 없다. 예전에는 여기서 전부 빨개졌다.
                     continue
-                cx = (bb["x0"] + bb["x1"]) / 2
+                # 정렬은 검증기와 **같은 기준 상자**로 잰다 — 아니면 편집기는 깨끗한데
+                # 검증기는 반려하는(또는 그 반대) 갈라짐이 생긴다.
+                ab, _scattered = align_bbox(a, cell, r, c)
+                if not ab:
+                    continue
+                cx = (ab["x0"] + ab["x1"]) / 2
                 if abs(cx - cell / 2) > cell * 0.12:
                     bad.append(f"r{r}c{c} 가로 중앙 이탈 {round(cx - cell / 2)}px")
                 if align == "center":
-                    cy = (bb["y0"] + bb["y1"]) / 2
+                    cy = (ab["y0"] + ab["y1"]) / 2
                     if abs(cy - cell / 2) > cell * 0.14:
                         bad.append(f"r{r}c{c} 세로 중앙 이탈 {round(cy - cell / 2)}px")
-                elif align == "bottom_center" and (cell - 1 - bb["y1"]) > cell * 0.14:
-                    bad.append(f"r{r}c{c} 하단 정렬 이탈 {cell - 1 - bb['y1']}px")
+                elif align == "bottom_center" and (cell - 1 - ab["y1"]) > cell * 0.14:
+                    bad.append(f"r{r}c{c} 하단 정렬 이탈 {cell - 1 - ab['y1']}px")
     bg = detect_bg(im)
     return {
         "size": [im.width, im.height],

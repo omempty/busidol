@@ -502,5 +502,49 @@ check("align=none — 계측이 중앙 이탈을 안 만든다",
       "; ".join(m_none["cell_issues"]) or "없음")
 
 
+# ------------------------------------------------- 정렬 기준(흩어진 소멸 프레임)
+# 왜: 소멸·폭발 프레임은 **본체가 없는 것이 정상**이다. 예전에는 정렬을 '가장 큰 덩어리'로
+# 재서, 30조각으로 흩어진 프레임의 15%짜리 파편 하나를 본체로 골라 멀쩡한 프레임을
+# 이탈로 반려했다(실측: flying_thesis death r2c2 — 파편 x=38/바닥66 vs 내용 전체 x=63/바닥5).
+# 게다가 정렬 스냅은 내용 전체로 옮겨서, 눌러도 판정이 안 바뀌는 무한루프였다.
+import delivery_checks as dc  # noqa: E402
+
+# (1) 흩어진 칸 — 파편이 아니라 내용 전체로 판정한다
+a = sheet()
+for bx, by in ((6, 6), (22, 8), (9, 20), (24, 22)):     # 네 귀퉁이로 흩뿌린 조각
+    blob(a, bx, by, 4, 4, (200, 90, 90))
+bb, scattered, ratio = dc.align_anchor(so._vis_mask(a, CELL, 0, 0))
+check("흩어진 칸 - 본체 없음으로 판정한다", scattered and ratio < 0.5,
+      f"본체 비율 {ratio * 100:.0f}% / 흩어짐={scattered}")
+check("흩어진 칸 - 기준 상자가 내용 전체다",
+      bb is not None and bb["x0"] == 6 and bb["x1"] == 27,
+      f"x {bb['x0']}..{bb['x1']} (기대 6..27 - 파편 하나면 훨씬 좁다)")
+
+# (2) 부정 시험 - 본체가 뚜렷하면 예전대로 본체 기준이다(잔점이 경계를 부풀리면 안 된다)
+a2 = sheet()
+blob(a2, 11, 14, 10, 17, (80, 120, 200))          # 본체(칸 중앙·바닥)
+blob(a2, 1, 1, 1, 1, (80, 120, 200))              # 구석 잔점 - 내용 전체로 재면 경계가 밀린다
+bb2, sc2, r2 = dc.align_anchor(so._vis_mask(a2, CELL, 0, 0))
+check("부정 시험 - 본체가 뚜렷하면 잔점에 안 끌린다",
+      not sc2 and bb2["x0"] == 11 and bb2["x1"] == 20,
+      f"흩어짐={sc2} x {bb2['x0']}..{bb2['x1']} (기대 11..20 / 잔점에 끌리면 1..20)")
+
+# (3) 스냅과 판정이 **같은 기준**이라 자동보정이 수렴한다
+im_s, moved = so.snap_cells(img(a), CELL, ROWS, COLS, "bottom_center", only=(0, 0))
+bb3, _, _ = dc.align_anchor(so._vis_mask(np.asarray(im_s), CELL, 0, 0))
+cx3 = (bb3["x0"] + bb3["x1"]) / 2
+bm3 = CELL - 1 - bb3["y1"]
+check("정렬 스냅 - 흩어진 칸도 한 번에 판정을 통과시킨다",
+      abs(cx3 - CELL / 2) <= CELL * 0.12 and bm3 <= CELL * 0.14,
+      f"옮긴칸={moved} 중심x={cx3:.1f}(기대 {CELL / 2}) 바닥여백={bm3}")
+
+m_sc = so.measure(im_s, CELL, ROWS, COLS,
+                  [{"row": 0, "name": "walk_down", "frames": 1},
+                   {"row": 1, "name": "attack", "frames": 0}], "bottom_center")
+check("계측 - 스냅한 흩어진 칸을 이탈로 안 잡는다",
+      not any("이탈" in i and i.startswith("r0c0") for i in m_sc["cell_issues"]),
+      "; ".join(i for i in m_sc["cell_issues"] if i.startswith("r0c0")) or "없음")
+
+
 print(f"\n[test_sheet_ops] 통과 {_pass} · 실패 {_fail}")
 sys.exit(1 if _fail else 0)

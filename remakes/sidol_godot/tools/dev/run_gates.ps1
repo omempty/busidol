@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 5   # +5 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 소품 덧층(python)
+$total = $gates.Count + 8   # +8 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 소품 덧층(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -104,6 +104,38 @@ Write-Host ("[{0}/{1}] Sheet ops..." -f $i, $total)
 python (Join-Path $PSScriptRoot "..\convert\test_sheet_ops.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Sheet ops"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Autofix plan..." -f $i, $total)
+# 검증기 지적 -> 자동보정 계획(autofix_plan.py)의 표. 여기가 틀리면 편집기가
+# **고칠 수 없는 지적에 연산을 돌려 그림을 깎는다**(실측: 소프트 알파 시트에
+# quantize를 돌려 내용 -12%, 없던 정렬 ERR 2건). 부정 시험까지 포함한다.
+python (Join-Path $PSScriptRoot "..\convert\test_autofix_plan.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Autofix plan"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Waivers..." -f $i, $total)
+# 지적 면제(FORCE OK). 관문에 구멍을 내는 기능이라 **무엇을 면제할 수 없는가**를 잰다 —
+# 크기·스펙·빈 칸을 넘기면 설치와 재생이 실제로 깨진다. 사유 없이 걸리는지도 본다.
+python (Join-Path $PSScriptRoot "..\convert\test_waivers.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Waivers"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Installed sheets..." -f $i, $total)
+# **게임이 읽는 그림**이 **게임이 읽는 계약**과 맞는가. 납품 검증기는 10_submitted에만
+# 돌아서, 설치 뒤에 어긋난 것을 아무도 못 봤다(실측: 11종 중 3종이 낡은 산출물이었고
+# null_pointer는 11프레임이 하단 정렬을 어긴 채 게임에 들어가 있었다).
+python (Join-Path $PSScriptRoot "installed_sheets_check.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Installed sheets"
     exit 1
 }
 
