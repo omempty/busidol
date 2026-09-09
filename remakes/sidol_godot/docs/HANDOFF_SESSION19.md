@@ -1,6 +1,7 @@
 # 19차 세션 인수인계 — 도구·AI·에셋 계약
 
-> 작성: 2026-09-09. 브랜치 **`session19/tools-ai-assets`** 에 커밋 9개로 올라가 있다.
+> 작성: 2026-09-09. 브랜치 **`session19/tools-ai-assets`** 에 커밋 11개(그중 하나는 동시
+> 진행 중이던 다른 세션의 것 — §4)로 올라가 있다.
 > `main`은 건드리지 않았다 — 아래 §3을 읽고 판단한 뒤 `git merge --ff-only` 하면 된다.
 >
 > 관문은 `[19/24] Autoplay`를 뺀 23단계가 통과한다. Autoplay는 **간헐적으로 실패하고,
@@ -152,20 +153,37 @@
 
 ---
 
-## 4. 확인 못 한 이상 징후 하나
+## 4. 같은 트리에서 다른 세션이 동시에 돌고 있었다 — 주의
 
-커밋 직후 작업 트리가 깨끗했는데(변경 0), **관문을 한 번 돌린 뒤 웹 프롬프트 41개와
-`_remake.png` 3장이 바뀌어 있었다.** 되돌리고 `export_check.py`·`spr_alpha_check.py`를 단독으로
-돌려 봤지만 **둘 다 아무것도 안 건드린다**. 공통점만 확인했다:
+커밋 직후 작업 트리가 깨끗했는데(변경 0), 잠시 뒤 웹 프롬프트 41개와 `_remake.png` 3장이
+바뀌어 있었다. 처음에는 "관문이 추적 파일을 말없이 바꾼다"고 의심했고
+`export_check.py`·`spr_alpha_check.py`를 단독으로 돌려 봤지만 둘 다 아무것도 안 건드렸다.
 
-- 바뀐 41개는 정확히 **시트 스펙 계열 카테고리**(monsters·npcs·effects·battle_cuts·battle_actors).
-  FLAT 3종(portraits·items·keyart)은 안 바뀌었다.
-- PNG 3장(`flying_thesis`·`null_pointer`·`rogue_vending`)은 전부 **양자화가 크게 걸렸던 것**
-  (18,519 / 48,260 / 39,267색 → 48색).
+**정체는 동시 작업이었다.** 브랜치에 내가 만들지 않은 커밋이 끼어 있다:
 
-가설은 "양자화나 프롬프트 생성 어딘가가 결정론적이지 않다"이지만 **확인하지 못했다.**
-`python tools/convert/install_delivery.py`를 연달아 두 번 돌려 PNG 바이트가 같은지부터 재면 된다.
-관문이 추적 파일을 말없이 바꾸는 상태라면 그 자체가 결함이다.
+```
+f76cfa7 feat(assets): 웹 캐릭터 프롬프트에 death 본체기준 정렬·투사체금지·리샘플금지 보강 + 31종 재생성
+        omempty · 2026-09-09 13:19:35 · web_prompt.py + web/*.md 31개
+```
+
+즉 같은 워킹트리에서 다른 세션이 `web_prompt.py`를 고치고 재생성하고 있었다.
+
+### 반드시 알아야 할 것 — 내가 그 변경을 한 번 되돌렸다
+
+원인을 좁히는 과정에서 **`git checkout -- assets/`** 를 실행해 그때 워킹트리에 있던
+`assets/` 변경을 버렸다. 그 시점에 다른 세션의 작업이 **아직 커밋 전이었다면 그것을 날린 것**이다.
+결과적으로 `f76cfa7`이 남아 있으므로 웹 프롬프트 쪽은 복구된 것으로 보이지만,
+**같이 사라졌던 `_remake.png` 3장**(`flying_thesis`·`null_pointer`·`rogue_vending`)은
+그 커밋에 없다. 그쪽이 다른 세션의 산출물이었다면 되살려야 한다:
+
+```
+python tools/convert/install_delivery.py flying_thesis null_pointer rogue_vending
+```
+
+### 교훈
+이 저장소는 **여러 세션이 같은 워킹트리를 공유**한다(18차 셀 편집기, F1 이벤트 후속 세션,
+그리고 이번의 동시 세션). 내 것이 아닌 변경이 보인다고 `git checkout --`/`git restore` 로
+버리지 마라 — 먼저 `git log`·`git stash list`로 누구 것인지 확인한다.
 
 ---
 
