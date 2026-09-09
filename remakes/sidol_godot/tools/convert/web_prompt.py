@@ -280,6 +280,16 @@ def _character_sheet_prompt(asset_id: str, c: dict) -> str:
     body = sp.get("body_type", "")
     telegraph = sp.get("telegraph_visual", "")
     art_h = int(cell * 0.75)
+    # 화면 표시 크기 — **설치기와 같은 함수**로 뽑는다(배율 사다리까지 같아야 한다).
+    # 예전에는 프롬프트가 이 값을 아예 말하지 않아서, 화면 64px로 보일 그림을
+    # "칸 128px 안에서 96px 안팎"으로만 지시했다. 19종 중 12종이 절반으로 줄어
+    # 표시되는데도 전부에게 같은 말을 했고, 그래서 축소하면 사라질 디테일이
+    # 잔뜩 담겨 왔다(flying_thesis v5: 세밀도 0.913, 원작 도트는 0.384).
+    from install_delivery import sheet_scale  # noqa: PLC0415 — 지연 임포트
+
+    scale, _why = sheet_scale(sp, cell)
+    screen = int(round(cell * scale))
+    art_screen = int(round(art_h * scale))
 
     table = ["| 행(위→아래) | 애니메이션 | 프레임 수 | 그릴 내용 |", "|---|---|---|---|"]
     for n, a in c["layout"]:
@@ -299,6 +309,15 @@ def _character_sheet_prompt(asset_id: str, c: dict) -> str:
 이 시트는 **{cell}×{cell}px 칸을 {cols}열 × {rows}행**으로 붙인 것이다
 ({cell}×{cols} = {w}, {cell}×{rows} = {h}). 칸 경계선은 **그리지 않는다** — 보이지 않는
 격자일 뿐이다. 캐릭터는 칸 하나 안에 온전히 들어가야 하고, 옆 칸을 침범하면 안 된다.
+
+## 화면 표시 크기 — **{screen}px** (이게 진짜 크기다)
+게임은 이 시트를 그려진 크기 그대로 쓰지 않는다. 칸 {cell}px를 **{scale}배**로 줄여
+화면에 **{screen}px**로 그린다. 즉 아트 {art_h}px는 화면에서 약 **{art_screen}px**다.
+- **{screen}px에서 안 보이는 디테일은 그리지 마라.** 1~2px 폭의 무늬·글자·가는 선,
+  미세한 음영 단계는 축소하면 사라지거나 뭉개진 얼룩이 된다. 픽셀을 거기 쓰지 말고
+  형태와 대비에 써라.
+- **실루엣만으로 무엇인지 읽혀야 한다.** 색을 다 지우고 검은 형태만 남겼을 때
+  {name_ko}(으)로 읽히지 않으면 실패다 — 플레이어가 보는 것은 {screen}px짜리 실루엣이다.
 
 ## 행별 배치 (좌 → 우가 재생 순서)
 {chr(10).join(table)}
@@ -322,6 +341,8 @@ def _character_sheet_prompt(asset_id: str, c: dict) -> str:
    (날아가는 물체는 effects 담당. 셀 안에 그리면 실루엣이 커져 정렬 검사가 어긋난다)
 5. 부드러운 음영·확대복사·리샘플로 색이 수천 개가 되는 것(48색 이하) — **원본 픽셀로
    그려라. 다른 그림을 확대·축소해 붙이면 반려다**
+6. 화면 {screen}px에서 사라질 디테일에 픽셀을 쓰는 것 — 크게 그린 일러스트를 칸에
+   욱여넣으면 축소했을 때 형태를 못 알아본다. 처음부터 {screen}px에서 읽히게 설계하라.
 
 ## 내보내기 전 스스로 확인
 - [ ] 캔버스가 정확히 {w}×{h}px인가
@@ -331,6 +352,7 @@ def _character_sheet_prompt(asset_id: str, c: dict) -> str:
 - [ ] 고유색 48색 이하, 반투명 픽셀 없음인가
 - [ ] 공격 프레임에 몸이 아닌 물체(투사체·파편·무기)가 없는가
 - [ ] 소멸 행의 본체 덩어리가 칸 가로 중앙·바닥 접지에 있는가
+- [ ] **{screen}px로 줄여 봤을 때** 실루엣이 {name_ko}(으)로 읽히는가
 """
 
 

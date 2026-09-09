@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 8   # +8 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 소품 덧층(python)
+$total = $gates.Count + 9   # +9 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 웹 프롬프트 · 소품 덧층(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -136,6 +136,17 @@ Write-Host ("[{0}/{1}] Installed sheets..." -f $i, $total)
 python (Join-Path $PSScriptRoot "installed_sheets_check.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Installed sheets"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Web prompt..." -f $i, $total)
+# 프롬프트가 스펙의 값을 **실제로 읽는가**. 화면 표시 크기(cell.w)는 스펙에 있었는데
+# 설치기만 읽고 프롬프트는 안 읽었다 — 그래서 19종 중 12종이 절반으로 줄어드는데도
+# 전부에게 같은 크기를 지시했다. 프롬프트와 설치기의 배율이 갈라지면 여기서 걸린다.
+python (Join-Path $PSScriptRoot "..\convert\test_web_prompt.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Web prompt"
     exit 1
 }
 
