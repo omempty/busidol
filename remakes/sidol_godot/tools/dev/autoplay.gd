@@ -24,6 +24,13 @@ extends Node
 
 const AutoplayDriver := preload("res://tools/lib/autoplay_driver.gd")
 const AutoplayGoals := preload("res://tools/dev/autoplay_goals.gd")
+
+## 이 아래로 떨어지면 "기계가 프레임을 못 준 판"으로 보고 판정을 건너뛴다.
+## 실측: 통과 회차는 물리 초당 240(엔진 상한), 실패 회차는 64였다. 그 사이를 넉넉히 가른다.
+const SLOW_MACHINE_PHYS_PER_S := 150
+
+## 판정 결과 — 보고서를 쓰기 전에 정해 둔다(위 주석 참조).
+var _pending_exit := 0
 const AutoplayLog := preload("res://tools/dev/autoplay_log.gd")
 const AutoplayMap := preload("res://tools/dev/autoplay_map.gd")
 const AutoplayPilot := preload("res://tools/dev/autoplay_pilot.gd")
@@ -100,6 +107,10 @@ func _run() -> void:
 	await driver.run()
 	# 속도·배율은 여태 stdout에만 있었다 — 보고서에도 싣는다(autoplay_log.speed_rows 주석).
 	_log.elapsed_s = driver.elapsed
+	# **판정을 보고서보다 먼저 낸다.** _exit_code가 skip_reason을 세우는데, 보고서를 먼저 쓰면
+	# 그 행이 영영 안 실린다(2026-09-09 부정 시험에서 잡혔다 — 콘솔에는 SKIP이 찍히는데
+	# 보고서에는 없었다). 판정은 순수 계산이라 순서를 바꿔도 부작용이 없다.
+	_pending_exit = _exit_code(driver)
 	_write_report(driver)
 	print("")
 	print("=== 자동 주행 끝: %s ===" % driver.stop_reason)
@@ -117,7 +128,7 @@ func _run() -> void:
 			]
 		)
 	)
-	get_tree().quit(_exit_code(driver))
+	get_tree().quit(_pending_exit)
 
 
 ## 주행이 왜 그 속도인가 — 프레임을 어디서 기다렸는지 나눠 찍는다.
@@ -186,6 +197,34 @@ func _exit_code(driver: AutoplayDriver) -> int:
 	var need := int(_arg("--require-floors", 0.0))
 	var reached := driver.visited_regions.size()
 	if reached < need:
+		# **느린 판은 게임의 결함이 아니다.** 판정이 시간 예산에 묶여 있어서, 기계가
+		# 프레임을 못 주는 순간에 걸리면 코드와 무관하게 빨개진다(2026-09-09 실측:
+		# 물리 초당 64 · 걸음 초당 10.7로 층 3에서 예산 소진. 같은 커밋이 물리 초당 240인
+		# 판에서는 걸음 6843 · 층 6으로 통과했다).
+		#
+		# 그래서 **잴 수 없었던 판은 실패가 아니라 측정 불가**로 뺀다. 다만 조용히 통과하면
+		# 관문이 사문화되므로 **크게 남긴다** — 콘솔에 경고, 보고서에 사유 행.
+		# 시간 배율이 갇힌 경우(히트스톱 미복구)는 여기 해당하지 않는다: 그쪽은 물리 초당이
+		# 정상인 채로 배율만 낮으므로 「낮은 프레임 %」가 크게 잡히고, 아래 조건에 안 걸린다.
+		var phys_per_s := float(_log.physics_frames) / maxf(driver.elapsed, 0.001)
+		if phys_per_s < SLOW_MACHINE_PHYS_PER_S:
+			push_warning(
+				(
+					"[autoplay] SKIP — 잴 수 없는 판이다: 물리 초당 %.0f (기준 %d 미만). 층 %d/%d"
+					% [phys_per_s, SLOW_MACHINE_PHYS_PER_S, reached, need]
+				)
+			)
+			print(
+				(
+					(
+						"[autoplay] ⚠ SKIP — 기계가 프레임을 못 줬다(물리 초당 %.0f < %d). "
+						+ "층 %d/%d는 판정하지 않는다 — 한가한 때 다시 돌릴 것."
+					)
+					% [phys_per_s, SLOW_MACHINE_PHYS_PER_S, reached, need]
+				)
+			)
+			_log.skip_reason = "물리 초당 %.0f < %d — 측정 불가" % [phys_per_s, SLOW_MACHINE_PHYS_PER_S]
+			return 0
 		push_error("[autoplay] 걸어서 닿은 층 %d < 요구 %d — 층 전환이 막혔다" % [reached, need])
 		return 1
 	return 0

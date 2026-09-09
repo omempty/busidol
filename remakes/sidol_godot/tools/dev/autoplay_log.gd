@@ -36,6 +36,9 @@ var _seen: Dictionary = {}
 
 ## 주행이 끝난 실제 초. 속도 행을 보고서에 남기려면 밖에서 넣어 줘야 한다(로그는 시계가 없다).
 var elapsed_s := 0.0
+## 판정을 건너뛴 사유(비어 있으면 정상 판정). 보고서 맨 위에 크게 싣는다 —
+## 조용히 통과하는 관문은 사문화된 관문이다.
+var skip_reason := ""
 ## 시작 배율보다 **낮은 채로 지나간** 물리 프레임 수. 끝값으로는 못 잰다 —
 ## 주행이 끝나며 배율을 1.0으로 되돌리므로 어떤 회차든 정상으로 보인다.
 var scale_low_frames := 0
@@ -53,20 +56,29 @@ var scale_low_frames := 0
 func speed_rows() -> Array:
 	var span := maxf(elapsed_s, 0.001)
 	var low_pct := 100.0 * float(scale_low_frames) / maxf(float(physics_frames), 1.0)
-	return [
-		"| 경과 | %.1f초 |" % elapsed_s,
-		"| 걸음 초당 | %.1f |" % (float(steps) / span),
-		"| 물리 초당 | %.0f |" % (float(physics_frames) / span),
-		(
-			"| 시간 배율 | 시작 %.2f · 최저 %.2f · 낮은 프레임 %.1f%%%s |"
-			% [
-				scale_seen,
-				scale_min,
-				low_pct,
-				" ← 히트스톱이 되돌아오지 못했다" if low_pct > 20.0 else "",
+	var rows: Array = []
+	if not skip_reason.is_empty():
+		rows.append("| ⚠ 판정 건너뜀 | **%s** — 이 회차는 관문 결과로 쓰지 말 것 |" % skip_reason)
+	(
+		rows
+		. append_array(
+			[
+				"| 경과 | %.1f초 |" % elapsed_s,
+				"| 걸음 초당 | %.1f |" % (float(steps) / span),
+				"| 물리 초당 | %.0f |" % (float(physics_frames) / span),
+				(
+					"| 시간 배율 | 시작 %.2f · 최저 %.2f · 낮은 프레임 %.1f%%%s |"
+					% [
+						scale_seen,
+						scale_min,
+						low_pct,
+						" ← 히트스톱이 되돌아오지 못했다" if low_pct > 20.0 else "",
+					]
+				),
 			]
-		),
-	]
+		)
+	)
+	return rows
 
 
 func summary_rows() -> Array:
