@@ -22,6 +22,9 @@ $gates = @(
     @{ name = "Smoke battle";        args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_battle.tscn");                     fatal = $true }
     @{ name = "Smoke cutscene";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_cutscene.tscn");                   fatal = $true }
     @{ name = "Smoke dialogue";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_dialogue.tscn");                   fatal = $true }
+    # 초상·표정 배선 — 화자 이름으로 초상을 찾고 표정이 다른 칸을 가리키는가. 그림 16종이
+    # 표정 3칸씩 그려져 설치됐는데 대사가 expr을 안 써 0번 칸만 나오던 것을 여기서 잡는다.
+    @{ name = "Smoke portrait";      args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_portrait.tscn");                   fatal = $true }
     @{ name = "Smoke transitions";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_transitions.tscn");                fatal = $true }
     @{ name = "Smoke All-Floors events"; args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_all_floors_events.tscn"); fatal = $true }
     @{ name = "Smoke fx/portrait";   args = @("--headless", "--path", "@PROJ@", "res://tests/smoke_fx.tscn");                        fatal = $true }

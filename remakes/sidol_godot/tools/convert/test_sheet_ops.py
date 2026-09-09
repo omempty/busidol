@@ -570,5 +570,27 @@ check("행 재배치 - 빠진 조각을 조용히 버리지 않는다",
       msg[-90:])
 
 
+# ------------------------------------------------- 행 재배치는 기본값으로 키우지 않는다
+# 왜: refit의 일은 어긋난 배치를 바로잡는 것이지 작게 그려 온 그림을 칸에 꽉 채우는
+# 것이 아니다. 키우면 본체와 그림자 사이 간격까지 함께 늘어나 정렬이 깨진다 —
+# 실측(o_ray_v1): 오류 0건짜리 시트를 1.684배로 키우자 본체 바닥여백이 11 → 18px가
+# 되어 하단 정렬 이탈이 30건 났다. 전 납품 스윕에서 유일하게 나빠진 시트였다.
+a = sheet()
+blob(a, 13, 20, 6, 8, (90, 130, 210))          # 칸(32)보다 한참 작은 그림
+L2 = [{"row": 0, "name": "walk_down", "frames": 1}, {"row": 1, "name": "attack", "frames": 0}]
+im_small, msg_small, _n = so.refit(img(a), CELL, ROWS, COLS, L2, "bottom_center", 1.0, 0)
+bb_s, _s, _r = dc.align_anchor(so._vis_mask(np.asarray(im_small), CELL, 0, 0))
+check("행 재배치 - 채움 1.00에서는 작은 그림을 키우지 않는다",
+      (bb_s["x1"] - bb_s["x0"] + 1) == 6 and (bb_s["y1"] - bb_s["y0"] + 1) == 8,
+      f"{bb_s['x1'] - bb_s['x0'] + 1}x{bb_s['y1'] - bb_s['y0'] + 1}px (원본 6x8)")
+
+# 사람이 명시하면 키운다 — 그 길은 막지 않는다.
+im_big, _m, _n2 = so.refit(img(a), CELL, ROWS, COLS, L2, "bottom_center", 1.5, 0)
+bb_b, _s2, _r2 = dc.align_anchor(so._vis_mask(np.asarray(im_big), CELL, 0, 0))
+check("행 재배치 - 채움>1이면 키운다(사람이 명시한 경우)",
+      (bb_b["x1"] - bb_b["x0"] + 1) > 6,
+      f"{bb_b['x1'] - bb_b['x0'] + 1}px (원본 6px)")
+
+
 print(f"\n[test_sheet_ops] 통과 {_pass} · 실패 {_fail}")
 sys.exit(1 if _fail else 0)

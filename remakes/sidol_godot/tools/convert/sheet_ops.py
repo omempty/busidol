@@ -670,6 +670,13 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
     maxh = max(b[3] - b[1] + 1 for b in boxes.values())
     pad = round(cell * BOTTOM_MARGIN) if align == "bottom_center" else 0
     k = min(cell / maxw, (cell - pad) / maxh) * fk
+    # **기본값으로는 키우지 않는다.** refit의 일은 어긋난 배치를 바로잡는 것이지 작게
+    # 그려 온 그림을 칸에 꽉 채우는 것이 아니다. 키우면 본체와 그림자 사이 간격까지
+    # 함께 늘어나 정렬이 깨진다 — 실측(o_ray_v1): 오류 0건짜리 시트를 1.684배로 키우자
+    # 본체 바닥여백이 11px → 18px가 되어 하단 정렬 이탈이 30건 났다.
+    # 키우는 것은 사람이 fill>1로 명시할 때만 한다.
+    if fk <= 1.0:
+        k = min(k, 1.0)
 
     if only is not None:
         # 나머지 행은 입력 그대로 — 다시 앉힐 행의 띠만 비운다.

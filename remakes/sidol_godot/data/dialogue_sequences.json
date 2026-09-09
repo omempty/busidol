@@ -78,7 +78,8 @@
         },
         {
           "speaker": "화공과 교수",
-          "text": "@t2"
+          "text": "@t2",
+          "expr": "surprised"
         },
         {
           "speaker": "주인공",
@@ -142,7 +143,8 @@
       "steps": [
         {
           "speaker": "멍청 조교",
-          "text": "@c107"
+          "text": "@c107",
+          "expr": "confused"
         },
         {
           "speaker": "멍청 조교",
@@ -159,7 +161,8 @@
       "steps": [
         {
           "speaker": "여학생",
-          "text": "@c112"
+          "text": "@c112",
+          "expr": "worried"
         }
       ]
     },
@@ -181,7 +184,8 @@
         },
         {
           "speaker": "여학생",
-          "text": "@c205"
+          "text": "@c205",
+          "expr": "worried"
         }
       ]
     },
@@ -189,7 +193,8 @@
       "steps": [
         {
           "speaker": "수위 아저씨",
-          "text": "@c100"
+          "text": "@c100",
+          "expr": "mighty"
         }
       ]
     },
@@ -227,7 +232,8 @@
       "steps": [
         {
           "speaker": "식당 아가씨",
-          "text": "@c001"
+          "text": "@c001",
+          "expr": "happy"
         },
         {
           "op": "shop",
@@ -243,19 +249,19 @@
     },
     "tutor_after_blast": {
       "steps": [
-        { "speaker": "멍청 조교", "text": "@c163" }
+        { "speaker": "멍청 조교", "text": "@c163", "expr": "confused" }
       ]
     },
     "tutor_blackout": {
       "_comment": "F1 정전 중 조교 대사(백로그 §1.3)",
       "steps": [
-        { "speaker": "멍청 조교", "text": "@c119" }
+        { "speaker": "멍청 조교", "text": "@c119", "expr": "apologetic" }
       ]
     },
     "tutor_power": {
       "_comment": "F1 복구 후 조교 대사 — Q_F1_BLAST 전에는 이쪽이 이긴다",
       "steps": [
-        { "speaker": "멍청 조교", "text": "@c120" }
+        { "speaker": "멍청 조교", "text": "@c120", "expr": "apologetic" }
       ]
     },
     "tutor_after_blast_repeat": {
@@ -295,7 +301,7 @@
     },
     "guard_idle_blast_repeat": {
       "steps": [
-        { "speaker": "수위 아저씨", "text": "@c171" }
+        { "speaker": "수위 아저씨", "text": "@c171", "expr": "mighty" }
       ]
     },
     "guard_idle_f2": {
@@ -305,7 +311,7 @@
     },
     "guard_idle_f3": {
       "steps": [
-        { "speaker": "수위 아저씨", "text": "@c173" }
+        { "speaker": "수위 아저씨", "text": "@c173", "expr": "laughing" }
       ]
     },
     "walker_f1_repeat": {
@@ -417,7 +423,7 @@
     },
     "f2_rescue_girl_f2_repeat": {
       "steps": [
-        { "speaker": "여학생", "text": "@c258" }
+        { "speaker": "여학생", "text": "@c258", "expr": "determined" }
       ]
     },
     "f0_librarian_repeat_1": {
@@ -447,7 +453,7 @@
     },
     "guard_f0_repeat_2": {
       "steps": [
-        { "speaker": "수위 아저씨", "text": "@c016" }
+        { "speaker": "수위 아저씨", "text": "@c016", "expr": "laughing" }
       ]
     },
     "guard_f0_f3": {
@@ -648,7 +654,7 @@
     },
     "cafeteria_girl_f0_disk": {
       "steps": [
-        { "speaker": "식당 아가씨", "text": "@c648" },
+        { "speaker": "식당 아가씨", "text": "@c648", "expr": "cheerful" },
         { "op": "shop" }
       ]
     }
