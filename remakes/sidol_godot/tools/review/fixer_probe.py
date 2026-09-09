@@ -122,6 +122,19 @@ class Probe:
                      if(x<a)a=x; if(x>c)c=x; if(y<b)b=y; if(y>e)e=y; }
                    return c<0?null:[a,b,c,e];}""", [x0, y0, x1, y1])
 
+    def click(self, selector, **kw):
+        """버튼이 든 탭을 먼저 연 뒤 누른다.
+
+        우측 패널이 탭으로 나뉘면서 다른 탭의 버튼은 화면에 없다 — 사람도 탭을 눌러
+        옮긴 뒤에 누른다. 시험도 그렇게 해야 실제 조작을 재는 것이 된다.
+        """
+        self.pg.evaluate(
+            """sel => { const el = document.querySelector(sel);
+                        const sec = el && el.closest('section[data-tab]');
+                        if (sec && typeof showTab === 'function') showTab(sec.dataset.tab); }""",
+            selector)
+        self.pg.click(selector, **kw)
+
     def drag(self, a, b, steps=1, button="left", modifiers=None):
         """steps=1이면 중간 이벤트가 없는 '순간이동' 드래그 — 보간이 없으면 여기서 끊긴다."""
         m = self.pg.mouse
@@ -259,7 +272,7 @@ def run(shots: bool) -> int:
         # 행1의 셀을 고르고 행 전체를 8px 아래로.
         sx, sy = p.to_screen(60, 160)
         pg.mouse.click(sx, sy)
-        pg.click("[data-op='rowdown']", modifiers=["Shift"])
+        p.click("[data-op='rowdown']", modifiers=["Shift"])
         pg.eval_on_selector("[data-op='rowdown']", "e=>e.blur()")
         held = pg.evaluate("floating && [floating.kind, floating.dx, floating.dy, floating.px]")
         p.ok("행 이동은 확정 전까지 띄운 채로 있다", held == ["row", 0, 8, 90 * 40],
@@ -278,7 +291,7 @@ def run(shots: bool) -> int:
              f"{row0_before} → {row0_after}")
 
         # 11) 왕복 무손실 — ↓8 뒤 ↑8이면 원본 그대로여야 한다(예전엔 잘려 안 돌아왔다).
-        pg.click("[data-op='rowup']", modifiers=["Shift"])
+        p.click("[data-op='rowup']", modifiers=["Shift"])
         pg.eval_on_selector("[data-op='rowup']", "e=>e.blur()")
         pg.keyboard.press("Enter")
         pg.wait_for_timeout(150)
@@ -287,7 +300,7 @@ def run(shots: bool) -> int:
 
         # 12) Esc — 확정 안 한 이동은 통째로 없던 일이 된다.
         for _ in range(3):
-            pg.click("[data-op='rowright']")
+            p.click("[data-op='rowright']")
         pg.eval_on_selector("[data-op='rowright']", "e=>e.blur()")
         pg.keyboard.press("Escape")
         pg.wait_for_timeout(150)
@@ -297,7 +310,7 @@ def run(shots: bool) -> int:
         # 13) 되돌리기가 **제스처 단위**인가 — 5번 눌러도 Ctrl+Z 한 번이면 원상.
         undo_before = pg.evaluate("undoStack.length")
         for _ in range(5):
-            pg.click("[data-op='rowdown']")
+            p.click("[data-op='rowdown']")
         pg.eval_on_selector("[data-op='rowdown']", "e=>e.blur()")
         pg.keyboard.press("Enter")
         pg.wait_for_timeout(150)
@@ -326,7 +339,7 @@ def run(shots: bool) -> int:
         # 15) 잘리는 경우에는 **수치로 말한다** — 캔버스 밖으로 크게 밀어 본다.
         pg.evaluate("$('#log').innerHTML=''")
         for _ in range(30):
-            pg.click("[data-op='rowdown']", modifiers=["Shift"])
+            p.click("[data-op='rowdown']", modifiers=["Shift"])
         pg.eval_on_selector("[data-op='rowdown']", "e=>e.blur()")
         pg.keyboard.press("Enter")
         pg.wait_for_timeout(200)
@@ -394,7 +407,7 @@ def run(shots: bool) -> int:
         p.drag((145, 15), (195, 65), steps=3)          # r0 덩어리를 집고
         sx, sy = p.to_screen(30, 160)                  # r1c0 칸을 선택 대상으로
         pg.evaluate("sel={r:1,c:0}")
-        pg.click("[data-op='fitcell']")
+        p.click("[data-op='fitcell']")
         pg.keyboard.press("Enter")
         # 측정 구간을 y205 아래로 잡는다 — 이 시트에는 r1c0에 원래 덩어리(y110~199)가
         # 있어서 칸 전체를 재면 그것과 합쳐진 경계상자가 나온다(실제로 그렇게 헛짚었다).
@@ -513,7 +526,7 @@ def run_server_mode() -> int:
                 const s=new Set(); for(let i=0;i<d.length;i+=4) if(d[i+3]>8) s.add((d[i]<<16)|(d[i+1]<<8)|d[i+2]);
                 return s.size;}""")
             pg.select_option("#pixlevel", "8")
-            pg.click("[data-op='pixelize']")
+            p.click("[data-op='pixelize']")
             pg.wait_for_function("!document.querySelector('#autofix').disabled", timeout=20000)
             pg.wait_for_timeout(300)
             blocky = pg.evaluate("""()=>{const w=work.width,h=work.height,

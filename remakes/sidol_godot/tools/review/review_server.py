@@ -14,6 +14,7 @@ stdlib 전용(http.server + subprocess). 프로젝트 루트를 정적 서빙하
                                                file 없이 asset만으로도 된다(그림 생성 전)
   POST /api/fixer/op   {op,params,png}         시트 픽셀 연산(정본: tools/convert/sheet_ops.py)
   POST /api/fixer/save {cat,file,png,mode}     편집 결과를 다음 버전으로 재납품
+  POST /api/fixer/reveal {cat,file}            그 그림을 탐색기에서 선택된 채로 띄운다
 
 반려 시 10_submitted/_feedback/<cat>/<file>.md 에 재요청 패키지가 생성된다:
   원본 의뢰 prompt.md + 유저 반려 사항 + 자동 검증 결과 — 이 파일과 원본 첨부물을
@@ -736,6 +737,39 @@ def fixer_webprompt(cat: str, fname: str, asset: str = "") -> dict:
     }
 
 
+def fixer_reveal(payload: dict) -> dict:
+    """지금 편집 중인 파일을 탐색기에서 **선택된 채로** 띄운다.
+
+    셀 편집기로 못 하는 손질은 외부 툴(포토샵·Aseprite)로 하게 되는데, 그때마다
+    탐색기에서 경로를 따라 들어가는 것이 번거롭다. 서버는 127.0.0.1 전용이라
+    이 정도 조작은 안전하다 — 다만 경로는 safe_path로 LLM 폴더 안에 가둔다.
+    """
+    cat = payload.get("cat", "")
+    if cat not in CATEGORIES:
+        raise ValueError(f"알 수 없는 카테고리: {cat}")
+    fname = os.path.basename(payload.get("file", ""))
+    if not fname.lower().endswith(".png"):
+        raise ValueError("파일명이 .png가 아니다")
+    path = ""
+    for parts in (("10_submitted", cat, fname),
+                  ("10_submitted", "_rejected", cat, fname),
+                  ("20_processed", cat, fname)):
+        cand = safe_path(*parts)
+        if os.path.exists(cand):
+            path = cand
+            break
+    if not path:
+        raise ValueError(f"{fname}: 파일을 찾을 수 없다(아직 저장 안 했나?)")
+    if sys.platform.startswith("win"):
+        # /select 는 그 파일을 **고른 채로** 창을 연다 — 폴더만 열면 다시 찾아야 한다.
+        subprocess.Popen(["explorer", "/select,", os.path.normpath(path)])
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", "-R", path])
+    else:
+        subprocess.Popen(["xdg-open", os.path.dirname(path)])
+    return {"ok": True, "path": path, "detail": f"탐색기에서 열었다: {path}"}
+
+
 def fixer_save(payload: dict) -> dict:
     cat = payload.get("cat", "")
     if cat not in CATEGORIES:
@@ -843,7 +877,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         if urlparse(self.path).path not in ("/api/review", "/api/batch", "/api/fixer/save",
-                                            "/api/fixer/op", "/api/fixer/waive"):
+                                            "/api/fixer/op", "/api/fixer/waive",
+                                            "/api/fixer/reveal"):
             self._json(404, {"error": "not found"})
             return
         try:
@@ -853,6 +888,8 @@ class Handler(SimpleHTTPRequestHandler):
                 self._json(200, fixer_op(payload))
             elif urlparse(self.path).path == "/api/fixer/waive":
                 self._json(200, fixer_waive(payload))
+            elif urlparse(self.path).path == "/api/fixer/reveal":
+                self._json(200, fixer_reveal(payload))
             elif urlparse(self.path).path == "/api/fixer/save":
                 self._json(200, fixer_save(payload))
             elif urlparse(self.path).path == "/api/batch":
