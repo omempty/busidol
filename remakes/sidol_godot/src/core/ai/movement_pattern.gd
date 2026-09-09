@@ -14,8 +14,18 @@ enum Kind {
 	TELEPORT,  # N초마다 반경 내 랜덤 위치로 점프 (Sparker)
 	AMBUSHER,  # 정지 위장 → 플레이어 인접 시 폭발적 3셀 공격 (Rogue Vending)
 	PHASER,  # 벽 통과(충돌 무시), 느린 직진 (Null Pointer)
-	RANGED,  # 거리 유지 + 발사체 (CRT Golem)
 }
+
+## RANGED("거리 유지 + 발사체")를 뺀 이유 — 2026-09-09 실측:
+## 데이터 배정 **0건**(monsters.json floors 20건 중 없음), get_defaults가 주던
+## preferred_distance·projectile_interval을 **읽는 코드 0곳**, 그리고 필드에는 발사체 수단
+## 자체가 없다(투사체는 battle/dodge_phase.gd 전용 = 보스 전투 화면). 즉 이름만 있는 선언이라
+## 배정되는 순간 조용히 wander로 떨어지는 PATROL·PULSE 사고와 같은 자리였다.
+## 되살리려면 필드용 투사체 노드·충돌·연출부터 만들어야 한다 — 그때 enum에 다시 넣는다.
+##
+## 참고: data/monster_anim_specs.json의 crt_overseer가 아직 `"pattern": "ranged"`를 달고 있다.
+## 그 파일은 .gd가 읽지 않는 **아트 의뢰용 스펙**이고 이미 납품된 종이라 값을 건드리지 않았다.
+## 언젠가 그 종을 monsters.json 층에 올리면 ActorProbe.check_pattern_coverage가 FAIL로 잡는다.
 
 
 ## 패턴별 텔레그래프 정보 — UI/이펙트 표시용
@@ -47,7 +57,6 @@ const NAME_TO_KIND := {
 	"teleport": Kind.TELEPORT,
 	"ambusher": Kind.AMBUSHER,
 	"phaser": Kind.PHASER,
-	"ranged": Kind.RANGED,
 }
 ## 행동 주기 기본값(초) — 한 걸음 사이 간격. 패턴 성격에 맞춘 엔진측 튜닝값이며
 ## monsters.json의 params.act_interval로 종별 오버라이드할 수 있다.
@@ -123,8 +132,6 @@ static func get_defaults(kind: int) -> Dictionary:
 			}
 		Kind.PHASER:
 			return {"speed_divisor": 3, "act_interval": 0.55}  # 느린 직진
-		Kind.RANGED:
-			return {"preferred_distance": 4, "projectile_interval": 5}
 		_:
 			return {}
 

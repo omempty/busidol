@@ -58,14 +58,21 @@
 전자라면 `export_player_remaster_package.py`·`export_character_remaster_packages.py`와 같은 결로
 `export_battle_cut_remaster_packages.py`를 만들면 된다(공용 헬퍼는 이미 다 있다).
 
-### 1.4 확인 대기 중인 결정들
-- **`sys_builder` 크기**: 지금 계약이 192px(6타일)로 다른 보스(128px)의 1.5배다.
-  과하면 `sheet_cell`을 128로 되돌리면 된다 — **아직 납품 전이라 비용 0.**
-- **`RANGED` 이동 패턴**: enum·기본값에 선언만 있고 데이터에서 안 쓴다.
-  구현하거나 enum에서 빼야 한다(지금 관문은 "데이터가 쓰는 패턴"만 보므로 통과한다).
-- **`idle_anim: "squash"`**: `data/maps/npcs_f*.json` 11개 전부에 있는데 **읽는 코드가 0곳**이고,
-  그 값(`squash`)은 이 배율에서 도트를 끓게 해 못 쓴다(§2.4). 계약을 `"bob"`으로 바꾸고
-  `field.gd`에서 `NpcEntity`로 넘기는 것이 맞다 — 데이터 계약 변경이라 확인이 필요하다.
+### 1.4 확인 대기 중인 결정들 — **2026-09-09 전부 확정**
+- ~~**`sys_builder` 크기**~~ → **192px 유지**. 근거: `monster_anim_specs.json:990`의
+  `is_final_boss: true`를 가진 **유일한 종**이고(5층 결전, 탄막 dodge_phase도 이 종 전용),
+  192÷192 = **정확히 1.0** 배율이라 사다리(`install_delivery.py:63`)에 그대로 맞아 리샘플이 0이다.
+  128로 낮추면 결전 보스가 다른 보스와 같은 크기가 된다. 의뢰문 크기 계산은 이미 192 기준으로
+  고쳐져 있어(`export_monster_packages.py:181`) 추가 비용도 없다. **데이터 변경 없음.**
+- ~~**`RANGED` 이동 패턴**~~ → **enum에서 제거**(`movement_pattern.gd`, 근거 주석 동봉).
+  실측: 데이터 배정 **0건**, `preferred_distance`/`projectile_interval`을 읽는 코드 **0곳**,
+  필드에 발사체 수단 자체가 없다(투사체는 `battle/dodge_phase.gd` 전용). 되살리려면 필드용
+  투사체부터 만들어야 한다. `monster_anim_specs.json`의 crt_overseer는 아트 스펙이라 그대로 뒀고,
+  층에 올리는 순간 `check_pattern_coverage`가 잡는다.
+- ~~**`idle_anim: "squash"`**~~ → **계약을 `bob`/`none` 둘로 확정하고 배선했다.**
+  데이터 11건을 `bob`으로 바꿨고(`npcs_f0~f4.json`), `field.gd`가 `NpcEntity.set_idle_anim()`으로
+  넘기며, `ActorProbe.check_idle_anim_coverage`(world_audit)와 `smoke_field_test.gd` §5가
+  다시 죽는 것을 막는다. 실측: world_audit `[ok] NPC 11명이 쓰는 1종 전부 구현됨`.
 - **크기 정책**: 잡몹 64px / 주인공·NPC 85px / 보스 128px로 정리했고 유저가 "적당하다"고 했다.
   주인공만 비정수 배율(0.6667)인데 2/3은 3줄→2줄의 규칙적 축소라 도트는 고르게 떨어진다.
 
