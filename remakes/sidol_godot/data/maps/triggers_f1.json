@@ -14,35 +14,25 @@
     },
     {
       "id": "f1_sopo",
-      "type": "zone",
-      "cells": [
-        [
-          163,
-          18
-        ]
-      ],
+      "type": "interact",
+      "cells": [[157, 15], [158, 15], [159, 15], [157, 16], [158, 16], [159, 16]],
       "done_flag": "Q_F1_SOPO",
       "requires_flag": "Q_F1_START",
       "action": {
         "cutscene": "f1_sopo"
       },
-      "_comment": "교무과 우편물실 — F1 북동 사무실 열에서 가장 큰 방(x148~178 y14~23, 250칸). cell_probe f1 실측: 설 수 있음."
+      "_comment": "교무과 우편물실 — F1 북동 사무실 열에서 가장 큰 방(x148~178 y14~23, 250칸). cell_probe f1 실측: 설 수 있음. 2026-09-09: 빈 좌표를 밟는 대신 우편함(f1_mail_lockers)을 조사하면 나오게 바꿨다(zone→interact, cells=소품 몸 셀). 정렬은 PropsProbe.check_event_alignment가 잰다."
     },
     {
       "id": "f1_gas",
-      "type": "zone",
-      "cells": [
-        [
-          12,
-          32
-        ]
-      ],
+      "type": "interact",
+      "cells": [[11, 30], [12, 30], [13, 30], [11, 31], [12, 31], [13, 31]],
       "done_flag": "Q_F1_GAS",
       "requires_flag": "Q_F1_START",
       "action": {
         "cutscene": "f1_gas"
       },
-      "_comment": "창고 — F1 서쪽 외딴 방(x1~24 y29~36). cell_probe f1 실측: 설 수 있음."
+      "_comment": "창고 — F1 서쪽 외딴 방(x1~24 y29~36). cell_probe f1 실측: 설 수 있음. 2026-09-09: 같은 이유로 사물함(f1_storage_lockers) 조사로 바꿨다(zone→interact)."
     },
     {
       "id": "f1_blackout_sopo",

@@ -96,6 +96,11 @@ func _audit_floor(floor_no: int) -> void:
 	else:
 		RenderProbe.check_layers(_rep, renderer, rt)
 
+	# 소품 덧층 — 놓인 것이 실제로 조사되고, 이벤트가 그 앞에서 나는가.
+	var props: PropsLayer = field.props_layer()
+	PropsProbe.check_inspect_reach(_rep, rt, props, player.mover)
+	PropsProbe.check_event_alignment(_rep, floor_no, rt, props, player.mover)
+
 	var enemies: Array = field.enemy_manager.enemies if field.enemy_manager != null else []
 	ActorProbe.check_sheets(_rep, field.npcs, enemies)
 	ActorProbe.check_pose_coverage(_rep, player, enemies)

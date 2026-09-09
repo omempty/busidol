@@ -359,6 +359,22 @@ func _physics_process(_delta: float) -> void:
 			_open_chest(chest)
 		return
 
+	# 소품 조사 — **상자·원작 마커 다음 순위**. 소품 ATT는 0/1/2뿐이라 앞의 판정과 겹치지
+	# 않지만, 알약은 하나뿐이라 순서가 곧 우선순위다. 원작에 있던 것이 먼저 잡혀야 한다.
+	var prop_cell := _prop_in_front()
+	if prop_cell.x >= 0:
+		var prop := _props.prop_at(prop_cell)
+		_prompt.show_at(
+			"%s   SPACE" % String(prop.get("name_ko", "")),
+			Vector2(prop_cell.x + 0.5, prop_cell.y) * MapDefinition.TILE_PX - Vector2(0, 26)
+		)
+		# 어느 소품인지 몸 전체를 비춘다 — 그림이 아직 없어서(obj 아틀라스 미납품)
+		# 지금은 이 하이라이트가 소품의 유일한 시각 단서다.
+		_focus.show_cells(PropsLayer.cells_of(prop))
+		if interact_edge:
+			_start_inspect(prop)
+		return
+
 	# 계단 행선 — 앵커 위에 서면 윗층/아랫층·목적지를 알약에 (원작 타일은 동결이라 런타임 표시).
 	if gate != null:
 		var stair_label := gate.anchor_label(player.mover.grid_pos, GameState.current_floor)
@@ -464,6 +480,41 @@ func _talk_in_front() -> Vector2i:
 		if TalkTargets.has(runtime.attr_at(c)):
 			return c
 	return Vector2i(-9, -9)
+
+
+## 정면의 **조사 가능한** 소품 칸. 규약은 _talk_in_front와 같다(실패는 (-9,-9)).
+##
+## "조사 가능한"이 조건인 이유: requires_flag가 안 선 소품은 대사가 지금 상태와 어긋나므로
+## 대상에서 뺀다(PropsLayer.inspect_steps 주석). 알약이 떴는데 눌러도 아무 말이 없는 것보다
+## 애초에 안 뜨는 쪽이 낫다.
+func _prop_in_front() -> Vector2i:
+	if _props == null:
+		return Vector2i(-9, -9)
+	for c in front_cells():
+		var prop := _props.prop_at(c)
+		if prop.is_empty():
+			continue
+		if PropsLayer.inspect_steps(prop, GameState.flags).is_empty():
+			continue
+		return c
+	return Vector2i(-9, -9)
+
+
+## 소품 조사 — 원작 마커 대화(_start_talk)와 **같은 길**을 쓴다.
+## 끝나는 처리도 그쪽과 같다: _trigger_seq_active를 세우면 _on_dialogue_finished가 이동을 되돌린다.
+func _start_inspect(prop: Dictionary) -> void:
+	var steps: Array = PropsLayer.inspect_steps(prop, GameState.flags)
+	if steps.is_empty():
+		return
+	player.mover.enabled = false
+	_trigger_seq_active = true
+	_prompt.visible = false
+	dialogue_box.start(StringName("prop_%s" % String(prop.get("id", "?"))), steps)
+
+
+## 이 층의 소품 덧층 — 관문(world_audit)이 조사 도달성을 재는 데 쓴다.
+func props_layer() -> PropsLayer:
+	return _props
 
 
 ## 원작 마커 대화 시작 — 대사는 @t 원문 그대로(TalkTargets가 반복 횟수를 센다).

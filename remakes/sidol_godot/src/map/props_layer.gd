@@ -101,6 +101,30 @@ static func cells_of(prop: Dictionary) -> Array[Vector2i]:
 	return out
 
 
+## 조사(SPACE) 대사를 대사창 스텝으로 옮긴다. 형식은 TalkTargets.steps_for와 같은
+## `{speaker, text}` — 두 벌로 만들면 "마커는 되는데 소품은 다르게 뜬다"가 생긴다.
+##
+## `inspect.requires_flag` 규약(2026-09-09 확정): **그 플래그가 서 있을 때만 이 대사를 쓴다.**
+## f1_archive_shelf의 두 줄이 정전(Q_F1_BLACKOUT)을 전제로 쓰여 있어서다 — 불이 켜져 있는데
+## "정전이라 안 보인다"를 띄우면 화면과 어긋난 거짓말이 된다. 조건이 안 맞으면 빈 배열을
+## 돌려주고, 부르는 쪽이 그 소품을 조사 대상에서 뺀다(알약도 안 띄운다).
+## 대체 대사를 지어내지 않는 쪽을 택했다 — 없는 문장을 코드가 만들면 원작 고증이 흐려진다.
+static func inspect_steps(prop: Dictionary, flags: Dictionary) -> Array:
+	var ins: Variant = prop.get("inspect", {})
+	if typeof(ins) != TYPE_DICTIONARY:
+		return []
+	var need := String((ins as Dictionary).get("requires_flag", ""))
+	if not need.is_empty() and not flags.has(need):
+		return []
+	var speaker := String(prop.get("name_ko", ""))
+	var steps: Array = []
+	for line: Variant in (ins as Dictionary).get("lines", []):
+		var text := String(line)
+		if not text.is_empty():
+			steps.append({"speaker": speaker, "text": text})
+	return steps
+
+
 ## 소품이 지금 열려 있는가 — `state.open_flag`가 서 있으면 열림, 아니면 `state.default`.
 ## 상태가 없는 소품(책상 따위)은 언제나 닫힘으로 답한다.
 static func is_open(prop: Dictionary, flags: Dictionary) -> bool:

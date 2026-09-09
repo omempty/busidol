@@ -184,6 +184,86 @@ func _ready() -> void:
 		probe.set_idle_anim(keep)
 		print("[smoke_field] idle_anim 계약 %d명 확인(%s)" % [field.npcs.size(), keep])
 
+	# --- 6) 소품 조사(SPACE)가 데이터에서 대사창까지 이어지는가 ---
+	#
+	# 2026-09-09까지 props_f1.json의 inspect 5개와 PropsLayer.prop_at()은 **부르는 곳이 0곳**이었다.
+	# 정상 경로 하나로는 다시 죽는 것을 못 막는다 — requires_flag 부정 경로를 같이 세운다.
+	var layer: PropsLayer = field.props_layer()
+	if layer == null or layer.props.is_empty():
+		failures.append("f%d 소품 덧층이 비었다" % GameState.current_floor)
+	else:
+		var open_prop: Dictionary = {}
+		var gated_prop: Dictionary = {}
+		for prop: Dictionary in layer.props:
+			var ins: Dictionary = prop.get("inspect", {})
+			var need := String(ins.get("requires_flag", ""))
+			if need.is_empty():
+				if open_prop.is_empty():
+					open_prop = prop
+			elif gated_prop.is_empty():
+				gated_prop = prop
+
+		# 부정 시험: requires_flag가 안 선 소품은 **조사 대상에서 빠진다**(알약도 안 뜬다).
+		if not gated_prop.is_empty():
+			var need: String = String(
+				(gated_prop.get("inspect", {}) as Dictionary)["requires_flag"]
+			)
+			var g_stand := PropsProbe.stand_that_sees(rt, player.mover, gated_prop)
+			if g_stand.x < 0:
+				failures.append("소품 %s 앞에 설 자리가 없다" % gated_prop.get("id", "?"))
+			else:
+				GameState.flags[need] = true
+				player.mover.grid_pos = g_stand
+				var g_facing := &""
+				for f: StringName in [&"up", &"down", &"left", &"right"]:
+					player.facing = f
+					if field._prop_in_front().x >= 0:
+						g_facing = f
+						break
+				if g_facing.is_empty():
+					failures.append("%s: 플래그를 세워도 조사 대상이 안 된다" % gated_prop.get("id", "?"))
+				else:
+					GameState.flags.erase(need)
+					player.facing = g_facing
+					if field._prop_in_front().x >= 0:
+						failures.append("%s: %s가 없는데도 조사된다" % [gated_prop.get("id", "?"), need])
+					if not PropsLayer.inspect_steps(gated_prop, {}).is_empty():
+						failures.append("%s: 플래그 없이 대사가 만들어진다" % gated_prop.get("id", "?"))
+
+		# 정상 경로: 앞에 서면 잡히고 대사창이 실제로 열린다.
+		if open_prop.is_empty():
+			failures.append("requires_flag 없는 소품이 하나도 없다")
+		else:
+			var stand := PropsProbe.stand_that_sees(rt, player.mover, open_prop)
+			if stand.x < 0:
+				failures.append("소품 %s 앞에 설 자리가 없다" % open_prop.get("id", "?"))
+			else:
+				player.mover.grid_pos = stand
+				var found := false
+				for f: StringName in [&"up", &"down", &"left", &"right"]:
+					player.facing = f
+					if field._prop_in_front().x >= 0:
+						found = true
+						break
+				if not found:
+					failures.append("소품 %s 앞에 섰는데 못 잡는다(@%s)" % [open_prop.get("id", "?"), stand])
+				else:
+					field._start_inspect(open_prop)
+					await get_tree().process_frame
+					if not field.dialogue_box.is_open:
+						failures.append("소품 조사했는데 대사창이 안 열린다")
+					else:
+						print(
+							(
+								"[smoke_field] 소품 조사 OK — %s @%s %d줄"
+								% [
+									open_prop.get("id", "?"),
+									stand,
+									PropsLayer.inspect_steps(open_prop, GameState.flags).size()
+								]
+							)
+						)
+
 	_finish(failures)
 
 
