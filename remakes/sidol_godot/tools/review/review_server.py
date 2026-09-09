@@ -10,7 +10,8 @@ stdlib 전용(http.server + subprocess). 프로젝트 루트를 정적 서빙하
   GET  /api/fixer/contract?cat&file[&asset]    셀 편집기용 그리드 계약(셀 크기·행별 프레임)
   GET  /api/fixer/assets[?cat=monsters]        계약이 있는 에셋 목록(편집기 [계약] 드롭다운)
   GET  /api/fixer/files[?cat=monsters]         셀 편집기 파일 선택기 목록(대기·반려·승인본)
-  GET  /api/fixer/webprompt?cat&file           웹 챗용 프롬프트(공통 + 시트 상세)
+  GET  /api/fixer/webprompt?cat&file|asset     웹 챗용 프롬프트(공통 + 시트 상세)
+                                               file 없이 asset만으로도 된다(그림 생성 전)
   POST /api/fixer/op   {op,params,png}         시트 픽셀 연산(정본: tools/convert/sheet_ops.py)
   POST /api/fixer/save {cat,file,png,mode}     편집 결과를 다음 버전으로 재납품
 
@@ -678,16 +679,23 @@ def fixer_op(payload: dict) -> dict:
     }
 
 
-def fixer_webprompt(cat: str, fname: str) -> dict:
+def fixer_webprompt(cat: str, fname: str, asset: str = "") -> dict:
     """첨부 없이 웹 챗에 붙여넣는 프롬프트 — 공통 규약 + 이 시트 상세.
 
     편집기에서 바로 복사하려고 있는 자리다. 텍스트는 `tools/convert/web_prompt.py`가
     스펙에서 굽는다(손으로 쓴 허브 문서가 규격과 어긋나 있던 전례가 있다).
+
+    ## asset을 따로 받는 이유 (2026-09-09)
+
+    예전에는 파일명에서만 asset_id를 뽑았다. 그래서 **아직 그림이 없는 에셋**은
+    프롬프트를 볼 수 없었다 — 정작 순서는 "프롬프트를 받아 그림을 만들어 온다"인데
+    첫 단계가 막혀 있던 셈이다. `/api/fixer/contract`가 이미 같은 이유로 asset을
+    받고 있으므로 여기도 맞춘다. asset이 오면 그것이 우선이다.
     """
     sys.path.insert(0, os.path.join(ROOT, "tools", "convert"))
     import web_prompt  # noqa: PLC0415 — 지연 임포트(PIL 계열 의존)
 
-    asset_id = asset_id_of(fname)
+    asset_id = asset or asset_id_of(fname)
     return {
         "asset_id": asset_id,
         "common": web_prompt.common_prompt(),
@@ -780,10 +788,12 @@ class Handler(SimpleHTTPRequestHandler):
             q = parse_qs(parsed.query)
             cat = q.get("cat", [""])[0]
             fname = os.path.basename(q.get("file", [""])[0])
-            if cat not in CATEGORIES or not fname:
+            asset = os.path.basename(q.get("asset", [""])[0])
+            # 둘 중 **하나만** 있어도 된다 — 그림이 없는 에셋도 프롬프트가 나와야 한다.
+            if cat not in CATEGORIES or not (fname or asset):
                 self._json(400, {"error": "bad cat/file"})
                 return
-            self._json(200, fixer_webprompt(cat, fname))
+            self._json(200, fixer_webprompt(cat, fname, asset))
         elif parsed.path == "/api/fixer/files":
             q = parse_qs(parsed.query)
             self._json(200, {"files": fixer_files(q.get("cat", [""])[0]),

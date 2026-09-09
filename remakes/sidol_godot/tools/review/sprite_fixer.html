@@ -293,7 +293,7 @@
         </div>
         <div class="row hint">공통 규약은 대화 맨 앞에 <b>한 번만</b> — 이어지는 시트는 상세만 붙이면 된다.
           받은 그림이 크기가 안 맞으면 [크기 자동 조절]로 계약에 맞춘다.</div>
-        <pre id="webprompt">(파일을 열면 여기에 생성된다)</pre>
+        <pre id="webprompt">(카테고리와 [계약]을 고르면 여기에 생성된다 — 그림이 없어도 된다)</pre>
       </details>
     </section>
 
@@ -398,6 +398,17 @@
       </div>
       <div class="row">
         <button data-op="scale">계약 크기로 리샘플(nearest)</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>영역으로 집어 옮기기 <span class="meta" id="regioninfo">선택 도구로 드래그</span></h2>
+      <div class="row hint">행도 셀도 아닌 덩어리를 옮길 때 쓴다. <b>선택 도구(V)에서 드래그</b>하면
+        그 사각형 안의 그림을 집어 든다. 든 채로 <b>드래그·방향키</b>로 옮기고
+        <b>Enter</b> 확정 / <b>Esc</b> 취소. (Shift+드래그는 예전대로 사각 지우기)</div>
+      <div class="row">
+        <button data-op="fitcell">선택 칸에 앉히기</button>
+        <span class="hint">든 그림을 그 칸의 가로 중앙·바닥 접지로 옮긴다</span>
       </div>
     </section>
 
@@ -765,7 +776,7 @@ async function openServerFile(cat, file, opts) {
   u.searchParams.set("cat", cat); u.searchParams.set("file", file);
   history.replaceState(null, "", u);
   await applyContract(cat, file);
-  loadWebPrompt(cat, file);          // 웹 프롬프트는 그림과 무관하게 병렬로 받는다
+  loadWebPrompt(cat, file, ASSET);   // 웹 프롬프트는 그림과 무관하게 병렬로 받는다
   const ok = await loadFromCandidates(cat, file);
   if (ok) { syncPickers(); redraw(); await autoPrep(); }
   return ok;
@@ -917,6 +928,7 @@ function redraw() {
   vctx.clearRect(0, 0, view.width, view.height);
   vctx.drawImage(work, 0, 0, view.width, view.height);
   drawFloat(z);
+  drawMarquee(z);
   drawOnion(z);
   if ($("#showgrid").checked && contract.cell) drawGrid(z);
   updateStats();
@@ -947,6 +959,20 @@ function drawOnion(z) {
  * 띄워 놓은 이동 대상 — 아직 work에 없다. **격자 밖으로 나가 있어도 그대로 보여 준다.**
  * 자르는 것은 확정할 때 캔버스 경계로 딱 한 번이고, 그전까지는 눈으로 보고 되돌릴 수 있다.
  */
+/** 드래그 중인 영역 선택 사각형(확정 전 미리보기). */
+let marquee = null;
+/** 든 영역을 마우스로 끌고 있는 중인가 — {x, y} 시작점(이미지 좌표). */
+let regionDrag = null;
+
+function drawMarquee(z) {
+  if (!marquee) return;
+  vctx.save();
+  vctx.strokeStyle = "#ffd166"; vctx.lineWidth = 1; vctx.setLineDash([4, 3]);
+  vctx.strokeRect(marquee.x * z + .5, marquee.y * z + .5, marquee.w * z - 1, marquee.h * z - 1);
+  vctx.setLineDash([]);
+  vctx.restore();
+}
+
 function drawFloat(z) {
   if (!floating) return;
   const f = floating;
@@ -1288,7 +1314,105 @@ function startFloat(kind, r, c) {
   }
 }
 
+/**
+ * 사각 영역을 집어 든다. 행·셀 밴드와 달리 **사람이 그린 사각형이 곧 범위**다 —
+ * 연결 덩어리를 따라가지 않으므로 이웃과 붙어 있어도 사람이 정한 만큼만 가져간다.
+ */
+function startFloatRect(x0, y0, w, h) {
+  if (!work) return false;
+  const W = work.width, H = work.height;
+  x0 = Math.max(0, Math.min(W - 1, x0)); y0 = Math.max(0, Math.min(H - 1, y0));
+  w = Math.max(1, Math.min(W - x0, w)); h = Math.max(1, Math.min(H - y0, h));
+  const snap = imageData();
+  const d = wctx.getImageData(x0, y0, w, h);
+  let px = 0;
+  for (let i = 0, len = w * h; i < len; i++) if (d.data[i * 4 + 3] > 8) px++;
+  if (!px) { log(`그 영역(${w}×${h})에 옮길 내용이 없다`, "warn"); return false; }
+  const cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  cv.getContext("2d", { willReadFrequently: true }).putImageData(d, 0, 0);
+  wctx.clearRect(x0, y0, w, h);
+  const cell = contract.cell || 0;
+  floating = {
+    kind: "rect",
+    r: cell ? Math.floor((y0 + h / 2) / cell) : 0,
+    c: cell ? Math.floor((x0 + w / 2) / cell) : 0,
+    x: x0, y: y0, w, h, cv, dx: 0, dy: 0, px, spill: 0, manual: true, snap,
+  };
+  floatLabel();
+  log(`영역 ${w}×${h} @(${x0},${y0}) 집었다 — 불투명 ${px.toLocaleString()}px`
+      + " · 드래그/방향키로 옮기고 Enter 확정", "ok");
+  return true;
+}
+
+/** 든 것을 상대 이동시킨다(다시 집지 않는다). 영역·행·셀 공통. */
+function nudgeFloat(dx, dy) {
+  if (!floating) return false;
+  floating.dx += dx; floating.dy += dy;
+  statsStale = true;
+  floatLabel();
+  redraw();
+  return true;
+}
+
+/** 든 영역 안의 그림 경계상자(캔버스 좌표, dx/dy 적용 전). 없으면 null. */
+function floatContentBox() {
+  if (!floating) return null;
+  const f = floating;
+  const d = f.cv.getContext("2d", { willReadFrequently: true }).getImageData(0, 0, f.w, f.h);
+  let x0 = f.w, y0 = f.h, x1 = -1, y1 = -1;
+  for (let y = 0; y < f.h; y++) for (let x = 0; x < f.w; x++) {
+    if (d.data[(y * f.w + x) * 4 + 3] <= 8) continue;
+    if (x < x0) x0 = x;
+    if (x > x1) x1 = x;
+    if (y < y0) y0 = y;
+    if (y > y1) y1 = y;
+  }
+  if (x1 < 0) return null;
+  return { x0: f.x + x0, y0: f.y + y0, x1: f.x + x1, y1: f.y + y1 };
+}
+
+/**
+ * 든 그림을 지정 칸의 **가로 중앙 · 바닥 접지**로 옮긴다.
+ *
+ * 계약 정렬과 같은 자리에 앉히는 것이 목적이므로 여백은 sheet_ops.BOTTOM_MARGIN(0.04)과
+ * 같은 값을 쓴다 — 다른 값을 쓰면 눌러 맞춰 놓고 검증기에서 이탈로 잡힌다.
+ */
+function fitFloatToCell(r, c) {
+  const cell = contract.cell;
+  if (!cell) return log("셀 크기를 모르는 계약이라 앉힐 칸이 없다", "warn");
+  if (!floating) return log("먼저 선택 도구로 영역을 드래그해 집어라", "warn");
+  const bb = floatContentBox();
+  if (!bb) return log("든 영역에 그림이 없다", "warn");
+  const cx = (bb.x0 + bb.x1) / 2;
+  const targetCx = c * cell + cell / 2;
+  const bottom = (r + 1) * cell - 1 - Math.round(cell * 0.04);
+  const dx = Math.round(targetCx - cx);
+  const dy = bottom - bb.y1;
+  floating.dx = dx; floating.dy = dy;
+  statsStale = true;
+  floatLabel();
+  redraw();
+  log(`r${r}c${c}에 앉힘 (${dx >= 0 ? "+" : ""}${dx}, ${dy >= 0 ? "+" : ""}${dy})`
+      + " — Enter로 확정, Esc로 취소", "ok");
+}
+
+function regionLabel() {
+  const el = $("#regioninfo");
+  if (!el) return;
+  if (floating && floating.kind === "rect") {
+    const f = floating;
+    el.textContent = `든 영역 ${f.w}×${f.h} · ${f.px.toLocaleString()}px`
+                     + ` (${f.dx >= 0 ? "+" : ""}${f.dx}, ${f.dy >= 0 ? "+" : ""}${f.dy})`;
+    el.className = "warn";
+  } else {
+    el.textContent = "선택 도구로 드래그";
+    el.className = "meta";
+  }
+}
+
 function floatLabel() {
+  regionLabel();
   const el = $("#floatinfo");
   if (!el) return;
   if (!floating) { el.textContent = "행 전체를 한 번에"; el.className = "meta"; return; }
@@ -1393,10 +1517,19 @@ function dupNext() {
 // ------------------------------------------------------- 웹 챗용 프롬프트
 let webPrompt = { common: "", sheet: "" };
 
-async function loadWebPrompt(cat, file) {
+/** 웹 프롬프트를 받는다. **그림이 없어도** asset만으로 받을 수 있어야 한다 —
+ *  순서가 "프롬프트를 받아 → 그림을 만들어 온다"이므로 그림을 요구하면 첫 단계가 막힌다. */
+async function loadWebPrompt(cat, file, asset) {
   webPrompt = { common: "", sheet: "" };
+  if (!cat || !(file || asset)) {
+    $("#webprompt").textContent = "(카테고리와 [계약]을 고르면 여기에 생성된다)";
+    return;
+  }
   try {
-    const res = await fetch(`/api/fixer/webprompt?cat=${encodeURIComponent(cat)}&file=${encodeURIComponent(file)}`);
+    const q = `cat=${encodeURIComponent(cat)}`
+              + (file ? `&file=${encodeURIComponent(file)}` : "")
+              + (asset ? `&asset=${encodeURIComponent(asset)}` : "");
+    const res = await fetch(`/api/fixer/webprompt?${q}`);
     if (!res.ok) throw new Error("HTTP " + res.status);
     webPrompt = await res.json();
     $("#webprompt").textContent = webPrompt.sheet || "(이 시트의 상세 프롬프트를 만들 근거가 없다)";
@@ -1604,6 +1737,13 @@ const OPS = {
     for (const op of lastPlan) await OPS[op]();
     log("자동보정 끝 — 다시 저장하면 남은 지적을 알 수 있다", "ok");
   },
+  // 든 영역을 선택 칸(없으면 영역이 걸친 칸)의 가로 중앙·바닥 접지로 옮긴다.
+  fitcell: () => {
+    if (!floating) return log("먼저 선택 도구(V)로 옮길 영역을 드래그해 집어라", "warn");
+    const r = sel ? sel.r : floating.r;
+    const c = sel ? sel.c : floating.c;
+    fitFloatToCell(r, c);
+  },
   // 시트 전체 — 규칙이 걸린 연산은 전부 서버로 보낸다.
   key: () => serverOp("key", { tol: 40 }),
   // 배경은 색만 보고 지우면 그림 안쪽이 뚫린다 — 서버가 가장자리 연결성으로 판정한다.
@@ -1671,7 +1811,8 @@ const SERVER_OPS = new Set(["key", "guides", "binarize", "quantize", "deblack", 
 // 부동 이동 — 되돌리기 스냅숏을 **제스처당 하나** 스스로 찍는다. 버튼 래퍼가 또 찍으면
 // 1px 누를 때마다 undo가 쌓여 되돌리기가 사실상 못 쓰게 된다.
 const FLOAT_OPS = new Set(["rowleft", "rowright", "rowup", "rowdown",
-                           "grpleft", "grpright", "grpup", "grpdown"]);
+                           "grpleft", "grpright", "grpup", "grpdown",
+                           "fitcell"]);
 
 document.querySelectorAll("[data-op]").forEach(b => {
   b.onclick = (e) => {
@@ -1700,10 +1841,20 @@ $("#autofix").onclick = () => serverOp("autofix", {
 
 // 캔버스 상호작용 — 도구 모드별: 선택 / 연필 / 채우기 (+우클릭 지우개 공통)
 let dragStart = null;
+let marqueeStart = null;   // 영역 선택 드래그 시작점
 let lastPt = null;      // 직전 스탬프 위치(스트로크 보간용)
 view.oncontextmenu = e => e.preventDefault();
 view.onmousedown = e => {
   if (!work) return;
+  const [x0_, y0_] = evPos(e);
+  // 든 영역 안을 누르면 그것을 끌겠다는 뜻이다 — 여기서 내려놓으면 옮길 수가 없다.
+  if (floating && floating.kind === "rect" && e.button === 0 && !e.altKey && !e.shiftKey) {
+    const fx = floating.x + floating.dx, fy = floating.y + floating.dy;
+    if (x0_ >= fx && x0_ < fx + floating.w && y0_ >= fy && y0_ < fy + floating.h) {
+      regionDrag = { x: x0_, y: y0_ };
+      return;
+    }
+  }
   commitFloat();   // 캔버스를 건드리는 순간 내려놓는다(스포이드·선택 모두 픽셀을 읽는다).
   const [x, y] = evPos(e);
   if (e.altKey) {
@@ -1744,7 +1895,9 @@ view.onmousedown = e => {
     redraw();
     return;
   }
-  if (e.shiftKey) { dragStart = { x, y }; return; }
+  if (e.shiftKey) { dragStart = { x, y }; return; }   // 사각 지우기(예전 동작 유지)
+  // 선택 도구의 맨드래그 = **영역 집기**. 눌렀다 뗀 자리가 거의 같으면 셀 선택으로 본다.
+  marqueeStart = { x, y };
   if (contract.cell) {
     sel = { r: Math.floor(y / contract.cell), c: Math.floor(x / contract.cell) };
     const name = (contract.layout[sel.r] || {}).name || "";
@@ -1758,6 +1911,19 @@ view.onmousedown = e => {
 view.onmousemove = e => {
   if (!work) return;
   const [x, y] = evPos(e);
+  if (regionDrag) {                       // 든 영역을 끌고 있다
+    nudgeFloat(x - regionDrag.x, y - regionDrag.y);
+    regionDrag = { x, y };
+    updateStatusPos(x, y);
+    return;
+  }
+  if (marqueeStart && (e.buttons & 1)) {  // 영역 선택 사각형을 그리는 중
+    marquee = { x: Math.min(marqueeStart.x, x), y: Math.min(marqueeStart.y, y),
+                w: Math.abs(x - marqueeStart.x) + 1, h: Math.abs(y - marqueeStart.y) + 1 };
+    updateStatusPos(x, y);
+    redraw();
+    return;
+  }
   if (painting) {
     // 이벤트 사이를 선으로 이어야 빠른 드래그에서 자국이 끊기지 않는다.
     const erasing = e.buttons === 2 || tool === "erase" || (e.buttons === 1 && e.shiftKey);
@@ -1778,6 +1944,15 @@ document.onmouseup = () => {
   if (painting) { painting = false; lastPt = null; statsStale = true; redraw(); log("스트로크 확정"); }
 };
 view.onmouseup = e => {
+  if (regionDrag) { regionDrag = null; return; }
+  if (marqueeStart) {
+    const m = marquee;
+    marqueeStart = null; marquee = null;
+    // 3px 미만은 '클릭'으로 본다 — 셀 선택은 이미 mousedown에서 했다.
+    if (m && (m.w >= 3 || m.h >= 3)) { startFloatRect(m.x, m.y, m.w, m.h); redraw(); return; }
+    redraw();
+    return;
+  }
   if (!dragStart) return;
   const z = zoomFactor(), rect = view.getBoundingClientRect();
   const x = Math.floor((e.clientX - rect.left) / z), y = Math.floor((e.clientY - rect.top) / z);
@@ -1815,6 +1990,16 @@ document.onkeydown = e => {
     if (k === "e") { setTool("erase"); return; }
     if (k === "o") { $("#onion").checked = !$("#onion").checked; redraw(); return; }
     if (k === "d") { if (sel && contract.cell) { pushUndo(); dupNext(); redraw(); } return; }
+  }
+  const step0 = e.shiftKey ? 8 : 1;
+  const rmoves = { ArrowLeft: [-step0, 0], ArrowRight: [step0, 0],
+                   ArrowUp: [0, -step0], ArrowDown: [0, step0] };
+  // 영역을 들고 있으면 방향키는 **그 영역**을 옮긴다. 셀 기준으로 다시 집으면
+  // 사람이 정한 범위가 통째로 날아간다.
+  if (floating && floating.kind === "rect" && rmoves[e.key]) {
+    e.preventDefault();
+    nudgeFloat(rmoves[e.key][0], rmoves[e.key][1]);
+    return;
   }
   if (!sel || !contract.cell) return;
   const step = e.shiftKey ? 8 : 1;
@@ -1998,6 +2183,9 @@ $("#pickcat").onchange = async () => {
 $("#pickasset").onchange = async () => {
   ASSET = $("#pickasset").value;
   await applyContract(CAT, FILE);
+  // 계약을 바꾸면 프롬프트도 그 에셋의 것이어야 한다. 예전에는 여기서 갱신하지 않아
+  // **그림이 없으면 프롬프트를 아예 볼 수 없었다**(파일을 열 때만 받았다).
+  loadWebPrompt(CAT, FILE, ASSET);
   redraw();
   log(ASSET ? `계약 → ${ASSET} (${contract.size[0]}×${contract.size[1]}`
               + `${contract.cell ? ` · 셀 ${contract.cell} · ${contract.rows}행 ${contract.cols}열` : ""})`

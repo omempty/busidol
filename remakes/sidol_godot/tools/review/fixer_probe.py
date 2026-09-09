@@ -341,6 +341,86 @@ def run(shots: bool) -> int:
             pg.screenshot(path=str(out))
             p.lines.append(f"  ·   화면: {out}")
 
+        # 13) 영역으로 집어 옮기기 — 행도 셀도 아닌 덩어리를 사람이 사각형으로 집는다.
+        #     행 단위 이동으로는 격자를 벗어난 그림을 못 맞춘다는 실사용 지적에서 나왔다.
+        pg.evaluate("dirty=false")
+        pg.set_input_files("#localfile", str(move_sheet))
+        pg.wait_for_function("work && LOCAL==='probe_move_v1.png' && !floating", timeout=5000)
+        pg.select_option("#zoom", "1")
+        pg.click("#tool-select")
+        base2 = p.sig()
+
+        # (a) 선택 도구 맨드래그로 r0 덩어리(150~189, 20~59)만 감싸 집는다.
+        p.drag((145, 15), (195, 65), steps=3)
+        held = pg.evaluate("floating && [floating.kind, floating.px, floating.w, floating.h]")
+        p.ok("선택 도구 드래그가 영역을 집는다",
+             held and held[0] == "rect" and held[1] == 40 * 40,
+             f"{held} (기대 rect · 1600px)")
+
+        # 집은 자리는 캔버스에서 비어 있어야 한다 — 들고 있는 동안은 work에서 빠진다.
+        hole = p.bbox(140, 0, 256, 128)
+        p.ok("집는 동안 원래 자리는 비어 있다", hole is None, f"{hole}")
+
+        # (b) 든 영역을 마우스로 끌어 옮긴다(방향키가 아니라 실제 드래그).
+        p.drag((170, 40), (170, 100), steps=4)
+        moved_dy = pg.evaluate("floating && floating.dy")
+        p.ok("든 영역을 마우스로 끌어 옮긴다", moved_dy == 60, f"dy={moved_dy} (기대 60)")
+
+        # (c) Esc — 원본 그대로. 사람이 정한 범위가 날아가도 픽셀은 살아야 한다.
+        pg.keyboard.press("Escape")
+        p.ok("Esc로 영역 이동을 취소하면 원본 그대로",
+             p.sig() == base2 and not pg.evaluate("!!floating"),
+             f"{p.sig()} vs {base2}")
+
+        # (d) 다시 집어 Enter로 확정 — 픽셀 총량이 보존되고 실제로 옮겨져 있어야 한다.
+        p.drag((145, 15), (195, 65), steps=3)
+        p.drag((170, 40), (170, 100), steps=4)
+        pg.keyboard.press("Enter")
+        after2 = p.sig()
+        box = p.bbox(140, 0, 256, 256)
+        p.ok("영역 이동을 확정해도 불투명 픽셀이 안 없어진다", after2[0] == base2[0],
+             f"{base2[0]} → {after2[0]}")
+        p.ok("확정한 영역이 실제로 60px 내려가 있다", box == [150, 80, 189, 119],
+             f"{box} (기대 [150, 80, 189, 119])")
+
+        # (e) [선택 칸에 앉히기] — 계약 정렬 자리(가로 중앙·바닥 여백 4%)로 간다.
+        #     "격자를 벗어난 객체를 셀 안으로"가 이 기능의 목적이라 여기서 좌표로 잰다.
+        pg.evaluate("dirty=false")
+        pg.set_input_files("#localfile", str(move_sheet))
+        pg.wait_for_function("work && LOCAL==='probe_move_v1.png' && !floating", timeout=5000)
+        pg.select_option("#zoom", "1")
+        pg.click("#tool-select")
+        cell = pg.evaluate("contract.cell")
+        p.drag((145, 15), (195, 65), steps=3)          # r0 덩어리를 집고
+        sx, sy = p.to_screen(30, 160)                  # r1c0 칸을 선택 대상으로
+        pg.evaluate("sel={r:1,c:0}")
+        pg.click("[data-op='fitcell']")
+        pg.keyboard.press("Enter")
+        # 측정 구간을 y205 아래로 잡는다 — 이 시트에는 r1c0에 원래 덩어리(y110~199)가
+        # 있어서 칸 전체를 재면 그것과 합쳐진 경계상자가 나온다(실제로 그렇게 헛짚었다).
+        fit = p.bbox(0, 205, 128, 256)
+        want_cx = cell / 2
+        got_cx = None if not fit else (fit[0] + fit[2]) / 2
+        margin = None if not fit else (2 * cell - 1 - fit[3])
+        p.ok("[선택 칸에 앉히기]가 칸 가로 중앙에 맞춘다",
+             fit is not None and abs(got_cx - want_cx) <= 1,
+             f"중심 x={got_cx} (기대 {want_cx}) · fit={fit} · cell={cell}")
+        p.ok("[선택 칸에 앉히기]가 칸 바닥에 접지시킨다",
+             margin == round(cell * 0.04),
+             f"바닥 여백 {margin}px (기대 {round(cell * 0.04) if cell else '?'})")
+
+        # (f) 부정 시험 — 짧은 클릭은 영역을 집지 않는다(예전 셀 선택이 살아 있어야 한다).
+        pg.evaluate("dirty=false")
+        pg.set_input_files("#localfile", str(move_sheet))
+        pg.wait_for_function("work && LOCAL==='probe_move_v1.png' && !floating", timeout=5000)
+        pg.select_option("#zoom", "1")
+        pg.click("#tool-select")
+        cx2, cy2 = p.to_screen(60, 160)
+        pg.mouse.click(cx2, cy2)
+        p.ok("부정 시험 - 짧은 클릭은 영역을 집지 않는다",
+             not pg.evaluate("!!floating") and pg.evaluate("sel && [sel.r, sel.c]") == [1, 0],
+             f"floating={pg.evaluate('!!floating')} sel={pg.evaluate('sel && [sel.r,sel.c]')}")
+
         p.ok("페이지 예외 없음", not errs, " / ".join(errs[:3]))
         br.close()
 
