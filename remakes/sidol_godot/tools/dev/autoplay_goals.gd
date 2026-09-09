@@ -18,10 +18,24 @@ const RANK_NEW_FLOOR := 0
 const RANK_TRIGGER := 2000
 const RANK_NPC := 4000
 const RANK_CHEST := 6000
+## **아직 못 가 본 층이 남아 있을 때** 이미 가 본 층으로 되돌아가는 계단.
+## 상자보다 앞이다 — 근거는 _stairs()의 rank 주석.
+const RANK_BACKTRACK := 5000
 const RANK_FLOOR_SEEN := 9000
 
 ## 이 층에서 못 낸 목표의 사유 — 부르는 쪽이 보고서에 싣는다.
 var notes: Array[String] = []
+
+
+## 이 게임에 층이 몇 개인가 — **데이터에서 뽑는다.** transitions.json의 guard 범위가
+## "그 층에 이 계단이 있다"는 뜻이므로, 범위의 합집합이 곧 걸어 다닐 수 있는 층 목록이다.
+## 도착 층(floor_delta를 더한 값)은 쓰지 않는다 — 범위 끝에서 존재하지 않는 층이 섞인다.
+static func _all_floors_visited(visited: Dictionary) -> bool:
+	for t: Dictionary in JsonUtil.load_dict(TRANSITIONS_PATH, "autoplay").get("transitions", []):
+		for f in range(int(t["guard_min_floor"]), int(t["guard_max_floor"]) + 1):
+			if not visited.has(f):
+				return false
+	return true
 
 
 func collect(field: Node2D, floor_no: int, visited: Dictionary) -> Array:
@@ -56,7 +70,21 @@ func _stairs(floor_no: int, visited: Dictionary) -> Array:
 		# 이유다(2026-08-29 주행 보고서 대조: f2에 닿자마자 stairs_center_up_f2를 밟고
 		# 실패했고, Q_F2_POSTER는 그 뒤에야 HP실→포스터로 섰다).
 		# 잠겼다는 사실 자체는 여전히 잰다 — 목표에서 빼지 않고 순서만 뒤로 놓는다.
-		var rank := RANK_NEW_FLOOR if not visited.has(to_floor) else RANK_FLOOR_SEEN
+		# 이미 가 본 층으로 되돌아가는 계단의 순위는 **아직 못 가 본 층이 남았는가**로 갈린다.
+		#
+		# 실측(2026-09-09, 120초 예산 2회): 새 판은 예외 없이 f1에서 f0로 먼저 내려간다
+		# (f0가 미방문이라 rank 0). 그런데 돌아오는 계단이 RANK_FLOOR_SEEN(9000)이라
+		# 상자(6000)보다 뒤로 밀려 **f0 상자 45·46개를 다 줍고서야** f1로 돌아왔다
+		# (그 사이 목표 48·49개). 예산의 절반 가까이가 본편과 무관한 지하 청소에 고정
+		# 지출되고, 주행이 조금만 느려지면 그대로 관문이 빨개진다(실패 회차 gate_6은
+		# 목표 61개 중 55개가 f0 상자였고 층 2에서 끝났다).
+		#
+		# 그래서 못 가 본 층이 남아 있는 동안에는 되돌아가는 계단을 상자보다 앞에 둔다.
+		# 전 층을 다 밟은 뒤에는 예전대로 맨 뒤다 — 그때는 상자·트리거를 마저 훑는 것이 맞다.
+		# 잠긴 계단은 여전히 맨 뒤다(위 주석의 2026-08-29 사고).
+		var rank := RANK_NEW_FLOOR
+		if visited.has(to_floor):
+			rank = RANK_FLOOR_SEEN if _all_floors_visited(visited) else RANK_BACKTRACK
 		if locked:
 			rank = RANK_FLOOR_SEEN
 		var goal := {
