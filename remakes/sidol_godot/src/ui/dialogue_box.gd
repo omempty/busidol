@@ -216,6 +216,7 @@ func start(p_seq_id: StringName, p_steps: Array) -> void:
 	auto_advance = SettingsManager.dialogue_auto
 	_cooldown = INPUT_COOLDOWN
 	_auto_wait = -1.0
+	_sync_modal_group()
 	_load_step()
 
 
@@ -259,7 +260,18 @@ func advance() -> void:
 func close() -> void:
 	is_open = false
 	visible = false
+	_sync_modal_group()
 	finished.emit(seq_id)
+
+
+## 대화창도 '열려 있는 창'이다 — ESC가 메뉴로 새지 않게 ModalFrame과 같은 그룹에 든다.
+## (대화창은 ModalFrame 껍데기를 쓰지 않아 자동으로 걸리지 않는다.)
+func _sync_modal_group() -> void:
+	if is_open and is_visible_in_tree():
+		if not is_in_group(ModalFrame.MODAL_GROUP):
+			add_to_group(ModalFrame.MODAL_GROUP)
+	elif is_in_group(ModalFrame.MODAL_GROUP):
+		remove_from_group(ModalFrame.MODAL_GROUP)
 
 
 func _load_step() -> void:

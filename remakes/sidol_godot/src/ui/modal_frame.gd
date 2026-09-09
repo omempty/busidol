@@ -27,11 +27,32 @@ var _hint: Label
 var _close_btn: PanelContainer
 var _dim: ColorRect
 
+## 열려 있는 모달임을 알리는 그룹. PauseMenu가 이걸 보고 "이미 창이 떠 있으면 메뉴를
+## 열지 않는다"를 판단한다 — 창을 새로 만들어도 ModalFrame만 쓰면 자동으로 걸린다.
+const MODAL_GROUP := &"ui_modal"
+
 
 ## 뷰포트 접근은 트리에 들어온 뒤에만 가능하다 — setup()은 add_child 전에 불린다.
 func _ready() -> void:
 	_fit_viewport()
 	get_viewport().size_changed.connect(_fit_viewport)
+	visibility_changed.connect(_sync_modal_group)
+	_sync_modal_group()
+
+
+## 보이면 그룹에 들고, 숨으면 뺀다. 트리에서 빠질 때도 반드시 빼야 한다 —
+## 남아 있으면 닫힌 창 때문에 ESC가 영영 메뉴를 못 연다.
+func _sync_modal_group() -> void:
+	if is_visible_in_tree():
+		if not is_in_group(MODAL_GROUP):
+			add_to_group(MODAL_GROUP)
+	elif is_in_group(MODAL_GROUP):
+		remove_from_group(MODAL_GROUP)
+
+
+func _exit_tree() -> void:
+	if is_in_group(MODAL_GROUP):
+		remove_from_group(MODAL_GROUP)
 
 
 func setup(title_key: String, hint_key: String = "", min_size: Vector2 = Vector2(320, 0)) -> void:

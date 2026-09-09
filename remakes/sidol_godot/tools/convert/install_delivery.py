@@ -61,6 +61,11 @@ SHEET_SCALE = 0.6667
 ## 화면 배율은 이 사다리 위의 값만 쓴다. 도트를 비정수 배율로 그리면 칸마다 픽셀이
 ## 한 줄씩 먹히거나 겹쳐 보인다(0.6667이 정확히 그 값이었다). 동률이면 큰 쪽을 고른다.
 SCALE_LADDER = (0.25, 0.5, 1.0, 2.0)
+## 화면에 그려지는 최소 배율. 스펙의 잡몹 game cell 64는 사다리에서 0.5(=화면 64px)로
+## 떨어지는데, **유저 신고: "필드 몬스터가 너무 작아졌다"**. 이 차등이 들어오기 전에는
+## 전 종이 0.6667(=85px)이었고 그 크기가 기준이었다. 보스 차등(1.0=128px)은 그대로
+## 두고 아래쪽만 옛 크기로 되돌린다 — 작아진 쪽만 원복하는 것이 신고의 내용이다.
+SCALE_MIN = 0.6667
 DEFAULT_COLORS = 48
 VERSION_RE = re.compile(r"^(?P<id>.+)_v(?P<n>\d+)\.png$", re.IGNORECASE)
 
@@ -137,6 +142,11 @@ def sheet_scale(sp: dict, cell: int) -> tuple:
     ratio = float(int(game["w"])) / float(base)
     snapped = min(SCALE_LADDER, key=lambda k: (abs(k - ratio), -k))
     note = f"게임 cell {int(game['w'])} ÷ 시트 셀 {base} = {ratio:.3f} → 배율 {snapped}"
+    if snapped < SCALE_MIN:
+        # 사다리 아래쪽(0.5=64px)은 화면에서 너무 작다는 신고가 있었다. 차등을 없애지 않고
+        # 바닥만 옛 기준(0.6667=85px)으로 올린다 — 보스의 1.0은 그대로다.
+        note += f" → 최소 배율 {SCALE_MIN}로 올림(화면 {base * SCALE_MIN:.0f}px, 너무 작다는 신고)"
+        return SCALE_MIN, note
     if abs(snapped - ratio) > 1e-6:
         note += f" (사다리로 당김 · 화면 {base * snapped:.0f}px)"
     else:

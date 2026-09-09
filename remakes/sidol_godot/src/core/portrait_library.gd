@@ -40,6 +40,13 @@ static func _scan() -> void:
 		var display_name := str(spec.get("name", ""))
 		if not display_name.is_empty():
 			_name_to_id[display_name] = asset_id
+		# 대사의 화자는 스펙의 `name`과 다를 수 있다 — 배치명·별명으로 적히기 때문이다.
+		# (실측: npc_tutor_dumb의 name은 '화공과 조교'인데 대사 화자는 '멍청 조교'라
+		#  초상이 설치돼 있는데도 12줄 내내 조용히 안 떴다.)
+		for alias in spec.get("speaker_aliases", []):
+			var alias_name := str(alias)
+			if not alias_name.is_empty():
+				_name_to_id[alias_name] = asset_id
 
 
 ## 화자 문자열(대사 데이터의 speaker) 또는 asset_id → 설치된 초상의 asset_id. 없으면 "".

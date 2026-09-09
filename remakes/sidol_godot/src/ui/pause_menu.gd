@@ -72,6 +72,22 @@ func _build_root() -> void:
 		_bind_mouse(row, i)
 
 
+## 나 말고 열려 있는 모달이 있는가.
+##
+## 왜 필요한가: `_unhandled_input`은 뒤쪽 형제부터 받는데, field.gd는 대화창(114행)과
+## 가방(175행)을 PauseMenu(178행)보다 **앞에** 붙여 놓았다. 그래서 대화·로그·가방이
+## 열려 있어도 ESC를 여기서 먼저 집어 메뉴가 떴다 — 로그를 닫으려던 ESC가 메뉴를 여는
+## 것이 유저가 신고한 증상이다. 순서에 기대지 않고 **떠 있는 창이 있으면 안 연다**.
+##
+## 이벤트를 소비하지 않고 그냥 빠진다 — 그래야 진짜 주인(로그창 등)이 받아서 닫는다.
+func _other_modal_open() -> bool:
+	for node in get_tree().get_nodes_in_group(ModalFrame.MODAL_GROUP):
+		if node is CanvasItem and (node as CanvasItem).is_visible_in_tree():
+			if not is_ancestor_of(node):
+				return true
+	return false
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if (
 		event.is_action_pressed(&"cancel")
@@ -89,7 +105,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				_switch(Screen.ROOT)
 			get_viewport().set_input_as_handled()
 			return
-		elif can_open_on_cancel:
+		elif can_open_on_cancel and not _other_modal_open():
 			if _screen == Screen.ROOT:
 				toggle()
 				get_viewport().set_input_as_handled()

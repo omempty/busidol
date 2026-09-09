@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 9   # +9 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 웹 프롬프트 · 소품 덧층(python)
+$total = $gates.Count + 10  # +10 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 자동보정 계획 · 지적 면제 · 설치 시트 · 웹 프롬프트 · 초상 배선 · 소품 덧층(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -147,6 +147,17 @@ Write-Host ("[{0}/{1}] Web prompt..." -f $i, $total)
 python (Join-Path $PSScriptRoot "..\convert\test_web_prompt.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Web prompt"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Portrait speakers..." -f $i, $total)
+# 설치된 초상이 **화자 이름과 이어져 있는가**. 스펙의 name만 보던 조회기 때문에
+# npc_tutor_dumb(name '화공과 조교')이 대사 화자 '멍청 조교'와 안 이어져, 초상이
+# 설치돼 있는데도 12줄 내내 조용히 안 떴다(유저 신고).
+python (Join-Path $PSScriptRoot "portrait_speakers_check.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Portrait speakers"
     exit 1
 }
 

@@ -172,7 +172,10 @@ func _ready() -> void:
 	# 시스템 탭은 기능을 다시 만들지 않고 신호만 보낸다 — 세이브/로드가 두 벌이 되면
 	# 한쪽만 고쳐져 갈라진다(04_uiux §1.3 주석 참조).
 	inventory_panel = InventoryPanel.new()
-	add_child(inventory_panel)  # PauseMenu보다 먼저 — cancel 입력 우선권
+	# 주의: 자식 순서는 cancel 우선권을 **주지 않는다**. `_unhandled_input`은 뒤쪽
+	# 형제부터 받으므로 뒤에 붙는 PauseMenu가 먼저 집는다(이 줄의 옛 주석이 반대로
+	# 적혀 있었다). 우선권은 PauseMenu._other_modal_open()이 판단한다.
+	add_child(inventory_panel)
 
 	var pause_menu := PauseMenu.new()
 	add_child(pause_menu)

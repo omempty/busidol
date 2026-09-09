@@ -1150,9 +1150,10 @@ window.deleteItem = async file => {
   try {
     const r = await api('/api/review', { cat: CUR, file, action: 'delete' });
     toast(r && r.detail ? r.detail : '삭제 완료', !(r && r.ok));
-    PENDING_ITEMS = PENDING_ITEMS.filter(x => x.file !== file);
-    updateSummary(PENDING_ITEMS);
-    renderCards();
+    // 목록을 손으로 고치지 않고 **서버에서 다시 읽는다** — 지운 것이 그 에셋의 마지막
+    // 버전이면 '(미납품)' 카드로 다시 올라오는 것이 맞다. 손으로 지우면 그게 안 보여
+    // "지웠는데 왜 그대로냐"가 된다.
+    await load();
   } catch (e) {
     toast('삭제 오류: ' + e.message, true);
   }
@@ -1219,6 +1220,21 @@ $('#tgSheetGrid').onchange = e => {
 };
 
 $('#statusFilter').onchange = renderCards;
+
+/** 다른 창(셀 편집기)에서 납품·수정하고 돌아오면 목록이 낡아 있다 — 지금까지 F5가 필요했다.
+ *  창이 다시 앞으로 오면 서버에서 다시 읽는다. 연타로 도는 것을 막으려고 2초로 묶는다.
+ *  이미지 URL에는 렌더할 때마다 ?t=가 붙으므로 브라우저 캐시도 함께 비켜 간다. */
+let _lastFocusLoad = 0;
+function refreshOnFocus() {
+  const now = Date.now();
+  if (now - _lastFocusLoad < 2000) return;
+  _lastFocusLoad = now;
+  load();
+}
+window.addEventListener('focus', refreshOnFocus);
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshOnFocus();
+});
 $('#searchFilter').oninput = renderCards;
 
 $('#batch-ok-pass').onclick = async () => {

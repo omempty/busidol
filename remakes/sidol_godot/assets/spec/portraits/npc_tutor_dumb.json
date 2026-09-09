@@ -14,5 +14,9 @@
     "confused"
   ],
   "render_mode": "authentic_pixel_art_remaster",
-  "palette": "palette_master.json (8-bit scaled)"
+  "palette": "palette_master.json (8-bit scaled)",
+  "speaker_aliases": [
+    "멍청 조교"
+  ],
+  "_speaker_aliases_comment": "대사(dialogue_sequences.json)의 화자 문자열. 스펙의 name('화공과 조교')과 달라 초상이 안 뜨던 것을 잇는다 — 배치명은 data/maps/npcs_f1.json의 '멍청 조교'다."
 }
