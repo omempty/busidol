@@ -654,6 +654,12 @@ src/map/props_layer.gd      로더(게임이 그것을 어떻게 읽는가)
 (`requires_flag`가 없을 때 조사 대상에서 빠지는가), 그리고 **길목 판정 민감도**
 (소품은 안 걸리고, 같은 자리에 가로벽을 세우면 걸리는가 — 판정이 잠들어 있는 것을 가린다).
 
+`props_check.py`는 여기에 더해 **플래그 사슬**을 본다: 소품이 기대는 `state.open_flag`·
+`inspect.requires_flag`를 **아무도 세우지 않으면** 그 소품은 영영 열리지 않거나 조사되지
+않는다(오타 한 글자로 그렇게 된다). 플래그를 세우는 곳은 트리거 `done_flag`, 컷신
+`set_flags`/`flag`/`on_win_flag`, 마커 `sets_flag`, 몬스터 `first_win_flag`, 그리고
+GDScript의 `set_flag("…")`까지 훑어 모은다.
+
 ### `props_check.py`가 보는 것 / 안 보는 것
 
 ```powershell

@@ -20,7 +20,9 @@
 "이 소품이 길을 끊는가"는 `src/map/placement.gd`의 `CHOKE_RADIUS`·`blocks_passage()`가
 GDScript로 이미 갖고 있는 규칙이다. 파이썬으로 옮겨 오면 같은 규칙이 두 벌이 되고,
 이 저장소가 반복해 물린 결함이 정확히 그것이다(한쪽만 고쳐진다). **그 판정은 GDScript
-쪽 관문(world_audit / validate.gd)이 봐야 한다.** 여기서는 스키마와 참조만 본다.
+쪽 관문이 본다** — 2026-09-09에 `PropsProbe.check_choke`(world_audit)가 붙었고,
+`Placement.blocks_cells()`로 소품이 **실제로 막는 칸**만 놓고 묻는다. 여기서는 스키마와
+참조만 본다.
 
 사용:
   python tools/dev/props_check.py                    data/maps/props_f*.json 전부
@@ -31,6 +33,7 @@ GDScript로 이미 갖고 있는 규칙이다. 파이썬으로 옮겨 오면 같
 from __future__ import annotations
 
 import glob
+import io
 import json
 import os
 import re
@@ -182,6 +185,78 @@ def check_footprint(tag: str, prop: dict, rep: Report):
     return pair["anchor"], pair["size"], grid
 
 
+def collect_settable_flags() -> set:
+    """이 게임에서 **누군가 실제로 세우는** 플래그 전부.
+
+    소품의 `state.open_flag`·`inspect.requires_flag`는 그 플래그가 서야 뜻이 생긴다.
+    아무도 안 세우는 이름(오타 포함)이면 그 소품은 **영영 열리지 않고 영영 조사되지
+    않는다** — 데이터는 멀쩡해 보이고 게임도 조용히 돌아간다. validate.gd가 대화 마커에
+    대해 같은 사슬 검사를 하고 있고(「요구만 하고 아무도 안 세우는 플래그」), 여기는
+    소품판이다.
+
+    출처(값이 곧 플래그 이름인 키들):
+      triggers_f*.json  done_flag           트리거가 발동하면 선다
+      cutscenes/*.json  set_flags.args 키   컷신 op가 세운다
+                        flag / on_win_flag  craft 성공·전투 승리로 선다
+      talk_targets.json sets_flag           원작 마커 대화가 세운다
+      monsters.json     first_win_flag      첫 승리로 선다
+    그리고 GDScript가 코드로 세우는 것(GameState.set_flag("X") / flags["X"] = true)도 훑는다.
+    """
+    flags: set = set()
+
+    def walk(node) -> None:
+        if isinstance(node, dict):
+            if node.get("op") == "set_flags" and isinstance(node.get("args"), dict):
+                flags.update(str(k) for k in node["args"])
+            for key in ("done_flag", "flag", "on_win_flag", "sets_flag", "first_win_flag"):
+                val = node.get(key)
+                if isinstance(val, str) and val:
+                    flags.add(val)
+            for val in node.values():
+                walk(val)
+        elif isinstance(node, list):
+            for item in node:
+                walk(item)
+
+    for path in glob.glob(os.path.join(ROOT, "data", "**", "*.json"), recursive=True):
+        try:
+            with io.open(path, encoding="utf-8") as fh:
+                walk(json.load(fh))
+        except (OSError, ValueError):
+            continue  # 다른 관문이 잡는다 — 여기서 파싱 실패로 죽지 않는다
+
+    code_re = re.compile(r'(?:set_flag|has_flag)\(\s*"([A-Za-z0-9_]+)"|flags\["([A-Za-z0-9_]+)"\]')
+    for path in glob.glob(os.path.join(ROOT, "src", "**", "*.gd"), recursive=True) + glob.glob(
+        os.path.join(ROOT, "scenes", "**", "*.gd"), recursive=True
+    ):
+        try:
+            with io.open(path, encoding="utf-8") as fh:
+                for m in code_re.finditer(fh.read()):
+                    flags.add(m.group(1) or m.group(2))
+        except OSError:
+            continue
+    return flags
+
+
+def check_flags(tag: str, prop: dict, settable: set, rep: Report) -> None:
+    """소품이 기대는 플래그를 아무도 안 세우면 그 소품은 죽은 것이다."""
+    pairs = [
+        ("state.open_flag", (prop.get("state") or {}).get("open_flag")),
+        ("inspect.requires_flag", (prop.get("inspect") or {}).get("requires_flag")),
+    ]
+    for key, val in pairs:
+        if val is None:
+            continue
+        if not isinstance(val, str) or not val.strip():
+            rep.fail("%s %s는 비지 않은 문자열이어야 한다: %r" % (tag, key, val))
+            continue
+        if val not in settable:
+            rep.fail(
+                "%s %s '%s'를 세우는 곳이 없다 — 그 소품은 영영 %s"
+                % (tag, key, val, "열리지 않는다" if "open" in key else "조사되지 않는다")
+            )
+
+
 def check_inspect(tag: str, prop: dict, rep: Report) -> None:
     ins = prop.get("inspect")
     if ins is None:
@@ -189,6 +264,9 @@ def check_inspect(tag: str, prop: dict, rep: Report) -> None:
     if not isinstance(ins, dict):
         rep.fail("%s inspect는 객체여야 한다: %r" % (tag, ins))
         return
+    unknown = set(ins) - {"lines", "requires_flag"}
+    if unknown:
+        rep.warn("%s inspect에 모르는 키: %s" % (tag, ", ".join(sorted(unknown))))
     lines = ins.get("lines")
     if not isinstance(lines, list) or not lines:
         rep.fail("%s inspect.lines는 비지 않은 배열이어야 한다: %r" % (tag, lines))
@@ -210,7 +288,7 @@ def check_state(tag: str, prop: dict, rep: Report) -> None:
         rep.fail("%s state.default는 'open'/'closed'여야 한다: %r" % (tag, default))
 
 
-def check_file(path: str, spec: dict, rep: Report) -> int:
+def check_file(path: str, spec: dict, settable: set, rep: Report) -> int:
     """한 파일을 검사하고 검사한 소품 수를 반환."""
     name = os.path.basename(path)
     m = FILE_RE.match(name)
@@ -271,6 +349,7 @@ def check_file(path: str, spec: dict, rep: Report) -> int:
 
         check_inspect(tag, prop, rep)
         check_state(tag, prop, rep)
+        check_flags(tag, prop, settable, rep)
 
         sprite = prop.get("sprite")
         if not isinstance(sprite, str) or not sprite.strip():
@@ -356,9 +435,10 @@ def main(argv: list) -> int:
         return 0
 
     spec = load_spec(rep)
+    settable = collect_settable_flags()
     total = 0
     for path in paths:
-        total += check_file(path, spec, rep)
+        total += check_file(path, spec, settable, rep)
 
     for w in rep.warns:
         print("[props_check] WARN — %s" % w)
@@ -371,11 +451,13 @@ def main(argv: list) -> int:
         )
         return 1
     print(
-        "[props_check] ok — 소품 %d개/파일 %d개 · 스키마·정본 id·크기·맵 범위·겹침·원본 ATT·문 간섭 통과 (경고 %d건)"
+        "[props_check] ok — 소품 %d개/파일 %d개 · 스키마·정본 id·크기·맵 범위·겹침·원본 ATT·문 간섭·플래그 사슬 통과 (경고 %d건)"
         % (total, len(paths), len(rep.warns))
     )
-    print("[props_check] note — 통로 차단(도달 가능성)은 여기서 재지 않는다: "
-          "src/map/placement.gd blocks_passage()/CHOKE_RADIUS가 정본이라 GDScript 쪽 관문이 봐야 한다.")
+    print(
+        "[props_check] note — 통로 차단(도달 가능성)은 여기서 재지 않는다: "
+        "Placement.blocks_cells()가 정본이고 world_audit의 PropsProbe.check_choke가 그것을 부른다."
+    )
     return 0
 
 
