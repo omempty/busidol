@@ -53,6 +53,30 @@ const NAME_TO_KIND := {
 ## monsters.json의 params.act_interval로 종별 오버라이드할 수 있다.
 const BASE_ACT_INTERVAL := 0.34
 
+## **실제로 decide()에 분기가 있는 패턴.** 여기 없는 것은 wander로 조용히 떨어진다.
+##
+## 왜 이 목록이 필요한가 (2026-09-09 실측): PATROL·PULSE는 enum에도, NAME_TO_KIND에도,
+## get_defaults에도, get_telegraph에도 있었고 **데이터에서 실제로 배정까지 돼 있었는데**
+## (f3 iron_voc 순찰 · f4 o_ray 펄스) SpeciesBrain에 분기가 없어 둘 다 배회만 했다.
+## 게임은 정상으로 보이고 관문도 초록이었다 — 아무도 "선언한 패턴이 실제로 도는가"를
+## 재지 않았기 때문이다. 이 목록과 AiProbe.check_pattern_coverage가 그 자리다.
+const IMPLEMENTED_KINDS := [
+	Kind.WANDER,
+	Kind.CHASE,
+	Kind.DASH,
+	Kind.BURROW,
+	Kind.ZIGZAG,
+	Kind.PATROL,
+	Kind.PULSE,
+	Kind.TELEPORT,
+	Kind.AMBUSHER,
+	Kind.PHASER,
+]
+
+
+static func is_implemented(pattern: String) -> bool:
+	return NAME_TO_KIND.has(pattern) and IMPLEMENTED_KINDS.has(NAME_TO_KIND[pattern])
+
 
 static func kind_from_name(pattern: String) -> int:
 	return int(NAME_TO_KIND.get(pattern, Kind.WANDER))
@@ -81,13 +105,22 @@ static func get_defaults(kind: int) -> Dictionary:
 		Kind.ZIGZAG:
 			return {"switch_interval": 2, "act_interval": 0.26}
 		Kind.PATROL:
-			return {"route_length": 6}
+			# 한 변 6칸이면 32px 타일에서 화면 한 폭 안이라 순찰선이 눈에 들어온다.
+			return {"route_length": 6, "aggro_radius": 5, "act_interval": 0.34}
 		Kind.PULSE:
 			return {"interval_ticks": 6, "radius": 2, "damage": 5, "act_interval": 0.5}
 		Kind.TELEPORT:
 			return {"interval_ticks": 5, "jump_radius": 4, "act_interval": 0.45}
 		Kind.AMBUSHER:
-			return {"trigger_range": 1, "burst_cells": 3, "damage": 15, "act_interval": 0.4}
+			# trigger_range가 1이었다 — 몸이 2×2라 사실상 이미 닿은 뒤에야 걸린다.
+			# 3칸이면 "지나가려는 순간" 터져서 매복으로 읽힌다.
+			return {
+				"trigger_range": 3,
+				"burst_cells": 3,
+				"cooldown_ticks": 6,
+				"damage": 15,
+				"act_interval": 0.4
+			}
 		Kind.PHASER:
 			return {"speed_divisor": 3, "act_interval": 0.55}  # 느린 직진
 		Kind.RANGED:

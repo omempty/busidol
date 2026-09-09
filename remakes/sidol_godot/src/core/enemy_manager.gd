@@ -36,6 +36,20 @@ const PROXIMITY_AGGRO := 2
 const RESPAWN_SECONDS := 45.0
 ## 도달 판정 기준점을 못 세웠을 때 나선으로 찾아보는 반경(셀).
 const SEED_SEARCH_RADIUS := 40
+## 액터(NPC·워커) 주변으로 몬스터를 안 세우는 반경(셀, 체비셰프).
+##
+## **왜 방 배제만으로는 모자란가 (2026-09-09 실측).** "NPC가 사는 방은 비운다"는 규칙은
+## 방 안에 선 액터에만 걸린다. 그런데 실제 배치는 액터 17명 중 **12명이 복도**에 서 있고,
+## 복도는 배제 대상에서 뺀다(전체를 배제하면 설 자리가 없다). 그래서 f1·f2·f4·f5에서는
+## 배제되는 칸이 **0개**였다 — 규칙이 있는데 4개 층에서 한 번도 안 걸렸다.
+##
+## 방이라는 개념과 무관하게 "이 사람 곁에는 안 나온다"를 보장하려면 반경이 필요하다.
+## 8칸이면 화면 안이지만 말을 거는 거리는 아니다(SAFE_SPAWN_DIST 10보다 작게 잡아
+## 플레이어 보호 반경이 늘 더 넓게 유지된다).
+## **고정 NPC에만 건다.** 워커(배경 보행자)는 정의상 돌아다니므로 그 곁을 비워 봐야
+## 다음 순간 스스로 몬스터 옆으로 걸어간다 — 실측에서 f2 워커가 스폰 9칸이던 몬스터에게
+## 8칸까지 걸어갔다. 워커는 자리 겹침(_actor_anchors)만 피하면 된다.
+const ACTOR_CLEAR_RADIUS := 8
 
 var enemies: Array[EnemyEntity] = []
 var _occupied := {}  # Vector2i(몸 셀) -> EnemyEntity
@@ -52,6 +66,7 @@ var _respawn_accum := 0.0
 ## 이 층의 고정 NPC·배회 워커 **앵커** — 스폰에서 "NPC가 사는 방"을 빼는 데 쓴다.
 ## 필드가 액터를 먼저 세우고 넘겨준다(scenes/field.gd). 비어 있으면 방 배제를 건너뛴다.
 var _actor_anchors: Array[Vector2i] = []
+var _npc_anchors: Array[Vector2i] = []
 
 
 func spawn_for_floor(
@@ -59,10 +74,13 @@ func spawn_for_floor(
 	rt: MapRuntime,
 	parent: Node2D,
 	player_cell: Vector2i,
-	actor_anchors: Array[Vector2i] = []
+	actor_anchors: Array[Vector2i] = [],
+	npc_anchors: Array[Vector2i] = []
 ) -> void:
 	despawn_all()
 	_actor_anchors = actor_anchors
+	# 반경 배제는 **고정 NPC만**. 안 넘기면 예전처럼 전체 액터를 쓴다(도구·프루브 호환).
+	_npc_anchors = npc_anchors if not npc_anchors.is_empty() else actor_anchors
 	_runtime = rt
 	_parent = parent
 	_floor = floor_idx
@@ -412,7 +430,8 @@ func _collect_spawn_anchors(
 	var reach := ReachProbe.reachable_anchors(rt, seed_anchor)
 	var banned := _banned_room_anchors(rt)
 	var out: Array[Vector2i] = []
-	var without_rooms: Array[Vector2i] = []
+	var without_rooms: Array[Vector2i] = []  # 방 배제만 푼 것
+	var bare: Array[Vector2i] = []  # 방·반경 둘 다 푼 것
 	for anchor: Variant in reach:
 		var a: Vector2i = anchor
 		var d := a - player_cell
@@ -421,6 +440,11 @@ func _collect_spawn_anchors(
 		# reachable_anchors는 문 점프 착지도 돌려준다(통행 판정을 안 한다) —
 		# 설 수 있는 자리만 남긴다.
 		if not Placement.body_fits(rt, a):
+			continue
+		bare.append(a)
+		# 액터 곁은 방을 가리지 않고 비운다 — 복도에 선 NPC가 대다수라 방 배제만으로는
+		# 4개 층에서 한 칸도 안 걸렸다(위 ACTOR_CLEAR_RADIUS 주석의 실측).
+		if _near_actor(a):
 			continue
 		without_rooms.append(a)
 		if not banned.has(a):
@@ -432,6 +456,13 @@ func _collect_spawn_anchors(
 		# 도달 판정만 남기고 방 배제를 포기한다.
 		push_warning("EnemyManager: f%d 빈 방이 없어 NPC 방 배제를 생략" % _floor)
 		return without_rooms
+	if not bare.is_empty():
+		# 반경까지 빼면 설 자리가 없는 층 — 층을 텅 비우느니 반경을 포기한다.
+		# **조용히 넘어가지 않는다**: 이 경고가 뜨면 액터 배치나 반경을 다시 봐야 한다.
+		push_warning(
+			"EnemyManager: f%d 액터 반경 %d까지 빼면 자리가 없어 반경 배제를 생략" % [_floor, ACTOR_CLEAR_RADIUS]
+		)
+		return bare
 	push_warning("EnemyManager: f%d 도달 가능 앵커 없음 — 맵 전체에서 뽑는다" % _floor)
 	return _all_anchors(rt, player_cell, min_dist)
 
@@ -532,6 +563,15 @@ func _raw_fits(rt: MapRuntime, a: Vector2i) -> bool:
 		if v != 0 and v != 2:
 			return false
 	return true
+
+
+## 이 앵커가 액터 곁인가 — 2×2 몸끼리의 체비셰프 거리로 잰다.
+func _near_actor(a: Vector2i) -> bool:
+	for act: Vector2i in _npc_anchors:
+		var d := a - act
+		if maxi(absi(d.x), absi(d.y)) <= ACTOR_CLEAR_RADIUS:
+			return true
+	return false
 
 
 ## 액터 앵커가 속한 방. 액터는 Placement.find_spot으로 자리를 옮겨 앉을 수 있어

@@ -46,6 +46,7 @@ func _ready() -> void:
 
 	_rep.scope("")
 	MotionProbe.check_contact_symmetry(_rep)
+	ActorProbe.check_pattern_coverage(_rep)
 	RenderProbe.check_atlas_transparency(_rep)
 
 	for f: int in FLOORS:
@@ -99,6 +100,7 @@ func _audit_floor(floor_no: int) -> void:
 	ActorProbe.check_pose_coverage(_rep, player, enemies)
 	ActorProbe.check_placement(_rep, rt, player, field.npcs, enemies)
 	ActorProbe.check_spawn_distance(_rep, player, enemies)
+	ActorProbe.check_actor_clearance(_rep, field.npcs, enemies)
 
 	# 도달성은 NPC 차단 오버라이드가 적용된 런타임 기준 — 그래야 "NPC가 길을 막았다"가 보인다.
 	var reach := ReachProbe.reachable_anchors(rt, player.mover.grid_pos)

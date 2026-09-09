@@ -104,3 +104,67 @@ static func check_spawn_distance(rep: AuditReport, player: PlayerEntity, enemies
 		if Placement.bodies_touch(p, e.mover.grid_pos):
 			rep.fail("스폰 즉시 접촉", "%s @%s (플레이어 %s)" % [e.species_id, e.mover.grid_pos, p])
 	rep.ok("스폰 안전거리", "몬스터 %d체" % enemies.size())
+
+
+## 고정 NPC·워커 곁에 몬스터가 서 있지 않은가.
+##
+## 왜 이 프루브가 필요한가 (2026-09-09 실측): "NPC가 사는 방은 비운다"는 규칙이
+## EnemyManager에 있었는데 **아무도 그것을 재지 않았다.** 실제 배치는 액터 17명 중
+## 12명이 복도에 서 있고 복도는 배제에서 빠지므로, f1·f2·f4·f5에서는 배제되는 칸이
+## 0개였다 — 규칙이 4개 층에서 한 번도 안 걸린 채 반년을 지났다. 반경 배제를 더했으니
+## 그것이 실제로 지켜지는지는 여기서 층마다 잰다.
+## 워커는 빼고 잰다 — 배경 보행자는 정의상 몬스터 곁으로 걸어갈 수 있다.
+static func check_actor_clearance(rep: AuditReport, npcs: Array, enemies: Array) -> void:
+	var anchors: Array[Vector2i] = []
+	for n: NpcEntity in npcs:
+		anchors.append(n.cell)
+	if anchors.is_empty() or enemies.is_empty():
+		rep.ok("액터 이격", "액터 %d · 몬스터 %d — 잴 것 없음" % [anchors.size(), enemies.size()])
+		return
+	var worst := 9999
+	var bad := 0
+	for e: EnemyEntity in enemies:
+		var best := 9999
+		for a: Vector2i in anchors:
+			var d := e.mover.grid_pos - a
+			best = mini(best, maxi(absi(d.x), absi(d.y)))
+		worst = mini(worst, best)
+		if best <= EnemyManager.ACTOR_CLEAR_RADIUS:
+			bad += 1
+			rep.fail(
+				"액터 곁 스폰",
+				(
+					"%s @%s — 가장 가까운 액터까지 %d칸(허용 >%d)"
+					% [e.species_id, e.mover.grid_pos, best, EnemyManager.ACTOR_CLEAR_RADIUS]
+				)
+			)
+	if bad == 0:
+		rep.ok(
+			"액터 이격",
+			(
+				"몬스터 %d체 · 액터 %d명 · 최근접 %d칸(반경 %d 초과여야)"
+				% [enemies.size(), anchors.size(), worst, EnemyManager.ACTOR_CLEAR_RADIUS]
+			)
+		)
+
+
+## 데이터가 배정한 이동 패턴이 **전부 실제로 구현돼 있는가.**
+##
+## 선언(enum·기본값·텔레그래프)만 있고 decide()에 분기가 없으면 그 종은 조용히 배회만
+## 한다 — 화면상으로는 "가만히 안 있고 움직이니" 정상으로 보여서 눈으로는 절대 안 잡힌다.
+## 실제로 PATROL·PULSE 두 패턴이 그 상태로 남아 있었다(2026-09-09).
+static func check_pattern_coverage(rep: AuditReport) -> void:
+	var missing: Array[String] = []
+	var seen := {}
+	for floor_idx in range(0, 6):
+		for sp: Dictionary in Database.encounter_species(floor_idx):
+			var name := str(sp.get("pattern", "wander"))
+			if seen.has(name):
+				continue
+			seen[name] = true
+			if not MovementPattern.is_implemented(name):
+				missing.append("%s (f%d %s)" % [name, floor_idx, str(sp.get("id", "?"))])
+	for m in missing:
+		rep.fail("이동 패턴 미구현", "%s — decide()에 분기가 없어 배회로 떨어진다" % m)
+	if missing.is_empty():
+		rep.ok("이동 패턴 구현", "데이터가 쓰는 %d종 전부 구현됨" % seen.size())
