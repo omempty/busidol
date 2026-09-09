@@ -39,7 +39,7 @@ static func check_inspect_reach(
 
 ## 이벤트가 소품 앞에서 나는가.
 ##
-## 연결은 데이터가 이미 선언하고 있다: 소품의 `state.open_flag`와 트리거의 `done_flag`가
+## 연결은 데이터가 이미 선언하고 있다: 소품의 `state.open_flag`와 트리거의 완료 플래그가
 ## 같은 플래그다(f1_storage_lockers ↔ f1_gas / f1_mail_lockers ↔ f1_sopo).
 ## 그런데 그 둘이 같은 자리에 있는지는 아무도 재지 않았다 — 어긋나 있으면 플레이어는
 ## **빈 방의 좌표를 밟아** 이벤트를 얻는다(2026-09-09 유저 지적).
@@ -48,7 +48,7 @@ static func check_event_alignment(
 ) -> void:
 	if layer == null or layer.props.is_empty():
 		return
-	var by_flag := _triggers_by_done_flag(floor_no)
+	var by_flag := _triggers_by_completion_flag(floor_no)
 	if by_flag.is_empty():
 		return
 	var checked := 0
@@ -202,12 +202,17 @@ static func _chebyshev_to(from: Vector2i, cells: Dictionary) -> int:
 	return best
 
 
-## done_flag → {id, cells}. zone 트리거만 자리를 가진다(auto는 층에 들어서면 바로 돈다).
+## 완료 플래그 → {id, type, cells}. zone·interact 트리거만 자리를 가진다(auto는 층에 들어서면 바로 돈다).
+##
+## **done_flag와 guard_flag를 함께 색인한다.** 둘은 "이 트리거가 끝났다는 표식"이라는
+## 뜻이 같고, 세우는 시점만 다르다(done은 발동 직전에 TriggerSystem이, guard는 결과가
+## 성공했을 때 컷신 쪽이). done_flag만 보면 **져도 되는 트리거는 통째로 이 관문 밖**이었다 —
+## F5 보스 재도전 둘이 정확히 그 꼴이라 소품과 어긋나도 초록이었을 것이다(2026-09-09).
 ##
 ## 파일 모양 주의: triggers_f*.json은 **배열이 아니라 `{schema_version, _comment, triggers[]}`**다.
 ## 처음에 배열로 읽었더니 이 관문이 아무 짝도 못 찾고 **조용히 초록**이었다(2026-09-09 실측).
 ## 그래서 ReachProbe와 같은 정본 로더(JsonUtil)를 쓴다 — 읽는 방법이 두 벌이면 또 갈린다.
-static func _triggers_by_done_flag(floor_no: int) -> Dictionary:
+static func _triggers_by_completion_flag(floor_no: int) -> Dictionary:
 	var out: Dictionary = {}
 	var doc := JsonUtil.load_dict(TRIGGER_PATH % floor_no, "PropsProbe")
 	for t: Variant in doc.get("triggers", []):
@@ -215,6 +220,8 @@ static func _triggers_by_done_flag(floor_no: int) -> Dictionary:
 			continue
 		var td := t as Dictionary
 		var flag := String(td.get("done_flag", ""))
+		if flag.is_empty():
+			flag = String(td.get("guard_flag", ""))
 		var cells: Variant = td.get("cells", [])
 		if flag.is_empty() or typeof(cells) != TYPE_ARRAY or (cells as Array).is_empty():
 			continue

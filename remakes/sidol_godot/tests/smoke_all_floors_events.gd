@@ -18,6 +18,7 @@ func _ready() -> void:
 	_test_all_floors_npcs_and_walkers()
 	_test_full_scenario_quest_chain()
 	_test_npc_repeats_and_progression()
+	_test_f5_boss_retry_after_defeat()
 
 	if _failures.is_empty():
 		print("[smoke_all_floors] PASS — 전 층 시나리오 체인, NPC/Walker 동작, 대사 고유성 전수 검증 통과!")
@@ -366,6 +367,89 @@ func _test_full_scenario_quest_chain() -> void:
 	print(
 		"   - [OK] F5 모교수 치료(Q_F5_BOSS_CURE) -> SYS_BUILDER 각성(Q_F5_AI_BATTLE) -> 엔딩(Q_ENDING) 확인"
 	)
+
+
+## 5. F5 보스전에 **져도 게임이 계속되는가** — 막다른 길 회귀 시험(백로그 §3.9).
+##
+## 두 보스 컷신은 층 진입 auto 트리거로 시작하고 done_flag는 컷신이 돌기 **전에** 선다.
+## 그래서 첫 판에서 지면 승리 플래그(q_f5_prof_won·q_f5_ai_battle_won)가 영영 서지 않고,
+## 해독제 단계도 최종전도 에필로그도 열리지 않는다 — 세이브를 되돌리는 것 말고는 끝낼 방법이
+## 없었다. 지금은 소품 콘솔 위에 얹은 interact 재도전이 그 사슬을 잇는다. 좌표는 여기에
+## 적지 않고 트리거 파일에서 읽는다(데이터가 움직여도 시험이 같이 움직인다).
+func _test_f5_boss_retry_after_defeat() -> void:
+	print("[smoke_all_floors] 5. F5 보스전 패배 후 재도전 경로 검사...")
+	var before_failures := _failures.size()
+	var doc := JsonUtil.load_dict("res://data/maps/triggers_f5.json", "smoke_all_floors")
+	var by_id: Dictionary = {}
+	for t: Variant in doc.get("triggers", []):
+		if typeof(t) == TYPE_DICTIONARY:
+			by_id[String((t as Dictionary).get("id", ""))] = t
+
+	# (모교수, 보스) 각각: 진 상태 플래그 / 이긴 상태 플래그 / 재도전 트리거 id / 컷신 id
+	var cases: Array = [
+		{
+			"label": "모교수",
+			"before": ["q_f5_boss_gate", "q_f5_prof_intro_seen"],
+			"win": "q_f5_prof_won",
+			"retry": "f5_professor_retry",
+			"cutscene": "f5_professor",
+			"intro": "f5_professor_intro"
+		},
+		{
+			"label": "SYS_BUILDER",
+			"before": ["q_f5_prof_won", "Q_F5_BOSS_CURE", "Q_F5_AI_BATTLE"],
+			"win": "q_f5_ai_battle_won",
+			"retry": "f5_boss_retry",
+			"cutscene": "boss_sys_builder",
+			"intro": "f5_boss_intro"
+		}
+	]
+
+	for case: Dictionary in cases:
+		var rid := String(case["retry"])
+		if not by_id.has(rid):
+			_failures.append("%s 재도전 트리거(%s)가 triggers_f5.json에 없다" % [case["label"], rid])
+			continue
+		var cells: Array[Vector2i] = []
+		for raw: Variant in (by_id[rid] as Dictionary).get("cells", []):
+			cells.append(Vector2i(int((raw as Array)[0]), int((raw as Array)[1])))
+		if cells.is_empty():
+			_failures.append("%s 재도전 트리거에 cells가 없다" % case["label"])
+			continue
+
+		# --- 진 직후 상태를 그대로 세운다: 연출은 봤고(done_flag) 승리 플래그만 없다 ---
+		GameState.reset()
+		for f: String in case["before"]:
+			GameState.set_flag(f, true)
+		var trig := TriggerSystem.new()
+		add_child(trig)
+		trig.load_for_floor(5)
+		var fired: Array[String] = []
+		trig.cutscene_requested.connect(func(id: StringName) -> void: fired.append(String(id)))
+
+		# ① 연출 auto는 다시 안 난다 — 나면 패배 지점에서 층을 못 떠나는 무한 재전투가 된다.
+		trig.tick(Vector2i(80, 30), 0.5)
+		trig.tick(Vector2i(80, 30), 0.5)
+		if not fired.is_empty():
+			_failures.append(
+				"%s: 패배 복귀 직후 auto 트리거(%s)가 다시 발동했다 — 층을 떠날 수 없다" % [case["label"], case["intro"]]
+			)
+
+		# ② 콘솔을 조사하면 재도전이 열린다 — 이 한 줄이 없으면 게임을 끝낼 수 없다.
+		fired.clear()
+		var reopened := trig.try_interact(cells)
+		if not reopened or not fired.has(String(case["cutscene"])):
+			_failures.append("%s: 패배 후 %s를 조사해도 재도전이 열리지 않는다 (막다른 길)" % [case["label"], rid])
+
+		# ③ 이기면 닫힌다 — guard_flag가 서면 같은 자리에서 다시 나지 않는다.
+		GameState.set_flag(String(case["win"]), true)
+		fired.clear()
+		if trig.try_interact(cells) or not fired.is_empty():
+			_failures.append("%s: 승리 플래그(%s) 수립 후에도 재도전이 또 났다" % [case["label"], case["win"]])
+		trig.queue_free()
+
+	if _failures.size() == before_failures:
+		print("   - [OK] F5 보스 2건: 패배 후 콘솔 재도전 열림 / 승리 후 닫힘 / auto 재발동 없음")
 
 
 ## 4. NPC 다회차 대화(90년대 밈/개그) 및 진행 상황별 대사 변화 전수 검증

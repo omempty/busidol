@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "_comment": "F5 트리거 — WP-7 재구성: ①q_f5_boss_gate→모교수 제압전 ②승리(q_f5_prof_won)→해독제 투약(Q_F5_BOSS_CURE) ③Q_F5_BOSS_CURE→SYS_BUILDER 각성·결전 ④결전 승리(q_f5_ai_battle_won)→에필로그.",
+  "_comment": "F5 트리거 — WP-7 재구성: ①q_f5_boss_gate→모교수 제압전 ②승리(q_f5_prof_won)→해독제 투약(Q_F5_BOSS_CURE) ③Q_F5_BOSS_CURE→SYS_BUILDER 각성·결전 ④결전 승리(q_f5_ai_battle_won)→에필로그. 2026-09-09: ①③은 **져도 되는 트리거**인데 done_flag만 있어 첫 패배로 사슬이 끊겼다(게임을 못 끝낸다). 연출용 auto는 그대로 두고, 승리 플래그를 guard_flag로 읽는 interact 재도전(f5_professor_retry·f5_boss_retry)을 소품 콘솔 위에 얹어 되살렸다.",
   "triggers": [
     {
       "id": "f5_professor_intro",
@@ -8,7 +8,18 @@
       "once": true,
       "requires_flag": "q_f5_boss_gate",
       "done_flag": "q_f5_prof_intro_seen",
-      "action": { "cutscene": "f5_professor" }
+      "action": { "cutscene": "f5_professor" },
+      "_comment": "첫 대면은 층에 올라선 순간 강제로 난다(연출). done_flag는 그대로 둔다 — 대면은 실제로 한 번 일어났고 되돌릴 것이 아니다. 다만 이 컷신은 **전투로 끝나므로 실패할 수 있다**. 재도전은 아래 f5_professor_retry가 맡는다."
+    },
+    {
+      "id": "f5_professor_retry",
+      "type": "interact",
+      "once": false,
+      "cells": [[63, 41], [64, 41], [63, 42], [64, 42]],
+      "requires_flag": "q_f5_prof_intro_seen",
+      "guard_flag": "q_f5_prof_won",
+      "action": { "cutscene": "f5_professor" },
+      "_comment": "모교수전 재도전 — 서버실 관리 단말기(props_f5.json f5_server_console) 몸 셀 넷. **왜 auto도 zone도 아닌가**: 패배하면 BattleRewards.apply가 field.tscn을 다시 열고 TriggerSystem.load_for_floor가 _fired·_fired_cell을 비우는데 GameState.player_cell은 그대로라, 발동 자리에 선 채로 되돌아온다 → auto/zone이면 0.2초 뒤 같은 전투가 또 걸려 층을 영영 못 떠난다(회복도 장비도 못 하고 무한 재전투). interact는 사람이 SPACE를 눌러야 나므로 물러나 준비하고 다시 올 수 있다. guard_flag라 **이겨야** 닫힌다(done_flag였다면 첫 패배로 q_f5_prof_won이 영영 안 서서 해독제·최종전·엔딩이 통째로 막혔다 — 백로그 §3.9). 정렬은 PropsProbe.check_event_alignment가 잰다."
     },
     {
       "id": "f5_cure_stage",
@@ -25,7 +36,18 @@
       "once": true,
       "requires_flag": "Q_F5_BOSS_CURE",
       "done_flag": "Q_F5_AI_BATTLE",
-      "action": { "cutscene": "boss_sys_builder" }
+      "action": { "cutscene": "boss_sys_builder" },
+      "_comment": "각성 연출은 치료 직후 한 번만 강제로 난다. Q_F5_AI_BATTLE은 「결전에 돌입했다」는 표식이라 done_flag가 맞다(quests_v2.json 설명도 '최종 결전 돌입'). 승리 표식은 컷신 안 start_battle의 on_win_flag=q_f5_ai_battle_won이고, 재도전은 아래 f5_boss_retry가 맡는다."
+    },
+    {
+      "id": "f5_boss_retry",
+      "type": "interact",
+      "once": false,
+      "cells": [[74, 20], [75, 20], [74, 21], [75, 21]],
+      "requires_flag": "Q_F5_AI_BATTLE",
+      "guard_flag": "q_f5_ai_battle_won",
+      "action": { "cutscene": "boss_sys_builder" },
+      "_comment": "SYS_BUILDER전 재도전 — 중앙통제 콘솔(props_f5.json f5_control_console) 몸 셀 넷. f5_professor_retry와 같은 이유로 interact다. 컷신의 grant_skill(ember_of_flint)은 GameState 쪽에서 중복 습득이 무시되므로 재생해도 안전하다. guard_flag가 q_f5_ai_battle_won이라 이겨야 닫히고, 그 플래그가 곧 f5_epilogue의 requires_flag다 — 즉 **이 한 줄이 엔딩까지 가는 유일한 길**이다."
     },
     {
       "id": "f5_epilogue",
