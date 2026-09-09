@@ -37,6 +37,9 @@ import delivery_checks as dc  # noqa: E402  (같은 폴더 모듈)
 DARK_NAVY = (0x0A, 0x08, 0x2E)
 ## 하단 정렬 시 남기는 여백(셀 높이 비율). 편집기·설치기가 같은 수를 써야 접지가 흔들리지 않는다.
 BOTTOM_MARGIN = 0.04
+## 한 프레임 묶음이 가질 수 있는 최대 폭(칸 대비). 넘으면 거기서 끊는다 —
+## 넓은 그림자가 좌우 캐릭터를 걸쳐 묶음이 연쇄로 커지는 것을 막는다.
+GROUP_WIDTH_MAX = 1.4
 ## 정렬이 없는 계약에서 [정렬 스냅]을 눌렀을 때의 답. 조용히 아무것도 안 하면
 ## 사람은 버튼이 고장 난 줄 안다 — 왜 안 움직이는지 그 자리에서 말한다.
 ALIGN_NONE_MSG = ("정렬이 없는 계약(align=none)이라 옮기지 않았다 — 타일·아이콘·초상은 "
@@ -611,6 +614,7 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
     boxes = {}
     anchors = {}      # 프레임마다 '무엇을 칸 중앙에 둘 것인가' — 본체 상자
     missing = []
+    dropped = []      # 계약보다 많이 그려 온 묶음 — 조용히 버리지 않고 문장에 싣는다
     for r in todo:
         nfr = max(1, frames_of.get(r, cols))
         yb0, yb1 = round(r * H / rows), round((r + 1) * H / rows)
@@ -618,13 +622,27 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
         if not band.any():
             missing += [f"r{r}c{c}" for c in range(nfr)]
             continue
-        # 연결된 덩어리는 통째로 한 프레임의 것이다 — 밴드 경계로 자르면 옆 프레임이
-        # 몇 px 삐져든 것까지 이 프레임으로 쳐서 상자가 부풀고 축척이 무너진다.
-        per = {}
-        for b in dc.blobs(band):
-            bcx = (b["x0"] + b["x1"] + 1) / 2.0
-            fi = max(0, min(nfr - 1, int(bcx * nfr / W)))
-            per.setdefault(fi, []).append(b)
+        # 프레임은 왼쪽→오른쪽 순서로 놓인다. 가로로 겹치는 덩어리끼리 한 프레임이고
+        # (캐릭터 + 발밑 그림자처럼), 넓은 그림자가 좌우를 동시에 걸쳐 묶음이 연쇄로
+        # 커지는 것은 폭 상한으로 끊는다 — 한 칸에 앉을 것이므로 그보다 넓으면 프레임이
+        # 아니다. 밴드로 자르던 예전 방식은 그림이 시트 폭을 안 채우면 배정이 어긋났다.
+        cap = cell * GROUP_WIDTH_MAX
+        groups = []
+        for b in sorted(dc.blobs(band), key=lambda b: b["x0"]):
+            g = groups[-1] if groups else None
+            if g and b["x0"] <= g["x1"] and (max(g["x1"], b["x1"]) - g["x0"] + 1) <= cap:
+                g["x1"] = max(g["x1"], b["x1"])
+                g["blobs"].append(b)
+                g["n"] += b["n"]
+            else:
+                groups.append({"x0": b["x0"], "x1": b["x1"], "blobs": [b], "n": b["n"]})
+        if len(groups) > nfr:
+            # 계약보다 묶음이 많다 — 픽셀이 많은 것부터 계약 수만큼만 프레임으로 본다.
+            # (실측: flask_titan_v3 hurt 행은 3프레임 계약인데 캐릭터 3개 + 주인 없는
+            #  그림자 4개가 그려져 있었다. 그림자를 프레임으로 세면 배치가 통째로 밀린다.)
+            dropped.append(f"r{r} 계약 {nfr} 밖 묶음 {len(groups) - nfr}개")
+            groups = sorted(sorted(groups, key=lambda g: -g["n"])[:nfr], key=lambda g: g["x0"])
+        per = {i: g["blobs"] for i, g in enumerate(groups)}
         for c in range(nfr):
             bl = per.get(c)
             if not bl:
@@ -700,6 +718,8 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
     basis = "그 행에서 가장 큰 프레임" if only is not None else "가장 큰 프레임"
     msg = (f"{scope} {len(boxes)}프레임 → {tgt_w}×{tgt_h} "
            f"({basis} {maxw}×{maxh}px 기준 축척 {k:.3f}, 채움 {fk:.2f}, 정렬 {align})")
+    if dropped:
+        msg += " · 계약 밖 묶음은 빼고 앉혔다(" + ", ".join(dropped) + ")"
     msg += clamped
     if clipped_px:
         msg += f" · 칸 경계에서 잘린 픽셀 {clipped_px:,}px (프레임 {clipped_frames}개)"
