@@ -955,18 +955,21 @@ function createCard(it) {
       <button class="btn-act ok" onclick="act('${esc(it.file)}', 'approve')">✅ 승인 및 설치</button>
       <button class="btn-act bad" onclick="toggleFeedback('${esc(it.file)}', true)">❌ 반려</button>
       <button class="btn-act fix" onclick="openFixer('${esc(it.file)}')">🛠️ 셀 편집기</button>
+      <button class="btn-act bad" onclick="deleteItem('${esc(it.file)}')">🗑️ 삭제</button>
     `;
   } else if (st === 'approved') {
     actionButtons = `
       <button class="btn-act" style="background:#12301f;color:#48d597;cursor:default">✅ 게임 설치 완료</button>
       <button class="btn-act reset" onclick="resetItem('${esc(it.file)}')">🔄 재심사로 되돌리기</button>
       <button class="btn-act fix" onclick="openFixer('${esc(it.file)}')">🛠️ 셀 편집기</button>
+      <button class="btn-act bad" onclick="deleteItem('${esc(it.file)}')">🗑️ 삭제</button>
     `;
   } else if (st === 'rejected') {
     actionButtons = `
       <button class="btn-act bad" style="cursor:default">반려 상태</button>
       <button class="btn-act reset" onclick="resetItem('${esc(it.file)}')">🔄 재심사로 복구</button>
       <button class="btn-act fix" onclick="openFixer('${esc(it.file)}')">🛠️ 셀 편집기</button>
+      <button class="btn-act bad" onclick="deleteItem('${esc(it.file)}')">🗑️ 삭제</button>
     `;
   } else {
     actionButtons = `
@@ -1133,6 +1136,25 @@ window.act = async (file, action, feedback = '') => {
         b.style.opacity = '1.0';
       });
     }
+  }
+};
+
+/** 이 **버전 하나**를 지운다 — 그림과 그에 딸린 정보(피드백 md)까지.
+ *
+ * assets/raw는 .gitignore라 되돌릴 수 없다. 그래서 무엇이 지워지는지 이름을 보이고
+ * 확인을 받는다. 20_processed(채택본)는 서버가 남긴다 — 게임이 그것을 읽는다.
+ */
+window.deleteItem = async file => {
+  if (!confirm(file + " 을(를) 지운다.\n\n납품 그림과 피드백 문서가 함께 사라지며 되돌릴 수 없다."
+               + "\n(이미 채택돼 설치된 판은 남는다)\n\n계속할까?")) return;
+  try {
+    const r = await api('/api/review', { cat: CUR, file, action: 'delete' });
+    toast(r && r.detail ? r.detail : '삭제 완료', !(r && r.ok));
+    PENDING_ITEMS = PENDING_ITEMS.filter(x => x.file !== file);
+    updateSummary(PENDING_ITEMS);
+    renderCards();
+  } catch (e) {
+    toast('삭제 오류: ' + e.message, true);
   }
 };
 

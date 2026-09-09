@@ -728,6 +728,53 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
     return out, msg, len(boxes)
 
 
+def scale_cells(im: Image.Image, cell: int, rows: int, cols: int,
+                k: float, align: str = "bottom_center", only=None) -> tuple:
+    """칸 안의 그림만 축척 k로 줄인다(격자·칸 배치는 그대로).
+
+    ## 왜 refit과 따로 있나
+
+    refit은 프레임을 **다시 찾아 다시 앉힌다** — 배치가 틀어진 납품을 바로잡는 도구다.
+    배치는 맞는데 그림만 칸보다 큰 경우에는 그렇게까지 할 필요가 없고, 오히려 프레임
+    묶음을 잘못 잡을 위험만 진다. 이건 칸마다 있는 것을 제자리에서 줄이기만 한다.
+
+    줄이는 기준점은 계약 정렬과 같다: 가로 중앙, 세로는 바닥 접지(align에 따라 중앙).
+    그래야 줄인 뒤에도 정렬 검사를 그대로 통과한다.
+    """
+    if not (cell and rows and cols):
+        return im, "계약 격자가 없어 칸 단위로 줄일 수 없다", 0
+    k = float(k)
+    if not (0.05 <= k <= 1.0):
+        return im, f"축척 {k}는 0.05~1.00 밖이다(줄이는 연산이다)", 0
+    src = im.convert("RGBA")
+    out = src.copy()
+    pad = round(cell * BOTTOM_MARGIN) if align == "bottom_center" else 0
+    targets = [tuple(only)] if only else [(r, c) for r in range(rows) for c in range(cols)]
+    done = 0
+    for (r, c) in targets:
+        r, c = int(r), int(c)
+        box = (c * cell, r * cell, (c + 1) * cell, (r + 1) * cell)
+        sub = src.crop(box)
+        a = np.asarray(sub)
+        vis = a[:, :, 3] > 8
+        if not vis.any():
+            continue
+        ys, xs = np.where(vis)
+        x0, x1, y0, y1 = int(xs.min()), int(xs.max()), int(ys.min()), int(ys.max())
+        piece = sub.crop((x0, y0, x1 + 1, y1 + 1))
+        nw = max(1, round(piece.width * k))
+        nh = max(1, round(piece.height * k))
+        piece = piece.resize((nw, nh), Image.NEAREST)
+        blank = Image.new("RGBA", (cell, cell), (0, 0, 0, 0))
+        px = (cell - nw) // 2
+        py = (cell - pad - nh) if align == "bottom_center" else (cell - nh) // 2
+        blank.paste(piece, (max(0, px), max(0, py)))
+        out.paste(blank, (box[0], box[1]))
+        done += 1
+    what = f"r{targets[0][0]}c{targets[0][1]}" if only else f"{done}칸"
+    return out, f"칸 내용 축소 {what} × {k:.2f} (정렬 {align} 유지)", done
+
+
 def autosize(im: Image.Image, cell: int, rows: int, cols: int, size=None) -> tuple:
     """어떤 크기로 와도 계약 캔버스에 맞춘다 — 무엇을 했는지 문장으로 돌려준다.
 
@@ -973,6 +1020,11 @@ def apply_op(im: Image.Image, op: str, params: dict) -> tuple:
         im, n = snap_cells(im, cell, rows or 1, cols or 1, align, groups=groups,
                            only=(int(only[0]), int(only[1])) if only else None)
         return im, (f"정렬 스냅 {n}칸" if n else "이동 불필요")
+    if op == "scalecells":
+        only = p.get("cell_rc")
+        im, msg, _n = scale_cells(im, cell, rows, cols, p.get("k", 0.9), align,
+                                  only=(int(only[0]), int(only[1])) if only else None)
+        return im, msg
     if op == "snapall":
         if not (cell and rows and cols):
             return im, "계약이 없어 전 셀 정렬을 못 한다"

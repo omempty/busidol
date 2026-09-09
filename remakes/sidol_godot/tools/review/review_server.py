@@ -339,11 +339,44 @@ def build_revise_md(cat: str, fname: str, feedback: str, validation: dict) -> st
     return "\n".join(parts)
 
 
+def delete_submission(cat: str, fname: str) -> dict:
+    """그 **버전 하나**를 지운다 — 그림과 그에 딸린 정보.
+
+    지우는 것: 10_submitted / _rejected 의 그 png, 그리고 _feedback 의 그 png.md.
+    지우지 않는 것: 20_processed. 거기 있는 것은 이미 채택돼 게임에 설치된 판이고,
+    다른 버전을 지운다고 함께 사라지면 게임이 깨진다.
+
+    assets/raw는 .gitignore라 되돌릴 수 없다. 그래서 무엇을 지웠는지 경로로 돌려주고,
+    편집기·보드는 누르기 전에 확인을 받는다.
+    """
+    if not fname.lower().endswith(".png"):
+        raise ValueError("파일명이 .png가 아니다")
+    removed, kept = [], []
+    for parts in (("10_submitted", cat, fname),
+                  ("10_submitted", "_rejected", cat, fname),
+                  ("10_submitted", "_feedback", cat, fname + ".md")):
+        path = safe_path(*parts)
+        if os.path.exists(path):
+            os.remove(path)
+            removed.append("/".join(parts))
+    proc = safe_path("20_processed", cat, fname)
+    if os.path.exists(proc):
+        kept.append(f"20_processed/{cat}/{fname} (채택본이라 남겨 둔다)")
+    if not removed:
+        return {"ok": False, "detail": f"{fname}: 지울 것이 없다(이미 지워졌나?)"}
+    _VALIDATION_CACHE.clear()
+    return {"ok": True, "removed": removed, "kept": kept,
+            "detail": f"{fname} 삭제 — " + ", ".join(removed)
+                      + (" · 남김: " + ", ".join(kept) if kept else "")}
+
+
 def do_review(payload: dict) -> dict:
     cat = payload.get("cat", "")
     action = payload.get("action", "")
     if cat not in CATEGORIES:
         raise ValueError(f"알 수 없는 카테고리: {cat}")
+    if action == "delete":
+        return delete_submission(cat, os.path.basename(payload.get("file", "")))
     if action not in ("approve", "reject", "reset"):
         raise ValueError(f"알 수 없는 액션: {action}")
     fname = os.path.basename(payload.get("file", ""))

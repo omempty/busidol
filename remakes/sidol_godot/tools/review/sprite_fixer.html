@@ -410,6 +410,15 @@
         <button data-op="fitcell">선택 칸에 앉히기</button>
         <span class="hint">든 그림을 그 칸의 가로 중앙·바닥 접지로 옮긴다</span>
       </div>
+      <div class="row">
+        <button data-op="shrinksel">선택 영역 축소</button>
+        <input type="number" id="shrink" value="0.90" min="0.05" max="1" step="0.05">배
+        <button data-op="shrinkcell">선택 칸 내용 축소</button>
+        <button data-op="shrinkall">전 칸 내용 축소</button>
+      </div>
+      <div class="row hint">칸보다 크게 그려 온 그림을 줄일 때. <b>칸 내용 축소</b>는 격자를
+        그대로 두고 칸 안의 그림만 줄여 다시 앉힌다(정렬 유지) — 배치까지 틀어졌으면
+        [행 재배치]가 맞다.</div>
     </section>
 
     <section>
@@ -1706,6 +1715,16 @@ function syncWaive() {
 }
 
 /** 버튼에 **무엇을 할지**를 적어 둔다 — 눌러 보기 전에 알 수 있어야 한다. */
+/** 축소 배율 입력 — 줄이는 연산이므로 1보다 크면 받지 않는다. */
+function shrinkFactor() {
+  const k = parseFloat(($("#shrink") || {}).value);
+  if (!(k > 0.05 && k <= 1.0)) {
+    log("축소 배율은 0.05~1.00 사이여야 한다(줄이는 연산이다)", "warn");
+    return 0;
+  }
+  return k;
+}
+
 function syncAutofix() {
   const btn = $("#fixcodes"), what = $("#fixcodeswhat");
   if (!btn || !what) return;
@@ -1736,6 +1755,37 @@ const OPS = {
     log("지적 자동보정 " + lastPlan.length + "단계: " + lastPlan.join(" → "));
     for (const op of lastPlan) await OPS[op]();
     log("자동보정 끝 — 다시 저장하면 남은 지적을 알 수 있다", "ok");
+  },
+  // 든 영역을 그 자리에서 줄인다 — 캔버스 안에서 크기만 바꾸고 위치(좌상단)는 둔다.
+  // 서버를 거치지 않는다: 들고 있는 것은 아직 work에 없다.
+  shrinksel: () => {
+    if (!floating) return log("먼저 선택 도구(V)로 줄일 영역을 드래그해 집어라", "warn");
+    const k = shrinkFactor();
+    if (!k) return;
+    const f = floating;
+    const nw = Math.max(1, Math.round(f.w * k)), nh = Math.max(1, Math.round(f.h * k));
+    const cv = document.createElement("canvas");
+    cv.width = nw; cv.height = nh;
+    const cx = cv.getContext("2d", { willReadFrequently: true });
+    cx.imageSmoothingEnabled = false;               // 도트는 보간하면 죽는다
+    cx.drawImage(f.cv, 0, 0, nw, nh);
+    f.cv = cv; f.w = nw; f.h = nh;
+    const d = cx.getImageData(0, 0, nw, nh);
+    let px = 0;
+    for (let i = 0, len = nw * nh; i < len; i++) if (d.data[i * 4 + 3] > 8) px++;
+    f.px = px;
+    statsStale = true;
+    floatLabel(); redraw();
+    log(`든 영역 ${nw}×${nh}로 축소 (×${k.toFixed(2)}) — 불투명 ${px.toLocaleString()}px`, "ok");
+  },
+  shrinkcell: () => {
+    if (!sel) return log("셀을 먼저 선택하라", "warn");
+    const k = shrinkFactor();
+    if (k) serverOp("scalecells", { k, cell_rc: [sel.r, sel.c] });
+  },
+  shrinkall: () => {
+    const k = shrinkFactor();
+    if (k) serverOp("scalecells", { k });
   },
   // 든 영역을 선택 칸(없으면 영역이 걸친 칸)의 가로 중앙·바닥 접지로 옮긴다.
   fitcell: () => {
@@ -1807,12 +1857,12 @@ const OPS = {
 const SERVER_OPS = new Set(["key", "guides", "binarize", "quantize", "deblack", "erasecolor",
                             "regrid", "scale", "snap", "snapall", "measure",
                             "autosize", "autokey", "pixelize", "refit", "rowfit",
-                            "fixcodes"]);
+                            "fixcodes", "shrinkcell", "shrinkall"]);
 // 부동 이동 — 되돌리기 스냅숏을 **제스처당 하나** 스스로 찍는다. 버튼 래퍼가 또 찍으면
 // 1px 누를 때마다 undo가 쌓여 되돌리기가 사실상 못 쓰게 된다.
 const FLOAT_OPS = new Set(["rowleft", "rowright", "rowup", "rowdown",
                            "grpleft", "grpright", "grpup", "grpdown",
-                           "fitcell"]);
+                           "fitcell", "shrinksel"]);
 
 document.querySelectorAll("[data-op]").forEach(b => {
   b.onclick = (e) => {
