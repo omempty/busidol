@@ -187,7 +187,18 @@ func step_to(player: PlayerEntity, dir: Vector2i, want: Vector2i, patient: bool)
 
 ## 막힌 칸을 향해 밀어 방향만 돌린다(조사 자세). 통행 가능한 칸이면 걸어 들어가므로
 ## 부르는 쪽이 **막힌 칸에만** 쓴다.
-func face(player: PlayerEntity, dir: Vector2i) -> void:
+##
+## **player를 안 받는다 (2026-09-09).** 이 함수는 키를 누를 뿐 player를 한 번도 쓰지
+## 않는데 타입이 붙어 있었다. 그래서 전투·컷신 전환으로 필드 player가 해제된 순간
+## 호출하면 **본문에 들어가기도 전에** 인자 타입 검사에서 죽었다:
+##
+##   SCRIPT ERROR: Invalid type in function 'face' ... (previously freed)
+##
+## 200틱 주행 3회 중 1회에서 실제로 났다. 본문에 is_instance_valid 가드를 넣어도
+## 소용없다 — 오류가 나는 자리가 본문이 아니라 호출 규약이기 때문이다. 안 쓰는 인자를
+## 없애는 것이 유일하게 확실한 수다. (같은 파일의 still()은 player를 실제로 쓰므로
+## 그쪽은 가드로 지킨다.)
+func face(dir: Vector2i) -> void:
 	var action := action_for(dir)
 	press(action)
 	await tree.physics_frame

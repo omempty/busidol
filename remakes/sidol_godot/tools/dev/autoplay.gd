@@ -511,13 +511,13 @@ func _provoke(goal: Dictionary) -> bool:
 ## 멈춘다. 사람이 하는 것과 같다: 그 방향으로 걸어와 서면 그것이 곧 전방이다.
 func _aim(player: PlayerEntity, dir: Vector2i, passable: bool) -> void:
 	if not passable:
-		await _pilot.face(player, dir)
+		await _pilot.face(dir)
 		return
 	var here := player.mover.grid_pos
 	if await _pilot.step_to(player, -dir, here - dir, false):
 		await _pilot.step_to(player, dir, here, false)
 		return
-	await _pilot.face(player, dir)  # 뒤가 막혔다 — 밀어 보는 수밖에 없다
+	await _pilot.face(dir)  # 뒤가 막혔다 — 밀어 보는 수밖에 없다
 
 
 ## 막혔을 때 마지막 수단. 대개는 **정말 막힌 것이 아니라** 전투·컷신이 목표 조회를
