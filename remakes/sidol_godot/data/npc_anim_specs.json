@@ -1,9 +1,10 @@
 {
   "schema_version": 1,
-  "_comment": "필드 NPC 스프라이트 스펙 — 전용 시트가 없어 주인공 플레이스홀더로 나오는 4종. 규격은 원작 이관 NPC 시트(rescue_girl_original.json 등)와 같다: 셀 128, 2프레임 4방향 보행 + 정면 idle. 몬스터 스펙과 같은 스키마라 같은 생성기(export_npc_packages.py)가 읽는다.",
+  "_comment": "필드 NPC 스프라이트 스펙. (1) source=placeholder 4종 — 전용 시트가 없어 주인공 플레이스홀더로 나온다(export_npc_packages.py가 신규 창작으로 의뢰한다). (2) source=original_eventer_spr 7종 — 원작 EVENTER.SPR에서 이관한 인물이라 그림은 있고 계약이 없었다(export_character_remaster_packages.py가 리마스터로 의뢰한다). 몬스터 스펙과 같은 스키마다.",
   "_policy": "필드 캐릭터는 SD 등신(주인공 시돌이 기준) — body_type humanoid.",
   "style_target": "쯔바이/나르실리온/악튜러스풍 JRPG + 1995 한국 공대 캠퍼스",
-  "_animations_note": "행 순서 고정: walk_down · walk_up · walk_left · walk_right · idle_down.",
+  "_animations_note": "행 순서 고정: walk_down · walk_up · walk_left · walk_right · idle_down. 원작 이관 7종은 주인공 정본(assets/spec/sprites/player_sidol.json)과 같은 8행이라 뒤에 idle_up · idle_left · idle_right가 더 붙는다.",
+  "_remaster_note": "원작 이관 7종의 목표 계약이 walk 4방향×4프레임 + idle 4방향×2프레임인 근거: ① 주인공 정본 player_sidol.json이 정확히 그 구성이고(셀 128 · 4열×8행 = 512×1024) 같은 화면에 나란히 서는 필드 인물이 주인공보다 성긴 보행을 하면 눈에 띈다. ② 설치된 <id>_original.png는 보행이 2프레임뿐이고, idle_down 행은 walk_down 행과 픽셀 단위로 동일하다(7종 전부 실측 — src/entities/npc_entity.gd 주석과 같은 사실) — 즉 원작에는 대기 자세가 아예 없었다. 그래서 idle 4방향은 '펴는 것'이 아니라 '새로 그리는 것'이다. ③ fps는 주인공 정본과 같은 walk 9 / idle 2 (원작 2프레임 6fps의 뒤를 잇는 값). cell{w,h}는 게임 내 프레임 크기로, 같은 파일의 placeholder 4종과 같은 48을 쓴다(시트 셀은 항상 128이며 이 값이 아니다).",
   "species": [
     {
       "id": "dev1",
@@ -71,6 +72,157 @@
         "walk_left": { "row": 2, "frames": 2, "fps": 6, "_desc": "좌향 보행 2프레임" },
         "walk_right": { "row": 3, "frames": 2, "fps": 6, "_desc": "우향 보행 2프레임" },
         "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "rescue_girl",
+      "name_ko": "여학생",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 1층에서 구출되고 2층에서 재회한다",
+      "telegraph_visual": "",
+      "token": "1995년 공대 여학생. 어깨까지 오는 갈색 웨이브 머리, 회백색 원피스 위에 흰 앞판, 맨손. 겁먹은 얼굴이지만 필요할 땐 과감하다",
+      "_token_source": "data/maps/npcs_f2.json(배치명 '여학생', 10,9) · data/dialogue.json @c112·@c204·@c205(구출 대사) · docs/04_scenario/02_story_bible.md:74 '여자1' · assets/spec/portraits/npc_girl.json subject_token('여학생: 단발머리, 당황하지만 필요하면 과감한 학생. 평상복+책가방') · assets/sprites/rescue_girl_original.png 실측(갈색 웨이브 머리·회백색 원피스·흰 앞판). 초상 토큰의 '책가방'은 이관 시트에 없어 넣지 않았다.",
+      "_art_note": "이관 시트가 cafeteria_girl과 바이트 단위로 같다(EVENTER.SPR 여학생 블록 0을 두 인물이 공유 — migrate_original_sheets.py:80-81). 원작은 tint로만 갈랐다.",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 사람" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "cafeteria_girl",
+      "name_ko": "식당 아가씨",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 지하 학생식당 상점 주인",
+      "telegraph_visual": "",
+      "token": "지하 학생식당을 지키는 상점 주인. 갈색 웨이브 머리, 회백색 작업 원피스 위에 흰 앞치마. 괴물이 와도 카레는 나온다며 늘 웃는 얼굴",
+      "_token_source": "data/maps/npcs_f0.json(배치명 '식당 아가씨', 188,59 · _comment '원본 SikDangGirl 표식 ATT 66') · data/maps/talk_targets.json:4 '66 SikDangGirl — NPC cafeteria_girl이 같은 자리에 서 있고 상점까지 담당한다' · data/dialogue.json @c001·@c644~@c648 · docs/04_scenario/02_story_bible.md:96 '식당 아가씨(상점)' · assets/spec/portraits/npc_cafeteria_girl.json subject_token('앞치마+머리 수건, 활짝 웃는 얼굴') · assets/sprites/cafeteria_girl_original.png 실측. 초상 토큰의 '머리 수건'은 이관 시트에 없다(머리가 그대로 드러나 있다) — 시트를 따랐다.",
+      "_art_note": "이관 시트가 rescue_girl과 바이트 단위로 같다(EVENTER.SPR 여학생 블록 0 공유). 리마스터에서 두 인물을 갈라야 한다.",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 사람" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "guard_idle",
+      "name_ko": "수위 아저씨",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 현관 셔터를 지키는 경비",
+      "telegraph_visual": "",
+      "token": "학교를 지키는 경비. 챙 달린 파란 제복 모자, 파란 제복 상하의, 한 손에 든 갈색 나무 곤봉, 검은 구두. 괴물이 한 트럭 와도 끄떡없다는 공대 최강자 개그 캐릭터",
+      "_token_source": "data/maps/npcs_f0.json(배치명 '수위 아저씨', 170,45) · data/dialogue.json @c100·@c004·@c005·@c015 · data/cutscenes/opening.json speaker '수위 아저씨' · docs/04_scenario/02_story_bible.md:77 '수위 | 1층 경비 | 괴물 한 트럭도 안 죽는 최강자 개그' · docs/04_scenario/03_remake_scenario_master.md:53 · assets/spec/portraits/npc_guard.json subject_token('근육질 노인 경비, 모자+조끼, 여유로운 미소') · assets/sprites/guard_idle_original.png 실측(파란 제복·챙 모자·갈색 곤봉). 초상은 '노인·조끼'라 하나 이관 시트는 통짜 제복에 젊은 인상이다 — 시트를 계승하는 것이 리마스터 계약이라 토큰에 연령을 적지 않았다(사람이 정할 항목).",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 사람" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "tutor_dumb",
+      "name_ko": "멍청 조교",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 1층 유일 NPC, 사건의 직접 원흉",
+      "telegraph_visual": "",
+      "token": "화공과 계절학기 조교. 빨간 챙 모자, 파랑·흰 체크무늬 스웨터, 빨간 바지, 앳된 얼굴에 미안해하는 표정. 실험 찌꺼기를 화장실에 버려 사건을 일으킨 장본인",
+      "_token_source": "data/maps/npcs_f1.json(배치명 '멍청 조교', 12,11) · data/dialogue.json @c107·@c109·@c161·@c163(리메이크) 및 원작 TALK.TXT @t22~@t30('제가 그만 화장실에다가' / '너 때문에 모교수가 변하고') · docs/04_scenario/02_story_bible.md:86 '화공과 조교(멍청 조교) | 사건의 직접 원흉' · assets/spec/portraits/npc_tutor_dumb.json subject_token('젊은 조교, 비니, 미안해하는 강아지 눈') · assets/sprites/tutor_dumb_original.png 실측. 초상의 '비니'는 시트에서 챙 있는 빨간 모자다 — 시트를 따랐다.",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 사람" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "prof_chem",
+      "name_ko": "화공과 교수",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 해독제 제작자, 시약 3종을 의뢰한다",
+      "telegraph_visual": "",
+      "token": "3층 화학공학과 교수. 정수리가 벗겨진 중년, 유난히 큰 눈, 보라색 반팔 셔츠에 드러난 굵은 팔, 남색 바지. 학회 심사가 안 끝났다며 시약을 아끼는 원칙주의자",
+      "_token_source": "data/maps/npcs_f3.json(배치명 '화공과 교수', 138,19) · data/maps/talk_targets.json:4 '51 Howa(화공과 교수) — NPC prof_chem이 같은 인물이다' · 원작 TALK.TXT @t0~@t20(해독제 의뢰 원문) · docs/04_scenario/03_remake_scenario_master.md:55·184-188 · assets/spec/portraits/prof_chem.json subject_token('실험복+보호안경 목걸이, 냉철한 원칙주의자 인상') · assets/sprites/prof_chem_original.png 실측(보라 반팔·대머리·큰 눈). 초상의 '실험복·보호안경'은 이관 시트에 없다 — 시트를 계승한다.",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 사람" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "librarian",
+      "name_ko": "지하 사서",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 지하 서고를 혼자 지킨다",
+      "telegraph_visual": "",
+      "token": "지하 서고의 사서. '~하시오 / ~구려' 투로 말하는 나이 든 인물. 80년대 펀치 카드와 5.25인치 디스켓이 잠든 서고를 혼자 지킨다. **겉모습은 미정**(아래 _art_conflict 참조)",
+      "_token_source": "data/maps/npcs_f0.json(배치명 '지하 사서', 175,50) · data/dialogue.json @c002·@c003·@c013·@c014(말투와 역할) · data/quests_v2.json Q_F0_DISK('지하 간(間) 잊혀진 서고'). **초상 스펙이 없다** — 외형 근거는 이관 시트뿐인데 그 시트가 사람이 아니다. 그래서 토큰에 외형을 적지 않았다(지어내는 것보다 비워 두는 편이 낫다).",
+      "_art_conflict": "이관 시트는 EVENTER.SPR '유령' 블록(migrate_original_sheets.py:41 '여학생·경비·조교·교수·유령')이라 흰 눈사람 형상의 유령이고, nothing_man과 바이트 단위로 같은 그림이다. 게임 데이터가 말하는 '지하 사서'(사람)와 어긋난다. 사람으로 다시 그릴지 유령 형상을 계승할지는 **사람이 정해야 한다** — 정해지기 전까지 이 항목의 외형은 미결이다.",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 개체" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
+      }
+    },
+    {
+      "id": "nothing_man",
+      "name_ko": "자칭 쓸모없는 복학생",
+      "cell": { "w": 48, "h": 48 },
+      "source": "original_eventer_spr",
+      "body_type": "humanoid",
+      "pattern": "정지(대화 상대) — 2층, 드래그 조합법을 알려 준다",
+      "telegraph_visual": "",
+      "token": "휴학계를 내러 왔다 갇힌 93학번 복학생. 컴퓨터가 뻑나면 본체 옆통수를 친다는 90년대 공대생 비기를 전수한다. 스스로를 쓸모없다 하지만 결정적인 조합법을 아는 인물. **겉모습은 미정**(아래 _art_conflict 참조)",
+      "_token_source": "data/maps/npcs_f2.json(배치명 '자칭 쓸모없는 복학생', 15,8) · data/dialogue.json @c206~@c208·@c241·@c245 · docs/04_scenario/02_story_bible.md:98 '아무 도움 안되는 사람'(원작 배역명) · docs/HANDOFF.md:2574(개편 경위). **초상 스펙이 없다** — 외형 근거는 이관 시트뿐인데 그 시트가 사람이 아니다. 그래서 토큰에 외형을 적지 않았다.",
+      "_art_conflict": "이관 시트는 EVENTER.SPR '유령' 블록이라 흰 눈사람 형상의 유령이고, librarian과 바이트 단위로 같은 그림이다. 게임 데이터가 말하는 '93학번 복학생'(사람)과 어긋난다. 사람으로 다시 그릴지 유령 형상을 계승할지는 **사람이 정해야 한다**.",
+      "animations": {
+        "walk_down": { "row": 0, "frames": 4, "fps": 9, "_desc": "정면 보행 4프레임 — 원작 2포즈를 양 끝에 두고 중간을 채운다" },
+        "walk_up": { "row": 1, "frames": 4, "fps": 9, "_desc": "뒷모습 보행 4프레임" },
+        "walk_left": { "row": 2, "frames": 4, "fps": 9, "_desc": "좌향 보행 4프레임" },
+        "walk_right": { "row": 3, "frames": 4, "fps": 9, "_desc": "우향 보행 4프레임 — walk_left의 좌우 대칭이되 같은 개체" },
+        "idle_down": { "row": 4, "frames": 2, "fps": 2, "_desc": "정면 대기 — 미세 호흡. 보행 포즈 복사 금지" },
+        "idle_up": { "row": 5, "frames": 2, "fps": 2, "_desc": "뒷모습 대기 — 미세 호흡" },
+        "idle_left": { "row": 6, "frames": 2, "fps": 2, "_desc": "좌향 대기 — 미세 호흡" },
+        "idle_right": { "row": 7, "frames": 2, "fps": 2, "_desc": "우향 대기 — 미세 호흡" }
       }
     }
   ]
