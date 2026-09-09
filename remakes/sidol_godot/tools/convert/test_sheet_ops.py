@@ -546,5 +546,27 @@ check("계측 - 스냅한 흩어진 칸을 이탈로 안 잡는다",
       "; ".join(i for i in m_sc["cell_issues"] if i.startswith("r0c0")) or "없음")
 
 
+# ------------------------------------------------- 행 재배치의 정렬 기준
+# 왜: refit도 프레임을 "칸 중앙"에 앉히는데, 기준이 전체 상자면 **멀리 떨어진 잔조각
+# 하나가 본체를 밀어낸다**. 실측(dworm_v1 burrow r7c1): 재배치 뒤 본체(내용의 98%)
+# 중심이 43, 기대 64로 검증기가 이탈로 잡았다 — 재배치를 눌러도 안 맞는 상태였다.
+a = sheet()
+blob(a, 6, 14, 12, 17, (80, 120, 200))     # 본체 — 칸 왼쪽에 치우쳐 있다
+blob(a, 29, 2, 2, 2, (80, 120, 200))       # 멀리 떨어진 잔조각(전체 상자를 부풀린다)
+L1 = [{"row": 0, "name": "walk_down", "frames": 1}, {"row": 1, "name": "attack", "frames": 0}]
+im_r, msg, n_fit = so.refit(img(a), CELL, ROWS, COLS, L1, "bottom_center", 1.0, 0)
+ar = np.asarray(im_r)
+bb_r, _sc, _ra = dc.align_anchor(so._vis_mask(ar, CELL, 0, 0))
+cx_r = (bb_r["x0"] + bb_r["x1"]) / 2
+check("행 재배치 - 잔조각이 아니라 본체를 칸 중앙에 앉힌다",
+      abs(cx_r - CELL / 2) <= CELL * 0.12,
+      f"본체 중심 x={cx_r:.1f} (기대 {CELL / 2}) · 앉힌 프레임 {n_fit}")
+# 본체를 칸 중앙에 두면 멀리 떨어진 조각은 칸에 못 들어간다 — 그건 원리상 어쩔 수
+# 없다. 지켜야 할 것은 **조용히 버리지 않는 것**이다(몇 px 잘렸는지 문장에 나온다).
+check("행 재배치 - 칸 밖으로 나간 조각을 조용히 버리지 않는다",
+      "잘린" in msg and "px" in msg,
+      msg[msg.find("잘린") - 20:][:70] if "잘린" in msg else msg[:70])
+
+
 print(f"\n[test_sheet_ops] 통과 {_pass} · 실패 {_fail}")
 sys.exit(1 if _fail else 0)

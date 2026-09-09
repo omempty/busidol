@@ -609,24 +609,45 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
     todo = [only] if only is not None else list(range(rows))
 
     boxes = {}
+    anchors = {}      # 프레임마다 '무엇을 칸 중앙에 둘 것인가' — 본체 상자
     missing = []
     for r in todo:
-        n = max(1, frames_of.get(r, cols))
+        nfr = max(1, frames_of.get(r, cols))
         yb0, yb1 = round(r * H / rows), round((r + 1) * H / rows)
-        for c in range(n):
-            xb0, xb1 = round(c * W / n), round((c + 1) * W / n)
-            vis = a[yb0:yb1, xb0:xb1, 3] > 8
-            if not vis.any():
+        band = a[yb0:yb1, :, 3] > 8
+        if not band.any():
+            missing += [f"r{r}c{c}" for c in range(nfr)]
+            continue
+        # 연결된 덩어리는 통째로 한 프레임의 것이다 — 밴드 경계로 자르면 옆 프레임이
+        # 몇 px 삐져든 것까지 이 프레임으로 쳐서 상자가 부풀고 축척이 무너진다.
+        per = {}
+        for b in dc.blobs(band):
+            bcx = (b["x0"] + b["x1"] + 1) / 2.0
+            fi = max(0, min(nfr - 1, int(bcx * nfr / W)))
+            per.setdefault(fi, []).append(b)
+        for c in range(nfr):
+            bl = per.get(c)
+            if not bl:
                 missing.append(f"r{r}c{c}")
                 continue
-            ys, xs = np.where(vis)
-            boxes[(r, c)] = (xb0 + int(xs.min()), yb0 + int(ys.min()),
-                             xb0 + int(xs.max()), yb0 + int(ys.max()))
+            boxes[(r, c)] = (min(b["x0"] for b in bl), yb0 + min(b["y0"] for b in bl),
+                             max(b["x1"] for b in bl), yb0 + max(b["y1"] for b in bl))
+            # **앉히는 기준은 본체다** — 검증기·계측·정렬 스냅과 같은 규칙(align_anchor)을
+            # 쓴다. 예전에는 잔조각까지 포함한 전체 상자를 칸 중앙에 맞춰, 멀리 떨어진
+            # 파편 하나가 본체를 밀어냈다(실측: dworm_v1 burrow r7c1 — 재배치 뒤 본체가
+            # 내용의 98%인데 중심 43, 기대 64로 검증기가 이탈로 잡았다).
+            big = max(bl, key=lambda b: b["n"])
+            tot = sum(b["n"] for b in bl)
+            if big["n"] >= tot * dc.MAIN_BLOB_MIN:
+                anchors[(r, c)] = (big["x0"], yb0 + big["y0"], big["x1"], yb0 + big["y1"])
+            else:
+                anchors[(r, c)] = boxes[(r, c)]      # 본체가 없으면 전체가 기준이다
     if not boxes:
         scope = f"행 {only}에" if only is not None else ""
         return im, f"{scope}내용이 없어 재배치할 것이 없다(배경 키잉을 먼저 하라)".lstrip(), 0
 
     # 축척 산출 대상: 전 시트면 전 프레임, only_row면 **그 행의 프레임만**.
+    # 상자는 이미 '본체 중심 한 칸 폭'으로 좁혀져 있으므로 전체 폭으로 잡아도 된다.
     maxw = max(b[2] - b[0] + 1 for b in boxes.values())
     maxh = max(b[3] - b[1] + 1 for b in boxes.values())
     pad = round(cell * BOTTOM_MARGIN) if align == "bottom_center" else 0
@@ -647,8 +668,17 @@ def refit(im: Image.Image, cell: int, rows: int, cols: int,
         nh = max(1, round(piece.height * k))
         piece = piece.resize((nw, nh), Image.NEAREST)
         cx0, cy0 = c * cell, r * cell
-        px = cx0 + (cell - nw) // 2
-        py = (cy0 + cell - pad - nh) if align == "bottom_center" else (cy0 + (cell - nh) // 2)
+        # 조각 안에서 본체가 어디에 있는지 — 축척을 먹인 좌표로 환산한다.
+        ax0, ay0, ax1, ay1 = anchors.get((r, c), (x0, y0, x1, y1))
+        a_cx = (ax0 + ax1 + 1 - 2 * x0) / 2.0 * k          # 조각 왼쪽 끝 기준 본체 중심
+        a_bot = (ay1 + 1 - y0) * k                          # 조각 위 끝 기준 본체 바닥
+        px = cx0 + int(round(cell / 2.0 - a_cx))
+        py = (cy0 + cell - pad - int(round(a_bot))) if align == "bottom_center" \
+            else (cy0 + (cell - nh) // 2)
+        # 세로는 본체 바닥을 접지선에 맞추되, 조각이 칸 밖으로 나가면 안으로 당긴다 —
+        # 접지 정확도보다 픽셀을 잃지 않는 것이 먼저다(잘린 양은 아래에서 세어 알린다).
+        if nh <= cell:
+            py = max(cy0, min(py, cy0 + cell - nh))
         # 자기 칸 사각형으로 클립한다. fill>1에서 넘친 픽셀을 그냥 붙이면 이웃 칸의
         # 프레임을 덮어써, 붙이는 순서가 결과를 바꾸는 사고가 난다.
         lx0, ly0 = max(px, cx0), max(py, cy0)
