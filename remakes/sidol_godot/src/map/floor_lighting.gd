@@ -24,8 +24,12 @@ extends Node2D
 ## F0은 백로그 1.2 "어둠 미로"의 무대다(03_content_backlog.md). 랜턴 아이템이
 ## 들어오면 반경을 넓히는 자리도 여기가 된다.
 const FLOOR_TINT := {
-	0: Color(0.42, 0.40, 0.55),  # 잊혀진 서고 — 식은 형광등 색
+	0: Color(0.34, 0.32, 0.44),  # 잊혀진 서고 — 식은 형광등 색 (주변 20% 다운)
 }
+
+## 정전 비상등 톤 — F0의 식은 형광등과 다른 붉은색(백로그 §1.3).
+## 정전 층도 어두운 층이다(안개가 같은 문을 탄다).
+const BLACKOUT_TINT := Color(0.38, 0.14, 0.14)
 
 ## 광원 반경 = 64 × texture_scale (px). 타일이 32px이므로 칸 수로는 그 절반이다.
 ## 참조 구현은 16px 타일에 플레이어 2.4 · 적 1.2를 썼다(반경 9.6칸 · 4.8칸).
@@ -50,6 +54,10 @@ const TEX_PX := 128
 
 ## 광원 텍스처는 한 장이면 된다 — 클래스 단위로 캐시한다(ShadowBlob과 같은 방식).
 static var _light_tex: GradientTexture2D = null
+## 런타임 정전 층 집합(층 번호 → true). 정적 표와 달리 세션 중 바뀐다.
+## 세이브에는 실리지 않는다 — 정전 한복판에서 저장 후 불러오면 밝은 F1로 깨어나지만
+## 분전반 트리거(requires Q_F1_BLACKOUT)는 살아 있어 스위치를 올리면 정합해진다.
+static var _blackout := {}
 
 var _floor := -1
 var _tint: CanvasModulate = null
@@ -60,7 +68,29 @@ var _tint: CanvasModulate = null
 ## 규칙을 하나로 둔다: 어두운 층은 지도도 안 그려진다. 조명 표와 안개 판정을 갈라 두면
 ## "불은 꺼졌는데 지도는 다 보이는" 층이 생긴다. 정전 이벤트도 같은 문을 통과하게 된다.
 static func is_dark(floor_index: int) -> bool:
-	return FLOOR_TINT.has(floor_index)
+	return FLOOR_TINT.has(floor_index) or _blackout.has(floor_index)
+
+
+## 이 층이 지금 정전 중인가.
+static func is_blackout(floor_index: int) -> bool:
+	return _blackout.has(floor_index)
+
+
+## 정전 기록을 통째로 지운다 — **새 게임·불러오기의 대칭 짝**이다(`GameState.fog.clear()` 옆).
+##
+## `_blackout`은 클래스 정적이라 씬 교체는 물론 **판이 바뀌어도 살아남는다.** 지우지
+## 않으면 정전 중에 끝낸 판의 어둠이 다음 판 F1에 그대로 얹히는데, 새 판에는
+## `Q_F1_BLACKOUT`이 없어 분전반 트리거(requires_flag)가 열리지 않는다 —
+## **끌 수 없는 정전**, 즉 진행 불가다. 세이브에 싣지 않기로 한 이상 여기서 지워야 한다.
+static func clear_blackout() -> void:
+	_blackout.clear()
+
+
+## 이 층의 톤 — 정전이면 비상등, 아니면 표. 어두운 층에서만 부른다.
+static func tint_for(floor_index: int) -> Color:
+	if _blackout.has(floor_index):
+		return BLACKOUT_TINT
+	return FLOOR_TINT[floor_index]
 
 
 ## 방사형 광원 텍스처 — 가운데가 밝고 가장자리에서 알파 0으로 사라진다.
@@ -85,17 +115,31 @@ static func light_texture() -> GradientTexture2D:
 ## `actors`는 지금 서 있는 액터 전부(플레이어 · 적 · NPC · 보행자).
 func apply(floor_index: int, actors: Array) -> void:
 	_floor = floor_index
+	_kill_restore_tw()
 	if _tint != null:
 		_tint.queue_free()
 		_tint = null
 	if not is_dark(floor_index):
+		for a: Variant in actors:
+			_strip(a as Node2D)
 		return
 	_tint = CanvasModulate.new()
 	_tint.name = TINT_NAME
-	_tint.color = FLOOR_TINT[floor_index]
+	_tint.color = tint_for(floor_index)
 	add_child(_tint)
 	for a: Variant in actors:
 		attach(a as Node2D)
+
+
+## 런타임 정전 토글 — 컷신 blackout op → field.set_blackout이 이 문으로 들어온다.
+## 켜면 비상등 톤 + 액터 광원, 끄면(분전반 복구) 형광등 순차 점등으로 밝아진다.
+func set_blackout_enabled(floor_index: int, enabled: bool, actors: Array) -> void:
+	if enabled:
+		_blackout[floor_index] = true
+		apply(floor_index, actors)
+	else:
+		_blackout.erase(floor_index)
+		_restore_sequential(actors)
 
 
 ## 액터 하나에 광원을 붙인다. 밝은 층이거나 이미 붙어 있으면 아무 일도 하지 않는다.
@@ -117,3 +161,48 @@ func attach(actor: Node2D) -> void:
 	# 액터의 논리 발밑이 아니라 몸 가운데를 비춘다 — 2×2 발판의 중심(minimap과 같은 기준).
 	light.position = Vector2(MapDefinition.TILE_PX, MapDefinition.TILE_PX) * 0.5
 	actor.add_child(light)
+
+
+## 액터의 광원을 거둔다 — 정전 복구(밝은 층으로 돌아감) 때만 쓴다.
+func _strip(actor: Node2D) -> void:
+	if actor == null or not is_instance_valid(actor):
+		return
+	if actor.has_node(NodePath(LIGHT_NAME)):
+		actor.get_node(NodePath(LIGHT_NAME)).queue_free()
+
+
+## 복구 점등 — 형광등이 하나둘 켜지듯 3단으로 밝아진다(백로그 §1.3).
+## 액터 광원은 마지막에 거둔다. 연타해도 트윈 하나로 직렬화된다.
+const RESTORE_STEPS := 3
+const RESTORE_STEP_TIME := 0.3
+
+var _restore_tw: Tween = null
+
+
+func _kill_restore_tw() -> void:
+	if _restore_tw != null and _restore_tw.is_valid():
+		_restore_tw.kill()
+	_restore_tw = null
+
+
+func _restore_sequential(actors: Array) -> void:
+	_kill_restore_tw()
+	if _tint == null:
+		apply(_floor, actors)
+		return
+	var from: Color = _tint.color
+	var tw := create_tween()
+	_restore_tw = tw
+	for i in range(1, RESTORE_STEPS + 1):
+		var c: Color = from.lerp(Color.WHITE, float(i) / float(RESTORE_STEPS))
+		tw.tween_property(_tint, "color", c, RESTORE_STEP_TIME)
+	tw.tween_callback(_finish_restore.bind(actors))
+
+
+func _finish_restore(actors: Array) -> void:
+	_restore_tw = null
+	if _tint != null:
+		_tint.queue_free()
+		_tint = null
+	for a: Variant in actors:
+		_strip(a as Node2D)

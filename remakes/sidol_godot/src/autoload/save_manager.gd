@@ -156,6 +156,9 @@ func _apply(data: Dictionary) -> void:
 		GameState.chest_overrides[int(floor_str)] = cells
 	# 구 세이브(이 키가 없던 시절)는 빈 기록으로 시작한다 — 첫 만남 대사부터 다시.
 	GameState.fog.restore(data.get("fog", {}))
+	# 정전은 세이브에 안 싣는다(밝은 층으로 깨어나고 분전반이 살아 있어 정합된다).
+	# 다만 **지우지 않으면** 이 프로세스에서 앞서 겪은 정전이 불러온 판에 얹힌다.
+	FloorLighting.clear_blackout()
 	GameState.defeat_streak = int(data.get("defeat_streak", 0))
 	GameState.defeat_floor = int(data.get("defeat_floor", -1))
 	var seen_v: Variant = data.get("npc_seen_sequences", {})

@@ -9,6 +9,7 @@ extends CanvasLayer
 ##   grant_item {args:{item, count}}   craft {args:{requires:{}, grant:{}, flag}}
 ##   illustration {args:{id, fade}} — 키아트 한 장을 화면에 띄운다(id 비우면 내림)
 ##   minigame_quiz {id} — 통과할 때까지 재도전 후 다음 스텝 진행
+##   blackout {args:{on:bool}} — F1 정전 토글(백로그 §1.3). field.set_blackout 문으로 간다.
 ##   choice {args:{options:[{text(@t/@c), steps:[op...]}]}} — 선택 강제, 수렴형.
 ##     각 옵션의 steps를 서브 열로 실행 후 다음 스텝 진행(WP-5, D4 승인).
 
@@ -266,6 +267,10 @@ func _execute(step: Dictionary) -> void:
 			await _actor_move(step)
 		"damage":
 			_apply_field_damage(step.get("args", {}))
+		"blackout":
+			var benabled := bool(step.get("args", {}).get("on", true))
+			if _field != null and _field.has_method("set_blackout"):
+				_field.call("set_blackout", benabled)
 		"start_battle":
 			GameState.pending_encounter = {
 				"enemies": step.get("enemies", []), "on_win_flag": str(step.get("on_win_flag", ""))

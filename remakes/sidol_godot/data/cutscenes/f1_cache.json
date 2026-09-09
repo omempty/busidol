@@ -1,0 +1,22 @@
+{
+  "id": "f1_cache",
+  "_comment": "백로그 §1.3 전자잠금 해제 — 정전 중에만 열리는 자료실(locks_f1.json f1_elec_lock) 안 보관함. 방탄조끼는 원래 폭파 뒤 매점 해금이라 정전 선행 입수가 기회 보상이 된다.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "시돌",
+          "text": "@c121"
+        }
+      ]
+    },
+    {
+      "op": "grant_item",
+      "args": {
+        "item": "ITEM_ARMOR_VEST",
+        "count": 1
+      }
+    }
+  ]
+}

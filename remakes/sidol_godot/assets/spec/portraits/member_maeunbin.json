@@ -1,0 +1,16 @@
+{
+  "asset_id": "member_maeunbin",
+  "category": "portraits",
+  "name": "마은빈",
+  "subject_token": "마은빈: 부싯돌 리더, 짧은 스포츠머리, 믿음직한 눈빛, 90년대 공대생 점퍼",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

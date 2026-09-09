@@ -9,8 +9,33 @@ signal sequence_requested(sequence_id: StringName)
 
 const AUTO_TICK_DELAY := 0.2  # auto 판정을 첫 물리 프레임에 몰아주지 않기 위한 지연
 
+## 반복 zone 트리거(once:false)의 재무장 규칙에 쓰는 "없음" 표식 — 맵 밖 좌표.
+##
+## ## 반복 zone은 **한 칸에 한 번**만 쏜다 — 서 있는 동안 매 틱이 아니다
+##
+## 발동하면 컷신이 조작을 통째로 쥔다(field._physics_process가 `is_running()`에서 return).
+## 그래서 매 틱 쏘면 플레이어는 그 칸에서 **한 걸음도 못 나가고** 컷신이 끝난 다음 틱에
+## 또 맞는다 — 사람이든 도구든 영영 갇힌다. 2026-09-08 자동 주행 실측: F2 스파크
+## 함정칸 (36,9)에 올라선 뒤 **190초 동안 40걸음**, 그 뒤 모든 목표가 「한 걸음이
+## 나가지 않았다」로 실패해 F3~F5에 못 갔다. 같은 꼴이 셋이었다 —
+## `f2_spark_zap` · `f3_fog_choke` · `f4_volt_zap`(백로그 §1.2 한 묶음).
+##
+## **초 단위 쿨다운으로는 못 막는다**(같은 날 실측: 1.0초를 넣고도 그대로 갇혔다).
+## 주행은 `Engine.time_scale=120`으로 도는데 컷신 동안에는 tick이 아예 안 불리므로,
+## 쿨다운이 재는 "자유 시간" 1초는 물리 두 틱(스케일 델타 0.5초/틱)밖에 안 된다 —
+## 도구가 키를 누를 프레임이 오기 전에 이미 재무장이 끝난다. 시간으로 재는 한
+## 배속에 따라 안전선이 흔들린다.
+##
+## 그래서 기준을 **플레이어가 움직였는가**로 바꾼다. 움직이려면 조작권이 있어야 하므로
+## 배속과 무관하게 "빠져나갈 수 있음"이 보장된다. 함정칸을 걸어서 지나가면 밟는 칸마다
+## 한 번씩 맞고, 밖으로 나갔다 다시 들어오면 또 맞는다(통행료는 그대로다).
+const INVALID_CELL := Vector2i(-9999, -9999)
+
 var _triggers: Array = []
 var _fired: Dictionary = {}
+## 트리거 id → 마지막으로 발동시킨 플레이어 앵커. 반복 zone 트리거의 재무장 판정에 쓴다.
+## 그 칸을 벗어나면 지운다(다시 밟으면 또 맞아야 하므로).
+var _fired_cell: Dictionary = {}
 var _elapsed := 0.0
 var _auto_checked := false
 
@@ -18,6 +43,7 @@ var _auto_checked := false
 func load_for_floor(floor_no: int) -> void:
 	_triggers.clear()
 	_fired.clear()
+	_fired_cell.clear()
 	_auto_checked = false
 	var path := "res://data/maps/triggers_f%d.json" % floor_no
 	if not FileAccess.file_exists(path):
@@ -48,7 +74,11 @@ func tick(player_cell: Vector2i, delta: float) -> void:
 					_fire(t)
 					return
 			"zone":
-				if _in_zone(t, player_cell):
+				var zid := str(t.get("id", ""))
+				if not _in_zone(t, player_cell):
+					_fired_cell.erase(zid)  # 밖으로 나갔다 — 다시 밟으면 또 맞는다
+				elif _fired_cell.get(zid, INVALID_CELL) != player_cell:
+					_fired_cell[zid] = player_cell
 					_fire(t)
 					return
 

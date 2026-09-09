@@ -9,8 +9,12 @@ signal stairs_locked
 ## 막힌 계단 — 앵커는 맞는데 현 층에 맞는 정의가 없다(예: F1 중앙 하향.
 ## F0 도착점이 벽이라 guard 2-5로 제외됨). 여기도 무반응이면 고장으로 보인다.
 signal stairs_dead
+## 전자잠금 문 — 앵커·방향은 맞는데 전기가 흐르고 있다(백로그 §1.3).
+## 정전 중에만 열린다. 조용히 넘기면 "문이 고장"으로 보이므로 field가 1.2초 힌트를 든다.
+signal door_locked
 
 const TRANSITIONS_PATH := "res://data/maps/transitions.json"
+const LOCKS_PATH := "res://data/maps/locks_f%d.json"
 const FLOORS_PATH := "res://data/maps/floors.json"
 const FADE_TIME := 0.18
 const DOOR_SLIDE_TIME := 0.4
@@ -20,6 +24,7 @@ var player: PlayerEntity
 var active := false
 
 var _transitions: Array = []
+var _locks: Array = []
 var _overlay: ColorRect
 
 
@@ -33,6 +38,7 @@ func setup(p_field: Node2D) -> void:
 	field = p_field
 	player = field.get_player()
 	_transitions = _load_transitions()
+	_locks = _load_locks(GameState.current_floor)
 
 	var overlay_layer := CanvasLayer.new()
 	overlay_layer.layer = 50
@@ -132,6 +138,55 @@ func _load_transitions() -> Array:
 	return raw["transitions"]
 
 
+## 층 전자잠금 표 — 없으면 빈 배열(다른 층·구판과 동일 동작).
+func _load_locks(floor_no: int) -> Array:
+	var path := LOCKS_PATH % floor_no
+	if not FileAccess.file_exists(path):
+		return []
+	var raw: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if typeof(raw) != TYPE_DICTIONARY:
+		push_warning("TransitionGate: 잠금 파일 파싱 실패: %s" % path)
+		return []
+	return raw.get("locks", [])
+
+
+## 이 문 행이 지금 잠겨 있는가 — 전자잠금 표에 들고 정전이 아니면 잠김.
+## 정전 중(FloorLighting.is_blackout)에는 열린다.
+func _door_locked(a: Vector2i, b: Vector2i) -> bool:
+	if _locks.is_empty():
+		return false
+	for lock: Dictionary in _locks:
+		var cells: Array = lock.get("door", [])
+		if cells.size() < 2:
+			continue
+		var c0 := Vector2i(int(cells[0][0]), int(cells[0][1]))
+		var c1 := Vector2i(int(cells[1][0]), int(cells[1][1]))
+		if (a == c0 and b == c1) or (a == c1 and b == c0):
+			return not FloorLighting.is_blackout(GameState.current_floor)
+	return false
+
+
+## 이 앵커가 잠긴 방 안에 갇혀 있으면 밖으로 내보내는 자리.
+## 정전 한복판 저장→불러오면 밝은 층에 잠긴 방이라 field가 진입 때 한 번 꺼낸다.
+## 갇힌 게 아니면 (-1,-1).
+func eject_cell_for(cell: Vector2i) -> Vector2i:
+	for lock: Dictionary in _locks:
+		var rect: Array = lock.get("interior", [])
+		if rect.size() < 4:
+			continue
+		var x0 := int(rect[0])
+		var y0 := int(rect[1])
+		if cell.x < x0 or cell.y < y0 or cell.x >= x0 + int(rect[2]) or cell.y >= y0 + int(rect[3]):
+			continue
+		if FloorLighting.is_blackout(GameState.current_floor):
+			continue
+		var exit_arr: Array = lock.get("exit", [])
+		if exit_arr.size() < 2:
+			continue
+		return Vector2i(int(exit_arr[0]), int(exit_arr[1]))
+	return Vector2i(-1, -1)
+
+
 func _physics_process(_delta: float) -> void:
 	if active or player == null or player.mover.moving:
 		return
@@ -158,6 +213,9 @@ func _try_door(dir: Vector2i) -> bool:
 	var b := Vector2i(anchor.x + 1, check_row)
 	if rt.definition.attr_at(a) != 9 or rt.definition.attr_at(b) != 9:
 		return false
+	if _door_locked(a, b):
+		door_locked.emit()
+		return true
 
 	active = true
 	player.mover.enabled = false

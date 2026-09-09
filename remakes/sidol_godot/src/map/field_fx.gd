@@ -23,6 +23,32 @@ const DOOR_FADE := 0.12
 const CHEST_RISE := 10.0
 const CHEST_TIME := 0.28
 
+## 번개 섬광 — 화면이 한순간 밝아졌다 꺼진다(백로그 §1.3 정전 중 이벤트).
+## 두 번 깜빡인다(번개는 대개 다중 방전이다). 정전 돌입 때 field.set_blackout이 부른다.
+const FLASH_LAYER := 35
+const FLASH_PEAK := 0.75
+const FLASH_TIME := 0.09
+
+
+## 창밖 번개 — 정전의 원인. 앞이 한순간 보이지만 안개는 걷지 않는다.
+func lightning_flash() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = FLASH_LAYER
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.color = Color(1, 1, 1, 0)
+	# **`set_anchors_preset`이 아니다.** 그쪽은 오프셋을 지금 크기(0×0)에 맞춰 남기므로
+	# 전체화면 앵커를 줘도 0 크기가 되어 섬광이 화면에 한 픽셀도 안 뜬다
+	# (이 저장소가 창 UI에서 한 번 물린 함정과 같은 것이다).
+	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	var tw := create_tween()
+	for _i in 2:
+		tw.tween_property(rect, "color:a", FLASH_PEAK, FLASH_TIME)
+		tw.tween_property(rect, "color:a", 0.0, FLASH_TIME * 2.0)
+	tw.tween_callback(layer.queue_free)
+
 
 ## 문이 열린다 — 원작 그림을 그 자리에 띄우고 효과음을 낸다.
 ##

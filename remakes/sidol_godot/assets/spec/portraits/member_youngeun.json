@@ -1,0 +1,16 @@
+{
+  "asset_id": "member_youngeun",
+  "category": "portraits",
+  "name": "김영은",
+  "subject_token": "김영은: 레벨 디자이너, 포니테일, 모눈종이 지도 든 손, 피곤한 미소",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

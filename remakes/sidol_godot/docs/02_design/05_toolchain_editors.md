@@ -105,7 +105,7 @@
 | 월드 | `spawn_actor`, `despawn_actor`, `move_actor`(경로), `teleport_player`, `open_door`, `place_chest`, **`unlock_transition`(계단/문 게이트 해제 — requires_flag 해소)** |
 | 아이템 조합 | **`craft`(재료 소모→산출물. 폭탄 3재료, 해독제 3약품 합성 등)** |
 | 씬 | `start_battle`(전투 스크립트 훅 포함, §5.3 참조), `start_cutscene`, `change_map/floor`, `shop`, **`minigame_quiz`, `minigame_battery_circuit`(직렬 전압 퍼즐)** |
-| 연출 | `fade_in/out`, `shake`, `flash`, `sfx`, `bgm`, `portrait`(얼굴 클로즈업 — 원작 Hong_P 등의 후속) |
+| 연출 | `fade_in/out`, `shake`, `flash`, `sfx`, `bgm`, `portrait`(얼굴 클로즈업 — 원작 Hong_P 등의 후속), **`blackout`(F1 정전 on/off — `field.set_blackout`, 18차)** |
 
 - 확장 규칙: 새 op는 레지스트리 한 곳에 추가 → 해석기(TriggerSystem)와 에디터 드롭다운에 자동 노출.
 - **원작 매핑**: event1()(여자 컷신), Run_Event_HP(), Quiz_Man(), store() 진입, 교수 퀘스트 플래그

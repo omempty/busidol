@@ -1,0 +1,40 @@
+{
+  "id": "f1_power",
+  "_comment": "백로그 §1.3 정전 복구 — 복도 끝 분전반(190,26) interact. 배터리 퍼즐 축소판 통과→복구→F1 전체 공개.",
+  "steps": [
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "시돌",
+          "text": "@c115"
+        }
+      ]
+    },
+    {
+      "op": "minigame_battery",
+      "id": "battery_circuit"
+    },
+    {
+      "op": "sfx",
+      "id": "charge_volt"
+    },
+    {
+      "op": "blackout",
+      "args": { "on": false }
+    },
+    {
+      "op": "set_flags",
+      "args": { "Q_F1_POWER": true }
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "시돌",
+          "text": "@c116"
+        }
+      ]
+    }
+  ]
+}

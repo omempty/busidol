@@ -280,6 +280,8 @@ func reset() -> void:
 	inventory.clear()
 	npc_seen_sequences.clear()
 	fog.clear()
+	# 정전은 세이브에 안 실리는 런타임 상태라 **여기서 지워야** 다음 판으로 새지 않는다.
+	FloorLighting.clear_blackout()
 	state_changed.emit()
 
 

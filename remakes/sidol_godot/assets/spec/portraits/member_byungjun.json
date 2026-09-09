@@ -1,0 +1,16 @@
+{
+  "asset_id": "member_byungjun",
+  "category": "portraits",
+  "name": "한병준",
+  "subject_token": "한병준: 테스터, 베개 자국 남은 볼, 졸린 눈, 버그 노트 든 손",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}

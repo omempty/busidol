@@ -17,6 +17,7 @@ const KNOWN_OPS := [
 	"grant_skill",
 	"craft",
 	"damage",
+	"blackout",
 	"illustration",
 	"minigame_quiz",
 	"minigame_battery",
@@ -51,6 +52,7 @@ func _initialize() -> void:
 	_validate_battle_moves()
 	_validate_cutscenes()
 	_validate_triggers()
+	_validate_map_locks()
 	_validate_skills_choreography()
 	_validate_credits()
 	_validate_minigames()
@@ -218,6 +220,66 @@ func _validate_triggers() -> void:
 					_err("%s/%s 시퀀스 없음: %s" % [f, t.get("id"), action["sequence"]])
 			else:
 				_err("%s/%s action에 cutscene/sequence 없음" % [f, t.get("id")])
+			# 반복 zone의 재무장은 **시간이 아니라 플레이어 이동**으로 판정한다
+			# (TriggerSystem.INVALID_CELL 주석 — 초 단위 쿨다운은 배속에서 무너졌다).
+			# 그래서 `cooldown_sec` 같은 키를 적어 두면 **아무도 안 읽는다** =
+			# 이 저장소의 지배적 결함(사문화 데이터)이 여기서 재발한 것이다.
+			if t.has("cooldown_sec"):
+				_err("%s/%s cooldown_sec는 아무도 읽지 않는다 — 재무장은 이동 기준이다" % [f, t.get("id")])
+
+
+# ---- maps/locks_f*.json (전자잠금) ----
+
+
+## 전자잠금 표 — `TransitionGate._load_locks`/`_door_locked`/`eject_cell_for`가 읽는 계약을
+## 그대로 검사한다. 이 표가 어긋나면 **아무 증상 없이 그냥 안 잠긴다**(문이 평소처럼 열린다).
+## 화면에 나타나는 것이 없으므로 여기서 안 잡으면 아무도 못 잡는 유형이다.
+func _validate_map_locks() -> void:
+	var dir := DirAccess.open(DATA + "maps")
+	if dir == null:
+		return
+	for f in dir.get_files():
+		if not f.begins_with("locks_f") or not f.ends_with(".json"):
+			continue
+		var raw: Dictionary = _load_json(DATA + "maps/" + f) as Dictionary
+		if raw.is_empty():
+			_err("maps/%s 파싱 실패" % f)
+			continue
+		var locks: Array = raw.get("locks", [])
+		if locks.is_empty():
+			_err("maps/%s locks가 비었다 — 파일만 있고 잠그는 문이 없다" % f)
+		for lock: Dictionary in locks:
+			_validate_one_lock(f, lock)
+
+
+func _validate_one_lock(file: String, lock: Dictionary) -> void:
+	var id := str(lock.get("id", ""))
+	if id.is_empty():
+		_err("maps/%s 잠금 id 누락" % file)
+	var door: Array = lock.get("door", [])
+	if door.size() != 2:
+		_err("maps/%s/%s door는 ATT 9 두 칸이다(현재 %d개)" % [file, id, door.size()])
+	else:
+		# TransitionGate._try_door는 (x, row)·(x+1, row) **가로 두 칸**만 본다.
+		# 세로로 적으면 어떤 문도 못 맞춰 잠금이 통째로 사문화된다.
+		var a := Vector2i(int(door[0][0]), int(door[0][1]))
+		var b := Vector2i(int(door[1][0]), int(door[1][1]))
+		if absi(a.x - b.x) != 1 or a.y != b.y:
+			_err("maps/%s/%s door 두 칸이 가로로 안 붙었다: %s %s" % [file, id, str(a), str(b)])
+	var interior: Array = lock.get("interior", [])
+	if interior.size() != 4 or int(interior[2]) <= 0 or int(interior[3]) <= 0:
+		_err("maps/%s/%s interior는 [x,y,w,h]이고 w·h가 양수여야 한다" % [file, id])
+		return
+	var exit_arr: Array = lock.get("exit", [])
+	if exit_arr.size() != 2:
+		_err("maps/%s/%s exit는 [x,y]다" % [file, id])
+		return
+	# exit가 방 안이면 「갇힘 탈출」이 제자리걸음이 된다 — 세이브 귀환이 영영 갇힌다.
+	var ex := Vector2i(int(exit_arr[0]), int(exit_arr[1]))
+	var x0 := int(interior[0])
+	var y0 := int(interior[1])
+	if ex.x >= x0 and ex.y >= y0 and ex.x < x0 + int(interior[2]) and ex.y < y0 + int(interior[3]):
+		_err("maps/%s/%s exit가 interior 안이다 — 갇힘 탈출이 제자리걸음이 된다" % [file, id])
 
 
 # ---- skills.json choreography_id ----

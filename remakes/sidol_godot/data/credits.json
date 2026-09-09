@@ -6,55 +6,73 @@
       "name": "마은빈",
       "role": "리더",
       "quote": "나를 믿어라",
-      "id": "member_1"
+      "id": "member_1",
+      "portrait": "member_maeunbin",
+      "episode": "락다운된 현관 앞에서 “나를 믿어라” 한 마디로 동아리를 묶었다."
     },
     {
       "name": "윤관식",
       "role": "매니저",
       "quote": "HP방은 부싯돌 아지트에요",
-      "id": "member_2"
+      "id": "member_2",
+      "portrait": "member_yoonsik",
+      "episode": "HP실 문을 끝까지 지킨 매니저. 아지트 열쇠는 그의 주머니에."
     },
     {
       "name": "이태하",
       "role": "전투 프로그래머",
       "quote": "전투모드는 내게 맡겨",
-      "id": "member_3"
+      "id": "member_3",
+      "portrait": "member_taeha",
+      "episode": "전투모드 담당. 그의 코드 위에서 시돌이가 수백 번을 구른다."
     },
     {
       "name": "이윤우",
       "role": "서포터",
       "quote": "우리모두 최선을.......",
-      "id": "member_4"
+      "id": "member_4",
+      "portrait": "member_yunwoo",
+      "episode": "서포터. 말줄임표 뒤에 숨은 응원이 가장 길었다."
     },
     {
       "name": "김현진",
       "role": "이펙트",
       "quote": "특수효과는 제가 맡겠습니다.",
-      "id": "member_5"
+      "id": "member_5",
+      "portrait": "member_hyunjin",
+      "episode": "특수효과 담당. 폭발 한 방에 밤을 새운 장인."
     },
     {
       "name": "김완종",
       "role": "그래픽",
       "quote": "포스트를 빨리 그려야지..",
-      "id": "member_6"
+      "id": "member_6",
+      "portrait": "member_wanjong",
+      "episode": "그래픽. 포스터 마감에 쫓기다 3층 계단을 막았지만… 만화는 완성되었다."
     },
     {
       "name": "김영은",
       "role": "레벨 디자인",
       "quote": "빨리 집에 가야지",
-      "id": "member_7"
+      "id": "member_7",
+      "portrait": "member_youngeun",
+      "episode": "레벨 디자인. “빨리 집에 가야지”라면서 가장 늦게까지 맵을 그렸다."
     },
     {
       "name": "한병준",
       "role": "테스터",
       "quote": "자고 일어나면 다 되어있도다!",
-      "id": "member_8"
+      "id": "member_8",
+      "portrait": "member_byungjun",
+      "episode": "테스터. 자고 일어나면 버그가 다 되어… 있지는 않았다. 그래도 잡았다."
     },
     {
       "name": "서정훈",
       "role": "이벤트",
       "quote": "테니스의 천재 ,,DDDD",
-      "id": "member_9"
+      "id": "member_9",
+      "portrait": "member_junghoon",
+      "episode": "이벤트. 테니스 라켓 대신 스크립트로 승부하는 천재."
     }
   ],
   "ending_cards": [

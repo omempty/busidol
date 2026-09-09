@@ -105,6 +105,19 @@ func reveal_rect(floor_index: int, def: MapDefinition, rect: Rect2i) -> Array[Ve
 	return out
 
 
+## 복구 보상 — 그 층 통행칸을 전부 밝힌다(백로그 §1.3 "안개가 걷힌다").
+## 새로 밝힌 칸 수를 돌려준다. 분전반 스위치를 올리면 field.set_blackout이 부른다.
+func reveal_all(floor_index: int, rt: MapRuntime) -> int:
+	var def := rt.definition
+	var n := 0
+	for y in def.height:
+		for x in def.width:
+			var cell := Vector2i(x, y)
+			if rt.is_passable(cell) and mark(floor_index, def, cell):
+				n += 1
+	return n
+
+
 ## 밝힌 통행칸 수 — 탐험률의 분자. 벽은 세지 않는다(걸을 수 있는 곳을 얼마나 봤나).
 func seen_passable(floor_index: int, rt: MapRuntime) -> int:
 	var def := rt.definition

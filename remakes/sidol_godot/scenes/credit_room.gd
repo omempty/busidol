@@ -22,9 +22,11 @@ var _idx := 0
 
 var _mode_lbl: Label
 var _panel: PanelContainer
+var _portrait: TextureRect
 var _title_lbl: Label
 var _sub_lbl: Label
 var _quote_lbl: Label
+var _episode_lbl: Label
 var _roll_clip: Control
 var _roll_lbl: Label
 var _quiz: QuizMinigame
@@ -49,8 +51,19 @@ func _ready() -> void:
 	_panel.custom_minimum_size = Vector2(460, 140)
 	add_child(_panel)
 
+	# 앨범 카드 — 초상左 + 소개右. 원작 Run_Event_HP도 초상+한마디 탐색이었다.
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 12)
+	_panel.add_child(hbox)
+	_portrait = TextureRect.new()
+	_portrait.custom_minimum_size = Vector2(132, 132)
+	_portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_portrait.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	hbox.add_child(_portrait)
 	var vbox := VBoxContainer.new()
-	_panel.add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(vbox)
 	_title_lbl = Label.new()
 	_title_lbl.add_theme_font_size_override("font_size", 18)
 	vbox.add_child(_title_lbl)
@@ -61,6 +74,10 @@ func _ready() -> void:
 	_quote_lbl = Label.new()
 	_quote_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(_quote_lbl)
+	_episode_lbl = Label.new()
+	_episode_lbl.modulate = Color(0.62, 0.72, 0.62)
+	_episode_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(_episode_lbl)
 
 	# 스탭롤 — 클리핑 영역 안을 위에서 아래로 흐르는 라벨
 	_roll_clip = Control.new()
@@ -135,6 +152,11 @@ func _refresh_member() -> void:
 	_title_lbl.text = "%d. %s" % [_idx + 1, str(m["name"])]
 	_sub_lbl.text = str(m["role"])
 	_quote_lbl.text = '"%s"' % str(m["quote"])
+	_episode_lbl.text = str(m.get("episode", ""))
+	_episode_lbl.visible = not str(m.get("episode", "")).is_empty()
+	# 초상 — 미납품이면 실루엣 폴백이 나온다(PortraitLibrary 방침). 스펙이 곧 의뢰다.
+	_portrait.texture = PortraitLibrary.texture_for(str(m.get("portrait", m.get("name", ""))))
+	_portrait.visible = true
 	_mark_member_seen(m)
 
 
@@ -157,6 +179,8 @@ func _mark_member_seen(m: Dictionary) -> void:
 
 
 func _refresh_card() -> void:
+	_portrait.visible = false
+	_episode_lbl.visible = false
 	if _cards.is_empty():
 		_title_lbl.text = ""
 		_sub_lbl.text = ""
@@ -183,6 +207,8 @@ static func _silhouette(title: String) -> String:
 
 
 func _refresh_quiz() -> void:
+	_portrait.visible = false
+	_episode_lbl.visible = false
 	_title_lbl.text = tr("UI_CREDIT_QUIZ_TITLE")
 	_sub_lbl.text = str(_quiz_cfg.get("intro", tr("UI_CREDIT_QUIZ_DESC")))
 	_quote_lbl.text = tr("UI_CREDIT_QUIZ_START")
@@ -249,6 +275,7 @@ func _step(dir: int) -> void:
 		return
 	_idx = (_idx + dir + count) % count
 	if _mode == 0:
+		AudioManager.play_sfx(&"sfx_menu_move")
 		_refresh_member()
 	elif _mode == 1:
 		_refresh_card()

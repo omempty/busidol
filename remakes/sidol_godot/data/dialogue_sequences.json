@@ -246,6 +246,18 @@
         { "speaker": "멍청 조교", "text": "@c163" }
       ]
     },
+    "tutor_blackout": {
+      "_comment": "F1 정전 중 조교 대사(백로그 §1.3)",
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c119" }
+      ]
+    },
+    "tutor_power": {
+      "_comment": "F1 복구 후 조교 대사 — Q_F1_BLAST 전에는 이쪽이 이긴다",
+      "steps": [
+        { "speaker": "멍청 조교", "text": "@c120" }
+      ]
+    },
     "tutor_after_blast_repeat": {
       "steps": [
         { "speaker": "멍청 조교", "text": "@c164" }
@@ -304,6 +316,18 @@
     "walker_f1_blast": {
       "steps": [
         { "speaker": "대피 중인 학생", "text": "@c175" }
+      ]
+    },
+    "walker_f1_blackout": {
+      "_comment": "F1 정전 중 복도 대사(백로그 §1.3) — Q_F1_POWER 전에만 걸린다",
+      "steps": [
+        { "speaker": "대피 중인 학생", "text": "@c117" }
+      ]
+    },
+    "walker_f1_power": {
+      "_comment": "F1 복구 후 복도 대사 — Q_F1_BLAST 전에는 이쪽이 이긴다",
+      "steps": [
+        { "speaker": "대피 중인 학생", "text": "@c118" }
       ]
     },
     "nothing_man_repeat_1": {

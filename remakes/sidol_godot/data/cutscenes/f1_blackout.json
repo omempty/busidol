@@ -1,0 +1,28 @@
+{
+  "id": "f1_blackout",
+  "_comment": "백로그 §1.3 정전 이벤트 발동 — 번개→1층 정전(비상등+안개). Q_F1_SOPO/Q_F1_GAS 중 하나 뒤 auto 발동, done_flag Q_F1_BLACKOUT.",
+  "steps": [
+    {
+      "op": "sfx",
+      "id": "sfx_thunder_arc"
+    },
+    {
+      "op": "shake",
+      "power": 6.0,
+      "times": 6
+    },
+    {
+      "op": "blackout",
+      "args": { "on": true }
+    },
+    {
+      "op": "dialogue",
+      "steps": [
+        {
+          "speaker": "시돌",
+          "text": "@c114"
+        }
+      ]
+    }
+  ]
+}

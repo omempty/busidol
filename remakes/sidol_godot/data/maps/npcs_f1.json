@@ -33,6 +33,14 @@
           "requires_flag": "Q_F1_BLAST",
           "sequence_id": "tutor_after_blast",
           "repeat_sequence_id": "tutor_after_blast_repeat"
+        },
+        {
+          "requires_flag": "Q_F1_POWER",
+          "sequence_id": "tutor_power"
+        },
+        {
+          "requires_flag": "Q_F1_BLACKOUT",
+          "sequence_id": "tutor_blackout"
         }
       ]
     }

@@ -202,7 +202,7 @@ func autoplay_begin() -> void:
 	_log.scale_seen = Engine.time_scale  # 드라이버가 걸어 둔 빨리 감기 배율
 	_count_physics_frames()
 	if await _wait_for_field():
-		await _settle()  # 프롤로그 컷신 — 끝나기 전에 걸으려 하면 전부 "못 갔다"가 된다
+		await _settle_boot()  # 프롤로그 컷신 — 끝나기 전에 걸으려 하면 전부 "못 갔다"가 된다
 
 
 ## 물리 프레임을 센다 — 띄워 두고 기다리지 않는 코루틴. 주행이 느릴 때
@@ -632,6 +632,22 @@ func _settle() -> void:
 	stuck.cutscene_player.stop()
 	stuck.dialogue_box.close()
 	stuck.get_player().mover.enabled = true
+
+
+## 프롤로그 전용 대기 — **여기서만 손을 직접 댄다.**
+##
+## 드라이버의 시계(`_watchdog`)는 `autoplay_begin`이 끝난 **뒤에** 돌기 시작한다.
+## 그래서 보통의 `_settle()`을 쓰면 대사를 넘겨 줄 손이 아무도 없어, 오프닝 6줄이
+## 그대로 서 있다가 3000프레임 상한에 걸려 강제로 닫힌다 — 예산 240초 중 **24초가
+## 첫 화면에서 사라졌다**(2026-09-08 실측: 보고서 「진행 정지 · f1 (9,9)」).
+## 주행 중에는 드라이버가 매 프레임 attend하므로 이 함수를 쓰지 않는다(이중 입력 방지).
+func _settle_boot() -> void:
+	for _i in SETTLE_FRAMES:
+		var field := _field()
+		if field == null or not _busy(field):
+			return
+		_pilot.attend(get_tree().current_scene)
+		await get_tree().process_frame
 
 
 func _until(predicate: Callable) -> bool:

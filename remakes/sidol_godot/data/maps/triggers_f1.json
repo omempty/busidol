@@ -45,6 +45,61 @@
       "_comment": "창고 — F1 서쪽 외딴 방(x1~24 y29~36). cell_probe f1 실측: 설 수 있음."
     },
     {
+      "id": "f1_blackout_sopo",
+      "type": "auto",
+      "once": true,
+      "_comment": "백로그 §1.3 정전 — SOPO/GAS 중 하나를 깬 시점(튜토리얼 뒤). OR은 auto 2개로 표현한다(TriggerSystem requires는 AND). 먼저 불붙은 쪽이 done_flag를 세워 다른 쪽을 막는다.",
+      "done_flag": "Q_F1_BLACKOUT",
+      "requires_flag": "Q_F1_SOPO",
+      "action": {
+        "cutscene": "f1_blackout"
+      }
+    },
+    {
+      "id": "f1_blackout_gas",
+      "type": "auto",
+      "once": true,
+      "_comment": "f1_blackout_sopo의 OR 쌍 — 창고 쪽을 먼저 깬 경우.",
+      "done_flag": "Q_F1_BLACKOUT",
+      "requires_flag": "Q_F1_GAS",
+      "action": {
+        "cutscene": "f1_blackout"
+      }
+    },
+    {
+      "id": "f1_power",
+      "type": "interact",
+      "cells": [
+        [
+          190,
+          26
+        ]
+      ],
+      "done_flag": "Q_F1_POWER",
+      "requires_flag": "Q_F1_BLACKOUT",
+      "action": {
+        "cutscene": "f1_power"
+      },
+      "_comment": "복도 끝 분전반 — 층 안에서 끝난다(백트래킹 없음). cell_probe f1 실측: 설 수 있고 조사도 된다."
+    },
+    {
+      "id": "f1_blackout_cache",
+      "type": "interact",
+      "cells": [
+        [
+          27,
+          38
+        ]
+      ],
+      "done_flag": "Q_F1_CACHE",
+      "guard_flag": "Q_F1_POWER",
+      "requires_flag": "Q_F1_BLACKOUT",
+      "action": {
+        "cutscene": "f1_cache"
+      },
+      "_comment": "전자잠금 자료실 안 보관함 — 정전 중에만 열린다(복구 뒤 Q_F1_POWER가 아니라 done_flag로 막는다. grant는 실패 경로가 없어 done이면 충분하다). cell_probe f1 실측: (27,38) 설 수 있고 조사도 된다. **문 바로 밑(30,35)에 두면 안 된다** — 조사하려고 문 아래 칸에 서면 위를 볼 때 문 판정(ATT 9 2칸)이 먼저 걸려 3칸 밖으로 튕겨 나간다(2026-09-08 자동 주행 실측: 「밟았는데 아무 일도 없었다」). 대사대로 방 구석이다."
+    },
+    {
       "id": "f1_blast",
       "type": "interact",
       "cells": [

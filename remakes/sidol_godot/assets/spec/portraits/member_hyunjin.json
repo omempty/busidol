@@ -1,0 +1,16 @@
+{
+  "asset_id": "member_hyunjin",
+  "category": "portraits",
+  "name": "김현진",
+  "subject_token": "김현진: 이펙트 담당, 앞머리 내린 단발, 스파크 튀는 눈빛, 장갑 낀 손",
+  "source_ref": "bmp/hp.bmp",
+  "resolution": {
+    "width": 256,
+    "height": 256
+  },
+  "expressions": [
+    "normal"
+  ],
+  "render_mode": "authentic_pixel_art_remaster",
+  "palette": "palette_master.json (8-bit scaled)"
+}
