@@ -83,3 +83,5 @@ docs/
 원본 파일을 직접 수정하지 않는다. 모든 한국어 텍스트는 조합형(Johab) 인코딩임에 유의.
 원본 보존 위치: `../../../originals/1995_sidol_bsd_dos/` (무결성 기록 = 동 폴더 `MANIFEST.sha256`).
 
+
+- [HANDOFF_SESSION19.md](HANDOFF_SESSION19.md) — 19차 인수인계(도구·AI·에셋 계약, 오토플레이 관문 미결)
