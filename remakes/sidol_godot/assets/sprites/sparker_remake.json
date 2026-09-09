@@ -5,7 +5,7 @@
  "cell_w": 128,
  "cell_h": 128,
  "cols": 5,
- "scale": 0.6667,
+ "scale": 0.5,
  "animations": {
   "walk_down": {
    "row": 0,

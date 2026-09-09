@@ -1,11 +1,11 @@
 {
  "schema_version": 2,
- "source": "assets/raw/llm/10_submitted/monsters/null_pointer_v1.png (512x1024, 128 cell, 4x8)",
+ "source": "20_processed/null_pointer/processed_sheet.png (512x1024, 128 cell)",
  "cell": 128,
  "cell_w": 128,
  "cell_h": 128,
  "cols": 4,
- "scale": 0.6667,
+ "scale": 0.5,
  "animations": {
   "walk_down": {
    "row": 0,

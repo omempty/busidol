@@ -178,7 +178,12 @@ def export_one(sp: dict) -> None:
     anims = sorted(sp["animations"].items(), key=lambda kv: int(kv[1].get("row", 0)))
     rows = len(anims)
     cols = max(int(a.get("frames", 1)) for _, a in anims)
-    sheet_w, sheet_h = cols * CELL, rows * CELL
+    # 셀은 종마다 다를 수 있다 — 스펙의 sheet_cell이 정본이고 없으면 기본 128이다.
+    # 예전에는 CELL(128) 고정이라 sheet_cell 192인 sys_builder의 의뢰문이 1024×768로
+    # 나갔다. 정본 계약은 1536×1152라 그대로 그려 오면 크기 위반으로 자동 반려된다
+    # (prompt_audit이 "선언 크기 ≠ 정본"으로 잡는다).
+    cell = int(sp.get("sheet_cell") or CELL)
+    sheet_w, sheet_h = cols * cell, rows * cell
 
     table_lines = ["| 행 | 애니 | 프레임 | 내용 |", "|---|---|---|---|"]
     for a_name, a in anims:
@@ -196,7 +201,7 @@ def export_one(sp: dict) -> None:
     # 크기·프레임 수는 문장으로 못 고친다 — 정답 크기의 빈 격자를 준다.
     # (라벨은 grid_guide.png로 분리된다 — 템플릿에 글자를 넣으면 납품물이 따라 그린다)
     row_labels = [f"{int(a.get('row', 0))} {n} x{int(a.get('frames', 1))}" for n, a in anims]
-    make_grid_template(os.path.join(out_dir, "grid_template.png"), cols, rows, CELL, row_labels)
+    make_grid_template(os.path.join(out_dir, "grid_template.png"), cols, rows, cell, row_labels)
     # 톤·색은 기존 캐릭터 시트에서 실측해 계약으로 준다(문서가 아니라 파일이 출처).
     refs = _tone_refs()
     tone = measure_tone(refs)
@@ -220,7 +225,7 @@ def export_one(sp: dict) -> None:
         token=sp.get("token", ""),
         sheet_w=sheet_w,
         sheet_h=sheet_h,
-        cell=CELL,
+        cell=cell,
         cols=cols,
         rows=rows,
         row_table=row_table,

@@ -55,8 +55,12 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", ".."))
 PROCESSED = os.path.join(ROOT, "assets", "raw", "llm", "20_processed")
 SPRITES = os.path.join(ROOT, "assets", "sprites")
 CELL = 128
-## 시트 메타 규약 — 실효 96px×2/3 = 64px = 타일 2배(player_original 규약, migrate_original_sheets.py).
+## 스펙이 게임 프레임 크기를 안 적어 둔 시트(대형 컷 등)의 기본 배율.
+## 원래 이 값이 **모든 종에 그대로** 쓰였다 — 아래 sheet_scale()의 주석 참조.
 SHEET_SCALE = 0.6667
+## 화면 배율은 이 사다리 위의 값만 쓴다. 도트를 비정수 배율로 그리면 칸마다 픽셀이
+## 한 줄씩 먹히거나 겹쳐 보인다(0.6667이 정확히 그 값이었다). 동률이면 큰 쪽을 고른다.
+SCALE_LADDER = (0.25, 0.5, 1.0, 2.0)
 DEFAULT_COLORS = 48
 VERSION_RE = re.compile(r"^(?P<id>.+)_v(?P<n>\d+)\.png$", re.IGNORECASE)
 
@@ -105,6 +109,41 @@ quantize = so.quantize
 clean_guides = so.clean_guides
 
 
+def sheet_scale(sp: dict, cell: int) -> tuple:
+    """설치 메타의 `scale` — **스펙이 적어 둔 게임 프레임 크기에서 뽑는다.**
+
+    ## 왜 바꿨나 (2026-09-09, 실측)
+
+    예전에는 종을 가리지 않고 `SHEET_SCALE`(0.6667) 하나였다. 시트 셀도 전 종 128이라
+    설치된 11종이 **화면에서 전부 똑같은 85px**였다:
+
+        c_bug 85px · dworm 85px · sewer_king 85px · hall_mother 85px · crt_overseer 85px
+
+    뒤 셋은 보스다. 스펙은 잡몹 64 · 보스 128 · sys_builder 192로 **크기 차등을 적어
+    두었는데 게임이 그 값을 아예 읽지 않았다**(읽는 곳은 절차적 플레이스홀더 생성기
+    하나뿐). 이 저장소의 지배적 결함(선언은 있는데 읽는 코드가 없다)이 몬스터 크기에서
+    난 자리다. 게임은 설치 메타의 `cell_w × scale`만 보므로, 그 차등을 **여기서** 메타에
+    실어야 산다.
+
+    배율 = 스펙 게임 cell ÷ 시트 셀. 비정수가 나오면 SCALE_LADDER로 당긴다 —
+    도트를 1.5배나 0.375배로 그리면 픽셀 줄이 먹힌다.
+
+    돌려주는 값: (배율, 그 근거 문장). 문장은 설치 로그에 그대로 실어 조용히 안 바뀌게 한다.
+    """
+    game = sp.get("cell")
+    base = int(cell or CELL)
+    if not isinstance(game, dict) or not int(game.get("w", 0)):
+        return SHEET_SCALE, f"스펙에 게임 cell이 없어 기본 배율 {SHEET_SCALE}"
+    ratio = float(int(game["w"])) / float(base)
+    snapped = min(SCALE_LADDER, key=lambda k: (abs(k - ratio), -k))
+    note = f"게임 cell {int(game['w'])} ÷ 시트 셀 {base} = {ratio:.3f} → 배율 {snapped}"
+    if abs(snapped - ratio) > 1e-6:
+        note += f" (사다리로 당김 · 화면 {base * snapped:.0f}px)"
+    else:
+        note += f" (화면 {base * snapped:.0f}px)"
+    return snapped, note
+
+
 def sheet_meta(sp: dict, cols: int, source: str, cell: int = CELL) -> dict:
     anims = {}
     for name, a in sorted(sp.get("animations", {}).items(), key=lambda kv: int(kv[1].get("row", 0))):
@@ -121,7 +160,7 @@ def sheet_meta(sp: dict, cols: int, source: str, cell: int = CELL) -> dict:
         "cell_w": cell,
         "cell_h": cell,
         "cols": cols,
-        "scale": SHEET_SCALE,
+        "scale": sheet_scale(sp, cell)[0],
         "animations": anims,
     }
 
@@ -164,7 +203,8 @@ def install_sheet(asset_id: str, colors: int, dry: bool) -> tuple:
         )
     rel = os.path.relpath(png, ROOT).replace("\\", "/")
     note = f" · 잔선 {lines}px 제거+오염 {tainted}px 정리" if lines else ""
-    return (True, f"{asset_id}: {rel} {want[0]}x{want[1]} · 색 {before}->{after}{note} · 애니 {rows}행")
+    return (True, f"{asset_id}: {rel} {want[0]}x{want[1]} · 색 {before}->{after}{note} "
+                  f"· 애니 {rows}행 · {sheet_scale(sp, cell)[1]}")
 
 
 def latest_versions(cat_dir: str) -> dict:

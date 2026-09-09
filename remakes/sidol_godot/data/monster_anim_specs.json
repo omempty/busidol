@@ -981,6 +981,8 @@
     "w": 192,
     "h": 192
    },
+   "_sheet_cell_note": "게임 프레임이 192라 납품 시트도 192로 받는다 — 128로 받으면 설치 배율이 1.5배 확대가 되어 도트 줄이 먹힌다(다른 종은 게임 64/시트 128 = 0.5배 축소).",
+   "sheet_cell": 192,
    "pattern": "phaser",
    "telegraph_visual": "screen_static_full_1s",
    "source": "placeholder_procedural",
