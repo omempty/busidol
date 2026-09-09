@@ -100,6 +100,7 @@ func _audit_floor(floor_no: int) -> void:
 	var props: PropsLayer = field.props_layer()
 	PropsProbe.check_inspect_reach(_rep, rt, props, player.mover)
 	PropsProbe.check_event_alignment(_rep, floor_no, rt, props, player.mover)
+	PropsProbe.check_choke(_rep, rt, props)
 
 	var enemies: Array = field.enemy_manager.enemies if field.enemy_manager != null else []
 	ActorProbe.check_sheets(_rep, field.npcs, enemies)

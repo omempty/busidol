@@ -264,6 +264,35 @@ func _ready() -> void:
 							)
 						)
 
+	# --- 7) 길목 판정이 실제로 민감한가(부정 시험) ---
+	#
+	# check_choke가 "길목 없음"으로 초록인 것은 두 가지를 뜻할 수 있다: 정말 안 막거나,
+	# **판정이 잠들어 있거나**. 뒤엣것을 가리려면 같은 자리에서 확실히 막는 모양을 넣어
+	# 빨개지는지 봐야 한다. 소품 앞 통로를 창 너비만큼 가로로 끊으면 반드시 걸려야 한다.
+	if layer != null and not layer.props.is_empty():
+		var prop0: Dictionary = layer.props[0]
+		var own := PropsProbe.blocking_cells(prop0)
+		if own.is_empty():
+			failures.append("소품 %s에 막는 칸이 없다" % prop0.get("id", "?"))
+		elif Placement.blocks_cells(rt, own):
+			failures.append("소품 %s가 길목을 막는데 관문이 통과했다" % prop0.get("id", "?"))
+		else:
+			var a := PropsLayer.anchor_of(prop0)
+			var sz := PropsLayer.size_of(prop0)
+			var wall: Array[Vector2i] = []
+			for dx in range(-Placement.CHOKE_RADIUS, sz.x + Placement.CHOKE_RADIUS):
+				for dy in range(0, 3):
+					wall.append(Vector2i(a.x + dx, a.y + sz.y + dy))
+			if not Placement.blocks_cells(rt, wall):
+				failures.append("통로를 가로로 끊었는데 길목으로 안 잡힌다 — 판정이 잠들어 있다")
+			else:
+				print(
+					(
+						"[smoke_field] 길목 판정 민감도 OK — 소품 %d칸 통과 · 가로벽 %d칸 검출"
+						% [own.size(), wall.size()]
+					)
+				)
+
 	_finish(failures)
 
 

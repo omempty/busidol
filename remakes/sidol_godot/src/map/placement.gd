@@ -67,6 +67,38 @@ static func blocks_passage(rt: MapRuntime, anchor: Vector2i, body: Vector2i = BO
 	return _components(after) > _components(window)
 
 
+## **임의 모양**을 막았을 때 통로가 끊기는가 — 소품(w×h, 칸마다 통행/차단이 다름)용.
+##
+## blocks_passage와 판정 원리는 같다(창 안에서 2×2 앵커 연결 성분 수가 늘면 길목).
+## 그런데 그쪽을 그대로 못 쓴다: blocks_passage는 **앵커±CHOKE_RADIUS 정사각 창**을
+## 몸 크기와 무관하게 잡고 사각형 전체를 막는다. 소품은 3×2·1×3처럼 모양이 다르고
+## 같은 소품 안에서도 윗칸은 지나가고(ATT 2) 아랫칸만 막는다 — 사각형으로 막으면
+## 실제보다 과하게 잡는다. 그렇다고 blocks_passage의 창 규칙을 일반화하면 NPC 배치
+## (find_spot)가 미세하게 움직여 이미 초록인 배치 관문이 흔들린다. 그래서 창만
+## 경계 상자 기준으로 따로 잡고, 성분 계산은 같은 _components를 쓴다.
+static func blocks_cells(rt: MapRuntime, cells: Array[Vector2i], mover: Vector2i = BODY) -> bool:
+	if cells.is_empty():
+		return false
+	var lo := cells[0]
+	var hi := cells[0]
+	for c: Vector2i in cells:
+		lo = Vector2i(mini(lo.x, c.x), mini(lo.y, c.y))
+		hi = Vector2i(maxi(hi.x, c.x), maxi(hi.y, c.y))
+	var window: Dictionary = {}
+	for y in range(lo.y - CHOKE_RADIUS, hi.y + CHOKE_RADIUS + 1):
+		for x in range(lo.x - CHOKE_RADIUS, hi.x + CHOKE_RADIUS + 1):
+			var a := Vector2i(x, y)
+			if body_fits(rt, a, mover):
+				window[a] = true
+	var after: Dictionary = {}
+	for a: Vector2i in window:
+		if not _body_hits(a, cells, mover):
+			after[a] = true
+	if after.is_empty():
+		return not window.is_empty()
+	return _components(after) > _components(window)
+
+
 ## desired에서 나선으로 퍼지며 조건을 만족하는 첫 앵커. 못 찾으면 제약을 단계적으로 완화한다
 ## (길목 회피 → 문 회피 순으로 포기) — 배치 실패로 NPC가 사라지는 편보다 낫다.
 ## taken: 이미 점유된 셀 Dictionary(Vector2i -> anything).

@@ -648,9 +648,11 @@ src/map/props_layer.gd      로더(게임이 그것을 어떻게 읽는가)
 |---|---|
 | `PropsProbe.check_inspect_reach` | 앞에 설 자리가 없어 대사가 죽는 소품 · 조사 대사가 없는 소품(WARN) |
 | `PropsProbe.check_event_alignment` | 소품 `state.open_flag`와 트리거 `done_flag`가 같은데 **자리가 어긋난 짝** — 빈 방 좌표를 밟아 이벤트가 나는 것 |
+| `PropsProbe.check_choke` | 소품이 **길을 끊는가**. 판정은 `Placement.blocks_cells()`(NPC 배치가 쓰는 규칙의 임의 모양판)이고, 소품이 **실제로 막는 칸**만 놓고 묻는다(사물함 윗칸은 머리 위로 지나가므로 뺀다) |
 
-실조작 시험은 `tests/smoke_field_test.gd` §6 — 정상(대사창이 열리는가)과 부정
-(`requires_flag`가 없을 때 조사 대상에서 빠지는가)을 같이 세운다.
+실조작 시험은 `tests/smoke_field_test.gd` §6~§7 — 정상(대사창이 열리는가), 부정
+(`requires_flag`가 없을 때 조사 대상에서 빠지는가), 그리고 **길목 판정 민감도**
+(소품은 안 걸리고, 같은 자리에 가로벽을 세우면 걸리는가 — 판정이 잠들어 있는 것을 가린다).
 
 ### `props_check.py`가 보는 것 / 안 보는 것
 

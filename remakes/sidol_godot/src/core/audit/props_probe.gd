@@ -97,6 +97,64 @@ static func check_event_alignment(
 		rep.ok("이벤트·소품 정렬", "플래그로 묶인 %d쌍 전부 소품 앞에서 난다" % checked)
 
 
+## 소품이 길목을 막는가 — 판정 정본은 Placement(NPC 배치가 쓰는 그 규칙)다.
+##
+## props_check.py가 "통로 차단은 여기서 안 본다"고 남겨 둔 마지막 구멍이다.
+## **주의(조용히 초록이 되는 자리)**: 이 관문이 도는 시점에 소품은 이미 런타임에 얹혀
+## 있다. 그대로 물어보면 창(window) 자체가 소품을 뺀 상태로 계산돼 "막은 적 없음"이
+## 나온다. 그래서 그 소품의 덧씌움만 잠깐 걷어내고 묻고 되돌린다 — 다른 소품·상자
+## 덧씌움은 그대로 둔다(여럿이 함께 만드는 길목도 그 상태에서 잡힌다).
+static func check_choke(rep: AuditReport, rt: MapRuntime, layer: PropsLayer) -> void:
+	if layer == null or layer.props.is_empty():
+		return
+	var bad := 0
+	for prop: Dictionary in layer.props:
+		var blocked := blocking_cells(prop)
+		if blocked.is_empty():
+			continue
+		var saved: Dictionary = {}
+		for c: Vector2i in blocked:
+			if rt.overrides.has(c):
+				saved[c] = rt.overrides[c]
+				rt.overrides.erase(c)
+		var chokes := Placement.blocks_cells(rt, blocked)
+		for c: Vector2i in saved:
+			rt.overrides[c] = saved[c]
+		if chokes:
+			bad += 1
+			rep.fail(
+				"소품이 길목을 막는다",
+				(
+					"%s @%s — 막는 칸 %d개가 통로를 쪼갠다(플레이어 2×2가 못 지나간다)"
+					% [String(prop.get("id", "?")), PropsLayer.anchor_of(prop), blocked.size()]
+				)
+			)
+	if bad == 0:
+		rep.ok("소품 통로", "소품 %d개 중 길목을 막는 것 없음" % layer.props.size())
+
+
+## 소품이 **실제로 막는** 칸(ATT 0·2는 지나갈 수 있으므로 뺀다).
+## 사물함처럼 윗칸은 머리 위(2)로 지나가고 아랫칸만 막는 모양이 표준이다.
+static func blocking_cells(prop: Dictionary) -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	var fp: Variant = prop.get("footprint", {})
+	if typeof(fp) != TYPE_DICTIONARY:
+		return out
+	var grid: Variant = (fp as Dictionary).get("attr_grid", [])
+	if typeof(grid) != TYPE_ARRAY:
+		return out
+	var anchor := PropsLayer.anchor_of(prop)
+	for dy in (grid as Array).size():
+		var row: Variant = (grid as Array)[dy]
+		if typeof(row) != TYPE_ARRAY:
+			continue
+		for dx in (row as Array).size():
+			var att := int((row as Array)[dx])
+			if att != 0 and att != 2:
+				out.append(anchor + Vector2i(dx, dy))
+	return out
+
+
 static func _inspect_lines(prop: Dictionary) -> Array:
 	var ins: Variant = prop.get("inspect", {})
 	if typeof(ins) != TYPE_DICTIONARY:
