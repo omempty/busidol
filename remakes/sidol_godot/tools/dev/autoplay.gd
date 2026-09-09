@@ -98,6 +98,8 @@ func _run() -> void:
 	driver.time_scale = _arg("--scale", driver.time_scale)
 	print("[autoplay] start (예산 %.0f초 / 목표 %d개)" % [driver.max_seconds, driver.max_goals])
 	await driver.run()
+	# 속도·배율은 여태 stdout에만 있었다 — 보고서에도 싣는다(autoplay_log.speed_rows 주석).
+	_log.elapsed_s = driver.elapsed
 	_write_report(driver)
 	print("")
 	print("=== 자동 주행 끝: %s ===" % driver.stop_reason)
@@ -214,6 +216,11 @@ func _count_physics_frames() -> void:
 		# 배율은 주행 중에 남이 덮어쓸 수 있다(전투 히트스톱). 최솟값을 남긴다.
 		if _log.scale_min <= 0.0 or Engine.time_scale < _log.scale_min:
 			_log.scale_min = Engine.time_scale
+		# **낮은 채로 몇 프레임이나 있었나** — 끝값으로는 못 잰다(주행이 끝나며 1.0으로
+		# 되돌리므로 늘 정상으로 보인다). 정상 히트스톱은 몇 프레임이고, 되돌아오지
+		# 못한 히트스톱은 남은 주행 전체다. 그래서 비율이 곧 지문이다.
+		if Engine.time_scale < _log.scale_seen * 0.999:
+			_log.scale_low_frames += 1
 
 
 func autoplay_end() -> void:
@@ -277,6 +284,7 @@ func autoplay_fingerprint() -> String:
 ## 드라이버의 "밟은 목표"는 바퀴마다 초기화된다 — 누적치를 따로 싣는다.
 func autoplay_report_rows() -> Array:
 	var rows: Array = ["| 밟은 목표(누적) | %d |" % _reached]
+	rows.append_array(_log.speed_rows())
 	rows.append_array(_log.summary_rows())
 	return rows
 

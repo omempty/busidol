@@ -34,6 +34,40 @@ var data_notes: Dictionary = {}
 
 var _seen: Dictionary = {}
 
+## 주행이 끝난 실제 초. 속도 행을 보고서에 남기려면 밖에서 넣어 줘야 한다(로그는 시계가 없다).
+var elapsed_s := 0.0
+## 시작 배율보다 **낮은 채로 지나간** 물리 프레임 수. 끝값으로는 못 잰다 —
+## 주행이 끝나며 배율을 1.0으로 되돌리므로 어떤 회차든 정상으로 보인다.
+var scale_low_frames := 0
+
+
+## **속도를 보고서에 남긴다.** 여태 이 수치는 stdout에만 있었고 보고서에는 없었다.
+## 그래서 관문이 빨개진 회차를 나중에 열어 봐도 "왜 느렸는가"를 알 수 없었고,
+## 세션마다 요약만 보고 추측했다(2026-09-09).
+##
+## 두 수가 원인을 가른다:
+##   걸음 초당   통과 회차는 44~47, 실패 회차는 7~15였다(같은 기계·같은 명령)
+##   끝 배율     히트스톱은 배율을 5%로 낮췄다가 되돌린다. **끝 배율이 최저와 같으면
+##               되돌아오지 못한 것**이다 — 그 판 내내 시간이 5%로 흐른 것이라
+##               느린 이유가 곧 그것이다(battle_presenter.hitstop 주석 참조).
+func speed_rows() -> Array:
+	var span := maxf(elapsed_s, 0.001)
+	var low_pct := 100.0 * float(scale_low_frames) / maxf(float(physics_frames), 1.0)
+	return [
+		"| 경과 | %.1f초 |" % elapsed_s,
+		"| 걸음 초당 | %.1f |" % (float(steps) / span),
+		"| 물리 초당 | %.0f |" % (float(physics_frames) / span),
+		(
+			"| 시간 배율 | 시작 %.2f · 최저 %.2f · 낮은 프레임 %.1f%%%s |"
+			% [
+				scale_seen,
+				scale_min,
+				low_pct,
+				" ← 히트스톱이 되돌아오지 못했다" if low_pct > 20.0 else "",
+			]
+		),
+	]
+
 
 func summary_rows() -> Array:
 	return [
