@@ -28,6 +28,9 @@ var _cam: Camera2D
 var _prompt: InteractPrompt
 var _focus: InteractFocus
 var _plates: DoorPlates
+## 소품 덧층 — 원본 맵 3층은 바이트 일치로 잠겨 있어 소품을 거기 쓸 수 없다.
+## data/maps/props_f*.json을 읽어 ATT만 덧씌운다(chest_overrides와 같은 기구의 정적 판).
+var _props: PropsLayer
 var _coord_label: Label
 var _coord_layer: CanvasLayer
 var fx: FieldFx
@@ -59,6 +62,9 @@ func _edge(action: StringName) -> bool:
 func _ready() -> void:
 	var def := MapDefinition.load_from_json("res://data/maps/f%d.json" % GameState.current_floor)
 	runtime = MapRuntime.new(def)
+	# 소품 먼저, 상자 나중 — 같은 칸이 겹치면 플레이 결과(열린 상자)가 이겨야 한다.
+	_props = PropsLayer.load_floor(GameState.current_floor)
+	_props.apply_to(runtime)
 	_apply_chest_overrides()
 
 	renderer = MapRenderer.new()
@@ -100,6 +106,9 @@ func _ready() -> void:
 	gate.setup(self)
 	gate.stairs_locked.connect(_on_stairs_locked)
 	gate.stairs_dead.connect(_on_stairs_dead)
+	gate.door_locked.connect(_on_stairs_locked)
+	# 잠긴 방 안 세이브 귀환 — 정전 한복판에 저장하면 밝은 층에 잠긴 방이라 꺼낸다.
+	_eject_from_locked_room()
 
 	dialogue_box = DialogueBox.new()
 	add_child(dialogue_box)
@@ -141,7 +150,12 @@ func _ready() -> void:
 	# 위에 있어서, 첫 층에서는 NPC 통행 오버라이드도 안 선 상태로 자리를 골랐고
 	# "NPC가 사는 방은 비운다"는 판정에 넘길 액터 목록도 비어 있었다(2026-09-06).
 	enemy_manager.spawn_for_floor(
-		GameState.current_floor, runtime, self, player.mover.grid_pos, _actor_anchors()
+		GameState.current_floor,
+		runtime,
+		self,
+		player.mover.grid_pos,
+		_actor_anchors(),
+		_npc_anchors()
 	)
 
 	triggers = TriggerSystem.new()
@@ -552,6 +566,9 @@ func _show_pickup_popup(text: String) -> void:
 func rebuild_floor(new_anchor: Vector2i) -> void:
 	var def := MapDefinition.load_from_json("res://data/maps/f%d.json" % GameState.current_floor)
 	runtime = MapRuntime.new(def)
+	# 소품 먼저, 상자 나중 — 같은 칸이 겹치면 플레이 결과(열린 상자)가 이겨야 한다.
+	_props = PropsLayer.load_floor(GameState.current_floor)
+	_props.apply_to(runtime)
 	_apply_chest_overrides()
 	for child in get_children():
 		if child is MapRenderer:
@@ -577,7 +594,7 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	_spawn_walkers()
 	if enemy_manager != null:
 		enemy_manager.spawn_for_floor(
-			GameState.current_floor, runtime, self, new_anchor, _actor_anchors()
+			GameState.current_floor, runtime, self, new_anchor, _actor_anchors(), _npc_anchors()
 		)
 	if triggers != null:
 		triggers.load_for_floor(GameState.current_floor)
@@ -713,6 +730,36 @@ func _fog_active() -> bool:
 	return SettingsManager.fog_of_war and FloorLighting.is_dark(GameState.current_floor)
 
 
+## 잠긴 전자잠금 방 안에 서서 깨어나면 밖으로 꺼낸다(정전 중 세이브 귀환).
+## 복구는 분전반 자리에서만 일어나 그 순간 방 안에 있을 수 없으므로, 여기가 유일한 감금 경로다.
+func _eject_from_locked_room() -> void:
+	if gate == null or player == null:
+		return
+	var exit := gate.eject_cell_for(player.mover.grid_pos)
+	if exit.x < 0:
+		return
+	push_warning("잠긴 방 안 착지 — 밖으로 꺼냄: %s -> %s" % [player.mover.grid_pos, exit])
+	player.mover.grid_pos = exit
+	player.position = GridMover.block_center(exit)
+
+
+## 런타임 정전 토글 — 컷신 blackout op이 이 문으로 들어온다.
+## 켜면 비상등+번개+안개, 끄면(분전반 복구) 그 층 지도를 전부 밝힌다(보상).
+func set_blackout(enabled: bool) -> void:
+	if lighting == null:
+		return
+	if enabled:
+		if fx != null:
+			fx.lightning_flash()
+		lighting.set_blackout_enabled(GameState.current_floor, true, _lit_actors())
+	else:
+		lighting.set_blackout_enabled(GameState.current_floor, false, _lit_actors())
+		if runtime != null:
+			GameState.fog.reveal_all(GameState.current_floor, runtime)
+	if minimap != null:
+		minimap.on_revealed()
+
+
 ## 지금 화면이 덮고 있는 칸 범위. 감사 도구도 이것을 물어 "화면만큼만 밝혔는가"를 잰다.
 func visible_cell_rect() -> Rect2i:
 	var px := get_viewport_rect().size
@@ -747,6 +794,14 @@ func _lit_actors() -> Array[Node2D]:
 func _on_enemy_spawned(e: EnemyEntity) -> void:
 	if lighting != null:
 		lighting.attach(e)
+
+
+## 반경 배제용 — **고정 NPC만**. 워커는 돌아다니므로 곁을 비워도 스스로 다가간다.
+func _npc_anchors() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for n: NpcEntity in npcs:
+		out.append(n.cell)
+	return out
 
 
 func _actor_anchors() -> Array[Vector2i]:

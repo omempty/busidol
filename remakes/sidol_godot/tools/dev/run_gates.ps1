@@ -42,7 +42,7 @@ $gates = @(
     @{ name = "Autoplay";            args = @("--headless", "--path", "@PROJ@", "res://tools/dev/autoplay.tscn", "--", "--seconds", "240", "--goals", "150", "--require-floors", "5", "--out", "user://autoplay_gate.md"); fatal = $true }
 )
 
-$total = $gates.Count + 4   # +4 = 내보내기 포함 규칙 · 원본 대조 · SPR 알파 · 시트 연산(python)
+$total = $gates.Count + 5   # +5 = 내보내기 · 원본 대조 · SPR 알파 · 시트 연산 · 소품 덧층(python)
 $i = 0
 foreach ($g in $gates) {
     $i++
@@ -69,6 +69,17 @@ Write-Host ("[{0}/{1}] Originals match..." -f $i, $total)
 python (Join-Path $PSScriptRoot "originals_check.py")
 if ($LASTEXITCODE -ne 0) {
     Write-Host "*** FAIL *** Originals match"
+    exit 1
+}
+
+$i++
+Write-Host ("[{0}/{1}] Props overlay..." -f $i, $total)
+# 소품은 원본 맵 3층에 못 쓰고 덧층(data/maps/props_f*.json)으로만 얹는다. 여기서 보는 것은
+# 스키마·정본 id·크기·맵 범위·겹침·원본 ATT다. 통로 차단(도달 가능성)은 Placement가 정본이라
+# GDScript 쪽 관문이 본다 — 파이썬으로 옮기면 같은 규칙이 두 벌이 된다.
+python (Join-Path $PSScriptRoot "props_check.py")
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "*** FAIL *** Props overlay"
     exit 1
 }
 
