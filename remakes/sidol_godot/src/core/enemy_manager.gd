@@ -86,10 +86,12 @@ func spawn_for_floor(
 	_floor = floor_idx
 	_respawn_accum = 0.0
 	var table := Database.encounter_table(floor_idx)
-	# 밀도 설정(Q6) 반영 — NONE이면 0마리, 즉 몬스터 없는 탐험 모드.
-	_cap = SettingsManager.encounter_count(int(table.get("count", 0)))
-	_respawn_seconds = float(table.get("respawn_seconds", RESPAWN_SECONDS))
 	var species_list := Database.encounter_species(floor_idx)
+	# 밀도 설정(Q6) 반영 — NONE이면 0마리, 즉 몬스터 없는 탐험 모드.
+	# 단 **시나리오 종은 밀도로 지울 수 없다**(effective_cap / pending_story_species).
+	var pending := pending_story_species(species_list)
+	_cap = effective_cap(int(table.get("count", 0)), pending.size())
+	_respawn_seconds = float(table.get("respawn_seconds", RESPAWN_SECONDS))
 	if species_list.is_empty() or _cap == 0:
 		GameState.field_roster.erase(floor_idx)
 		return
@@ -99,8 +101,10 @@ func spawn_for_floor(
 	# 여기가 다시 불리는데, 그때마다 새로 뽑으면 잡은 놈이 되살아나고 자리도 바뀐다.
 	var roster: Array = GameState.field_roster.get(floor_idx, [])
 	if roster.is_empty():
-		roster = _roll_roster(rt, player_cell, species_list, _cap)
-		GameState.field_roster[floor_idx] = roster
+		roster = _roll_roster(rt, player_cell, species_list, _cap, pending)
+	# 되세운 명단은 **손대지 않는다** — 잡은 놈이 되살아나면 안 된다(self_check가 잰다).
+	# 예전 밀도로 뽑혀 시나리오 종이 빠진 명단은 _respawn_tick이 그 종을 먼저 채워 메운다.
+	GameState.field_roster[floor_idx] = roster
 	_keep_landing_clear(rt, player_cell, roster)
 	for entry: Dictionary in roster:
 		_make_enemy(entry)
@@ -131,8 +135,42 @@ func _keep_landing_clear(rt: MapRuntime, player_cell: Vector2i, roster: Array) -
 			taken[c] = true
 
 
+## 아직 첫 격파 플래그가 안 선 **시나리오 종** 목록.
+##
+## dworm의 `first_win_flag`(Q_F1_START)는 이 게임에서 **필드 몬스터가 세우는 유일한
+## 시나리오 플래그**이고, 그것이 서지 않으면 f1_sopo·f1_gas가 requires_flag로 잠겨
+## **1층에서 게임이 끝난다**(백로그 §3.9.1). 그런데 밀도 「없음」은 스폰을 0으로 만들고,
+## 「보통」이어도 명단은 종을 무작위로 뽑아 dworm이 빠질 수 있었다. 설정 한 칸이 진행을
+## 끊을 수 있으면 그것은 설정이 아니라 결함이다 — 그래서 이 종들은 밀도와 무관하게
+## 자리를 보장받는다. **플래그가 서면 목록에서 빠지므로**, 그 뒤의 「없음」은 진짜로
+## 0마리다(탐험 모드는 튜토리얼 한 판만 치르면 그대로 유지된다).
+static func pending_story_species(species_list: Array) -> Array:
+	var out: Array = []
+	for s: Variant in species_list:
+		if typeof(s) != TYPE_DICTIONARY:
+			continue
+		var flag := str((s as Dictionary).get("first_win_flag", ""))
+		if flag.is_empty() or GameState.has_flag(flag):
+			continue
+		out.append(s)
+	return out
+
+
+## 밀도 배율을 먹인 정원 — 단 시나리오 종 수보다 작아지지 않는다.
+## 관문(ActorProbe.check_story_species_density)이 이 함수를 밀도 4종에 대해 직접 부른다.
+static func effective_cap(base_count: int, pending_count: int) -> int:
+	return maxi(SettingsManager.encounter_count(base_count), pending_count)
+
+
 ## 새 명단을 뽑는다 — 그 층에 처음 들어섰을 때 한 번.
-func _roll_roster(rt: MapRuntime, player_cell: Vector2i, species_list: Array, count: int) -> Array:
+##
+## `pending`(아직 첫 격파 플래그가 안 선 시나리오 종)은 **앞자리를 확정으로 가져간다.**
+## 전부 무작위로 뽑으면 f1 5마리·5종 기준으로 dworm이 한 마리도 안 나올 확률이
+## (4/5)^5 = 32.8%다 — 보통 밀도에서도 세 판에 한 판은 튜토리얼 몬스터가 없는 층이
+## 되고, 그것이 자동 주행이 판마다 흔들린 이유이기도 하다(HANDOFF_F1_EVENTS §5-4).
+func _roll_roster(
+	rt: MapRuntime, player_cell: Vector2i, species_list: Array, count: int, pending: Array = []
+) -> Array:
 	var out: Array = []
 	var spots := _collect_spawn_anchors(rt, player_cell, SAFE_SPAWN_DIST)
 	if spots.is_empty():
@@ -145,7 +183,9 @@ func _roll_roster(rt: MapRuntime, player_cell: Vector2i, species_list: Array, co
 			break
 		for c in Placement.body_cells(cell):
 			taken[c] = true
-		var spec: Dictionary = species_list[rng.randi() % species_list.size()]
+		var spec: Dictionary = (
+			pending[_i] if _i < pending.size() else species_list[rng.randi() % species_list.size()]
+		)
 		(
 			out
 			. append(
@@ -640,7 +680,20 @@ func _respawn_tick(player_cell: Vector2i, delta: float) -> void:
 	var cell := _pick_free_anchor(spots, {})
 	if cell.x < 0:
 		return
-	var spec: Dictionary = species_list[rng.randi() % species_list.size()]
+	# **시나리오 종이 먼저다.** 첫 격파 플래그가 아직 안 섰는데 그 종이 층에 없다면
+	# (예전 밀도로 뽑힌 명단이거나, 붙었다가 졌거나) 무작위보다 그것을 먼저 되돌린다 —
+	# 그 한 마리를 못 만나면 사슬이 끊긴다. 명단 보존 규약은 건드리지 않는다(여기는 "추가"다).
+	var spec: Dictionary = {}
+	var on_field := {}
+	for e: Variant in enemies:
+		if e != null:
+			on_field[str(e.species_id)] = true
+	for cand: Dictionary in pending_story_species(species_list):
+		if not on_field.has(str(cand["id"])):
+			spec = cand
+			break
+	if spec.is_empty():
+		spec = species_list[rng.randi() % species_list.size()]
 	var entry := {
 		"id": str(spec["id"]),
 		"pattern": str(spec["pattern"]),

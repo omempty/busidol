@@ -198,3 +198,57 @@ static func check_pattern_coverage(rep: AuditReport) -> void:
 		rep.fail("이동 패턴 미구현", "%s — decide()에 분기가 없어 배회로 떨어진다" % m)
 	if missing.is_empty():
 		rep.ok("이동 패턴 구현", "데이터가 쓰는 %d종 전부 구현됨" % seen.size())
+
+
+## 시나리오 종이 **설정 한 칸으로 사라지지 않는가** — 밀도 4종 전부에서 자리를 받는가.
+##
+## dworm의 `first_win_flag`(Q_F1_START)는 필드 몬스터가 세우는 유일한 시나리오 플래그이고,
+## 그것이 없으면 f1_sopo·f1_gas가 잠겨 **1층에서 게임이 끝난다**. 밀도 「없음」은 스폰을 0으로
+## 만들었고, 「보통」이어도 명단이 종을 무작위로 뽑아 dworm이 빠질 수 있었다(백로그 §3.9.1).
+## 정본은 `EnemyManager.effective_cap()` 하나다 — 여기서 그것을 직접 불러 잰다.
+static func check_story_species_density(rep: AuditReport) -> void:
+	var saved: int = SettingsManager.encounter_density
+	var bad: Array[String] = []
+	var checked := 0
+	for floor_idx in range(0, 6):
+		var species := Database.encounter_species(floor_idx)
+		var pending := EnemyManager.pending_story_species(species)
+		if pending.is_empty():
+			continue
+		var base := int(Database.encounter_table(floor_idx).get("count", 0))
+		for d in [
+			SettingsManager.EncounterDensity.NONE,
+			SettingsManager.EncounterDensity.LOW,
+			SettingsManager.EncounterDensity.NORMAL,
+			SettingsManager.EncounterDensity.HIGH,
+		]:
+			checked += 1
+			SettingsManager.encounter_density = d
+			var cap := EnemyManager.effective_cap(base, pending.size())
+			if cap < pending.size():
+				bad.append("f%d 밀도 %d — 정원 %d < 시나리오 종 %d" % [floor_idx, d, cap, pending.size()])
+	SettingsManager.encounter_density = saved
+	for b in bad:
+		rep.fail("시나리오 종이 밀도에 지워진다", "%s — 첫 격파 플래그가 영영 안 서서 진행이 끊긴다" % b)
+	if bad.is_empty() and checked > 0:
+		rep.ok("시나리오 종 정원", "밀도 4종 × %d건 전부 자리를 받는다" % (checked / 4))
+
+
+## 그 층에 **실제로** 서 있는가 — 계산이 맞아도 명단에서 빠지면 소용이 없다.
+## world_audit이 층마다 세운 뒤 부르므로, 무작위 명단이 시나리오 종을 빠뜨리면 여기서 붉어진다.
+static func check_story_species_spawned(rep: AuditReport, floor_no: int, enemies: Array) -> void:
+	var pending := EnemyManager.pending_story_species(Database.encounter_species(floor_no))
+	if pending.is_empty():
+		return
+	var on_field := {}
+	for e: Variant in enemies:
+		if e != null and "species_id" in e:
+			on_field[str(e.species_id)] = true
+	var missing: Array[String] = []
+	for spec: Dictionary in pending:
+		if not on_field.has(str(spec["id"])):
+			missing.append("%s(%s)" % [str(spec["id"]), str(spec.get("first_win_flag", ""))])
+	for m in missing:
+		rep.fail("시나리오 종이 층에 없다", "(f%d) %s — 잡을 수가 없어 그 플래그를 요구하는 사건이 통째로 잠긴다" % [floor_no, m])
+	if missing.is_empty():
+		rep.ok("시나리오 종 배치", "(f%d) %d종 전부 층에 서 있다" % [floor_no, pending.size()])

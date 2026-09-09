@@ -106,6 +106,9 @@
 | `PropsProbe.check_event_alignment` | 플래그로 묶인 트리거와 소품의 자리 어긋남 | world_audit |
 | `PropsProbe.check_choke` | 소품이 길을 끊는가(`Placement.blocks_cells`) | world_audit |
 | `smoke_all_floors` §5 | **F5 보스전에 져도 게임이 계속되는가** — 패배 복귀 직후 auto 재발동 없음 / 콘솔 조사로 재도전 열림 / 승리 후 닫힘 | run_gates `[9/24]` |
+| `ActorProbe.check_story_species_density` | `first_win_flag`를 매단 종의 정원이 밀도 4종 전부에서 확보되는가 | world_audit |
+| `ActorProbe.check_story_species_spawned` | 그 종이 층에 **실제로** 서 있는가 | world_audit |
+| `smoke_field` 밀도 검사 | 명단을 네 밀도로 실제로 뽑아 dworm 포함 여부 + 격파 후 「없음」=0마리 | run_gates `[4/24]` |
 
 > `props_check.py` 행에 **플래그 사슬**이 더해졌다(`8c0d3e9`): 소품이 기대는 `open_flag`·
 > `requires_flag`를 아무도 안 세우면 FAIL. 오타 한 글자로 소품이 영영 죽는 자리였다.
@@ -113,6 +116,8 @@
 ### 2.1 부정 시험을 꼭 같이 넣었다
 정상만 보는 관문은 고장 나도 초록이다. 예: "묶음을 모르면 소품이 부서진다"(상자 폭 56 → 60),
 "묶음을 모르면 계측이 중앙 이탈로 잡는다", props 부정 시험 10종.
+
+조우 밀도 쪽도 부정 2종(정원 보장 제거 / 앞자리 확정 제거)으로 붉어지는 것을 확인했다.
 
 F5 보스 재도전 시험도 부정 2종으로 붉어지는 것을 확인했다 — ①재도전 트리거를 지우면 "재도전이
 열리지 않는다"가, ②연출용 auto에 `guard_flag`를 얹으면 "패배 복귀 직후 auto가 다시 발동했다 —
@@ -214,3 +219,46 @@ python tools/convert/install_delivery.py flying_thesis null_pointer rogue_vendin
 
 - 기준선 비교용 워크트리를 만들어 뒀다면 지운다: `git worktree remove <경로>` / `git worktree prune`.
 - `assets/raw/llm/**`은 gitignore라 커밋에 안 들어간다(의뢰 패키지는 각자 다시 구우면 된다).
+
+---
+
+## 6. 세션 종료 시점 인수인계 (2026-09-09 마감)
+
+백로그 **§3.9 「게임을 끝낼 수 있는 자리 3곳」이 전부 해소**됐다. 셋 다 같은 모양이었다 —
+**데이터·설정이 시나리오 사슬을 끊을 수 있는데 아무도 재지 않았다.**
+
+| 자리 | 무엇이었나 | 어떻게 닫았나 | 관문 |
+|---|---|---|---|
+| F5 보스 2건 | `auto` 트리거의 `done_flag`가 컷신 **전에** 서서, 첫 패배로 승리 플래그가 영영 안 섰다 | 연출 `auto`는 그대로 두고 **소품 콘솔 위 `interact` 재도전**을 얹었다(`guard_flag`) | `smoke_all_floors` §5 |
+| 조우 밀도 | `first_win_flag`를 매단 종이 밀도·무작위 추첨으로 사라졌다(「보통」에서도 32.8%) | **시나리오 종은 랜덤 조우가 아니다** — 정원·앞자리를 보장 | `ActorProbe` 2종 + `smoke_field` 밀도 검사 |
+| F3 대사 오배선 | 메인 퀘스트 2개가 퀴즈 보기를 읊었다(12줄) | `@c347`~`@c358` 신설·화자 재배정 | (데이터 교체) |
+
+### 이번 마감에서 배운 것 — **백로그의 처방을 그대로 믿지 마라**
+
+두 건 다 백로그가 적어 둔 처방이 **부정 시험에서 기각**됐다.
+
+- F5: 「`done_flag` → `guard_flag`(데이터 2줄)」 → **무한 재전투**가 된다. 패배 복귀는
+  `change_scene_to_file(field.tscn)`이고 `load_for_floor`가 `_fired`를 비우는데
+  `GameState.player_cell`은 그대로다 — 발동 자리에 선 채로 돌아온다.
+- 밀도: 「①NONE 제거 ②플래그 대체 출처 ③방치」 → **셋 다 문제를 잘못 잡았다.** 재 보니
+  NONE은 스펙트럼의 끝일 뿐이고 「보통」에서도 세 판에 한 판이 같은 상태였다.
+
+처방을 쓰기 전에 **먼저 재는 것**이 두 번 다 정답을 바꿨다.
+
+### 다음 세션이 이어받을 것 (우선순위 순)
+
+1. **`Q_F2_FIGHTER` 공회전** — 트리거·플래그·대사가 전부 없고, 보상 [연속 펀치]는 이미 시작 스킬이다(§3.9.3).
+2. **`choice` op 실질 0** — 러너와 `tests/smoke_choice.tscn`은 이미 있다. 데이터만으로 3곳 추가 가능(§3.10 #3).
+3. **`@c420`이 정의 없이 참조된다**(`f4_sacrifice.json`) · **`@c441` 피카츄 시대 오류** · **`@t` 재작성 15개**(원문 복원 or 규칙 개정 — 판단 필요).
+4. **`@c230`이 F3 이벤트를 "2층"이라 안내한다**(§3.9.4).
+5. **선행 사슬 미구현** — `quests_v2.json`이 규정한 F0 디스켓 → F4 배터리 → F4 희생이 트리거 `requires_flag`에 없다(§3.9.3).
+6. **Memory Archive 명세** — 기존 `credits.json.ending_cards` + `scenes/credit_room.gd`의 확장으로 쓴다.
+   조각을 매달 그릇은 이번에 생긴 **소품 `inspect`**다(`memory_id` 필드 한 칸). 실측 공백:
+   F5 상자 0개 · `choice` 실질 0 · F4 대사 12줄(F1은 54줄).
+7. **소품 그림 미배선** — `renderer.set_object(cell, id)`에 붙일 자리는 있는데 obj 아틀라스 인덱스가
+   없다. 그때까지 소품은 **보이지 않고 막기만 한다** — F5 콘솔 둘도 같은 상태다(§1.2).
+
+### 주의 — 사생활
+`https://github.com/omempty/busidol`는 **공개 저장소**이고 `credits.json`에 실명 9명 + 일화가
+이미 들어 있다. 1995년 실사진을 도입한다면 `assets/private/`(gitignore)에 두고 배포 zip에만
+싣는 것을 권한다.

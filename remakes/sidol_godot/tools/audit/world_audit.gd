@@ -48,6 +48,7 @@ func _ready() -> void:
 	MotionProbe.check_contact_symmetry(_rep)
 	ActorProbe.check_pattern_coverage(_rep)
 	ActorProbe.check_idle_anim_coverage(_rep)
+	ActorProbe.check_story_species_density(_rep)
 	RenderProbe.check_atlas_transparency(_rep)
 
 	for f: int in FLOORS:
@@ -76,12 +77,22 @@ func _audit_floor(floor_no: int) -> void:
 	GameState.current_floor = floor_no
 	GameState.player_cell = Vector2i(-1, -1)
 	GameState.flags["q_f1_opening_seen"] = true
-	GameState.flags["Q_F1_START"] = true
+	# 층마다 "첫 격파 전"으로 되돌린다 — 앞 층 감사가 켜 두면 목록이 비어 관문이 죽는다.
+	GameState.flags.erase("Q_F1_START")
+	GameState.field_roster.clear()
+	# **Q_F1_START는 필드를 세운 뒤에 연다.** 스폰 시점에 켜져 있으면 dworm이
+	# "첫 격파 전 시나리오 종" 목록에서 빠져 check_story_species_spawned가 볼 것이
+	# 없어진다 — 관문이 붙자마자 조용히 죽는 자리다(이 저장소의 주 결함 유형).
 
 	var field: Node2D = FIELD_SCENE.instantiate()
 	add_child(field)
 	await get_tree().process_frame
 	await get_tree().process_frame
+
+	ActorProbe.check_story_species_spawned(
+		_rep, floor_no, field.enemy_manager.enemies if field.enemy_manager != null else []
+	)
+	GameState.flags["Q_F1_START"] = true
 
 	var player: PlayerEntity = field.get_player()
 	var rt: MapRuntime = field.get_runtime()

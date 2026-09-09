@@ -12,6 +12,8 @@ func _ready() -> void:
 
 	# 프롤로그 컷신(auto 트리거) 스킵 + F1 존 트리거 게이트 개방 — 이동 검증에 집중
 	GameState.flags["q_f1_opening_seen"] = true
+	# **Q_F1_START는 아직 세우지 않는다** — 아래 밀도 검사가 "첫 격파 전" 상태를 봐야 한다.
+	await _test_encounter_density(failures)
 	GameState.flags["Q_F1_START"] = true
 
 	var field: Node2D = FIELD_SCENE.instantiate()
@@ -336,6 +338,65 @@ func _settle() -> void:
 	while t < TIMEOUT:
 		await get_tree().process_frame
 		t += get_process_delta_time()
+
+
+## 조우 밀도가 **시나리오 종을 지우지 못하는가** — 백로그 §3.9.1의 막다른 길.
+##
+## dworm의 first_win_flag(Q_F1_START)는 필드 몬스터가 세우는 유일한 시나리오 플래그이고,
+## 그것이 없으면 f1_sopo·f1_gas가 requires_flag로 잠겨 1층에서 게임이 끝난다. 밀도 「없음」은
+## 스폰을 0으로 만들었고, 「보통」이어도 명단이 종을 무작위로 뽑아 dworm이 빠질 수 있었다
+## (5종·5마리 기준 32.8%). 여기서는 **실제로 명단을 뽑아** 네 밀도 전부에서 서 있는지 본다 —
+## 계산만 재는 것은 ActorProbe.check_story_species_density(world_audit)가 따로 한다.
+func _test_encounter_density(failures: Array[String]) -> void:
+	var saved_density: int = SettingsManager.encounter_density
+	var field: Node2D = FIELD_SCENE.instantiate()
+	add_child(field)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var rt: MapRuntime = field.get_runtime()
+	var mgr: EnemyManager = field.enemy_manager
+	var player: PlayerEntity = field.get_player()
+	if rt == null or mgr == null or player == null:
+		failures.append("밀도 검사: 필드 조립 실패")
+		field.queue_free()
+		return
+	var cell := player.mover.grid_pos
+
+	var names := ["없음", "적게", "보통", "많게"]
+	for d in [
+		SettingsManager.EncounterDensity.NONE,
+		SettingsManager.EncounterDensity.LOW,
+		SettingsManager.EncounterDensity.NORMAL,
+		SettingsManager.EncounterDensity.HIGH,
+	]:
+		SettingsManager.encounter_density = d
+		GameState.field_roster.erase(1)
+		mgr.spawn_for_floor(1, rt, field, cell)
+		var ids := {}
+		for e: Variant in mgr.enemies:
+			ids[str(e.species_id)] = true
+		if not ids.has("dworm"):
+			failures.append(
+				"밀도 %s에서 dworm이 층에 없다 — Q_F1_START를 세울 수 없어 1층에서 진행이 끝난다" % names[int(d)]
+			)
+		else:
+			print("   - [OK] 밀도 %s — 몬스터 %d마리, dworm 포함" % [names[int(d)], mgr.enemies.size()])
+
+	# 첫 격파가 끝나면 「없음」은 **진짜로** 0마리다 — 탐험 모드가 튜토리얼 한 판만 치른다.
+	GameState.flags["Q_F1_START"] = true
+	SettingsManager.encounter_density = SettingsManager.EncounterDensity.NONE
+	GameState.field_roster.erase(1)
+	mgr.spawn_for_floor(1, rt, field, cell)
+	if mgr.enemies.size() != 0:
+		failures.append("Q_F1_START 수립 후 밀도 없음인데 %d마리가 남았다 — 탐험 모드가 깨진다" % mgr.enemies.size())
+	else:
+		print("   - [OK] Q_F1_START 수립 후 밀도 없음 — 0마리(탐험 모드 유지)")
+
+	GameState.flags.erase("Q_F1_START")
+	GameState.field_roster.erase(1)
+	SettingsManager.encounter_density = saved_density
+	field.queue_free()
+	await get_tree().process_frame
 
 
 func _finish(failures: Array[String]) -> void:
