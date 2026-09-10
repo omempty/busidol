@@ -310,8 +310,18 @@ func _ready() -> void:
 	battle.player_combatant.hp = 9999
 	battle.player_combatant.attach_effect({"kind": &"paralysis", "turns": 3, "magnitude": 0})
 	battle._end_player_defend()
-	await get_tree().process_frame
-	print("[smoke_battle] 턴 넘김 경로 마비 재검사: 잔존=%s" % str(battle.player_combatant.has_paralysis()))
+	# 적 턴이 순서화됐다(돌진·빔 박자를 실제로 기다린다, 2026-09-09) — 1프레임이 아니라
+	# 흐름이 끝날 때까지(_busy 해제) 기다린다. 마비 재귀 3회 + 적 타격 3회분이다.
+	waited = 0.0
+	while battle._busy and waited < TIMEOUT * 2.0:
+		await get_tree().process_frame
+		waited += get_process_delta_time()
+	print(
+		(
+			"[smoke_battle] 턴 넘김 경로 마비 재검사: 잔존=%s (%.2fs)"
+			% [str(battle.player_combatant.has_paralysis()), waited]
+		)
+	)
 	if battle.player_combatant.has_paralysis():
 		failures.append("_end_player_defend가 살아 넘어온 마비를 무시하고 커맨드 창을 연다")
 	battle.player_combatant.active_effects.clear()

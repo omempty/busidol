@@ -70,11 +70,14 @@
   ],
   "_enemy_comment": "적 전투 대형 시트 계약 — 2026-09-07 신설. 원작 전투는 320×200 전체 화면 프레임 시퀀스였고(WARMODE.C) 그 프레임이 저장소에 있었는데 게임 코드가 로드하는 곳이 0곳이었다. 적이 화면 높이의 13~21%밖에 안 돼 원작(52~73%)의 압박감이 통째로 빠져 있었다. 설치 규약: assets/sprites/<id>_battle.png + .json. SpriteSets.battle_sheet가 필드 도트보다 우선한다.",
   "_enemy_frames": "프레임 의미는 원작 소스가 확정한다 — 0 평상(ENLoss=0) · 1 빈사(HP<=15, ENLoss=1) · 2 사망(EN.Life==0) · 3 공격(EnemyAttackAni가 x=100->-50 슬라이드) · 4·5 피격 반응(EnemyAvoid가 Snum=6으로 0~5를 로드하고 random(3)==0?4:5로 고른다). 정정 2026-09-07: 처음엔 4·5를 '원작 미사용'으로 적었으나 틀렸다 — 세 번째 로드 지점인 EnemyAvoid를 놓쳤다.",
+  "_enemy_pairing": "필드↔전투 짝 대응표(2026-09-09 원본 대조 확정). 원작은 슬롯 인덱스 i가 짝을 정한다 — GOODITEM.C Check_Quang()이 WarMode(page, i)로 슬롯 번호를 넘기고 WARMODE.C가 E{i+1}.SPR을 읽으며, 필드도 eye[i].mode = 8*(i%8+1)이라 I.SPR 8*(i+1) ↔ E{i+1}.SPR이 짝이다. 전투 대형(bake_battle_sheets.py)은 원작명 기준이라 맞았으나 필드 시트(migrate_original_sheets.py SOURCES)가 5~8블록을 잘못 배정해 4종이 어긋나 있었다. field_frame = I.SPR 시작 프레임(8장 블록). sparker는 신설종이라 원작 대응이 없고 8번째 슬롯(FireMan 자리)을 이어받아 I64를 임시로 쓴다(전투 대형 없음 — 전투에서는 필드 도트로 나온다).",
+  "_enemy_pairing_table": "slot0 I008↔E1 Mad Eye=mad_eye · slot1 I016↔E2 Vilgur=vulgar · slot2 I024↔E3 DWorm=dworm · slot3 I032↔E4 Ozzy=ozzy · slot4 I040↔E5 Iron-Vic=iron_voc · slot5 I048↔E6 HellCop=hellcop · slot6 I056↔E7 O-Rey=o_ray · slot7 I064↔E8 FireMan=sparker(임시)",
   "enemies": [
     {
       "id": "sparker",
       "status": "needs_art",
       "origin_spr": null,
+      "field_frame": 64,
       "_desc": "리메이크 신설 종 — 원작에 대응 프레임이 없다. 320×200 대형 6프레임(평상·빈사·사망·공격·미사용2)을 새로 그려야 한다"
     },
     {
@@ -84,7 +87,8 @@
       "origin_spr_num": 0,
       "origin_name": "Mad Eye",
       "hue_shift": 0,
-      "_desc": "원작 E1.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+      "_desc": "원작 E1.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다",
+      "field_frame": 8
     },
     {
       "id": "vulgar",
@@ -93,7 +97,8 @@
       "origin_spr_num": 1,
       "origin_name": "Vilgur",
       "hue_shift": 0,
-      "_desc": "원작 E2.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+      "_desc": "원작 E2.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다",
+      "field_frame": 16
     },
     {
       "id": "dworm",
@@ -102,7 +107,8 @@
       "origin_spr_num": 2,
       "origin_name": "DWorm",
       "hue_shift": 0,
-      "_desc": "원작 E3.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+      "_desc": "원작 E3.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다",
+      "field_frame": 24
     },
     {
       "id": "ozzy",
@@ -111,7 +117,8 @@
       "origin_spr_num": 3,
       "origin_name": "Ozzy",
       "hue_shift": 100,
-      "_desc": "원작 E4.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다. e2와 바이트 동일이라 색상환 100° 회전으로 가른다"
+      "_desc": "원작 E4.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다. e2와 바이트 동일이라 색상환 100° 회전으로 가른다",
+      "field_frame": 32
     },
     {
       "id": "iron_voc",
@@ -120,7 +127,8 @@
       "origin_spr_num": 4,
       "origin_name": "Iron-Vic",
       "hue_shift": 0,
-      "_desc": "원작 E5.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+      "_desc": "원작 E5.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다",
+      "field_frame": 40
     },
     {
       "id": "hellcop",
@@ -129,7 +137,8 @@
       "origin_spr_num": 5,
       "origin_name": "HellCop",
       "hue_shift": 0,
-      "_desc": "원작 E6.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다"
+      "_desc": "원작 E6.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다",
+      "field_frame": 48
     },
     {
       "id": "o_ray",
@@ -138,7 +147,8 @@
       "origin_spr_num": 6,
       "origin_name": "O-Rey",
       "hue_shift": 160,
-      "_desc": "원작 E7.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다. e2와 바이트 동일이라 색상환 160° 회전으로 가른다"
+      "_desc": "원작 E7.SPR 6프레임 — tools/dev/bake_battle_sheets.py가 굽는다. e2와 바이트 동일이라 색상환 160° 회전으로 가른다",
+      "field_frame": 56
     },
     {
       "id": "c_bug",

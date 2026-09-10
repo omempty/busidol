@@ -36,10 +36,12 @@ static func roll_special(
 ##
 ## 확률·종류는 monsters.json의 종별 `special`이 정한다(코드에 값을 두지 않는다).
 ## dot 피해량은 적 AP에서 뽑는다 — 층이 올라가면 지속 피해도 같이 아파진다.
+##
+## 순서: 돌진 → (대기) → 문구·피격. 피해 숫자보다 그림이 먼저다(원작과 같은 자리).
 static func try_special(
 	attacker: Combatant,
 	player: Combatant,
-	enemy_id: String,
+	enemy_id: StringName,
 	presenter: BattlePresenter,
 	rng: RandomNumberGenerator
 ) -> bool:
@@ -61,6 +63,7 @@ static func try_special(
 	if not presenter.play_enemy_anim(presenter.target_index, "special"):
 		presenter.play_enemy_anim(presenter.target_index, "attack")
 	presenter.enemy_lunge(presenter.target_index)
+	await presenter._cut_beat(presenter.enemy_attack_beat(presenter.target_index))
 	var key := "UI_BLOG_ENEMY_PARALYZE" if kind == &"paralysis" else "UI_BLOG_ENEMY_DOT"
 	BattleLog.push(
 		TranslationServer.translate(key) % [attacker.display_name, magnitude], BattleLog.Kind.DAMAGE
@@ -71,27 +74,40 @@ static func try_special(
 
 
 ## 일반 공격 — 첫 생존 적의 턴(원작 공식: (Power + rnd(10)) / 6).
+##
+## 순서(원작 `EnemyAttackAni` → `MyAvoid`, WARMODE.C:537-642):
+## 돌진 → 섬광·빔(딤 상영) → 주인공 회피 컷(임팩트만) → 피해 숫자·피격.
+## 2026-09-09까지는 피해 계산·숫자·피격이 먼저 나가고 돌진·빔 트윈이 뒤에서
+## 알아서 도는 fire-and-forget이라 "순서가 엉망"이었다(§8.1).
 static func regular_attack(
 	attacker: Combatant, player: Combatant, presenter: BattlePresenter
 ) -> void:
-	var raw := DamageCalculator.enemy_hit(attacker.attack_stat(), EnemyManager.rng)
-	var actual: int = player.take_damage(raw)
 	# 적 시트에 attack 행이 있으면 그 동작으로 때린다(없으면 기존 연출 그대로).
 	presenter.play_enemy_anim(presenter.target_index, "attack")
 	presenter.enemy_lunge(presenter.target_index)
+	# 돌진이 화면을 가로지를 동안 기다린다 — 피해는 그 뒤에 깎는다.
+	await presenter._cut_beat(presenter.enemy_attack_beat(presenter.target_index))
 	# **원작 공격의 나머지 절반** — 돌진 뒤 섬광이 터지고 에너지파가 화면을 가로지른다
 	# (WARMODE.C:599-625). 대형 시트를 쓰는 적에게만 붙고, 발사 종이 아니면 섬광까지다.
-	# 임팩트 = 이 일격이 주인공을 쓰러뜨렸거나 빈사로 몰았을 때. 그 밖에는 가끔만.
+	# 임팩트 = 주인공이 쓰러지거나 빈사로 몰린 일격. 그 밖에는 가끔만.
 	var lethal := player.is_down() or float(player.hp) <= float(maxi(player.max_hp, 1)) * 0.25
-	presenter.origin_attack_fx(lethal)
+	await presenter.origin_attack_fx_async(lethal)
+	var raw := DamageCalculator.enemy_hit(attacker.attack_stat(), EnemyManager.rng)
+	var actual: int = player.take_damage(raw)
+	# 원작 `MyAvoid()` 자리 — 빔 다음·피해 숫자 전에 주인공 회피 컷(딤 상영).
+	# 한 방이 크면(최대 HP의 1/4 이상) 반드시, 아니면 도트 연출로 충분하다.
+	if actual * 4 >= maxi(player.max_hp, 1):
+		await presenter.play_origin_avoid_cut_async()
 	presenter.show_damage_number(actual, true)
 	BattleLog.push(
 		TranslationServer.translate("UI_BLOG_ENEMY_HIT") % [attacker.display_name, actual],
 		BattleLog.Kind.DAMAGE
 	)
 	presenter.hurt_flash(presenter.player_sprite)
-	# 원작은 피격도 대형 컷이었다(DEF 시퀀스) — 시트가 없으면 조용히 건너뛴다.
-	presenter.play_cut("player_hurt")
+	# 주인공의 타격 스파크 — 적중 이펙트가 전부 적 쪽(`at_actor: target`)에만 붙어
+	# 대형컷이 안 뜨면 시돌이는 플래시·넉백뿐이었다. 시트판(hit_spark.png) 우선,
+	# 없으면 절차적 베기 아크로 폴백한다(`play_fx_kf`가 둘 다 안다).
+	presenter.play_fx_kf({"effect": "hit_spark", "at_actor": "self"})
 	# 아군 타격과 같은 등급화 — 피해 비례 shake + 임팩트 히트스톱.
 	presenter.play_screen_kf({"shake": minf(3.0 + float(maxi(actual, 0)) / 8.0, 7.0)})
 	if actual > 0:
@@ -125,6 +141,8 @@ static func dodge_sequence(
 		presenter.hurt_flash(presenter.player_sprite)
 		presenter.play_screen_kf({"shake": 3, "flash": "#ff3333", "a": 0.25})
 	if hits == 0:
-		presenter.play_cut("player_dodge")  # 무피격 = 완전 회피 — 원작 D 시퀀스 자리
+		# 무피격 = 완전 회피 — 원작 D 시퀀스 자리. `player_dodge.png`는 미납품이라
+		# `play_cut`은 조용히 건너뛰고, 원작 회피 컷(딤 상영)이 그 자리를 맡는다.
+		await presenter.play_origin_avoid_cut_async(true)
 	print("[battle] dodge phase done: hits=%d dmg=%d" % [hits, actual])
 	return hits

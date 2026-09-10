@@ -37,6 +37,12 @@ var _target_index := 0
 var _last_action: Dictionary = {}
 var _skills: Array[Dictionary] = []
 var _flee_failures := 0  # 이 전투에서 도망에 실패한 횟수 — 시도마다 확률이 오른다
+## 마지막 대형 컷 이후 지난 플레이어 액션 수 — 약점·크리 같은 흔한 임팩트가
+## 매 턴 컷을 터뜨려 물리는 것을 막는 쿨다운 분자(2026-09-10).
+## 큰 임팩트(킬샷·브레이크·필살기)는 쿨다운을 무시한다.
+var _actions_since_cut := 99
+## 흔한 임팩트(크리·약점·평범 턴 idle)가 컷을 틀 수 있는 최소 간격(액션 수).
+const CUT_COOLDOWN_ACTIONS := 2
 
 # 연출 (로직↔연출 분리: ChoreographyRunner + BattlePresenter)
 var _runner: ChoreographyRunner
@@ -252,12 +258,22 @@ func _on_command(cmd_id: StringName) -> void:
 			# **회복이 아니라 기력을 번다.** 구판은 방어가 최대 HP 6%를 무료·무제한으로
 			# 회복해 죽음이 원리적으로 불가능했다(2026-09-06 실측: 승률 100%).
 			# 이제 방어는 "한 턴을 팔아 다음 스킬을 산다" — 피해 절반 + 기력 큰 회복.
+			# 원작에 방어 커맨드가 없어 전용 컷도 없다 — 회피(d1) 첫 자세를 단컷으로
+			# 빌린다. 방어는 매 턴 쓸 수 있어 대형 컷 쿨다운을 공유한다(3턴에 한 번꼴).
+			_busy = true
+			if _actions_since_cut >= CUT_COOLDOWN_ACTIONS:
+				_actions_since_cut = 0
+				await _presenter.play_origin_short_cut_async("avoid_c", 0, 0.35)
+			else:
+				_actions_since_cut += 1
 			player_combatant.attach_effect(
 				{"kind": &"buff_damage_taken", "turns": 1, "magnitude": 50}
 			)
 			var st_cfg: Dictionary = BattleSetup.stamina_config()
 			var gained := player_combatant.gain_stamina(int(st_cfg.get("gain_on_guard", 28)))
 			AudioManager.play_sfx(&"cast_shield")
+			# 방어막 전개 — `shield_up` 에셋이 디버그 무브에만 묶여 놀고 있었다.
+			_presenter.play_fx_kf({"effect": "shield_up", "at_actor": "self"})
 			var note := tr("UI_BLOG_GUARD")
 			if gained > 0:
 				note += "  " + tr("UI_BATTLE_STAMINA_GAIN") % gained
@@ -359,6 +375,15 @@ func _begin_player_action(command: Dictionary, move_id: StringName) -> void:
 	# 공격 기합 — 원작 `AttackAni2()`가 애니 시작에 d1.voc를 냈다(WARMODE.C:321).
 	# 방어·도구는 그 자리가 아니므로 여기(공격 개시)에만 둔다.
 	AudioManager.play_voice(&"d1")
+	# 원작 순서(`MyAttackAni` → `EnemyAvoid`, WARMODE.C:370-415) — 대형 컷(딤 상영)이
+	# 먼저 터지고 러지·타격·적 피격이 뒤따른다. 데미지 숫자가 뜨고 컷이 덮던
+	# 순서가 여기 고쳐진다(2026-09-09). 판정은 이미 끝났고 표현 순서만 바꾼다.
+	var tier := _player_cut_tier()
+	if tier > 0:
+		_actions_since_cut = 0
+		await _presenter.play_origin_player_cut_async(tier == 2)
+	else:
+		_actions_since_cut += 1
 	_play_move(move_id)
 
 
@@ -424,19 +449,10 @@ func _on_choreo_damage_frame() -> void:
 	else:
 		_log(tr("UI_BLOG_HIT") % [who, int(pop["amount"])], BattleLog.Kind.DAMAGE)
 
-	# **원작 주인공 대형 컷은 여기서만 터진다.**
-	#
-	# 원작 동작은 공격 3종뿐이라 매 턴 틀면 몇 분 만에 물린다(유저 판단 2026-09-07).
-	# 그래서 "이 한 방이 컸다"는 순간에만 화면을 끊고 들어오게 한다 —
-	# 쓰러뜨린 일격(페이탈리티) · 브레이크 · 크리티컬 · 약점 적중 · 필살기(기력 스킬).
-	# 그 밖에는 아주 가끔만(ORIGIN_CUT_IDLE_CHANCE) — 아예 안 나오면 자산이 다시 사문화된다.
-	# 한 액션에 여러 번 때리는 기술도 있으므로 **마지막 타격에서 한 번만** 판정한다.
+	# 한 액션에 여러 번 때리는 기술도 있으므로 **마지막 타격에서 한 번만** 소리를 낸다.
+	# 대형 컷은 여기서 틀지 않는다 — `_begin_player_action`이 안무 전에 상영한다
+	# (원작 `MyAttackAni` → `EnemyAvoid` 순서. 여기서 틀면 숫자가 먼저 뜨고 컷이 덮는다).
 	if _pending_pops.is_empty():
-		var finisher := idx < enemies.size() and enemies[idx].is_down()
-		var skill_used := StringName(str(_last_action.get("kind", ""))) == &"skill"
-		var impact := finisher or broke or crit or weak or skill_used
-		if impact or EnemyManager.rng.randf() < BattlePresenter.ORIGIN_CUT_IDLE_CHANCE:
-			_presenter.play_origin_player_cut()
 		AudioManager.play_sfx(&"sfx_hit_enemy")
 	if idx < _presenter.enemy_sprites.size():
 		_presenter.hurt_flash(_presenter.enemy_sprites[idx])
@@ -449,6 +465,37 @@ func _on_choreo_finished(_move_id: StringName) -> void:
 	_pending_action = {}
 	_pending_pops.clear()
 	_resolve_turn()
+
+
+## 원작 주인공 대형 컷 등급 — 0=없음 1=보통(쿨다운 적용) 2=빅(항상·큰 동작).
+##
+## "이 한 방이 컸다"는 순간에만 화면을 끊는다(원작 동작이 공격 3종뿐이라 매 턴 틀면
+## 몇 분 만에 물린다 — 유저 판단 2026-09-07).
+##   2 — 쓰러뜨린 일격(페이탈리티). 큰 동작(rise/flurry) 중에서만 고른다.
+##   1 — 브레이크 · 필살기(기력 스킬). 쿨다운 무시, 동작은 무작위.
+##   0 — 크리티컬 · 약점 · 평범 턴 idle(15%)은 쿨다운(`CUT_COOLDOWN_ACTIONS`)이
+##       찼을 때만. 약점 몹을 파밍하면 매 타가 약점이라 매 턴 컷이 터지던 구멍의 처방이다.
+## 판정은 이미 끝난 damages 큐의 **마지막 타격**으로 본다(연타 기술 대응).
+func _player_cut_tier() -> int:
+	if _pending_pops.is_empty():
+		return 0
+	var last: Dictionary = _pending_pops.back()
+	var idx := int(last.get("enemy_index", 0))
+	var finisher := idx < enemies.size() and enemies[idx].is_down()
+	if finisher:
+		return 2
+	if bool(last.get("break", false)):
+		return 1
+	if StringName(str(_last_action.get("kind", ""))) == &"skill":
+		return 1
+	var minor := (
+		bool(last.get("crit", false))
+		or bool(last.get("weak", false))
+		or EnemyManager.rng.randf() < BattlePresenter.ORIGIN_CUT_IDLE_CHANCE
+	)
+	if minor and _actions_since_cut >= CUT_COOLDOWN_ACTIONS:
+		return 1
+	return 0
 
 
 ## 현재 대상 — 지목한 적이 살아 있으면 그 적, 아니면 첫 생존자.
@@ -490,25 +537,27 @@ func _resolve_turn() -> void:
 	_busy = true
 	_ui.hide_menu()
 
-	# 적 턴 처리
+	# 적 턴 처리 — 행동 순서(`_enemy_actors`)를 순회한다. 지금은 1마리라 한 번 돈다.
 	if controller.state == BattleController.TurnState.ENEMY_TURN:
-		var idx := _alive_enemy_index()
-		var edef: Dictionary = Database.get_enemy_def(StringName(_enemy_ids[idx]))
-		var actor: Combatant = null
-		for e in enemies:
-			if not e.is_down():
-				actor = e
+		for actor in _enemy_actors():
+			var idx := enemies.find(actor)
+			var edef: Dictionary = Database.get_enemy_def(
+				StringName(_enemy_ids[idx] if idx >= 0 and idx < _enemy_ids.size() else "")
+			)
+			if actor.is_broken():
+				# 브레이크 지속 — 행동 불가, 턴 소비로 해제
+				actor.broken_turns -= 1
+				_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
+			elif not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
+				await BattleEnemyPhase.dodge_sequence(
+					_dodge, edef, _presenter, _ui, player_combatant
+				)
+			else:
+				# 누구 턴인지 글자로 — TURN N 라벨만으로는 적 공격이 안 보인다.
+				_ui.set_turn_text(_enemy_turn_text(actor.display_name))
+				await _enemy_act(actor, idx)
+			if player_combatant.is_down():
 				break
-		if actor != null and actor.is_broken():
-			# 브레이크 지속 — 행동 불가, 턴 소비로 해제
-			actor.broken_turns -= 1
-			_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
-		elif actor != null and not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
-			await BattleEnemyPhase.dodge_sequence(_dodge, edef, _presenter, _ui, player_combatant)
-		elif actor != null:
-			# 누구 턴인지 글자로 — TURN N 라벨만으로는 적 공격이 안 보인다.
-			_ui.set_turn_text(_enemy_turn_text(actor.display_name))
-			_enemy_act(actor, idx)
 		controller.turn_count += 1
 		_tick_effects()
 
@@ -540,11 +589,23 @@ func _resolve_turn() -> void:
 	# 마비를 거는 라운드에서 이미 0이 된다. 2가 "정확히 한 턴을 빼앗는" 최솟값이고,
 	# 그보다 길게 잡지 않는 이유는 여러 턴을 연속으로 빼앗으면 "내가 하는 게임"이
 	# 아니게 되기 때문이다(고전 RPG가 가장 자주 미움받는 자리).
-	if _consume_turn_if_paralyzed():
+	if await _consume_turn_if_paralyzed():
 		return
 	_ui.show_command_menu()
 	if _target_index >= 0 and _target_index < enemies.size():
 		_check_break_chance_cue(enemies[_target_index])
+
+
+## 행동 순서 — 현재는 첫 생존 1마리(1대1 확정, §8.3 기각).
+## 다체를 열면 이 배열을 순회하면 된다(호출부 `_resolve_turn`·`_end_player_defend`).
+## `break` 하나가 1대1의 전부다 — 지우면 다체, 그때 밸런스(§8.3)를 다시 잰다.
+func _enemy_actors() -> Array[Combatant]:
+	var out: Array[Combatant] = []
+	for e in enemies:
+		if not e.is_down():
+			out.append(e)
+			break
+	return out
 
 
 ## 적 한 체의 행동 — 종별 특수(상태이상)를 먼저 굴리고, 안 나오면 통상공격.
@@ -571,18 +632,26 @@ func _enemy_act(actor: Combatant, idx: int) -> void:
 	var eid := str(_enemy_ids[idx]) if idx >= 0 and idx < _enemy_ids.size() else ""
 	if (
 		not eid.is_empty()
-		and BattleEnemyPhase.try_special(actor, player_combatant, eid, _presenter, EnemyManager.rng)
+		and await BattleEnemyPhase.try_special(
+			actor, player_combatant, eid, _presenter, EnemyManager.rng
+		)
 	):
 		return
-	BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
+	await BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)
 
 
 func _end_player_defend() -> void:
-	# 적 턴만 진행
-	var attacker := _first_alive_enemy()
-	if attacker != null:
+	# 적 턴만 진행. 호출부(방어·도망 실패·아이템·마비)는 fire-and-forget으로 던지고
+	# 흐름은 여기서 자립한다 — 끝에서 커맨드 창을 열고 _busy를 풀기 때문이다.
+	# 2026-09-09까지는 _busy를 안 만져서 아이템 사용 뒤 명령이 영영 막혔다(소프트락).
+	_busy = true
+	_ui.hide_menu()
+	# 행동 순서(`_enemy_actors`)를 순회한다. 지금은 1마리라 한 번 돈다.
+	for attacker in _enemy_actors():
 		_ui.set_turn_text(_enemy_turn_text(attacker.display_name))
-		_enemy_act(attacker, enemies.find(attacker))
+		await _enemy_act(attacker, enemies.find(attacker))
+		if player_combatant.is_down():
+			break
 	_tick_effects()
 	_ui.refresh_bars()
 	_sync_player_state()
@@ -597,8 +666,9 @@ func _end_player_defend() -> void:
 	# 커맨드 창이 그냥 열려 **걸린 마비가 조용히 무시된다.** 지속 1이던 시절에는
 	# 무조건 지워져서 안 드러나던 구멍이다.
 	# 재귀는 유한하다 — 한 번 돌 때마다 적이 한 대 때리고 지속이 1씩 줄어든다.
-	if _consume_turn_if_paralyzed():
+	if await _consume_turn_if_paralyzed():
 		return
+	_busy = false
 	_ui.show_command_menu()
 
 
@@ -648,6 +718,17 @@ func _show_result(result: StringName) -> void:
 		BattleLog.Kind.RESULT
 	)
 	_ui.show_result(result)
+	# 승패 전용 스프라이트는 없다(원작에도 없었다 — WARMODE.C는 dead/win.voc만 낸다).
+	# 풀컷은 과하고 빈 화면은 싱거우니 단컷으로 메운다 —
+	# 패는 빈사 포즈 정지(원작 `Back[MELoss=2]` 자리) + 적색 플래시·흔들림,
+	# 승은 승룡권 첫 자세 + 금빛 플래시. UI는 막 위에 있어 결과문은 읽힌다.
+	# `player_battle` 계약의 down/win행이 납품되면 그때 포즈로 교체한다.
+	if result == &"lose":
+		_presenter.play_screen_kf({"shake": 5.0, "flash": "#ff2222", "a": 0.25})
+		await _presenter.play_origin_short_cut_async("pose", 1, 0.9)
+	else:
+		_presenter.play_screen_kf({"flash": "#ffe066", "a": 0.25})
+		await _presenter.play_origin_short_cut_async("rise", 0, 0.5)
 	await get_tree().create_timer(0.9).timeout
 	var rewards := BattleRewards.compute(_enemy_ids)
 	battle_ended.emit(result, rewards)

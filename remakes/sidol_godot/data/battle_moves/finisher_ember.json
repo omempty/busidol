@@ -2,7 +2,7 @@
   "id": "finisher_ember",
   "side": "player",
   "length": 1.8,
-  "_comment": "부싯돌의 불꽃(필살) — scripted finisher, 마스터 시나리오 §2.2 필자 아이템 요구",
+  "_comment": "부싯돌의 불꽃(필살) — scripted finisher, 마스터 시나리오 §2.2 필자 아이템 요구 [cut:player_finisher sprite 채널 cut 키(대형컷 의뢰분)는 미납품이라 play_cut이 조용히 러지로 폴백한다(2026-09-10 확인). 지우지 말 것 — battle_cut_specs.json 의뢰가 오면 살아난다. 되살릴 때는 딤 + 컨트롤러 원작컷 중복 방지 필요(docs/02_design/08_battle_rules.md §9).]",
   "channels": {
     "sprite": [
       {

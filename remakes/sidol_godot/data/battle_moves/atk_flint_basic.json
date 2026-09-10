@@ -2,7 +2,7 @@
   "id": "atk_flint_basic",
   "side": "player",
   "length": 0.6,
-  "_comment": "부싯돌 치기 — 기본 공격 변형(스킬 flint_strike 매핑)",
+  "_comment": "부싯돌 치기 — 기본 공격 변형(스킬 flint_strike 매핑) [cut:player_attack_swing sprite 채널 cut 키(대형컷 의뢰분)는 미납품이라 play_cut이 조용히 러지로 폴백한다(2026-09-10 확인). 지우지 말 것 — battle_cut_specs.json 의뢰가 오면 살아난다. 되살릴 때는 딤 + 컨트롤러 원작컷 중복 방지 필요(docs/02_design/08_battle_rules.md §9).]",
   "channels": {
     "sprite": [
       {

@@ -261,7 +261,7 @@
    },
    "pattern": "patrol",
    "telegraph_visual": "",
-   "source": "original_e_spr",
+   "source": "original_i_spr",
    "animations": {
     "walk_down": {
      "row": 0,
@@ -322,7 +322,7 @@
    },
    "pattern": "chase",
    "telegraph_visual": "",
-   "source": "original_e_spr",
+   "source": "original_i_spr",
    "animations": {
     "walk_down": {
      "row": 0,
@@ -382,7 +382,7 @@
    },
    "pattern": "pulse",
    "telegraph_visual": "expanding_ring_0.5s",
-   "source": "original_e_spr",
+   "source": "original_i_spr",
    "animations": {
     "walk_down": {
      "row": 0,
@@ -443,7 +443,7 @@
    },
    "pattern": "teleport",
    "telegraph_visual": "glitch_flicker_0.3s",
-   "source": "original_e_spr",
+   "source": "original_i_spr",
    "animations": {
     "walk_down": {
      "row": 0,

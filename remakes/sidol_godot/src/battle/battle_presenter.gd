@@ -67,9 +67,26 @@ const ORIGIN_PLAYER_OFFSET := Vector2(0, 20)
 const ORIGIN_CUT_IDLE_CHANCE := 0.15
 ## 원작 화면 논리 폭. 세로는 ORIGIN_SCREEN_H.
 const ORIGIN_SCREEN_W := 320.0
+## 대형 컷 상영 중 스테이지 딤 — 원작 전투 화면이 검은 바탕에 격투 컷만 올렸듯
+## (WARMODE.C `Page_Clear` + 클립), 리메이크 스테이지 위에 풀스크린 컷을 겹치면
+## 뒤의 도트 액터·바닥선과 섞여 난잡하다(2026-09-09 유저 지적). 컷(z=50) 바로 아래에
+## 검은 막을 깔고 UI(CanvasLayer 20)는 그대로 둔다 — 메뉴·로그는 읽힌 채로 둔다.
+const CUT_DIM_ALPHA := 0.72
+const CUT_DIM_Z := 45
+## 원작 돌진 슬라이드 시간 — `_origin_charge` 트윈과 같은 값. 적 턴 순서화(await)가
+## 트윈을 기다리는 기준이다(트윈 자체는 콜백이 없어 시간으로 맞춘다).
+const ORIGIN_CHARGE_TIME := 0.34
+## 필드 도트 종의 러지 왕복 시간 — `enemy_lunge` 비-대형 경로(0.10 + 0.14)와 같은 값.
+const DOT_LUNGE_TIME := 0.24
+## 주인공 회피 컷 상영 시간(배속 전) — 원작 `MAvoid1~3` 슬라이드 분량을 한 장으로 뭉뚱그린 것.
+const ORIGIN_AVOID_HOLD := 0.5
 
 var _last_origin_cut := ""
+var _last_avoid_cut := ""
 var _origin_player_meta_cache: Dictionary = {}
+## 딤 오버레이 참조 수 — 컷·빔이 겹치면 먼저 끝난 쪽이 막을 걷어 버리면 안 된다.
+var _dim_rect: ColorRect = null
+var _dim_count := 0
 
 var _idle_clock := 0.0
 ## 적 전투원 참조 — 빈사·사망 포즈를 매 프레임 스스로 맞추기 위한 것.
@@ -803,22 +820,131 @@ func _origin_fx(fx_id: String, at: Vector2) -> Sprite2D:
 	return spr
 
 
+## 대형 컷 상영 중 스테이지를 덮는 검은 막. 참조 수로 겹침을 견딘다 —
+## 먼저 끝난 쪽이 막을 걷어 가면 뒤의 컷이 민낯으로 남는다.
+func _cut_dim_show() -> void:
+	if _root == null:
+		return
+	_dim_count += 1
+	if _dim_rect != null and is_instance_valid(_dim_rect):
+		return
+	var rect := ColorRect.new()
+	rect.name = "CutDim"
+	rect.color = Color(0, 0, 0, 0)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rect.position = Vector2.ZERO
+	rect.size = _root.get_viewport_rect().size
+	rect.z_index = CUT_DIM_Z
+	_root.add_child(rect)
+	_dim_rect = rect
+	var tw := rect.create_tween()
+	tw.tween_property(rect, "color:a", CUT_DIM_ALPHA, 0.08)
+
+
+func _cut_dim_hide() -> void:
+	if _dim_count > 0:
+		_dim_count -= 1
+	if _dim_count > 0:
+		return
+	if _dim_rect == null or not is_instance_valid(_dim_rect):
+		_dim_rect = null
+		return
+	var rect := _dim_rect
+	_dim_rect = null
+	var tw := rect.create_tween()
+	tw.tween_property(rect, "color:a", 0.0, 0.15)
+	tw.tween_callback(rect.queue_free)
+
+
+## 연출 박자 대기 — 배속을 나눈 실초. 적 턴 순서화(await)의 자다.
+func _cut_beat(dur_unscaled: float) -> void:
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	await get_tree().create_timer(maxf(dur_unscaled, 0.01) / speed).timeout
+
+
+## **원작 단컷 — 풀 동작이 아니라 한 자세를 잠깐 끊어 보여준다.**
+##
+## 대형 컷(돌진·교대 TECH)은 길어서 남발하면 물린다. 방어는 매 턴 쓸 수 있고
+## 승패는 한 번뿐이라 풀컷이 과하다 — 그 자리는 한 프레임 + 딤 + 짧은 홀드로 메운다.
+## 쿨다운은 호출부(컨트롤러)가 대형 컷과 같은 자(`_actions_since_cut`)로 본다.
+## 반환: 실제로 떴는가.
+func play_origin_short_cut_async(row_name: String, col: int, hold: float) -> bool:
+	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
+		return false
+	if not ResourceLoader.exists(ORIGIN_PLAYER_CUT):
+		return false
+	var anims: Dictionary = _origin_player_meta().get("animations", {})
+	if not anims.has(row_name):
+		return false
+	var frames := maxi(int((anims[row_name] as Dictionary).get("frames", 1)), 1)
+	var spr := _make_origin_cut_sprite(
+		int((anims[row_name] as Dictionary).get("row", 0)), clampi(col, 0, frames - 1)
+	)
+	if spr == null:
+		return false
+	_cut_dim_show()
+	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET)
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	var tw := spr.create_tween()
+	tw.tween_interval(maxf(hold, 0.05) / speed)
+	tw.tween_property(spr, "modulate:a", 0.0, 0.12 / speed)
+	tw.tween_callback(spr.queue_free)
+	await _cut_beat(maxf(hold, 0.05) + 0.12)
+	_cut_dim_hide()
+	return true
+
+
+## 적 돌진 박자(배속 반영 실초) — 돌진 슬라이드만의 길이.
+## 적 턴은 이만큼 기다렸다가 빔·피해를 이어 간다. 빔 상영 시간은
+## `origin_attack_fx_async`가 안에서 기다리므로 여기 두면 두 번 잰다.
+## 필드 도트 종은 `enemy_lunge` 러지 왕복과 같은 길이.
+func enemy_attack_beat(index: int) -> float:
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	if index < 0 or index >= enemy_sprites.size():
+		return DOT_LUNGE_TIME / speed
+	var spr := enemy_sprites[index]
+	if spr != null and is_instance_valid(spr) and spr.has_meta(&"battle_sheet"):
+		return ORIGIN_CHARGE_TIME / speed
+	return DOT_LUNGE_TIME / speed
+
+
 ## **원작 공격의 나머지 절반** — 돌진이 끝난 뒤 섬광이 터지고 에너지파가 화면을 가로지른다.
 ##
 ## `WARMODE.C:599-625`. 돌진(`_origin_charge`)만 옮기고 여기서 멈춰 있었다 —
 ## 유저 지적("적 무기/에너지파등 발사 등이 있는걸로 기억됨")이 가리킨 자리다.
 ## 발사 종이 아니면(Iron-Vic·HellCop) 섬광까지만 하고 끝난다 — 원작이 그렇다.
+##
+## 순서화 버전(`_async`)이 정본이다 — 구 버전은 캡처 도구(`battle_anim_shots`) 호환용으로만 남긴다.
 func origin_attack_fx(impact: bool = false) -> void:
+	_origin_attack_fx_fire(impact)
+
+
+## 섬광·빔이 뜰 것인가 — 게이트 판정만. 그리는 쪽과 기다리는 쪽이 같은 답을 봐야 한다.
+func _origin_fx_will_show(impact: bool) -> bool:
 	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
-		return
+		return false
 	# 돌진은 적의 공격 동작 자체라 늘 나가지만(그게 없으면 적이 가만히 있는다),
 	# **섬광과 에너지파는 임팩트 순간에만** 터뜨린다 — 매 턴이면 화면이 시끄럽고 물린다.
 	if not impact and EnemyManager.rng.randf() >= ORIGIN_CUT_IDLE_CHANCE:
-		return
+		return false
 	# 대형 시트를 쓰는 적일 때만 — 필드 도트 종은 기존 리메이크 연출로 간다(하이브리드).
 	var idx := target_index
 	if idx < 0 or idx >= enemy_sprites.size() or not enemy_sprites[idx].has_meta(&"battle_sheet"):
-		return
+		return false
+	return true
+
+
+## 빔 상영 시간(배속 전) — 발사 종이면 섬광 대기 + 비행, 아니면 섬광 대기만.
+func _origin_fx_hold() -> float:
+	var idx := target_index
+	var enemy_id := StringName(_enemy_ids[idx]) if idx >= 0 and idx < _enemy_ids.size() else &""
+	return MUZZLE_HOLD + (BOLT_FLIGHT if BOLT_SPECIES.has(enemy_id) else 0.0)
+
+
+func _origin_attack_fx_fire(impact: bool) -> bool:
+	if not _origin_fx_will_show(impact):
+		return false
+	var idx := target_index
 	var enemy_id := StringName(_enemy_ids[idx]) if idx < _enemy_ids.size() else &""
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
 	var muzzle := _origin_fx("origin_muzzle", Vector2.ZERO)
@@ -828,12 +954,12 @@ func origin_attack_fx(impact: bool = false) -> void:
 		mt.tween_property(muzzle, "modulate:a", 0.0, 0.12 / speed)
 		mt.tween_callback(muzzle.queue_free)
 	if not BOLT_SPECIES.has(enemy_id):
-		return
+		return true
 	# Iron-Vic만 전용 투사체를 대각선으로 끌고 온다(`:280` `RPut_Spr(i,i,&Eff[0],0)`) —
 	# 다만 그 종은 위에서 이미 걸러졌으므로 여기 오는 것은 공용 에너지파뿐이다.
 	var bolt := _origin_fx("origin_bolt", Vector2(BOLT_FROM, 0.0))
 	if bolt == null:
-		return
+		return true
 	var sc := _origin_scale()
 	var bt := bolt.create_tween()
 	bt.tween_interval(MUZZLE_HOLD / speed)
@@ -845,6 +971,19 @@ func origin_attack_fx(impact: bool = false) -> void:
 		. set_trans(Tween.TRANS_LINEAR)
 	)
 	bt.tween_callback(bolt.queue_free)
+	return true
+
+
+## 순서화 버전 — 빔이 화면을 가로지를 동안 딤을 깔고 끝까지 기다렸다가 걷는다.
+## 적 턴은 이 await 뒤에 피해를 깎는다(원작 `EnemyAttackAni` → `MyAvoid` 순서).
+func origin_attack_fx_async(impact: bool) -> bool:
+	if not _origin_fx_will_show(impact):
+		return false
+	_cut_dim_show()
+	_origin_attack_fx_fire(impact)
+	await _cut_beat(_origin_fx_hold())
+	_cut_dim_hide()
+	return true
 
 
 ## **주인공 원작 대형 컷 — 임팩트 순간에만.**
@@ -858,45 +997,124 @@ func origin_attack_fx(impact: bool = false) -> void:
 ##   4 → `flurry`(a3, 백열 장수 패러디 — 두 프레임을 20회 교대하며 점점 빨라진다)
 ## 다만 **직전에 쓴 것은 다시 안 고른다** — 셋뿐이라 연속으로 같은 게 나오면 티가 크다.
 ##
+## 순서: 컷(딤 상영) → 러지·타격 → 적 피격. 원작 `MyAttackAni` → `EnemyAvoid`와 같은
+## 자리다. 데미지 숫자가 먼저 뜨고 컷이 뒤늦게 덮던 순서가 여기 고쳐진다(2026-09-09).
 ## 반환: 실제로 컷이 떴는가(에셋이 없으면 false — 호출부는 기존 연출로 간다).
 func play_origin_player_cut() -> bool:
+	var pick := _pick_origin_player_cut()
+	if pick.is_empty():
+		return false
+	_cut_dim_show()
+	return _play_origin_cut_anim(pick, true)
+
+
+## 순서화 버전 — 컷 상영이 끝날 때까지 기다렸다가 딤을 걷는다.
+## 플레이어 턴은 이 await 뒤에 안무(`_play_move`)를 튼다.
+## prefer_big: 쓰러뜨린 일격이면 큰 동작(rise/flurry) 중에서만 고른다 —
+## 평범한 스윙이 킬샷에 걸리면 마무리가 싱겁다.
+func play_origin_player_cut_async(prefer_big: bool = false) -> bool:
+	var pick := _pick_origin_player_cut(prefer_big)
+	if pick.is_empty():
+		return false
+	_cut_dim_show()
+	if not _play_origin_cut_anim(pick, false):
+		_cut_dim_hide()
+		return false
+	await _cut_beat(float(pick["dur"]))
+	_cut_dim_hide()
+	return true
+
+
+## 컷 고르기 — 없으면 {} (SKIP·미납품). 상영 시간(dur, 배속 전)까지 딸려 온다.
+func _pick_origin_player_cut(prefer_big: bool = false) -> Dictionary:
+	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
+		return {}
+	if not ResourceLoader.exists(ORIGIN_PLAYER_CUT):
+		return {}
+	var meta := _origin_player_meta()
+	var anims: Dictionary = meta.get("animations", {})
+	var picks: Array[String] = []
+	if prefer_big:
+		picks.append("rise:0")
+		picks.append("flurry:0")
+	else:
+		for i in 4:
+			picks.append("swing:%d" % i)  # 원작 4/6 확률 — select 0~3
+		picks.append("flurry:0")
+		picks.append("rise:0")
+	var pick := str(picks[EnemyManager.rng.randi_range(0, picks.size() - 1)])
+	if pick == _last_origin_cut and picks.size() > 1:
+		pick = str(picks[(picks.find(pick) + 1) % picks.size()])
+	var parts := pick.split(":")
+	var row_name := parts[0]
+	if not anims.has(row_name):
+		return {}
+	_last_origin_cut = pick
+	# flurry 간격 합(0.2×4 + 0.1×4 + 0.045×6) + 걷힘 0.14 — `_origin_cut_flurry`와 같은 값.
+	var dur := 1.61 if row_name == "flurry" else (0.54 if row_name == "rise" else 0.52)
+	return {
+		"row_name": row_name,
+		"row": int((anims[row_name] as Dictionary).get("row", 0)),
+		"col": int(parts[1]),
+		"dur": dur,
+	}
+
+
+func _play_origin_cut_anim(pick: Dictionary, with_dim_hide: bool) -> bool:
+	var row_name := str(pick["row_name"])
+	var spr := _make_origin_cut_sprite(int(pick["row"]), int(pick["col"]))
+	if spr == null:
+		if with_dim_hide:
+			_cut_dim_hide()
+		return false
+	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
+	match row_name:
+		"rise":
+			# `:301` `for(i=200;i>=0;i-=25)` — 아래에서 솟아오른다.
+			_origin_cut_move(spr, Vector2(0, 200), Vector2(0, 0), 0.42 / speed, with_dim_hide)
+		"flurry":
+			# `:347` 두 프레임 20회 교대 + 점점 빨라짐. 위치는 고정.
+			_origin_cut_flurry(spr, int(pick["row"]), speed, with_dim_hide)
+		_:
+			# `:322` `for(i=-50;i<=150;i+=30)` — 왼쪽에서 오른쪽으로 파고든다.
+			_origin_cut_move(spr, Vector2(-50, 0), Vector2(150, 0), 0.40 / speed, with_dim_hide)
+	origin_hit_spark()
+	return true
+
+
+## **주인공 피격 원작 컷 — 적 턴의 `MyAvoid()` 자리.**
+##
+## 원작은 적 공격이 끝나면 주인공 회피 풀스크린(`d1~d3`)이 붙었다(`:499 MyAvoid`).
+## 리메이크는 `player_hurt.png` 미납품이라 그 자리가 플래시·흔들림뿐이었다(§8.2).
+## 원작 회피 3종 분포(`:517` `random(6)` — 0~2 avoid_a · 3 avoid_b · 4·5 avoid_c)를
+## 그대로 옮긴다. 적 빔 다음·피해 숫자 전에 상영한다. 강제면 분포 무시하고 avoid_a.
+func play_origin_avoid_cut_async(forced: bool = false) -> bool:
 	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
 		return false
 	if not ResourceLoader.exists(ORIGIN_PLAYER_CUT):
 		return false
 	var meta := _origin_player_meta()
 	var anims: Dictionary = meta.get("animations", {})
-	var picks: Array[String] = []
-	for i in 4:
-		picks.append("swing:%d" % i)  # 원작 4/6 확률 — select 0~3
-	picks.append("flurry:0")
-	picks.append("rise:0")
-	var pick := str(picks[EnemyManager.rng.randi_range(0, picks.size() - 1)])
-	if pick == _last_origin_cut and picks.size() > 1:
-		pick = str(picks[(picks.find(pick) + 1) % picks.size()])
-	_last_origin_cut = pick
-	var parts := pick.split(":")
-	var row_name := parts[0]
-	var col := int(parts[1])
+	var row_name := "avoid_a"
+	if not forced:
+		var roll := EnemyManager.rng.randi_range(0, 5)
+		row_name = "avoid_a" if roll <= 2 else ("avoid_b" if roll == 3 else "avoid_c")
+	if row_name == _last_avoid_cut:
+		row_name = "avoid_b" if row_name != "avoid_b" else "avoid_a"
 	if not anims.has(row_name):
 		return false
-	var row := int((anims[row_name] as Dictionary).get("row", 0))
-
-	var spr := _make_origin_cut_sprite(row, col)
+	_last_avoid_cut = row_name
+	var spr := _make_origin_cut_sprite(int((anims[row_name] as Dictionary).get("row", 0)), 0)
 	if spr == null:
 		return false
+	_cut_dim_show()
+	# `MAvoid1` 자리 — 오른쪽으로 밀며 스파크. b·c도 같은 박자로 뭉뚱그린다.
+	# dur은 배속 반영 실초로 넘긴다(`_origin_cut_move`는 나눠 받지 않는다).
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
-	match row_name:
-		"rise":
-			# `:301` `for(i=200;i>=0;i-=25)` — 아래에서 솟아오른다.
-			_origin_cut_move(spr, Vector2(0, 200), Vector2(0, 0), 0.42 / speed)
-		"flurry":
-			# `:347` 두 프레임 20회 교대 + 점점 빨라짐. 위치는 고정.
-			_origin_cut_flurry(spr, row, speed)
-		_:
-			# `:322` `for(i=-50;i<=150;i+=30)` — 왼쪽에서 오른쪽으로 파고든다.
-			_origin_cut_move(spr, Vector2(-50, 0), Vector2(150, 0), 0.40 / speed)
-	origin_hit_spark()
+	_origin_cut_move(spr, Vector2(0, 0), Vector2(40, 0), ORIGIN_AVOID_HOLD / speed, false)
+	origin_hit_spark(Vector2(10, 60))
+	await _cut_beat(ORIGIN_AVOID_HOLD + 0.12)
+	_cut_dim_hide()
 	return true
 
 
@@ -919,18 +1137,23 @@ func _make_origin_cut_sprite(row: int, col: int) -> Sprite2D:
 	return spr
 
 
-## 컷을 원작 좌표 a → b로 밀고 지운다.
-func _origin_cut_move(spr: Sprite2D, from: Vector2, to: Vector2, dur: float) -> void:
+## 컷을 원작 좌표 a → b로 밀고 지운다. dim_hide면 끝에서 딤도 걷는다
+## (fire-and-forget 상영 — 트윈이 스프라이트에 묶여 씬 전환에 같이 죽는다).
+func _origin_cut_move(
+	spr: Sprite2D, from: Vector2, to: Vector2, dur: float, dim_hide: bool = false
+) -> void:
 	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET + from)
 	var target := spr.position + (to - from) * _origin_scale()
 	var tw := spr.create_tween()
 	tw.tween_property(spr, "position", target, dur).set_trans(Tween.TRANS_LINEAR)
 	tw.tween_property(spr, "modulate:a", 0.0, 0.12)
+	if dim_hide:
+		tw.tween_callback(_cut_dim_hide)
 	tw.tween_callback(spr.queue_free)
 
 
 ## 백열 장수 — 두 프레임을 교대하며 점점 빨라진다(`:347` Delay 200 → 100 → 0).
-func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float) -> void:
+func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float, dim_hide: bool = false) -> void:
 	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET)
 	var at := spr.texture as AtlasTexture
 	if at == null:
@@ -946,6 +1169,8 @@ func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float) -> void:
 		)
 		tw.tween_interval(gap)
 	tw.tween_property(spr, "modulate:a", 0.0, 0.14)
+	if dim_hide:
+		tw.tween_callback(_cut_dim_hide)
 	tw.tween_callback(spr.queue_free)
 
 
