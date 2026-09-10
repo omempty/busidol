@@ -86,7 +86,8 @@ func door_open(renderer: MapRenderer, anchor: Vector2i, dir: Vector2i, hold: flo
 
 ## 상자가 열린다 — 원작에 없던 연출이다(원작은 ATT를 지워 즉시 끝냈다).
 ## 뚜껑이 튀어 오르듯 위로 밀리며 사라진다. 그림 자체는 호출자가 지운다.
-func chest_open(renderer: MapRenderer, cells: Array[Vector2i]) -> void:
+## celebratory=false(빈 상자·기습)면 뚜껑 팝만 나가고 스파클은 생략한다.
+func chest_open(renderer: MapRenderer, cells: Array[Vector2i], celebratory: bool = true) -> void:
 	var sprites: Array[Sprite2D] = []
 	for cell: Vector2i in cells:
 		var tex := renderer.object_texture_at(cell)
@@ -110,6 +111,112 @@ func chest_open(renderer: MapRenderer, cells: Array[Vector2i]) -> void:
 			for s: Sprite2D in sprites:
 				s.queue_free()
 	)
+	if celebratory:
+		_chest_sparkle(cells)
+
+
+## 기습 상자(MEET) — 뚜껑이 날아가고 검은 연기가 뿜는다.
+## 금빛 스파클의 반대 자리다: 보상이 아니라 위협이 튀어나온다.
+## 뚜껑은 높이·빠르게 + 제각각 기울어 날아가고, 적색 섬광이 한 번 번쩍인다.
+func chest_ambush(renderer: MapRenderer, cells: Array[Vector2i]) -> void:
+	var sprites: Array[Sprite2D] = []
+	for cell: Vector2i in cells:
+		var tex := renderer.object_texture_at(cell)
+		if tex == null:
+			continue
+		sprites.append(_put(tex, cell))
+	if sprites.is_empty():
+		return
+	var tw := create_tween().set_parallel(true)
+	for s: Sprite2D in sprites:
+		(
+			tw
+			. tween_property(s, "position:y", s.position.y - 26.0, 0.22)
+			. set_trans(Tween.TRANS_QUAD)
+			. set_ease(Tween.EASE_OUT)
+		)
+		tw.tween_property(s, "rotation", randf_range(-0.45, 0.45), 0.3)
+		tw.tween_property(s, "modulate:a", 0.0, 0.3).set_delay(0.1)
+	tw.chain().tween_callback(
+		func() -> void:
+			for s: Sprite2D in sprites:
+				s.queue_free()
+	)
+	_chest_puff(cells)
+	_red_flash()
+
+
+## 기습 연기 — 검붉은 먼지가 위로 솟는다(금빛 스파클과 반대 색).
+func _chest_puff(cells: Array[Vector2i]) -> void:
+	if cells.is_empty():
+		return
+	var center := Vector2.ZERO
+	for cell: Vector2i in cells:
+		center += (Vector2(cell) + Vector2(0.5, 0.5)) * float(MapDefinition.TILE_PX)
+	center /= float(cells.size())
+	var p := CPUParticles2D.new()
+	p.position = center + Vector2(0, -6)
+	p.amount = 22
+	p.one_shot = true
+	p.explosiveness = 0.85
+	p.lifetime = 0.7
+	p.direction = Vector2(0, -1)
+	p.spread = 50.0
+	p.gravity = Vector2(0, -50)
+	p.initial_velocity_min = 60.0
+	p.initial_velocity_max = 160.0
+	p.scale_amount_min = 3.0
+	p.scale_amount_max = 5.5
+	p.color = Color(0.32, 0.22, 0.3)
+	p.z_index = Z + 1
+	add_child(p)
+	p.emitting = true
+	get_tree().create_timer(1.4).timeout.connect(p.queue_free)
+
+
+## 적색 섬광 — `lightning_flash`의 붉은 판. 기습 순간 화면이 한 번 굳는다.
+func _red_flash() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = FLASH_LAYER
+	add_child(layer)
+	var rect := ColorRect.new()
+	rect.color = Color(0.7, 0.05, 0.05, 0)
+	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(rect)
+	var tw := create_tween()
+	tw.tween_property(rect, "color:a", 0.28, 0.08)
+	tw.tween_property(rect, "color:a", 0.0, 0.32)
+	tw.tween_callback(layer.queue_free)
+
+
+## 개봉 스파클 — 뚜껑이 열리는 자리에 금빛 파티클을 한 줌 뿌린다.
+## 팝업·동전분수·개봉음과 겹쳐 "열었다"를 여러 감각으로 못 박는다.
+func _chest_sparkle(cells: Array[Vector2i]) -> void:
+	if cells.is_empty():
+		return
+	var center := Vector2.ZERO
+	for cell: Vector2i in cells:
+		center += (Vector2(cell) + Vector2(0.5, 0.5)) * float(MapDefinition.TILE_PX)
+	center /= float(cells.size())
+	var p := CPUParticles2D.new()
+	p.position = center + Vector2(0, -10)
+	p.amount = 16
+	p.one_shot = true
+	p.explosiveness = 0.9
+	p.lifetime = 0.55
+	p.direction = Vector2(0, -1)
+	p.spread = 55.0
+	p.gravity = Vector2(0, 160)
+	p.initial_velocity_min = 70.0
+	p.initial_velocity_max = 150.0
+	p.scale_amount_min = 2.0
+	p.scale_amount_max = 3.5
+	p.color = Color(1.0, 0.86, 0.35)
+	p.z_index = Z + 1
+	add_child(p)
+	p.emitting = true
+	get_tree().create_timer(1.2).timeout.connect(p.queue_free)
 
 
 func _put(tex: Texture2D, cell: Vector2i) -> Sprite2D:

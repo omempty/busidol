@@ -32,6 +32,11 @@ OUT = ROOT / "assets" / "audio"
 
 SFX = {
     "sfx_menu_move": lambda b: add_tone(b, 0, 0.05, 880, "square", 0.18),
+    "sfx_chest_open": lambda b: (add_tone(b, 0, 0.22, 150, "triangle", 0.22, sweep=0.5),
+                                 add_noise(b, 0.20, 0.06, 0.25, 18),
+                                 add_tone(b, 0.26, 0.16, 330, "square", 0.2, sweep=1.6)),
+    "sfx_coin": lambda b: [add_tone(b, 0.07 * i, 0.09 if i == 0 else 0.30, f, "square", 0.2)
+                           for i, f in enumerate([988, 1319])],
     "sfx_item_get": lambda b: [add_tone(b, 0.09 * i, 0.10, midi_hz(m), "square", 0.22)
                                for i, m in enumerate([72, 76, 79, 84])],
     "sfx_encounter": lambda b: [add_tone(b, 0.15 * i, 0.14, f, "square", 0.25)

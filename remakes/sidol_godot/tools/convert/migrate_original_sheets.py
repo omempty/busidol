@@ -35,8 +35,11 @@ tutor_dumb가 잃은 4,320px는 **전부 정확히 RGB(0,0,0)** 이었다.
 
 매핑 근거:
   - I.SPR 블록 1~8 = 필드 몬스터 8종 — 원본 GOODITEM.C `eye[i].mode = 8*(i%8+1)` +
-    docs/04_scenario/02_story_bible.md "필드 몬스터 8종"
-    (Mad Eye·Vulgar·DWorm·Ozzy·Iron-Voc·HellCop·O-Ray·Sparker)
+    WARMODE.C `WarMode(page, i)` → `E{i+1}.SPR` (슬롯 인덱스가 필드↔전투 짝을 정한다)
+    블록 순서 = Mad Eye·Vilgur·DWorm·Ozzy·Iron-Vic·HellCop·O-Rey·FireMan
+    (WARMODE.C:17 `EName[]` + E2·E4·E7·E8 바이트 동일).
+    리메이크 종 대응: mad_eye·vulgar·dworm·ozzy·iron_voc·hellcop·o_ray +
+    sparker(신설 — 8번째 슬롯/FireMan 자리를 이어받음, 전투 대형 없음).
   - EVENTER.SPR 블록 0~4 = 이벤트 NPC 5인 — 원본 GOODITEM.C `eve_spt`
     (여학생·경비·조교·교수·유령). 여학생/유령 블록은 2명씩 공유하며
     npcs_f*.json의 tint로 변별한다.
@@ -66,16 +69,26 @@ COLS = 2
 SCALE = 0.6667  # 실효 96px×⅔ = 64px = 타일 2배 (player_original 규약)
 
 # id → (원작 그룹, 시작 프레임 인덱스) — 8프레임 블록
+#
+# 블록 ↔ 전투 SPR 짝은 원작 슬롯 인덱스가 정한다 — GOODITEM.C `Check_Quang()`이
+# `WarMode(page, i, ...)`로 슬롯 번호를 그대로 넘기고, WARMODE.C가 그 번호로
+# `E{i+1}.SPR`을 읽는다. 필드(`eye[i].mode = 8*(i%8+1)`)와 전투가 같은 i를 쓰므로
+# I.SPR 8*(i+1) ↔ E{i+1}.SPR이 짝이다(2026-09-09 원본 대조 + 픽셀 육안 확인 —
+# I40 노랑 덩어리↔E5 아이언빅 · I48 청색 로봇↔E6 헬캅 · I64 화염 십자↔E8 파이어맨).
+# 전투 대형 시트(bake_battle_sheets.py SPECIES)는 원작명 기준이라 맞았는데,
+# 여기 필드 쪽이 5~8블록을 잘못 배정해 4종의 짝이 어긋나 있었다. 정정한다.
+# Sparker는 리메이크 신설종이라 원작 대응이 없고, 리메이크 8번째 슬롯(원작 FireMan
+# 자리)을 이어받으므로 I64를 임시로 쓴다 — 신규 필드 아트가 오면 교체한다.
 SOURCES: dict[str, tuple[str, int]] = {
-    # 필드 몬스터 8종 (I.SPR 블록 1~8)
-    "mad_eye": ("i", 8),
-    "vulgar": ("i", 16),
-    "dworm": ("i", 24),
-    "ozzy": ("i", 32),
-    "o_ray": ("i", 40),
-    "sparker": ("i", 48),
-    "iron_voc": ("i", 56),
-    "hellcop": ("i", 64),
+    # 필드 몬스터 8종 (I.SPR 블록 1~8) — 뒤 숫자는 전투 짝 E*.SPR
+    "mad_eye": ("i", 8),  # E1 Mad Eye
+    "vulgar": ("i", 16),  # E2 Vilgur
+    "dworm": ("i", 24),  # E3 DWorm
+    "ozzy": ("i", 32),  # E4 Ozzy
+    "iron_voc": ("i", 40),  # E5 Iron-Vic
+    "hellcop": ("i", 48),  # E6 HellCop
+    "o_ray": ("i", 56),  # E7 O-Rey
+    "sparker": ("i", 64),  # E8 FireMan 자리(신설종 임시 — 원작 대응 없음)
     # NPC (EVENTER.SPR 블록 0~4)
     "rescue_girl": ("eventer", 0),
     "cafeteria_girl": ("eventer", 0),  # 여학생 블록 공유 — tint 변별

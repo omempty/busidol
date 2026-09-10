@@ -549,21 +549,33 @@ func _chest_in_front() -> Vector2i:
 func _open_chest(cell: Vector2i) -> void:
 	var attr := runtime.attr_at(cell)
 	var group := _chest_group(cell, attr)
+	# 축하 연출(스파클)은 내용물이 있을 때만 — 빈 상자·기습에 금빛이 터지면
+	# 거짓 보상 신호가 된다. 뚜껑 팝(물리 동작)은 항상 나간다.
+	var item_probe := Database.legacy_item(attr)
+	var is_reward := attr != CHEST_MEET and attr != CHEST_EMPTY and not item_probe.is_empty()
 	# 연출을 먼저 띄우고(원래 그림을 복제한다) 그 다음 그림을 지운다 — 순서가 바뀌면
 	# 복제할 그림이 이미 없다.
 	if fx != null and renderer != null:
-		fx.chest_open(renderer, group)
+		fx.chest_open(renderer, group, is_reward)
 	for c in group:
 		runtime.set_override_attr(c, 1)  # 빈 상자 처리
 		GameState.set_chest_override(c, 1)  # 세이브 유지 대상
 	_draw_opened_chest(group)
 	_focus.clear()
 	EventBus.item_obtained.emit(StringName("chest_%d" % attr))
+	# 개봉음 — 열리는 순간에. 내용물음(획득·동전·기습)은 아래 분기에서 겹친다.
+	AudioManager.play_sfx(&"sfx_chest_open")
 
 	if attr == CHEST_MEET:
 		# 원작 MEET — 상자를 열면 몬스터가 튀어나온다 (기습 인카운터).
+		# 축하 연출이 아니라 위협 연출: 뚜껑이 날아가고 검은 연기가 뿜는다.
+		# 장면이 즉시 바뀌면 경고가 스치듯 사라지므로 0.75초 공포 박자를 둔다.
 		AudioManager.play_sfx(&"sfx_encounter")
-		_show_pickup_popup(tr("UI_FIELD_AMBUSH"))
+		if fx != null and renderer != null:
+			fx.chest_ambush(renderer, group)
+		_show_pickup_popup(tr("UI_FIELD_AMBUSH"), null, Color(1.0, 0.35, 0.25))
+		_kick_camera()
+		await get_tree().create_timer(0.75).timeout
 		var species := Database.encounter_species(GameState.current_floor)
 		if not species.is_empty():
 			_trigger_encounter(str(species[0]["id"]), false, true)
@@ -572,18 +584,26 @@ func _open_chest(cell: Vector2i) -> void:
 	var item_id := Database.legacy_item(attr)
 	if attr == CHEST_EMPTY or item_id.is_empty():
 		AudioManager.play_sfx(&"sfx_menu_move")
-		_show_pickup_popup(tr("UI_FIELD_EMPTY"))
+		_show_pickup_popup(tr("UI_FIELD_EMPTY"), null, Color(0.75, 0.75, 0.8))
 		return
 
 	var def := Database.get_item(item_id)
-	AudioManager.play_sfx(&"sfx_item_get")
-	# money 계열은 소지품이 아니라 골드로 — ItemEffects가 판정한다.
+	var icon := ItemIcons.texture(def)
+	var is_money := str(def.get("kind", "")) == "money"
+	# money 계열은 소지품이 아니라 골드로 — ItemEffects가 판정한다(단일 창구).
 	if ItemEffects.on_acquire(item_id, 1):
+		AudioManager.play_sfx(&"sfx_item_get")
 		GameState.inventory.add(item_id, 1)
 		GameState.acquired.emit(&"item", item_id, 1)
-		_show_pickup_popup(tr("UI_FIELD_GOT_ITEM") % str(def.get("name_ko", item_id)))
+		_show_pickup_popup(
+			tr("UI_FIELD_GOT_ITEM") % str(def.get("name_ko", item_id)), icon, Color(1.0, 0.95, 0.8)
+		)
 	else:
-		_show_pickup_popup("%s" % str(def.get("name_ko", item_id)))
+		# 돈은 무음이었고 글자만 떴다 — 동전음 + 동전 분수 + 금빛 팝업으로.
+		AudioManager.play_sfx(&"sfx_coin")
+		_show_pickup_popup(str(def.get("name_ko", item_id)), icon, Color(1.0, 0.84, 0.3))
+		if is_money:
+			_spawn_coin_burst(icon)
 
 
 ## 같은 ATT 값으로 4방향 인접한 셀 덩어리 = 상자 하나.
@@ -603,17 +623,106 @@ func _chest_group(start: Vector2i, attr: int) -> Array[Vector2i]:
 	return out
 
 
-func _show_pickup_popup(text: String) -> void:
+## 기습 카메라 킥 — 0.3초간 ±6px로 흔들렸다 복귀한다.
+## 카메라는 offset ZERO 기준(스무딩 없음)이라 복귀값이 고정이다.
+func _kick_camera() -> void:
+	if _cam == null:
+		return
+	var tw := create_tween().set_parallel(true)
+	for i in 5:
+		(
+			tw
+			. tween_property(_cam, "offset", Vector2(randf_range(-6, 6), randf_range(-6, 6)), 0.06)
+			. set_delay(0.06 * i)
+		)
+	tw.chain().tween_property(_cam, "offset", Vector2.ZERO, 0.08)
+
+
+## 획득 팝업 — 상자 위로 아이콘+문구가 바운스로 솟아올랐다 페이드아웃한다.
+## 구판은 외곽선 없는 14px 라벨이라 배경에 묻혔다(특히 밝은 바닥).
+## 이제 외곽선+그림자 + 팝 스케일 + 상승으로 읽힌다. 돈은 금빛 + 동전 분수.
+func _show_pickup_popup(
+	text: String, icon: Texture2D = null, tint: Color = Color(1.0, 0.9, 0.3)
+) -> void:
+	var anchor := player.position + Vector2(0, -64)
+	var box := CenterContainer.new()
+	box.size = Vector2(240, 80)
+	box.position = anchor + Vector2(-120, -80)
+	box.z_index = 60
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(box)
+	var vbox := VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 2)
+	vbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(vbox)
+	if icon != null:
+		var rect := TextureRect.new()
+		rect.texture = icon
+		rect.custom_minimum_size = Vector2(26, 26)
+		rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		vbox.add_child(rect)
 	var popup := Label.new()
 	popup.text = text
-	popup.add_theme_font_size_override("font_size", 14)
-	popup.add_theme_color_override("font_color", Color(1.0, 0.9, 0.3))
-	popup.position = player.position + Vector2(-40, -60)
-	add_child(popup)
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(popup, "position:y", popup.position.y - 24, 0.6)
-	tw.tween_property(popup, "modulate:a", 0.0, 0.6)
-	tw.chain().tween_callback(popup.queue_free)
+	popup.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	popup.add_theme_font_size_override("font_size", 17)
+	popup.add_theme_color_override("font_color", tint)
+	popup.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.95))
+	popup.add_theme_constant_override("outline_size", 5)
+	popup.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	popup.add_theme_constant_override("shadow_offset_x", 1)
+	popup.add_theme_constant_override("shadow_offset_y", 2)
+	popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vbox.add_child(popup)
+	# 바운스 팝(스케일) + 상승 — 트윈은 박스에 묶어 씬 전환에 같이 죽는다.
+	box.pivot_offset = box.size * 0.5
+	box.scale = Vector2.ONE * 0.6
+	var tw := box.create_tween().set_parallel(true)
+	tw.tween_property(box, "scale", Vector2.ONE, 0.28).set_trans(Tween.TRANS_BACK).set_ease(
+		Tween.EASE_OUT
+	)
+	(
+		tw
+		. tween_property(box, "position:y", box.position.y - 34, 1.0)
+		. set_trans(Tween.TRANS_QUAD)
+		. set_ease(Tween.EASE_OUT)
+	)
+	tw.chain().tween_interval(0.15)
+	tw.tween_property(box, "modulate:a", 0.0, 0.35)
+	tw.tween_callback(box.queue_free)
+
+
+## 동전 분수 — 돈 상자 전용. 아이콘 8개를 위로 뿜어 중력으로 떨군다.
+## 수십 개 쏟아붓는 풀 분수는 과하다(팝업·개봉음·스파클과 겹친다) — 맛만 본다.
+func _spawn_coin_burst(icon: Texture2D) -> void:
+	if icon == null:
+		return
+	var at := player.position + Vector2(0, -40)
+	for i in 8:
+		var coin := Sprite2D.new()
+		coin.texture = icon
+		coin.scale = Vector2.ONE * (0.38 + randf() * 0.16)
+		coin.position = at + Vector2(randf_range(-6, 6), 0)
+		coin.z_index = 61
+		add_child(coin)
+		var peak := at + Vector2(randf_range(-46, 46), randf_range(-72, -42))
+		var land := at + Vector2(randf_range(-62, 62), randf_range(6, 20))
+		var ctw := coin.create_tween()
+		(
+			ctw
+			. tween_property(coin, "position", peak, 0.26)
+			. set_trans(Tween.TRANS_QUAD)
+			. set_ease(Tween.EASE_OUT)
+			. set_delay(0.03 * i)
+		)
+		ctw.tween_property(coin, "position", land, 0.34).set_trans(Tween.TRANS_QUAD).set_ease(
+			Tween.EASE_IN
+		)
+		ctw.tween_property(coin, "modulate:a", 0.0, 0.2)
+		ctw.tween_callback(coin.queue_free)
 
 
 ## 층 전환 후 맵 재구축 — TransitionGate가 페이드 중 호출 (new_anchor = 도착 앵커).

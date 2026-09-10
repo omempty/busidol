@@ -198,6 +198,26 @@
    ],
    "loop": "none",
    "prompt_brief": "시스템 경보 — SYS_BUILDER 기동, 기계적 비프 반복"
+  },
+  {
+   "id": "sfx_chest_open",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.3,
+    0.6
+   ],
+   "loop": "none",
+   "prompt_brief": "AABBA7 AC83 - ABBB WMQ54 + AC79C6 CA75 + AD9B"
+  },
+  {
+   "id": "sfx_coin",
+   "kind": "sfx_one_shot",
+   "duration_sec": [
+    0.2,
+    0.5
+   ],
+   "loop": "none",
+   "prompt_brief": "AC7D6 NW4F - B5-E6 6LA5J6 2AC4 6FC"
   }
  ]
 }

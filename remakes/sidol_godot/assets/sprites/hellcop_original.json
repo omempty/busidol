@@ -1,6 +1,6 @@
 {
  "schema_version": 2,
- "source": "I.SPR frames 064-071 (원작 도트 24x24, 4배 nearest 베이크)",
+ "source": "I.SPR frames 048-055 (원작 도트 26x26, 4배 nearest 베이크)",
  "cell": 128,
  "cell_w": 128,
  "cell_h": 128,
