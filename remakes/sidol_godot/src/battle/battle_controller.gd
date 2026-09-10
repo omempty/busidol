@@ -57,6 +57,19 @@ func enemy_turn(enemy_id: String = "") -> Dictionary:
 	var enemy := _current_enemy()
 	if enemy == null or enemy.is_down():
 		return _advance_enemy()
+	# 브레이크는 행동 불가 + 모으기를 깬다 — 모으는 적을 깨뜨리는 것이 카운터다.
+	# 한 포인트당 정확히 한 적 턴을 쉰다(여기서 깎는다 — 호출부가 따로 깎으면 두 번 잰다).
+	# 실전(_resolve_turn)은 브레이크 적을 건너뛰므로, 계측(sim)도 같은 답을 보게
+	# 여기서 스킵한다(라운드 tick은 호출부sim이 맡는다 — 여기서 tick하면 두 번 잰다).
+	if enemy.is_broken():
+		enemy.broken_turns -= 1
+		enemy.pending_heavy_mult = 0.0
+		return {"skipped": "break"}
+	# 모은 강타가 있으면 발산이 그 턴을 잡아먹는다(특수보다 먼저).
+	if enemy.pending_heavy_mult > 0.0:
+		var raw_h := BattleEnemyPhase.heavy_damage(enemy, EnemyManager.rng)
+		player_combatant.take_damage(raw_h)
+		return {"heavy": raw_h, "attacker": enemy}
 	# 종별 특수(상태이상)를 먼저 굴린다 — 실전 _enemy_act와 같은 순서.
 	# sim이 적 ID를 넘길 때만 동작하고, 빈 문자열이면 기존 통상 경로 그대로다.
 	if not enemy_id.is_empty():
@@ -65,6 +78,9 @@ func enemy_turn(enemy_id: String = "") -> Dictionary:
 		)
 		if not rolled.is_empty():
 			return {"special": rolled, "attacker": enemy}
+		var charged := BattleEnemyPhase.roll_heavy(enemy, enemy_id, EnemyManager.rng)
+		if not charged.is_empty():
+			return {"charging": charged, "attacker": enemy}
 	var raw := DamageCalculator.enemy_hit(enemy.ap, EnemyManager.rng)
 	player_combatant.take_damage(raw)
 	return {"damage": raw, "attacker": enemy}
@@ -174,6 +190,10 @@ func _apply_player_damage(
 	if crit:
 		dmg = int(dmg * 1.5)
 
+	# 철벽 — 평범한 타격은 장갑에 막힌다. 약점·브레이크는 우회한다(벽의 답).
+	# 크리티컬은 막힌다(장갑은 운이 아니라 재질이다). take_damage 앞에서 깎는다.
+	if not weak and not target.is_broken() and target.bulwark_mult < 1.0:
+		dmg = maxi(1, int(float(dmg) * target.bulwark_mult))
 	dmg = target.take_damage(dmg)
 	var broke := false
 	if weak:

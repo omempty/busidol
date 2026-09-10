@@ -105,6 +105,19 @@
       "done_flag": "Q_F5_CACHE",
       "action": { "cutscene": "f5_cache" },
       "_comment": "순서 퍼즐 보상 — 서버 캐시. cell_probe f5 실측: 설 수 있고 조사도 된다."
+    },
+    {
+      "id": "f5_rest",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [103, 61],
+        [177, 58]
+      ],
+      "action": {
+        "cutscene": "rest_entry"
+      },
+      "_comment": "층간 휴식(계단 앞 회복소) — 상행 착지 셀(최상층). done_flag 없음=매 진입 회복."
     }
   ]
 }

@@ -251,6 +251,19 @@ func _execute(step: Dictionary) -> void:
 			var skid := StringName(str(sk.get("skill", "")))
 			if GameState.grant_skill(skid):
 				print("[cutscene] 스킬 습득: %s" % skid)
+		"recover":
+			# 층간 휴식(계단 앞 회복소). 비율까지만 채운다 — 깎지 않는다.
+			# 다 찼으면 조용히 통과한다(토스트·효과음 없음 — 지나다니며 스팸이 되지 않게).
+			var rargs: Dictionary = step.get("args", {})
+			var ratio := clampf(float(rargs.get("ratio", 1.0)), 0.0, 1.0)
+			var max_hp := GameState.max_hp()
+			var before: int = int(GameState.player_stats.get("hp", 1))
+			var target := mini(maxi(int(round(float(max_hp) * ratio)), 1), max_hp)
+			if target > before:
+				GameState.player_stats["hp"] = target
+				GameState.state_changed.emit()
+				GameState.acquired.emit(&"heal", &"rest", target - before)
+				AudioManager.play_sfx(&"sfx_item_get")
 		"craft":
 			_execute_craft(step.get("args", {}))
 		"illustration":

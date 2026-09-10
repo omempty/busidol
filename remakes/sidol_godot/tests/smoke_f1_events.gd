@@ -298,26 +298,41 @@ func _test_scenario_event_chain() -> void:
 		print("   - [OK] 씬 1-1 오프닝 컷신 데이터 완비")
 
 	# 2) Q_F1_START 전에는 f1_sopo, f1_gas 발동 불가 검증
+	# f1_sopo·f1_gas는 interact형이다 — zone tick이 아니라 try_interact(전방 셀)로
+	# 쏴야 한다(2026-09-10: tick으로 쏘던 구문이 영영 빈손이라 관문이 빨개졌다).
+	# 좌표도 실데이터 기준(트리거 셀 자체를 정면으로 본다).
 	var trig_sys := TriggerSystem.new()
 	add_child(trig_sys)
 	trig_sys.load_for_floor(1)
 
-	var sopo_cells := [Vector2i(163, 18)]
-	var gas_cells := [Vector2i(12, 32)]
+	var sopo_cells: Array[Vector2i] = [
+		Vector2i(157, 15),
+		Vector2i(158, 15),
+		Vector2i(159, 15),
+		Vector2i(157, 16),
+		Vector2i(158, 16),
+		Vector2i(159, 16)
+	]
+	var gas_cells: Array[Vector2i] = [
+		Vector2i(11, 30),
+		Vector2i(12, 30),
+		Vector2i(13, 30),
+		Vector2i(11, 31),
+		Vector2i(12, 31),
+		Vector2i(13, 31)
+	]
 
-	# Q_F1_START가 없으므로 zone 트리거 tick에서 발동되지 않아야 함
+	# Q_F1_START가 없으므로 interact해도 발동되지 않아야 함
 	var requested_cutscenes: Array[String] = []
 	trig_sys.cutscene_requested.connect(
 		func(id: StringName) -> void: requested_cutscenes.append(String(id))
 	)
 
-	trig_sys.tick(sopo_cells[0], 0.1)
-	if not requested_cutscenes.is_empty():
+	if trig_sys.try_interact(sopo_cells) or not requested_cutscenes.is_empty():
 		_failures.append("Q_F1_START 없이 f1_sopo 가 발동됨")
 	requested_cutscenes.clear()
 
-	trig_sys.tick(gas_cells[0], 0.1)
-	if not requested_cutscenes.is_empty():
+	if trig_sys.try_interact(gas_cells) or not requested_cutscenes.is_empty():
 		_failures.append("Q_F1_START 없이 f1_gas 가 발동됨")
 	requested_cutscenes.clear()
 	print("   - [OK] Q_F1_START 선행 조건 가드 정상 작동")
@@ -326,9 +341,12 @@ func _test_scenario_event_chain() -> void:
 	GameState.set_flag("q_f1_opening_seen", true)
 	GameState.set_flag("Q_F1_START", true)
 
-	# 4) 교무과 우편물실 (163, 18) 진입 -> f1_sopo 발동
-	trig_sys.tick(sopo_cells[0], 0.1)
-	if requested_cutscenes.is_empty() or requested_cutscenes[0] != "f1_sopo":
+	# 4) 교무과 우편물실 진입 -> f1_sopo 발동
+	if (
+		not trig_sys.try_interact(sopo_cells)
+		or requested_cutscenes.is_empty()
+		or requested_cutscenes[0] != "f1_sopo"
+	):
 		_failures.append("Q_F1_START 후 f1_sopo 발동 실패: %s" % str(requested_cutscenes))
 	else:
 		print("   - [OK] 씬 1-3 교무과 우편물실 진입: f1_sopo 트리거 발동")
@@ -348,9 +366,12 @@ func _test_scenario_event_chain() -> void:
 	else:
 		print("   - [OK] 소포 폭탄(ITEM_SOPO) 획득 및 Q_F1_SOPO 플래그 수립")
 
-	# 5) 창고 (12, 32) 진입 -> f1_gas 발동
-	trig_sys.tick(gas_cells[0], 0.1)
-	if requested_cutscenes.is_empty() or requested_cutscenes[0] != "f1_gas":
+	# 5) 창고 진입 -> f1_gas 발동
+	if (
+		not trig_sys.try_interact(gas_cells)
+		or requested_cutscenes.is_empty()
+		or requested_cutscenes[0] != "f1_gas"
+	):
 		_failures.append("Q_F1_START 후 f1_gas 발동 실패: %s" % str(requested_cutscenes))
 	else:
 		print("   - [OK] 씬 1-3 창고 진입: f1_gas 트리거 발동")

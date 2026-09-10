@@ -37,6 +37,14 @@ var broken_turns := 0  # 브레이크 지속 턴 — 행동 불가 + 받는 피�
 ## 공용 take_damage가 적에게도 dp/4를 깎던 탓에 f3 적(dp 165~195)이 플레이어 공격을
 ## 거의 전부 상쇄해 1~2 피해만 들어갔다(2026-08-28 실측).
 var dp_reduces_damage := true
+## 모은 강타 배율 — 0이면 없음. 적 턴에 모으기(텔레그래프)가 서면 다음 적 턴에
+## 통상 피해 × 이 값으로 발산한다. 값의 출처는 monsters.json 종별 `heavy.mult`.
+## 브레이크·사망 시 소멸한다(모으는 적을 깨뜨리는 것이 카운터 플레이).
+var pending_heavy_mult := 0.0
+## 철벽 계수 — 1.0이면 없음. 1.0 미만이면 약점·브레이크가 아닌 타격을 이만큼만
+## 받는다(값의 출처는 monsters.json 종별 `bulwark.normal_mult`).
+## 전투원이 종 id를 몰라도 되게 build_enemies가 수치만 옮겨 적는다.
+var bulwark_mult := 1.0
 
 
 func _init(p_name: String, p_hp: int, p_ap: int, p_dp: int) -> void:

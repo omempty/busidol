@@ -464,6 +464,55 @@ func _ready() -> void:
 		print("[smoke_battle] 히트스톱 복구 OK — 배율 %.2f 유지" % Engine.time_scale)
 	hs_probe.queue_free()
 
+	# --- 10) 강타·철벽 (2026-09-10) — 결정론(모으기는 직접 세우고, 비교는 동일 시드) ---
+	# 모으기→발산: pending을 세우면 enemy_turn이 발산 + 소멸한다.
+	var hlogic := BattleController.new()
+	add_child(hlogic)
+	var hhero := Combatant.new("프로브", 5000, 30, 10)
+	var hfoe := Combatant.new("헬캅", 5000, 60, 5)
+	hfoe.pending_heavy_mult = 2.0
+	hlogic.start(hhero, [hfoe] as Array[Combatant])
+	hlogic.state = BattleController.TurnState.ENEMY_TURN
+	var hr := hlogic.enemy_turn("")
+	if not hr.has("heavy") or int(hr.get("heavy", 0)) <= 0:
+		failures.append("모은 강타가 발산되지 않았다: %s" % str(hr))
+	if hfoe.pending_heavy_mult != 0.0:
+		failures.append("발산 뒤 모으기가 소멸하지 않았다")
+	# 브레이크는 모으기를 깬다(발산 대신 스킵).
+	hfoe.pending_heavy_mult = 2.0
+	hfoe.broken_turns = 1
+	hlogic.state = BattleController.TurnState.ENEMY_TURN
+	var br := hlogic.enemy_turn("")
+	if not br.has("skipped") or hfoe.pending_heavy_mult != 0.0 or hfoe.broken_turns != 0:
+		failures.append("브레이크가 모은 강타를 못 깼다: %s" % str(br))
+	hlogic.queue_free()
+	print("[smoke_battle] 강타 발산·브레이크 해제 확인")
+
+	# 철벽 — 약점도 브레이크도 아니면 깎인다. 동일 시드로 굴려 약점과 비교한다.
+	# 기본 공격 속성은 물리(맨손) — wall은 electric 약점이라 막히고, plain은 맞는다.
+	var wlogic := BattleController.new()
+	add_child(wlogic)
+	var who := Combatant.new("주인공", 5000, 60, 10)
+	var bulwark_foe := Combatant.new("철벽", 5000, 10, 5)
+	bulwark_foe.bulwark_mult = 0.4
+	bulwark_foe.weaknesses.assign([&"electric"] as Array[StringName])
+	var bare_foe := Combatant.new("민몸", 5000, 10, 5)
+	bare_foe.weaknesses.assign([&"physical"] as Array[StringName])
+	wlogic.start(who, [bulwark_foe] as Array[Combatant])
+	EnemyManager.rng.seed = 20260910
+	var cmd_bulwark := {"type": &"attack", "ap": who.attack_stat(), "target": bulwark_foe}
+	wlogic.submit_player_command(cmd_bulwark)
+	var wall_dmg: int = int((cmd_bulwark["damages"] as Array)[0]["amount"])
+	wlogic.begin_player_phase()
+	EnemyManager.rng.seed = 20260910
+	var cmd_bare := {"type": &"attack", "ap": who.attack_stat(), "target": bare_foe}
+	wlogic.submit_player_command(cmd_bare)
+	var bare_dmg: int = int((cmd_bare["damages"] as Array)[0]["amount"])
+	print("[smoke_battle] 철벽 비교: 벽=%d vs 약점=%d" % [wall_dmg, bare_dmg])
+	if wall_dmg <= 0 or wall_dmg >= bare_dmg:
+		failures.append("철벽 미적용 (벽=%d 약점=%d)" % [wall_dmg, bare_dmg])
+	wlogic.queue_free()
+
 	_finish(failures, battle)
 
 

@@ -72,6 +72,21 @@
         "cutscene": "f2_cache"
       },
       "_comment": "은닉 보상(백로그 §1.1) — 서쪽 구석 방독면. F3 독안개의 획득 경로(상점 F0보다 선행). cell_probe f2 실측: 설 수 있고 조사도 된다."
+    },
+    {
+      "id": "f2_rest",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [103, 61],
+        [177, 58],
+        [100, 61],
+        [169, 58]
+      ],
+      "action": {
+        "cutscene": "rest_entry"
+      },
+      "_comment": "층간 휴식(계단 앞 회복소) — 상행·하행 착지 셀. done_flag 없음=매 진입 회복."
     }
   ]
 }

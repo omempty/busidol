@@ -120,6 +120,7 @@ func _ready() -> void:
 	# 나중에 태어난 몬스터도 빛을 받아야 한다 — 이 배선이 없으면 첫 무리만 빛나고
 	# 리스폰된 놈은 어두운 층에서 통째로 안 보인다.
 	enemy_manager.enemy_spawned.connect(_on_enemy_spawned)
+	enemy_manager.enemy_warped.connect(_on_enemy_warped)
 
 	_prompt = InteractPrompt.new()
 	add_child(_prompt)
@@ -963,6 +964,13 @@ func _on_enemy_spawned(e: EnemyEntity) -> void:
 		lighting.attach(e)
 
 
+## 적 워프(잠복 출현·순간이동) — 사라진 자리·나타난 자리에 먼지를 뿜는다.
+## 없으면 D웜의 burrow가 순간이동 버그처럼 보인다(2026-09-10 유저 지적).
+func _on_enemy_warped(from_cell: Vector2i, to_cell: Vector2i) -> void:
+	if fx != null:
+		fx.enemy_warp_puff(from_cell, to_cell)
+
+
 ## 반경 배제용 — **고정 NPC만**. 워커는 돌아다니므로 곁을 비워도 스스로 다가간다.
 func _npc_anchors() -> Array[Vector2i]:
 	var out: Array[Vector2i] = []
@@ -989,6 +997,9 @@ func _spawn_walkers() -> void:
 		push_warning("보행자 파일 파싱 실패: %s" % path)
 		return
 	for w: Dictionary in Dictionary(raw).get("walkers", []):
+		# enabled:false면 스킵 — 파일럿 중단·계절 이벤트 같은 킬 스위치.
+		if not bool(w.get("enabled", true)):
+			continue
 		var legs: Array = []
 		for leg: Dictionary in w.get("pattern", []):
 			legs.append(
@@ -996,6 +1007,13 @@ func _spawn_walkers() -> void:
 			)
 		var walker := WalkerEntity.new()
 		add_child(walker)
+		walker.foe_source = enemy_manager
+		var tint_arr: Array = w.get("tint", [1.0, 1.0, 1.0])
+		var tint := Color(
+			float(tint_arr[0]) if tint_arr.size() > 0 else 1.0,
+			float(tint_arr[1]) if tint_arr.size() > 1 else 1.0,
+			float(tint_arr[2]) if tint_arr.size() > 2 else 1.0
+		)
 		walker.setup(
 			StringName(str(w.get("id", ""))),
 			StringName(str(w.get("sprite", ""))),
@@ -1005,7 +1023,8 @@ func _spawn_walkers() -> void:
 			str(w.get("name", "")),
 			StringName(str(w.get("sequence_id", ""))),
 			w.get("sequence_variants", []),
-			w.get("repeat_sequence_id", null)
+			w.get("repeat_sequence_id", null),
+			tint
 		)
 		walkers.append(walker)
 

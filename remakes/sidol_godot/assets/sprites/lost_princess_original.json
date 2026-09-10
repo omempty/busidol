@@ -1,0 +1,41 @@
+{
+ "schema_version": 2,
+ "source": "OpenGameArt 'Gypsy' by Svetlana Kushnariova (lana-chan@yandex.ru) & Jordan Irwin (AntumDeluge) (CC-BY 3.0) — gypsy-001 48x64. N/E/S/W remapped, 2 stride frames per direction. Modifications remain CC-BY 3.0.",
+ "cell": 128,
+ "cell_w": 128,
+ "cell_h": 128,
+ "cols": 2,
+ "scale": 1.2308,
+ "animations": {
+  "walk_down": {
+   "row": 0,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "walk_up": {
+   "row": 1,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "walk_left": {
+   "row": 2,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "walk_right": {
+   "row": 3,
+   "frames": 2,
+   "fps": 6,
+   "loop": true
+  },
+  "idle_down": {
+   "row": 4,
+   "frames": 2,
+   "fps": 2,
+   "loop": true
+  }
+ }
+}

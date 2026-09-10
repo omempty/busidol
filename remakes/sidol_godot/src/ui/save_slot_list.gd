@@ -66,7 +66,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		and event.button_index == MOUSE_BUTTON_RIGHT
 	):
 		canceled.emit()
-		get_viewport().set_input_as_handled()
+	var vp := get_viewport()
+	if vp != null:
+		vp.set_input_as_handled()
 		return
 	if event.is_action_pressed(&"move_up"):
 		_move(-1)

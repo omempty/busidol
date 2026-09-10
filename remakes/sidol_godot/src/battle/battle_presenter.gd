@@ -68,11 +68,16 @@ const ORIGIN_CUT_IDLE_CHANCE := 0.15
 ## 원작 화면 논리 폭. 세로는 ORIGIN_SCREEN_H.
 const ORIGIN_SCREEN_W := 320.0
 ## 대형 컷 상영 중 스테이지 딤 — 원작 전투 화면이 검은 바탕에 격투 컷만 올렸듯
-## (WARMODE.C `Page_Clear` + 클립), 리메이크 스테이지 위에 풀스크린 컷을 겹치면
+## (WARMODE.C `Page_Clear` + `Set_Clip(0,20,319,180)`, 리메이크 스테이지 위에 풀스크린 컷을 겹치면
 ## 뒤의 도트 액터·바닥선과 섞여 난잡하다(2026-09-09 유저 지적). 컷(z=50) 바로 아래에
 ## 검은 막을 깔고 UI(CanvasLayer 20)는 그대로 둔다 — 메뉴·로그는 읽힌 채로 둔다.
-const CUT_DIM_ALPHA := 0.72
+## 원작은 불투명 검정이므로 0.86까지 올린다(2026-09-10 유저 지적 "더 어둡게").
+## z 순서: 스테이지·액터(0) < 딤(45) < 레터박스(46)·적 공격자(46) < 원작FX(47) < 컷(50) < 플래시(100).
+## 딤보다 위여야 할 것이 아래에 있으면 막 뒤에서 어둡게 보인다 — 빔(z=40)이 그랬다.
+const CUT_DIM_ALPHA := 0.86
 const CUT_DIM_Z := 45
+const CUT_LETTER_Z := 46
+const ORIGIN_FX_Z := 47
 ## 원작 돌진 슬라이드 시간 — `_origin_charge` 트윈과 같은 값. 적 턴 순서화(await)가
 ## 트윈을 기다리는 기준이다(트윈 자체는 콜백이 없어 시간으로 맞춘다).
 const ORIGIN_CHARGE_TIME := 0.34
@@ -87,6 +92,8 @@ var _origin_player_meta_cache: Dictionary = {}
 ## 딤 오버레이 참조 수 — 컷·빔이 겹치면 먼저 끝난 쪽이 막을 걷어 버리면 안 된다.
 var _dim_rect: ColorRect = null
 var _dim_count := 0
+## 원작 클립(`Set_Clip(0,20,319,180)`) 자리 — 상하 검은 띠. 딤과 함께 깔고 걷는다.
+var _letter_bars: Array[ColorRect] = []
 
 var _idle_clock := 0.0
 ## 적 전투원 참조 — 빈사·사망 포즈를 매 프레임 스스로 맞추기 위한 것.
@@ -431,6 +438,8 @@ func spawn_afterimage(spr: Sprite2D, dir: float = -1.0) -> void:
 		ghost.position = spr.position + Vector2(dir * 12.0 * float(i + 1), 0)
 		ghost.modulate = Color(0.75, 0.8, 1.0, 0.42 - 0.1 * float(i))
 		ghost.z_index = spr.z_index - 1
+		# 잔상은 빛의 궤적이다 — 가산으로 겹칠수록 밝아진다.
+		ghost.material = BattleFxMaterials.additive()
 		_root.add_child(ghost)
 		var tw := ghost.create_tween()
 		tw.tween_property(ghost, "modulate:a", 0.0, AFTERIMAGE_FADE + 0.05 * float(i))
@@ -815,7 +824,9 @@ func _origin_fx(fx_id: String, at: Vector2) -> Sprite2D:
 	spr.scale = Vector2.ONE * sc
 	var w := float(ProjectSettings.get_setting("display/window/size/viewport_width", 960))
 	spr.position = Vector2((w - float(ORIGIN_SCREEN_H) * 1.6 * sc) * 0.5, 0.0) + at * sc
-	spr.z_index = 40
+	spr.z_index = ORIGIN_FX_Z  # 딤(45) 위 — 막 뒤에서 어둡게 보이던 빔의 처방
+	# 섬광·빔·스파크는 발광이다 — 딤 위에서도 타오르게 가산으로 얹는다.
+	spr.material = BattleFxMaterials.additive()
 	_root.add_child(spr)
 	return spr
 
@@ -837,6 +848,7 @@ func _cut_dim_show() -> void:
 	rect.z_index = CUT_DIM_Z
 	_root.add_child(rect)
 	_dim_rect = rect
+	_show_letterbox()
 	var tw := rect.create_tween()
 	tw.tween_property(rect, "color:a", CUT_DIM_ALPHA, 0.08)
 
@@ -851,9 +863,42 @@ func _cut_dim_hide() -> void:
 		return
 	var rect := _dim_rect
 	_dim_rect = null
+	_hide_letterbox()
 	var tw := rect.create_tween()
 	tw.tween_property(rect, "color:a", 0.0, 0.15)
 	tw.tween_callback(rect.queue_free)
+
+
+## 원작 클립(`Set_Clip(0,20,319,180)`) — 컷 상영 중에만 서는 상하 검은 띠.
+## 딤의 참조 수 안에 묶는다(따로 세면 딤과 띠가 따로 걷힌다).
+func _show_letterbox() -> void:
+	if _root == null:
+		return
+	for b in _letter_bars:
+		if b != null and is_instance_valid(b):
+			return
+	_letter_bars.clear()
+	var sc := _origin_scale()
+	var w := float(ProjectSettings.get_setting("display/window/size/viewport_width", 960))
+	var h := float(ProjectSettings.get_setting("display/window/size/viewport_height", 540))
+	var bar := 20.0 * sc
+	for y in [0.0, h - bar]:
+		var rect := ColorRect.new()
+		rect.name = "CutLetter"
+		rect.color = Color.BLACK
+		rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rect.position = Vector2(0, y)
+		rect.size = Vector2(w, bar)
+		rect.z_index = CUT_LETTER_Z
+		_root.add_child(rect)
+		_letter_bars.append(rect)
+
+
+func _hide_letterbox() -> void:
+	for b in _letter_bars:
+		if b != null and is_instance_valid(b):
+			b.queue_free()
+	_letter_bars.clear()
 
 
 ## 연출 박자 대기 — 배속을 나눈 실초. 적 턴 순서화(await)의 자다.
@@ -883,6 +928,7 @@ func play_origin_short_cut_async(row_name: String, col: int, hold: float) -> boo
 	if spr == null:
 		return false
 	_cut_dim_show()
+	_hide_cut_actor()
 	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET)
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
 	var tw := spr.create_tween()
@@ -890,6 +936,7 @@ func play_origin_short_cut_async(row_name: String, col: int, hold: float) -> boo
 	tw.tween_property(spr, "modulate:a", 0.0, 0.12 / speed)
 	tw.tween_callback(spr.queue_free)
 	await _cut_beat(maxf(hold, 0.05) + 0.12)
+	_show_cut_actor()
 	_cut_dim_hide()
 	return true
 
@@ -976,14 +1023,46 @@ func _origin_attack_fx_fire(impact: bool) -> bool:
 
 ## 순서화 버전 — 빔이 화면을 가로지를 동안 딤을 깔고 끝까지 기다렸다가 걷는다.
 ## 적 턴은 이 await 뒤에 피해를 깎는다(원작 `EnemyAttackAni` → `MyAvoid` 순서).
+## 원작(`:599-625`) 자리 재현:
+##   돌진 끝(-50)에 머문 적 + 섬광(0,0) → Delay(300) → Page_Clear(적 퇴장) →
+##   볼트만 검은 화면을 가로지른다 → Delay(200) → MyAvoid.
+## 그래서 섬광 동안 공격자를 딤 위(46)로 올리고, 볼트 비행 동안은 숨긴다.
+## 발사 종이 아니면 섬광까지만(숨김 없음 — 원작이 그렇다).
 func origin_attack_fx_async(impact: bool) -> bool:
 	if not _origin_fx_will_show(impact):
 		return false
 	_cut_dim_show()
+	var foe := _attacker_sprite()
+	var bolts := _attacker_bolts()
+	if foe != null:
+		foe.z_index = CUT_LETTER_Z
 	_origin_attack_fx_fire(impact)
-	await _cut_beat(_origin_fx_hold())
+	await _cut_beat(MUZZLE_HOLD)
+	if foe != null and is_instance_valid(foe) and bolts:
+		foe.visible = false
+	await _cut_beat(maxf(_origin_fx_hold() - MUZZLE_HOLD, 0.01))
+	if foe != null and is_instance_valid(foe):
+		foe.visible = true
+		foe.z_index = 0
 	_cut_dim_hide()
 	return true
+
+
+## 이번에 때리는 적 스프라이트(없으면 null).
+func _attacker_sprite() -> Sprite2D:
+	var idx := target_index
+	if idx < 0 or idx >= enemy_sprites.size():
+		return null
+	return enemy_sprites[idx]
+
+
+## 이번 공격자가 볼트를 쏘는 종인가(원작 `:601` 발사 종 + 에셋 실재).
+func _attacker_bolts() -> bool:
+	var idx := target_index
+	var enemy_id := StringName(_enemy_ids[idx]) if idx >= 0 and idx < _enemy_ids.size() else &""
+	if not BOLT_SPECIES.has(enemy_id):
+		return false
+	return ResourceLoader.exists(ORIGIN_FX_DIR + "origin_bolt.png")
 
 
 ## **주인공 원작 대형 컷 — 임팩트 순간에만.**
@@ -1021,6 +1100,7 @@ func play_origin_player_cut_async(prefer_big: bool = false) -> bool:
 		_cut_dim_hide()
 		return false
 	await _cut_beat(float(pick["dur"]))
+	_show_cut_actor()
 	_cut_dim_hide()
 	return true
 
@@ -1050,8 +1130,10 @@ func _pick_origin_player_cut(prefer_big: bool = false) -> Dictionary:
 	if not anims.has(row_name):
 		return {}
 	_last_origin_cut = pick
-	# flurry 간격 합(0.2×4 + 0.1×4 + 0.045×6) + 걷힘 0.14 — `_origin_cut_flurry`와 같은 값.
-	var dur := 1.61 if row_name == "flurry" else (0.54 if row_name == "rise" else 0.52)
+	# flurry 간격 합(0.2×5 + 0.1×3 + 0.03×12) + 걷힘 0.14 — `_origin_cut_flurry`와 같은 값.
+	# 원작(`:347`)은 Delay 200×5 + 100×3 + 0×12 ≈ 2.3초라 현대 박자로는 길어 간격만 축소하고
+	# 20회 교대 구조는 유지한다.
+	var dur := 1.80 if row_name == "flurry" else (0.54 if row_name == "rise" else 0.52)
 	return {
 		"row_name": row_name,
 		"row": int((anims[row_name] as Dictionary).get("row", 0)),
@@ -1067,6 +1149,9 @@ func _play_origin_cut_anim(pick: Dictionary, with_dim_hide: bool) -> bool:
 		if with_dim_hide:
 			_cut_dim_hide()
 		return false
+	# 원작은 컷 상영 전에 화면을 지운다(`Page_Clear`) — 작은 도트가 딤 뒤에 남으면
+	# 화면 끝에 희미한 잔상이 선다(2026-09-10 캡처 실측). 상영 중 숨기고 끝에서 되돌린다.
+	_hide_cut_actor()
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
 	match row_name:
 		"rise":
@@ -1075,9 +1160,11 @@ func _play_origin_cut_anim(pick: Dictionary, with_dim_hide: bool) -> bool:
 		"flurry":
 			# `:347` 두 프레임 20회 교대 + 점점 빨라짐. 위치는 고정.
 			_origin_cut_flurry(spr, int(pick["row"]), speed, with_dim_hide)
-		_:
-			# `:322` `for(i=-50;i<=150;i+=30)` — 왼쪽에서 오른쪽으로 파고든다.
-			_origin_cut_move(spr, Vector2(-50, 0), Vector2(150, 0), 0.40 / speed, with_dim_hide)
+		_:  # `:322` `for(i=-50;i<=150;i+=30)` — 왼쪽에서 오른쪽으로 파고든다.
+			# 실제 마지막 스텝은 130이다(-50+30×6. 150은 루프 조건일 뿐 도달하지 않는다).
+			# 150까지 밀면 원작보다 54px 더 나가 몸통이 화면 밖으로 밀려 팔만 남는다
+			# (2026-09-10 유저 지적 "원투 펀치에 팔만 나온다").
+			_origin_cut_move(spr, Vector2(-50, 0), Vector2(130, 0), 0.40 / speed, with_dim_hide)
 	origin_hit_spark()
 	return true
 
@@ -1088,6 +1175,12 @@ func _play_origin_cut_anim(pick: Dictionary, with_dim_hide: bool) -> bool:
 ## 리메이크는 `player_hurt.png` 미납품이라 그 자리가 플래시·흔들림뿐이었다(§8.2).
 ## 원작 회피 3종 분포(`:517` `random(6)` — 0~2 avoid_a · 3 avoid_b · 4·5 avoid_c)를
 ## 그대로 옮긴다. 적 빔 다음·피해 숫자 전에 상영한다. 강제면 분포 무시하고 avoid_a.
+## 행별 구조도 원작을 따른다(2026-09-10 정교화):
+##   avoid_a(`MAvoid1`) — 굴린 프레임(sprnum) 한 장을 x 0→40으로 민다 + 스파크.
+##   avoid_b(`MAvoid2`) — 0→50으로 민 뒤 마무리 포즈(2번 칸)를 0.4초 홀드(원작 500ms).
+##   avoid_c(`MAvoid3`) — 0·1번 칸을 0.3초씩 홀드(원작 1초씩. 현대 박자로 축소)한 뒤
+##     2번 칸을 x −20→60으로 밀며 스파크(원작은 2·3번 이중 그리기).
+## 홀드용 정지 컷은 from==to 이동으로 멈춰 세운다(끝의 0.12초 걷힘은 공통).
 func play_origin_avoid_cut_async(forced: bool = false) -> bool:
 	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
 		return false
@@ -1096,26 +1189,75 @@ func play_origin_avoid_cut_async(forced: bool = false) -> bool:
 	var meta := _origin_player_meta()
 	var anims: Dictionary = meta.get("animations", {})
 	var row_name := "avoid_a"
+	var col := 0
 	if not forced:
 		var roll := EnemyManager.rng.randi_range(0, 5)
 		row_name = "avoid_a" if roll <= 2 else ("avoid_b" if roll == 3 else "avoid_c")
+		col = roll if row_name == "avoid_a" else 0  # `MAvoid1(sprnum)` — 굴린 칸을 든다
 	if row_name == _last_avoid_cut:
 		row_name = "avoid_b" if row_name != "avoid_b" else "avoid_a"
+		col = 0
 	if not anims.has(row_name):
 		return false
 	_last_avoid_cut = row_name
-	var spr := _make_origin_cut_sprite(int((anims[row_name] as Dictionary).get("row", 0)), 0)
-	if spr == null:
-		return false
+	var row := int((anims[row_name] as Dictionary).get("row", 0))
 	_cut_dim_show()
-	# `MAvoid1` 자리 — 오른쪽으로 밀며 스파크. b·c도 같은 박자로 뭉뚱그린다.
-	# dur은 배속 반영 실초로 넘긴다(`_origin_cut_move`는 나눠 받지 않는다).
+	_hide_cut_actor()
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
-	_origin_cut_move(spr, Vector2(0, 0), Vector2(40, 0), ORIGIN_AVOID_HOLD / speed, false)
-	origin_hit_spark(Vector2(10, 60))
-	await _cut_beat(ORIGIN_AVOID_HOLD + 0.12)
+	match row_name:
+		"avoid_b":
+			var slide := _make_origin_cut_sprite(row, 0)
+			if slide == null:
+				_show_cut_actor()
+				_cut_dim_hide()
+				return false
+			_origin_cut_move(slide, Vector2(0, 0), Vector2(50, 0), ORIGIN_AVOID_HOLD / speed, false)
+			origin_hit_spark(Vector2(10, 60))
+			await _cut_beat(ORIGIN_AVOID_HOLD + 0.12)
+			var fin := _make_origin_cut_sprite(row, 1)
+			if fin != null:
+				_origin_cut_move(fin, Vector2(50, 0), Vector2(50, 0), 0.4 / speed, false)
+				await _cut_beat(0.4 + 0.12)
+		"avoid_c":
+			for h in [0, 1]:
+				var hold := _make_origin_cut_sprite(row, h)
+				if hold != null:
+					_origin_cut_move(hold, Vector2.ZERO, Vector2.ZERO, 0.3 / speed, false)
+					await _cut_beat(0.3 + 0.12)
+			var rush := _make_origin_cut_sprite(row, 2)
+			if rush == null:
+				_show_cut_actor()
+				_cut_dim_hide()
+				return false
+			_origin_cut_move(
+				rush, Vector2(-20, 0), Vector2(60, 0), ORIGIN_AVOID_HOLD / speed, false
+			)
+			origin_hit_spark(Vector2(10, 60))
+			await _cut_beat(ORIGIN_AVOID_HOLD + 0.12)
+		_:
+			var spr := _make_origin_cut_sprite(row, col)
+			if spr == null:
+				_show_cut_actor()
+				_cut_dim_hide()
+				return false
+			_origin_cut_move(spr, Vector2(0, 0), Vector2(40, 0), ORIGIN_AVOID_HOLD / speed, false)
+			origin_hit_spark(Vector2(10, 60))
+			await _cut_beat(ORIGIN_AVOID_HOLD + 0.12)
+	_show_cut_actor()
 	_cut_dim_hide()
 	return true
+
+
+## 원작 컷 상영 중 작은 주인공 도트 숨김/복원 — 원작은 `Page_Clear`라 도트가 없다.
+## 숨긴 채로 두면 전투 복귀 때 주인공이 사라진 것처럼 보인다. 호출부(컷 종료)가 되돌린다.
+func _hide_cut_actor() -> void:
+	if player_sprite != null and is_instance_valid(player_sprite):
+		player_sprite.visible = false
+
+
+func _show_cut_actor() -> void:
+	if player_sprite != null and is_instance_valid(player_sprite):
+		player_sprite.visible = true
 
 
 ## 컷 스프라이트 한 장 — 시트의 (행, 칸)을 잘라 원작 화면 좌표계에 얹는다.
@@ -1149,19 +1291,22 @@ func _origin_cut_move(
 	tw.tween_property(spr, "modulate:a", 0.0, 0.12)
 	if dim_hide:
 		tw.tween_callback(_cut_dim_hide)
+		tw.tween_callback(_show_cut_actor)
 	tw.tween_callback(spr.queue_free)
 
 
 ## 백열 장수 — 두 프레임을 교대하며 점점 빨라진다(`:347` Delay 200 → 100 → 0).
+## 원작 그대로 20회 교대다. `i 0~4: 200ms · 5~7: 100ms · 8~19: 0(vsync)` —
+## 현대 박자로 간격만 축소(0.2 · 0.1 · 0.03)하고 구조(5/3/12)는 유지한다.
 func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float, dim_hide: bool = false) -> void:
 	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET)
 	var at := spr.texture as AtlasTexture
 	if at == null:
 		return
 	var tw := spr.create_tween()
-	for i in 14:
+	for i in 20:
 		var col := i % 2 + 1  # 원작 `S[i%2+1]` — 0번은 배경 프레임이라 건너뛴다
-		var gap := (0.2 if i < 4 else (0.1 if i < 8 else 0.045)) / speed
+		var gap := (0.2 if i < 5 else (0.1 if i < 8 else 0.03)) / speed
 		tw.tween_callback(
 			func() -> void:
 				if is_instance_valid(spr) and at != null:
@@ -1171,6 +1316,7 @@ func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float, dim_hide: bool = 
 	tw.tween_property(spr, "modulate:a", 0.0, 0.14)
 	if dim_hide:
 		tw.tween_callback(_cut_dim_hide)
+		tw.tween_callback(_show_cut_actor)
 	tw.tween_callback(spr.queue_free)
 
 
@@ -1219,6 +1365,8 @@ func hurt_flash(spr: Sprite2D) -> void:
 		return
 	var f := SettingsManager.battle_speed_factor()
 	var tw := spr.create_tween()
+	# 백열 1프레임 — 맞은 순간 하얗게 타올랐다 붉어진다(가산 없이 HDR 클리핑으로 뽑는다).
+	tw.tween_property(spr, "modulate", Color(8, 8, 8), 0.03 / f)
 	tw.tween_property(spr, "modulate", Color(5, 0.3, 0.3), 0.05 / f)
 	tw.tween_property(spr, "modulate", Color.WHITE, 0.1 / f)
 
@@ -1460,10 +1608,22 @@ func _spawn_spark(at: Vector2) -> void:
 	p.initial_velocity_max = 140.0
 	p.scale_amount_min = 2.0
 	p.scale_amount_max = 4.0
-	p.color = Color(1.0, 0.85, 0.3)
+	p.color = Color.WHITE
+	# 불티는 가산+수명 곡선 — 흰핵→앰버→소멸. 단색 점들의 집합이 아니다.
+	p.material = BattleFxMaterials.additive()
+	p.color_ramp = BattleFxMaterials.spark_ramp()
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.8).timeout.connect(p.queue_free)
+
+
+## 임팩트 글로우 — 큰 일격의 발광 핵. 색·끝크기만 정한다(지속·z는 규격).
+func spawn_impact_glow(at: Vector2, edge: Color, end_px: float) -> void:
+	if SettingsManager.effect_speed == SettingsManager.EffectSpeed.SKIP:
+		return
+	BattleFxMaterials.spawn_glow(
+		_root, at, edge, 12.0, end_px, 0.3 / maxf(SettingsManager.battle_speed_factor(), 0.1), 55
+	)
 
 
 ## 절차적 전투 VFX 디스패처 — 물리 베기 아크, 화염 폭발, 번개 스트라이크, 대폭발, 실드
@@ -1489,6 +1649,7 @@ func _spawn_slash_arc_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	var slash := Line2D.new()
 	slash.width = 6.0 * scale_mult
 	slash.default_color = Color(1.0, 0.95, 0.8, 1.0)
+	slash.material = BattleFxMaterials.additive()
 	slash.begin_cap_mode = Line2D.LINE_CAP_ROUND
 	slash.end_cap_mode = Line2D.LINE_CAP_ROUND
 	slash.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -1545,7 +1706,9 @@ func _spawn_slash_arc_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	p.initial_velocity_max = 180.0 * scale_mult
 	p.scale_amount_min = 2.0 * scale_mult
 	p.scale_amount_max = 4.5 * scale_mult
-	p.color = Color(1.0, 0.88, 0.3)
+	p.color = Color.WHITE
+	p.material = BattleFxMaterials.additive()
+	p.color_ramp = BattleFxMaterials.spark_ramp()
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.6).timeout.connect(p.queue_free)
@@ -1558,7 +1721,7 @@ func _spawn_flame_burst_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	ring.default_color = Color(1.0, 0.45, 0.08, 0.95)
 	ring.z_index = 58
 	var ring_pts := PackedVector2Array()
-	var r_segs := 16
+	var r_segs := 32
 	for i in range(r_segs + 1):
 		var rad := (float(i) / float(r_segs)) * TAU
 		ring_pts.append(Vector2(cos(rad), sin(rad)))
@@ -1588,7 +1751,9 @@ func _spawn_flame_burst_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	p.initial_velocity_max = 160.0 * scale_mult
 	p.scale_amount_min = 3.5 * scale_mult
 	p.scale_amount_max = 7.5 * scale_mult
-	p.color = Color(1.0, 0.55, 0.1)
+	p.color = Color.WHITE
+	p.material = BattleFxMaterials.additive()
+	p.color_ramp = BattleFxMaterials.fire_ramp()
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.8).timeout.connect(p.queue_free)
@@ -1601,11 +1766,13 @@ func _spawn_volt_arc_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	var bolt := Line2D.new()
 	bolt.width = 4.0 * scale_mult
 	bolt.default_color = Color(0.4, 0.85, 1.0, 0.95)
+	bolt.material = BattleFxMaterials.additive()
 	bolt.z_index = 62
 
 	var core := Line2D.new()
 	core.width = 1.8 * scale_mult
 	core.default_color = Color.WHITE
+	core.material = BattleFxMaterials.additive()
 	core.z_index = 63
 
 	var top_pt := at + Vector2(randf_range(-25, 25) * scale_mult, -120.0 * scale_mult)
@@ -1643,7 +1810,9 @@ func _spawn_volt_arc_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	p.damping_max = 100.0
 	p.scale_amount_min = 2.0 * scale_mult
 	p.scale_amount_max = 4.5 * scale_mult
-	p.color = Color(0.45, 0.9, 1.0)
+	p.color = Color.WHITE
+	p.material = BattleFxMaterials.additive()
+	p.color_ramp = BattleFxMaterials.volt_ramp()
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.6).timeout.connect(p.queue_free)
@@ -1659,8 +1828,8 @@ func _spawn_blast_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 		ring.default_color = Color(1.0, 0.85, 0.3) if i == 0 else Color(1.0, 0.3, 0.1)
 		ring.z_index = 59
 		var ring_pts := PackedVector2Array()
-		for s in 17:
-			var rad := (float(s) / 16.0) * TAU
+		for s in 33:
+			var rad := (float(s) / 32.0) * TAU
 			ring_pts.append(Vector2(cos(rad), sin(rad)))
 		ring.points = ring_pts
 		ring.position = at
@@ -1685,11 +1854,17 @@ func _spawn_blast_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	p.initial_velocity_max = 280.0 * scale_mult
 	p.scale_amount_min = 3.0 * scale_mult
 	p.scale_amount_max = 8.0 * scale_mult
-	p.color = Color(1.0, 0.9, 0.4)
+	p.color = Color.WHITE
+	p.material = BattleFxMaterials.additive()
+	p.color_ramp = BattleFxMaterials.fire_ramp()
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.7).timeout.connect(p.queue_free)
 
+	# 필살핵 글로우 — 링보다 먼저 터지는 발광. 색은 불꽃 계열로 통일한다.
+	BattleFxMaterials.spawn_glow(
+		_root, at, Color(1.0, 0.6, 0.15), 16.0, 110.0 * scale_mult, 0.3, 55
+	)
 	if SettingsManager.screen_shake:
 		_shake_power = maxf(_shake_power, 8.0)
 	_do_flash(Color(1.0, 1.0, 1.0, 0.45))
@@ -1732,6 +1907,7 @@ func _spawn_shield_up_fx(at: Vector2, scale_mult: float = 1.0) -> void:
 	p.scale_amount_min = 2.0 * scale_mult
 	p.scale_amount_max = 4.0 * scale_mult
 	p.color = Color(0.35, 1.0, 0.85)
+	p.material = BattleFxMaterials.additive()
 	_root.add_child(p)
 	p.emitting = true
 	get_tree().create_timer(0.7).timeout.connect(p.queue_free)

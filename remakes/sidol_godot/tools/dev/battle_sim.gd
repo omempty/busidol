@@ -59,6 +59,8 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 	var dealt_count := 0
 	var enemy_hp_total := 0
 	var specials_total := 0
+	var heavies_total := 0
+	var charges_total := 0
 	var lost_total := 0
 	var names: Dictionary = {}
 
@@ -77,6 +79,8 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 		dealt_count += int(result["swings"])
 		enemy_hp_total += int(result["enemy_hp"])
 		specials_total += int(result.get("specials", 0))
+		heavies_total += int(result.get("heavies", 0))
+		charges_total += int(result.get("charges", 0))
 		lost_total += int(result.get("lost", 0))
 
 	var avg_turns := float(turns_total) / float(runs)
@@ -106,21 +110,24 @@ func _run_floor(floor_no: int, level: int, runs: int) -> void:
 	# 상태이상 집계 — 기존 표는 그대로 두고 한 줄만 덧붙인다(파서 호환).
 	print(
 		(
-			"      └ 특수 %d회(전투당 %.2f·턴당 %.1f%%) · 마비 턴상실 %d회"
+			"      └ 특수 %d회(전투당 %.2f·턴당 %.1f%%) · 강타 %d회(모으기 %d) · 마비 턴상실 %d회"
 			% [
 				specials_total,
 				float(specials_total) / float(maxi(runs, 1)),
 				100.0 * float(specials_total) / float(maxi(turns_total, 1)),
+				heavies_total,
+				charges_total,
 				lost_total,
 			]
 		)
 	)
 
 
-## 전투 1회 — 플레이어는 기본 공격만, 적은 특수(상태이상)→통상 순서.
-## 판정은 실제 전투와 같은 BattleController를 쓴다(약점·브레이크·방어 규칙까지 포함).
+## 전투 1회 — 플레이어는 기본 공격만, 적은 발산→특수→모으기→통상 순서.
+## 판정은 실제 전투와 같은 BattleController를 쓴다(약점·브레이크·방어·철벽·강타까지 포함).
 ## 턴 순서는 실전 _resolve_turn을 따른다: 적 특수→통상 뒤 라운드당 1회 tick_effects,
 ## 마비면 플레이어 공격을 통째로 스킵한다(_consume_turn_if_paralyzed).
+## 브레이크된 적은 스킵한다(실전과 같은 규약 — 2026-09-10부터 enemy_turn이 직접 건너뛴다).
 func _simulate(enemy_id: String, level: int) -> Dictionary:
 	var built_player := _player_at(level)
 	var player := Combatant.new(
@@ -161,6 +168,8 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 	var broke := false
 	var win := false
 	var specials := 0
+	var heavies := 0
+	var charges := 0
 	var lost := 0
 	ctrl.battle_finished.connect(func(result: StringName) -> void: win = result == &"win")
 
@@ -186,6 +195,10 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 		var eres := ctrl.enemy_turn(enemy_id)
 		if eres.has("special"):
 			specials += 1
+		if eres.has("heavy"):
+			heavies += 1
+		if eres.has("charging"):
+			charges += 1
 		# 씬 흐름과 같은 규약 — 적 페이즈가 끝나면 판정 상태를 플레이어 차례로 되돌린다.
 		ctrl.begin_player_phase()
 		var taken := before - player.hp
@@ -209,6 +222,8 @@ func _simulate(enemy_id: String, level: int) -> Dictionary:
 		"hits": hits,
 		"broke": broke,
 		"specials": specials,
+		"heavies": heavies,
+		"charges": charges,
 		"lost": lost,
 	}
 

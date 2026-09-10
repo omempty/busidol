@@ -157,6 +157,12 @@ func _apply_species_meta(raw: Dictionary) -> void:
 		# (2026-09-06: 실제로 넣자마자 발동률 0%가 나와 여기가 막힌 것을 알았다).
 		if entry.has("special"):
 			_enemies[sid]["special"] = entry["special"]
+		# 강타·철벽도 같은 문을 통과한다 — species 딕셔너리가 통째로 넘어가는 게 아니라
+		# 여기서 고른 키만 넘어간다. 키를 추가하고 여기를 빼먹으면 조용히 0%다.
+		if entry.has("heavy"):
+			_enemies[sid]["heavy"] = entry["heavy"]
+		if entry.has("bulwark"):
+			_enemies[sid]["bulwark"] = entry["bulwark"]
 	for bid: String in raw.get("bosses", {}):
 		if _enemies.has(bid):
 			_enemies[bid]["weaknesses"] = raw["bosses"][bid].get("weaknesses", [])

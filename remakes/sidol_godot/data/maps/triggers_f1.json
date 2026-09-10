@@ -108,6 +108,20 @@
         "Q_F1_GAS"
       ],
       "_comment": "마스터 시나리오 §1 클라이맥스 「2층 철문 대폭파」 — 그 철문이 곧 F1→F2 계단이다(transitions.json stairs_center_up_f1 anchor=[100,63]). 자리표시자 (3,0)은 맵 상단봉인 띠 안이라 걸어서 그 앞에 설 수 없었다(2026-08-29 cell_probe 실측)."
+    },
+    {
+      "id": "f1_rest",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [177, 58],
+        [100, 61],
+        [169, 58]
+      ],
+      "action": {
+        "cutscene": "rest_entry"
+      },
+      "_comment": "층간 휴식(계단 앞 회복소) — f0 상승·f2 하강 착지 셀. done_flag 없음=매 진입 회복."
     }
   ]
 }

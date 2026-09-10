@@ -423,6 +423,10 @@ func _on_choreo_damage_frame() -> void:
 
 	if broke:
 		_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
+		if idx >= 0 and idx < _presenter.enemy_sprites.size():
+			_presenter.spawn_impact_glow(
+				_presenter.enemy_sprites[idx].position, Color(1.0, 0.5, 0.2), 150.0
+			)
 		_log(tr("UI_BLOG_BREAK") % who, BattleLog.Kind.ACCENT)
 		AudioManager.play_sfx(&"sfx_explosion")
 		AudioManager.play_break_shatter()
@@ -630,11 +634,23 @@ func _enemy_act(actor: Combatant, idx: int) -> void:
 			)
 		)
 	var eid := str(_enemy_ids[idx]) if idx >= 0 and idx < _enemy_ids.size() else ""
+	# 적 턴 연출의 대상 인덱스 단일 출처 — 빔·회피 컷이 때리는 적을 보게.
+	# 죽은 적을 가리킨 채로 들어오면 빔이 엉뚱한 자리에서 나간다.
+	_presenter.target_index = idx
+	# 모은 강타가 있으면 발산이 그 턴을 잡아먹는다(특수·통상보다 먼저).
+	if actor.pending_heavy_mult > 0.0:
+		await BattleEnemyPhase.unleash_heavy(actor, player_combatant, _presenter, idx)
+		return
 	if (
 		not eid.is_empty()
 		and await BattleEnemyPhase.try_special(
 			actor, player_combatant, eid, _presenter, EnemyManager.rng
 		)
+	):
+		return
+	if (
+		not eid.is_empty()
+		and await BattleEnemyPhase.try_heavy_charge(actor, eid, _presenter, EnemyManager.rng, idx)
 	):
 		return
 	await BattleEnemyPhase.regular_attack(actor, player_combatant, _presenter)

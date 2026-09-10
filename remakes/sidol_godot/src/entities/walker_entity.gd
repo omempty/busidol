@@ -13,6 +13,11 @@ extends Node2D
 
 const STEP_TIME := 0.34
 const TURN_PAUSE_TIME := 1.0
+## 괴물 접근 경고 반경(체비셰프) — 안으로 들어오면 머리 위에 느낌표를 든다.
+## 적 엔티티의 추적 경고와 같은 어휘(빨간 ! 칩+팝)로 맞춘다. 빨간 느낌표는
+## 이 게임에서 "괴물 관련 위험" 하나만 뜻한다(EnemyEntity._build_alert_marker와 동기화).
+const FOE_ALERT_RADIUS := 5
+const FOE_ALERT_Y := -62.0
 
 var walker_id := &""
 var sprite_id := &""
@@ -24,6 +29,10 @@ var cell := Vector2i.ZERO
 var sprite := AnimatedSprite2D.new()
 
 var _runtime: MapRuntime
+## 적 위치 공급원 — 필드가 스폰 때 넘긴다. 없으면 회피·경고 없이 걷는다.
+var foe_source: EnemyManager = null
+var _foe_alert: PanelContainer
+var _foe_warned := false
 var _legs: Array = []  # [{dir: Vector2i, steps: int}, ...]
 var _leg := 0
 var _left := 0
@@ -46,7 +55,8 @@ func setup(
 	p_name: String = "",
 	p_seq: StringName = &"",
 	p_variants: Array = [],
-	p_repeat_seq: Variant = null
+	p_repeat_seq: Variant = null,
+	p_tint: Color = Color.WHITE
 ) -> void:
 	walker_id = p_id
 	sprite_id = p_sprite
@@ -60,6 +70,8 @@ func setup(
 	position = GridMover.block_center(cell)
 	z_index = 14
 	_build_visual()
+	# tint는 스프라이트에만 — 경고 칩까지 물들이면 빨간 !의 어휘가 흐려진다.
+	sprite.modulate = p_tint
 	if not _legs.is_empty():
 		_left = int(Dictionary(_legs[0]).get("steps", 0))
 		_current_dir = Dictionary(_legs[0]).get("dir", Vector2i.DOWN)
@@ -106,6 +118,7 @@ func _build_visual() -> void:
 		sprite.offset = Vector2(0.0, SpriteSets.foot_offset(_meta))
 	_base_scale = sprite.scale
 	add_child(sprite)
+	_build_foe_alert()
 	_face(Vector2i.DOWN, false)
 
 
@@ -114,6 +127,7 @@ func _process(delta: float) -> void:
 		return
 	# 외형 호흡은 매 프레임(정지 중에도 살아 있게). 이동은 아래 게이트를 통과해야.
 	_update_breathing(delta)
+	_update_foe_alert()
 	if _is_talking:
 		return
 	if _is_stepping:
@@ -122,6 +136,55 @@ func _process(delta: float) -> void:
 	if _wait > 0.0:
 		return
 	_step_once()
+
+
+## 괴물 접근 경고 — 반경 안에 적이 있으면 느낌표를 든다(없으면 내린다).
+## 몸은 붉히지 않는다 — 그건 "쫓기고 있다"는 적 엔티티의 어휘다.
+## 워커는 "무서워하고 있다"라 표식만 든다.
+func _update_foe_alert() -> void:
+	if _foe_alert == null:
+		return
+	var dist := _nearest_foe_dist()
+	var near := dist >= 0 and dist <= FOE_ALERT_RADIUS
+	if near == _foe_warned:
+		return
+	_foe_warned = near
+	_foe_alert.visible = near
+	if not near:
+		return
+	var tw := create_tween()
+	_foe_alert.position.y = FOE_ALERT_Y + 8.0
+	tw.tween_property(_foe_alert, "position:y", FOE_ALERT_Y - 5.0, 0.14).set_trans(Tween.TRANS_QUAD)
+	tw.tween_property(_foe_alert, "position:y", FOE_ALERT_Y, 0.10)
+
+
+## 가장 가까운 적까지 체비셰프 거리. 적이 없으면 -1.
+func _nearest_foe_dist() -> int:
+	if foe_source == null:
+		return -1
+	var best := -1
+	for f in foe_source.living_cells():
+		var d := maxi(absi(f.x - cell.x), absi(f.y - cell.y))
+		if best < 0 or d < best:
+			best = d
+	return best
+
+
+## 추적 경고 표식 — EnemyEntity와 같은 칩+느낌표(빨간 ! = 괴물 위험).
+func _build_foe_alert() -> void:
+	_foe_alert = PanelContainer.new()
+	var sb := HudTheme.chip(Color(0.10, 0.04, 0.04, 0.92), 5, 7, 1)
+	sb.border_color = EnemyEntity.ALERT_COLOR
+	sb.set_border_width_all(1)
+	_foe_alert.add_theme_stylebox_override("panel", sb)
+	_foe_alert.position = Vector2(-9, FOE_ALERT_Y)
+	_foe_alert.visible = false
+	_foe_alert.z_index = 20
+	_foe_alert.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mark := HudTheme.label("!", 15, EnemyEntity.ALERT_COLOR)
+	mark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_foe_alert.add_child(mark)
+	add_child(_foe_alert)
 
 
 ## 호흡 — **정수 1px 왕복만.** 스케일도 소수 오프셋도 쓰지 않는다.
@@ -163,6 +226,10 @@ func _step_once() -> void:
 		if not _runtime.is_passable(c):
 			blocked = true
 			break
+	# 괴물이 서 있는 칸으로는 안 간다 — 겹치면 유령처럼 비치고, 그건 개그가 아니라 버그다.
+	# 막힌 길과 같은 처리(다리 넘기고 대기)로 방향을 튼다.
+	if not blocked:
+		blocked = _foe_on(want)
 
 	if blocked:
 		_face(dir, false)
@@ -186,6 +253,18 @@ func _step_once() -> void:
 			if _left <= 0:
 				_face(_current_dir, false)
 	)
+
+
+## 들어갈 칸에 적이 있으면 true — 회피 판정용.
+func _foe_on(want: Vector2i) -> bool:
+	if foe_source == null:
+		return false
+	var want_cells := Placement.body_cells(want)
+	for f in foe_source.living_cells():
+		for c in Placement.body_cells(f):
+			if c in want_cells:
+				return true
+	return false
 
 
 func _face(dir: Vector2i, walking: bool) -> void:

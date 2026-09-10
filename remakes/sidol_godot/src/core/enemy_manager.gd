@@ -11,6 +11,11 @@ extends Node
 ## 조명을 여기서 직접 달지 않는 이유는 순환 참조와 관심사 분리다(이 클래스는 판정만).
 signal enemy_spawned(e: EnemyEntity)
 
+## 워프(잠복 출현·순간이동)로 자리를 크게 옮겼다 — 필드가 먼지 연출을 붙인다.
+## burrow는 설계가 "땅속으로 숨었다 나타난다"인데 연출이 없어 순간이동 버그로
+## 보였다(2026-09-10 유저 지적). 사라진 자리·나타난 자리 양쪽에 뿜는다.
+signal enemy_warped(from_cell: Vector2i, to_cell: Vector2i)
+
 static var rng := RandomNumberGenerator.new()
 
 ## 스폰 시 플레이어와 띄울 최소 거리(셀, 체비셰프) — 층 진입·전투 복귀 직후
@@ -253,6 +258,15 @@ func despawn_all() -> void:
 	_entry.clear()
 
 
+## 살아 있는 적들의 앵커 셀 — 워커 회피·경고 표시가 쓴다.
+func living_cells() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for e in enemies:
+		if is_instance_valid(e):
+			out.append(e.mover.grid_pos)
+	return out
+
+
 ## 플레이어 몸과 몬스터 몸이 겹치거나 변을 맞대면 전투. 판정은 Placement 단일 출처.
 ## **개체를 돌려준다** — 부르는 쪽이 그 개체를 명단에서 뺄 수 있어야 한다.
 func contact_entity(player_cell: Vector2i) -> EnemyEntity:
@@ -400,6 +414,7 @@ func _apply_move(e: EnemyEntity, dir: Vector2i) -> void:
 	e.mover.teleport(target)
 	_occupy(e, target)
 	e.face(dir)
+	enemy_warped.emit(from, target)
 
 
 func get_occupied() -> Dictionary:

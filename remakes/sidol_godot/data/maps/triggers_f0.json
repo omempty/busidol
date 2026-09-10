@@ -15,6 +15,18 @@
         "cutscene": "f0_disk"
       },
       "_comment": "지하 서고 — F0에서 문으로 막힌 방은 이 하나뿐이다(x169~191 y45~61). 자리표시자 (2,1)은 맵 상단 봉인 띠 안이었다. cell_probe f0 실측: 설 수 있음."
+    },
+    {
+      "id": "f0_rest",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [169, 58]
+      ],
+      "action": {
+        "cutscene": "rest_entry"
+      },
+      "_comment": "층간 휴식(계단 앞 회복소) — f1에서 내려오는 착지 셀. done_flag 없음=매 진입 회복. 전투 후 복귀 좌표는 여기(계단 앞)가 아니라 전투 전 자리라 발동하지 않는다."
     }
   ]
 }

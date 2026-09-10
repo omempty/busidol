@@ -373,3 +373,70 @@ python tools/convert/install_delivery.py flying_thesis null_pointer rogue_vendin
   4~20. 부족한 것은 소품·타일셋(원작 131~138)인데 그 납품 경로가 아직 없다.
 - **몬스터 화면 크기**: 잡몹 85px · 보스 128px · sys_builder 192px
   (`SCALE_MIN = 0.6667`로 아래쪽만 원복 — 전면 원복이 아니다).
+
+---
+
+## H. 추가분 (2026-09-10 오후 세션) — 전투 재미 · 유입 NPC · 이펙트
+
+> 같은 브랜치(`session19/tools-ai-assets`)에서 이어진 작업. **아직 커밋 안 됨** —
+> 아래 변경분 전부 워킹 트리에 있다. 관문은 전부 통과(import 0 · validate 0 ·
+> smoke·smoke_field·smoke_battle·smoke_f1_events PASS).
+
+### H.1 전투 재미 (평타 연타 100% 승률 처방)
+- **강타**: 전 종 `monsters.json` `heavy`{chance 0.10~0.20, mult 1.6~2.4} —
+  모으기 턴(텔레그래프+CHARGE 팝+경고) → 다음 턴 발산. 대응=가드·격파·**브레이크(소멸)**.
+  판정 `roll_heavy`(순수) · 연출 `try_heavy_charge`/`unleash_heavy` · 계측은
+  `BattleController.enemy_turn`. 브레이크 턴 감소도 여기로 일원화(sim 영구 브레이크 수정).
+- **철벽**: `bulwark.normal_mult`(iron_voc 0.5 · null_pointer 0.45) — 약점·브레이크
+  아닌 타격만 감쇄. `Database` 패스스루에 `heavy`·`bulwark` 추가(안 하면 0% — special과 같은 함정).
+- **재측정**(평타만·가드 없음, 층당 200): f4 승률 90% · f5 94.5%. 매운맛은 도전 난이도 담당.
+  수치는 `docs/02_design/08_battle_rules.md` §7·§11에 실측 표로 갱신됨.
+- **대형 컷 정교화**(WARMODE.C 대조): 스윙 종료 150→130(팔만 나오던 원인), flurry 20회,
+  회피 b/c 구조 분리, 볼트 비행 중 적 퇴장, 딤 0.86+레터박스, z-order(빔이 딤 위로),
+  컷 중 작은 주인공 숨김.
+- **이펙트**: `src/battle/battle_fx_materials.gd` 신설 — 가산 블렌드·수명 색곡선·
+  방사 글로우·피격 백열. 파티클·잔상·원작 FX·베기 아크에 적용.
+
+### H.2 필드 편의
+- **층간 휴식(회복소)**: `data/cutscenes/rest_entry.json` + `recover` op(컷신) +
+  f0~f5 계단 착지 `fX_rest` zone 트리거. 전투 후 복귀 좌표에선 발동 안 함.
+  HUD 갱신은 `state_changed.emit` 필수(빠뜨리면 게이지가 안 움직인다).
+- **워커 기능**: `tint` 지원(스프라이트만) · `enabled` 킬스위치 ·
+  **괴물 회피+느낌표**(반경 5, 적 추적 경고와 같은 칩). `EnemyManager.living_cells()` 추가.
+- **적 워프 먼지**: `EnemyManager.enemy_warped` 시그널 → `FieldFx.enemy_warp_puff`.
+  D웜 순간이동이 버그로 보이던 것(burrow 연출 미재생)의 처방.
+- **세이브 슬롯 크래시 가드**: `save_slot_list.gd`의 `get_viewport()` null 가드.
+
+### H.3 유입 NPC (B급 오마주 — "잘못 워프된 자들")
+| 층 | id | 시트 | 비고 |
+|---|---|---|---|
+| f1 | 방랑 자판기 | rogue_vending 재사용+tint | 로그 벤딩과 구분 대사. **벽 앞(x116, 벽 y24-25)** |
+| f1 | 전직 경비 | guard_idle 재사용+tint | |
+| f1 | 미아 모험가 | lost_squire (Conrad, CC-BY-SA, 32px native ×2) | 문워크 교정済 |
+| f2 | 길 잃은 오크 | lost_orc (AntumDeluge Orcs, CC-BY 3.0, 48x64 1:1) | 적 오인 개그 |
+| f2 | 납치 공주 | lost_princess (Cabbit+AntumDeluge Gypsy, CC-BY 3.0, 48x64) | 오크와 듀오 |
+
+- 대사 상황분기: f1 워커 2명에 `sequence_variants`(Q_F1_BLAST / Q_F1_BLACKOUT) 추가.
+  DialogueManager가 플래그를 보고 고른다. f2 오크·공주는 다음 세션.
+- **크레딧 표기済**(`data/credits.json` staff_roll). 시트 메타 `source`에 라이선스 명시.
+- **외부 리소스 폴더 규약**: `assets/raw/inflow/` — 파일명=id, 같은 이름 `.txt`=출처.
+  미아 모험가 원본(Conrad)·슬라임 팩이 여기 있다.
+
+### H.4 발주서 (판타지 파티 4대장 — 납품 대기)
+`assets/gen/prompts/web/npcs__party_hero.md` · `__party_mage.md` · `__party_dwarf.md` ·
+`__party_elf.md` — 512×1024·8행(4방향 걷기4+대기2)·무기 금지. 납품되면 워커 배선.
+
+### H.5 외부 사이트 검토 결과
+- **Kenney**: 탈락 — Roguelike Characters는 16px 부속품(조립 필요)이라 규격 미달.
+- **CraftPix**: 계정 가입 필요(자동 다운 불가) + 벡터풍 톤. `Tiny Schoolgirl` 팩만 육안 후보.
+- **OGA 48px+ 라인 채택**(오크·공주 실증). 최소 규격: **네이티브 32px 이상 + 정수배만**.
+
+### H.6 다음 세션 할 것
+1. **슬라임 팩 활용** — `assets/raw/inflow/craftpix-net-788364-free-slime-mobs-pixel-art-top-down-sprite-pack`(Slime1~3,
+   Walk 512×256·Idle 384×256 — **셀 레이아웃 실측 먼저**). 제안: 미아 파티의 펫 워커
+   ("미아 슬라임") 또는 f0 적. 크롤링 아님(사용자 제공분).
+2. **오크·공주 상황분기 대사**(f2 플래그).
+3. **방랑 자판기 판매 기능** 여부 결정(현재 말만 검).
+4. 4대장 납품 시 배선.
+5. **커밋** — 이 세션 변경분이 전부 미커밋이다.
+6. 실플레이 피드백(사용자 실행 중) 반영.

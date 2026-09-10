@@ -36,6 +36,102 @@
           "steps": 30
         }
       ]
+    },
+    {
+      "id": "walker_f1_squire",
+      "sprite": "lost_squire",
+      "name": "미아 모험가",
+      "sequence_id": "lost_squire_f1",
+      "repeat_sequence_id": "lost_squire_f1_repeat",
+      "_comment": "오마주 워커 파일럿 — CC-BY-SA 시트(Conrad 개조, 32px native x2). 좌우 매핑 교정됨.",
+      "pos": [
+        85,
+        26
+      ],
+      "pattern": [
+        {
+          "dir": "left",
+          "steps": 6
+        },
+        {
+          "dir": "right",
+          "steps": 6
+        }
+      ]
+    },
+    {
+      "id": "walker_f1_vending",
+      "sprite": "rogue_vending",
+      "name": "방랑 자판기",
+      "sequence_id": "vending_f1_first",
+      "repeat_sequence_id": "vending_f1_repeat",
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F1_BLAST",
+          "sequence_id": "vending_f1_blast"
+        },
+        {
+          "requires_flag": "Q_F1_BLACKOUT",
+          "sequence_id": "vending_f1_blackout"
+        }
+      ],
+      "tint": [
+        1.0,
+        0.88,
+        0.7
+      ],
+      "_comment": "방랑 자판기 파일럿 — 적 로그 벤딩과 동형이나 워커라 전투 없음. 따뜻한 tint+이름+대사로 구분. 2026-09-10: 로비 중앙(x95)에서 벽 앞(x116, 벽 y24-25 아래)으로 이동 — 자판기는 벽에 붙어야 자연스럽다.",
+      "pos": [
+        116,
+        26
+      ],
+      "pattern": [
+        {
+          "dir": "right",
+          "steps": 4
+        },
+        {
+          "dir": "left",
+          "steps": 4
+        }
+      ]
+    },
+    {
+      "id": "walker_f1_exguard",
+      "sprite": "guard_idle",
+      "name": "전직 경비",
+      "sequence_id": "guard_ex_first",
+      "repeat_sequence_id": "guard_ex_repeat",
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F1_BLAST",
+          "sequence_id": "guard_ex_blast"
+        },
+        {
+          "requires_flag": "Q_F1_BLACKOUT",
+          "sequence_id": "guard_ex_blackout"
+        }
+      ],
+      "tint": [
+        0.85,
+        0.8,
+        1.0
+      ],
+      "_comment": "전직 경비 — guard_idle 시트 재사용(현직 경비와 tint로 구분). 기존 walker_f1 복도 구간 서쪽 짧은 왕복.",
+      "pos": [
+        65,
+        26
+      ],
+      "pattern": [
+        {
+          "dir": "right",
+          "steps": 5
+        },
+        {
+          "dir": "left",
+          "steps": 5
+        }
+      ]
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "id": "rest_entry",
+  "schema_version": 1,
+  "_comment": "층간 휴식 — 계단 앞 회복소 zone 트리거가 호출한다(triggers_f0~f5). 대사가 없어 입력 대기 없이 끝나고, 다 찼으면 recover op이 조용히 통과한다. 전투 후 필드 복귀 때는 발동하지 않는다(복귀 좌표는 계단 앞이 아니라 전투 전 자리).",
+  "steps": [
+    {
+      "op": "recover",
+      "args": {
+        "ratio": 1.0
+      }
+    }
+  ]
+}

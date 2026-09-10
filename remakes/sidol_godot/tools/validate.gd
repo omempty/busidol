@@ -15,6 +15,7 @@ const KNOWN_OPS := [
 	"set_flags",
 	"grant_item",
 	"grant_skill",
+	"recover",
 	"craft",
 	"damage",
 	"blackout",

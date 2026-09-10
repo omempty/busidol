@@ -45,6 +45,8 @@ func _on_acquired(kind: StringName, id: StringName, amount: int) -> void:
 ## 이름은 **데이터가 정한다** — 여기 문자열을 박으면 개명 때 이 자리가 빠진다
 ## (2026-08-30 「부싯돌 → 시돌」 개명에서 실제로 겪은 자리).
 func _describe(kind: StringName, id: StringName, amount: int) -> String:
+	if kind == &"heal":
+		return tr("UI_ACQUIRE_HEAL") % amount
 	if kind == &"skill":
 		for sk: Dictionary in _all_skills():
 			if str(sk.get("id", "")) == String(id):

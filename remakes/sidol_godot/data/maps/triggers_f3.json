@@ -82,6 +82,21 @@
         "cutscene": "f3_fog_choke"
       },
       "_comment": "독안개 구역 — 방독면 보유 시 damage op이 조용히 통과(protect_item). 주 진입로라 막지 않고 통행료만 물린다. cell_probe f3 실측: 4칸 모두 도달 앵커."
+    },
+    {
+      "id": "f3_rest",
+      "type": "zone",
+      "once": false,
+      "cells": [
+        [103, 61],
+        [177, 58],
+        [100, 61],
+        [169, 58]
+      ],
+      "action": {
+        "cutscene": "rest_entry"
+      },
+      "_comment": "층간 휴식(계단 앞 회복소) — 상행·하행 착지 셀. done_flag 없음=매 진입 회복."
     }
   ]
 }

@@ -235,9 +235,13 @@ UI_BATTLE_STATUS_RESISTED,저항했다!,Resisted!
 UI_BLOG_STATUS_RESIST,%s의 수작을 버텨 냈다,%s's trick was resisted
 UI_BLOG_ENEMY_PARALYZE,%s의 방전! 몸이 저릿하다 (%d),%s discharges! Numbness (%d)
 UI_BLOG_ENEMY_DOT,%s의 부식 공격! 턴마다 %d,%s corrodes you! %d per turn
+UI_BLOG_ENEMY_HEAVY_CHARGE,%s가 힘을 모은다! 다음 턴에 강타!,%s is charging power! Heavy strike next turn!
+UI_BLOG_ENEMY_HEAVY_HIT,%s의 강타 %d,%s heavy strike %d
+UI_BATTLE_HEAVY_WARN,다음 턴 강타! 방어로!,Heavy incoming! Guard!
 UI_BATTLE_PARALYZED,몸이 저려 움직일 수 없다!,Too numb to move!
 UI_BLOG_PLAYER_PARALYZED,마비 — 턴을 잃었다,Paralyzed — turn lost
 UI_ACQUIRE_SKILL,신기술 『%s』을(를) 익혔다!,Learned skill: %s!
+UI_ACQUIRE_HEAL,휴식 — HP +%d,Rested — HP +%d
 UI_ACQUIRE_ITEM,%s 획득,Got %s
 UI_ACQUIRE_ITEM_N,%s ×%d 획득,Got %s x%d
 UI_QUEST_LOCKED,(아직 알 수 없다),(not yet known)

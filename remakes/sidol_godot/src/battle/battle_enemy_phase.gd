@@ -73,10 +73,96 @@ static func try_special(
 	return true
 
 
+## 강타 모으기 — 종별 두 번째 수. `heavy`{chance, mult}는 monsters.json이 정한다.
+## 판정(roll_heavy)과 연출(try/unleash)을 나눈다 — sim이 같은 주사위를 굴리게
+## (roll_special과 같은 규약). 모으기 턴은 피해가 없고, 다음 적 턴에 발산한다.
+## 브레이크·사망이 모으기를 깬다(카운터 플레이 — 발산 전에 깨뜨려라).
+## 반환: 빈 사전(불발·이미 모으는 중·정의 없음) / {"mult"} (모으기 시작).
+static func roll_heavy(
+	attacker: Combatant, enemy_id: String, rng: RandomNumberGenerator
+) -> Dictionary:
+	if attacker.pending_heavy_mult > 0.0:
+		return {}
+	var edef := Database.get_enemy_def(StringName(enemy_id))
+	var spec: Dictionary = edef.get("heavy", {})
+	if spec.is_empty():
+		return {}
+	if rng.randf() > float(spec.get("chance", 0.0)):
+		return {}
+	attacker.pending_heavy_mult = maxf(float(spec.get("mult", 2.0)), 1.0)
+	return {"mult": attacker.pending_heavy_mult}
+
+
+## 모은 강타 발산 피해 — 통상 1타 × 모은 배율. 발산하면 모으기는 소멸한다.
+static func heavy_damage(attacker: Combatant, rng: RandomNumberGenerator) -> int:
+	var mult := maxf(attacker.pending_heavy_mult, 1.0)
+	attacker.pending_heavy_mult = 0.0
+	var raw := DamageCalculator.enemy_hit(attacker.attack_stat(), rng)
+	return maxi(1, int(round(float(raw) * mult)))
+
+
+## 강타 모으기 턴(실전) — 텔레그래프 + 경고 + 로그. 피해는 없다(모으는 대가).
+## 반환: 모으기를 시작했는가.
+static func try_heavy_charge(
+	attacker: Combatant,
+	enemy_id: StringName,
+	presenter: BattlePresenter,
+	rng: RandomNumberGenerator,
+	index: int
+) -> bool:
+	var rolled := roll_heavy(attacker, str(enemy_id), rng)
+	if rolled.is_empty():
+		return false
+	presenter.play_enemy_anim(index, "attack")  # 몸을 웅크리는 예비 동작
+	# 예고는 눈에 띄어야 예보다 — 섬광을 길게(4연타) + 짧은 흔들림.
+	# 흔들림은 설정의 screen_shake를 따른다(멀미 대응).
+	presenter.play_telegraph("flash_red_1.0s")
+	presenter.play_screen_kf({"shake": 4.0})
+	presenter.show_flag_pop("CHARGE!", Color(1.0, 0.3, 0.2), index)
+	presenter.show_player_note(TranslationServer.translate("UI_BATTLE_HEAVY_WARN"))
+	BattleLog.push(
+		TranslationServer.translate("UI_BLOG_ENEMY_HEAVY_CHARGE") % attacker.display_name,
+		BattleLog.Kind.DAMAGE
+	)
+	var tree := Engine.get_main_loop() as SceneTree
+	await tree.create_timer(0.8).timeout
+	return true
+
+
+## 모은 강타 발산(실전) — 돌진 → 빔(대형 종) → 피해 숫자·피격. 통상보다 크게 흔든다.
+static func unleash_heavy(
+	attacker: Combatant, player: Combatant, presenter: BattlePresenter, index: int
+) -> void:
+	presenter.play_enemy_anim(index, "attack")
+	presenter.enemy_lunge(index)
+	await presenter._cut_beat(presenter.enemy_attack_beat(index))
+	await presenter.origin_attack_fx_async(true)
+	var raw := heavy_damage(attacker, EnemyManager.rng)
+	var actual: int = player.take_damage(raw)
+	if actual * 4 >= maxi(player.max_hp, 1):
+		await presenter.play_origin_avoid_cut_async()
+	presenter.show_damage_number(actual, true)
+	BattleLog.push(
+		TranslationServer.translate("UI_BLOG_ENEMY_HEAVY_HIT") % [attacker.display_name, actual],
+		BattleLog.Kind.DAMAGE
+	)
+	presenter.hurt_flash(presenter.player_sprite)
+	# 강타 착탄 글로우 — 화면에서 가장 아픈 자리임을 발광으로 못 박는다.
+	if presenter.player_sprite != null and is_instance_valid(presenter.player_sprite):
+		presenter.spawn_impact_glow(presenter.player_sprite.position, Color(1.0, 0.35, 0.1), 150.0)
+	presenter.play_fx_kf({"effect": "hit_spark", "at_actor": "self"})
+	presenter.play_screen_kf(
+		{"shake": minf(4.0 + float(maxi(actual, 0)) / 6.0, 8.0), "flash": "#ff2222", "a": 0.25}
+	)
+	if actual > 0:
+		presenter.hitstop()
+
+
 ## 일반 공격 — 첫 생존 적의 턴(원작 공식: (Power + rnd(10)) / 6).
 ##
 ## 순서(원작 `EnemyAttackAni` → `MyAvoid`, WARMODE.C:537-642):
-## 돌진 → 섬광·빔(딤 상영) → 주인공 회피 컷(임팩트만) → 피해 숫자·피격.
+## 돌진 → 섬광(공격자가 딤 위에 선다) → 볼트(적 퇴장·검은 화면에 볼트만, 원작 `Page_Clear` 자리)
+## → 주인공 회피 컷(임팩트만) → 피해 숫자·피격.
 ## 2026-09-09까지는 피해 계산·숫자·피격이 먼저 나가고 돌진·빔 트윈이 뒤에서
 ## 알아서 도는 fire-and-forget이라 "순서가 엉망"이었다(§8.1).
 static func regular_attack(

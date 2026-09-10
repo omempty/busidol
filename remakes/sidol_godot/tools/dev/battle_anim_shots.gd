@@ -31,6 +31,10 @@ func _ready() -> void:
 		get_tree().quit(0)
 		return
 	DirAccess.make_dir_recursive_absolute(OUT_DIR)
+	# 실행마다 비운다 — 샷이 쌓이면 이전 실행분과 섞여 "지금 코드"를 못 본다(2026-09-10).
+	for f in DirAccess.get_files_at(OUT_DIR):
+		if f.ends_with(".png"):
+			DirAccess.remove_absolute("%s/%s" % [OUT_DIR, f])
 	var args := OS.get_cmdline_user_args()
 	var eid := str(args[0]) if args.size() > 0 else "hellcop"
 

@@ -175,6 +175,152 @@
         }
       ]
     },
+    "lost_squire_f1": {
+      "_comment": "미아 모험가(오마주 워커) 첫 대화 — CC-BY-SA 시트. 던전 착각 램프쉐이드.",
+      "steps": [
+        {
+          "speaker": "미아 모험가",
+          "text": "@c664"
+        },
+        {
+          "speaker": "미아 모험가",
+          "text": "@c665"
+        }
+      ]
+    },
+    "lost_squire_f1_repeat": {
+      "_comment": "미아 모험가 반복 대사",
+      "steps": [
+        {
+          "speaker": "미아 모험가",
+          "text": "@c666"
+        }
+      ]
+    },
+    "vending_f1_first": {
+      "_comment": "방랑 자판기 첫 대화 — 로그 벤딩 선긋기.",
+      "steps": [
+        {
+          "speaker": "방랑 자판기",
+          "text": "@c667"
+        },
+        {
+          "speaker": "방랑 자판기",
+          "text": "@c668"
+        }
+      ]
+    },
+    "vending_f1_repeat": {
+      "_comment": "방랑 자판기 반복 대사",
+      "steps": [
+        {
+          "speaker": "방랑 자판기",
+          "text": "@c669"
+        }
+      ]
+    },
+    "guard_ex_first": {
+      "_comment": "전직 경비 첫 대화.",
+      "steps": [
+        {
+          "speaker": "전직 경비",
+          "text": "@c670"
+        },
+        {
+          "speaker": "전직 경비",
+          "text": "@c671"
+        }
+      ]
+    },
+    "guard_ex_repeat": {
+      "_comment": "전직 경비 반복 대사",
+      "steps": [
+        {
+          "speaker": "전직 경비",
+          "text": "@c672"
+        }
+      ]
+    },
+    "lost_orc_first": {
+      "_comment": "길 잃은 오크 첫 대화 — 적 오인 개그.",
+      "steps": [
+        {
+          "speaker": "길 잃은 오크",
+          "text": "@c673"
+        },
+        {
+          "speaker": "길 잃은 오크",
+          "text": "@c674"
+        }
+      ]
+    },
+    "lost_orc_repeat": {
+      "_comment": "길 잃은 오크 반복 대사",
+      "steps": [
+        {
+          "speaker": "길 잃은 오크",
+          "text": "@c675"
+        }
+      ]
+    },
+    "lost_princess_first": {
+      "_comment": "납치 공주 첫 대화 — 납치 클리셰.",
+      "steps": [
+        {
+          "speaker": "납치 공주",
+          "text": "@c676"
+        },
+        {
+          "speaker": "납치 공주",
+          "text": "@c677"
+        }
+      ]
+    },
+    "lost_princess_repeat": {
+      "_comment": "납치 공주 반복 대사",
+      "steps": [
+        {
+          "speaker": "납치 공주",
+          "text": "@c678"
+        }
+      ]
+    },
+    "vending_f1_blast": {
+      "_comment": "방랑 자판기 — 철문 폭파 후 상황 대사.",
+      "steps": [
+        {
+          "speaker": "방랑 자판기",
+          "text": "@c679"
+        }
+      ]
+    },
+    "vending_f1_blackout": {
+      "_comment": "방랑 자판기 — 정전 중 상황 대사.",
+      "steps": [
+        {
+          "speaker": "방랑 자판기",
+          "text": "@c680"
+        }
+      ]
+    },
+    "guard_ex_blast": {
+      "_comment": "전직 경비 — 철문 폭파 후 상황 대사.",
+      "steps": [
+        {
+          "speaker": "전직 경비",
+          "text": "@c681"
+        }
+      ]
+    },
+    "guard_ex_blackout": {
+      "_comment": "전직 경비 — 정전 중 상황 대사.",
+      "steps": [
+        {
+          "speaker": "전직 경비",
+          "text": "@c682"
+        }
+      ]
+    },
     "f2_rescue_girl": {
       "_comment": "2층 여학생 대사 (1층 구출 후)",
       "steps": [

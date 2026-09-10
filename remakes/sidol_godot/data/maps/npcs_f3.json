@@ -45,7 +45,7 @@
       ],
       "sequence_id": "prof_chem_first",
       "idle_anim": "bob",
-      "wander_range": 0,
+      "wander_range": 1,
       "tint": [
         1.0,
         0.85,

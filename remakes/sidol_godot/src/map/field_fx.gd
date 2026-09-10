@@ -219,6 +219,38 @@ func _chest_sparkle(cells: Array[Vector2i]) -> void:
 	get_tree().create_timer(1.2).timeout.connect(p.queue_free)
 
 
+## 적 워프(잠복·순간이동) 먼지 — 사라진 자리와 나타난 자리에 각각 뿜는다.
+## burrow의 설계는 "땅속으로 숨었다 나타난다"인데 연출이 스펙만 있고 재생이 없어
+## 순간이동 버그로 읽혔다(2026-09-10 유저 지적). 자리 표시만으로 납득이 생긴다.
+func enemy_warp_puff(from_cell: Vector2i, to_cell: Vector2i) -> void:
+	for cell: Vector2i in [from_cell, to_cell]:
+		_dust_at(cell)
+
+
+## 먼지 한 줌 — 상자 기습 연기(_chest_puff)의 옅은 판. 회색이라 아군·적 구분이 없다.
+func _dust_at(cell: Vector2i) -> void:
+	var p := CPUParticles2D.new()
+	p.position = (
+		(Vector2(cell) + Vector2(0.5, 0.5)) * float(MapDefinition.TILE_PX) + Vector2(0, -6)
+	)
+	p.amount = 14
+	p.one_shot = true
+	p.explosiveness = 0.9
+	p.lifetime = 0.55
+	p.direction = Vector2(0, -1)
+	p.spread = 70.0
+	p.gravity = Vector2(0, -30)
+	p.initial_velocity_min = 30.0
+	p.initial_velocity_max = 90.0
+	p.scale_amount_min = 2.5
+	p.scale_amount_max = 4.5
+	p.color = Color(0.55, 0.5, 0.42)
+	p.z_index = Z + 1
+	add_child(p)
+	p.emitting = true
+	get_tree().create_timer(1.2).timeout.connect(p.queue_free)
+
+
 func _put(tex: Texture2D, cell: Vector2i) -> Sprite2D:
 	var s := Sprite2D.new()
 	s.texture = tex

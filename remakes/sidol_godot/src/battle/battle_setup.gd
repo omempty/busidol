@@ -69,6 +69,10 @@ static func build_enemies(def: Dictionary) -> Dictionary:
 		)
 		# 적 DP는 데이터로만 보존한다(원작 미반영) — 표시·설계 근거로 남기되 피해 계산에는 안 쓴다.
 		c.dp_reduces_damage = false
+		# 철벽 계수는 수치만 옮겨 적는다(Combatant는 종 id를 모른다).
+		c.bulwark_mult = clampf(
+			float((edef.get("bulwark", {}) as Dictionary).get("normal_mult", 1.0)), 0.05, 1.0
+		)
 		for w in edef.get("weaknesses", []):
 			c.weaknesses.append(StringName(str(w)))
 		combatants.append(c)
