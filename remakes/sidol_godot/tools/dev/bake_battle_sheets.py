@@ -137,7 +137,21 @@ SHOT_FLIP = {
     "o_ray": True,
 }
 # 뚜렷한 노즐이 있는 종은 그 자리를 직접 잡는다(빨간 링 중심 — 공격 프레임 3 실측).
-SHOT_MUZZLE = {"dworm": [148, 62]}
+# vulgar·ozzy·o_ray: 공격 프레임 3이 바이트 동일(E2·E4·E7 frame3 md5 동일, 알파 마스크 동일) →
+#   같은 손끝 좌표. mad_eye: 동공(검은 구멍) 중심. dworm: 빨간 링 중심. 2026-09-11 실측.
+SHOT_MUZZLE = {
+    "dworm": [148, 62],
+    "mad_eye": [139, 79],
+    "vulgar": [194, 61],
+    "ozzy": [194, 61],
+    "o_ray": [194, 61],
+}
+
+# 프레임별 좌우 반전 — 원작 `EnemyAvoid` WARMODE.C:278이 마드아이(e1)의 4번 프레임만
+# `flag=1`(좌우 반전)로 그린다. e1의 4·5번 프레임은 서로 반대를 향해 저장돼 있어 한 장을
+# 뒤집어야 같은 방향이 된다. 리메이크 hurt 행은 [4, 5]를 col0·col1에 이어 붙이므로
+# col0(=4번)만 뒤집는다. hurt 애니 메타의 `frame_flip`으로 굽는다.
+HURT_FRAME_FLIP = {"mad_eye": [True, False]}
 
 
 # 리메이크 종 → (원작 SPR 세트, 색상환 회전°, 설명)
@@ -200,6 +214,8 @@ def bake(species: str, set_id: str, degrees: int, desc: str, check: bool) -> boo
         for col, frame_no in enumerate(idx):
             sheet.paste(frames[frame_no], (col * CELL_W, row * CELL_H))
         anims[name] = {"row": row, "frames": len(idx), "fps": fps, "loop": loop}
+        if name == "hurt" and species in HURT_FRAME_FLIP:
+            anims[name]["frame_flip"] = [bool(v) for v in HURT_FRAME_FLIP[species]]
     for name, (base, count, fps, loop) in ALIAS.items():
         anims[name] = {"row": anims[base]["row"], "frames": count, "fps": fps, "loop": loop}
 

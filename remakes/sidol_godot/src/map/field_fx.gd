@@ -222,6 +222,12 @@ func _chest_sparkle(cells: Array[Vector2i]) -> void:
 ## 적 워프(잠복·순간이동) 먼지 — 사라진 자리와 나타난 자리에 각각 뿜는다.
 ## burrow의 설계는 "땅속으로 숨었다 나타난다"인데 연출이 스펙만 있고 재생이 없어
 ## 순간이동 버그로 읽혔다(2026-09-10 유저 지적). 자리 표시만으로 납득이 생긴다.
+## 발걸음 먼지 — NPC 배회 착지용 공개 창구. `_dust_at` 그대로라 아군·적 구분이 없다.
+## 발밑에 깔리면 이동이 "디딤"으로 읽힌다(무음 이동이 유령처럼 보이던 자리).
+func step_puff(cell: Vector2i) -> void:
+	_dust_at(cell)
+
+
 func enemy_warp_puff(from_cell: Vector2i, to_cell: Vector2i) -> void:
 	for cell: Vector2i in [from_cell, to_cell]:
 		_dust_at(cell)

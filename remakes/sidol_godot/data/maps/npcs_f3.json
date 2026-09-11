@@ -44,6 +44,7 @@
         19
       ],
       "sequence_id": "prof_chem_first",
+      "repeat_sequence_id": "prof_chem_repeat",
       "idle_anim": "bob",
       "wander_range": 1,
       "tint": [

@@ -35,8 +35,16 @@ var _coord_label: Label
 var _coord_layer: CanvasLayer
 var fx: FieldFx
 var renderer: MapRenderer
+## 맵아트 최소 움직임 — 타일 교체 애니메이터(표가 비면 no-op). bind는 renderer.build 직후.
+var tile_animator: MapTileAnimator
 var _talking_npc: NpcEntity
 var _talking_walker: WalkerEntity
+## 말풍선 기록(세션 한정) — 첫 조우 "!"와 새 대사 "!"를 한 번씩만 띄우기 위함.
+## _emoted_first: 배우 id → true(첫 "!"를 이미 봄). _emoted_seq: 배우 id → 마지막으로 본 시퀀스.
+var _emoted_first: Dictionary = {}
+var _emoted_seq: Dictionary = {}
+## 말풍선 셀 앵커(맵아트 인물용) — 몸이 없어 프롬프트 좌표에 띄운다.
+var _emote_anchor: Node2D = null
 var _trigger_seq_active := false
 var _prev_states := {}
 ## 잠긴/막힌 계단 안내 — stairs_locked/dead 신호 시각+문구. 1.2초간 플레이어 머리 위에 유지.
@@ -71,10 +79,12 @@ func _ready() -> void:
 	add_child(renderer)
 	renderer.build(runtime)
 	_restore_opened_chests()
+	tile_animator = MapTileAnimator.new()
+	add_child(tile_animator)
+	tile_animator.bind_floor(GameState.current_floor, renderer)
 
 	fx = FieldFx.new()
 	add_child(fx)
-
 	lighting = FloorLighting.new()
 	add_child(lighting)
 
@@ -315,6 +325,14 @@ func _physics_process(_delta: float) -> void:
 		if fast_travel.open_for(GameState.current_floor):
 			return
 
+	# 주목 — 3칸 안에 들어온 고정 NPC가 플레이어를 본다(멀리서 알아보는 느낌).
+	# 랜덤 둘러보기와 겹치지 않게 notice()가 look 타이머를 갱신한다. 대화·배회 중 제외.
+	if player != null and player.mover != null:
+		for n: NpcEntity in npcs:
+			var dd: Vector2i = (n.cell - player.mover.grid_pos).abs()
+			if maxi(dd.x, dd.y) <= 3:
+				n.notice(player.mover.grid_pos)
+
 	var npc := _npc_in_front()
 	if npc != null:
 		_prompt.show_at("%s   SPACE" % npc.display_name, npc.position + Vector2(0, -46))
@@ -322,6 +340,7 @@ func _physics_process(_delta: float) -> void:
 		# 접근 반응 — 말을 걸기 전부터 플레이어를 쳐다본다(이동 중에는 손대지 않음).
 		if not npc._is_wandering:
 			npc.face_towards(player.mover.grid_pos)
+		_maybe_emote(String(npc.npc_id), npc, npc.resolve_sequence())
 		if interact_edge:
 			_start_dialogue(npc)
 		return
@@ -330,6 +349,7 @@ func _physics_process(_delta: float) -> void:
 	if walker != null and not walker.sequence_id.is_empty():
 		_prompt.show_at("%s   SPACE" % walker.display_name, walker.position + Vector2(0, -46))
 		_focus.show_cells(Placement.body_cells(walker.cell))
+		_maybe_emote(String(walker.walker_id), walker, walker.resolve_sequence())
 		if interact_edge:
 			_start_walker_dialogue(walker)
 		return
@@ -340,11 +360,12 @@ func _physics_process(_delta: float) -> void:
 	var talk_cell := _talk_in_front()
 	if talk_cell.x >= 0:
 		var talk_attr := runtime.attr_at(talk_cell)
-		_prompt.show_at(
-			"%s   SPACE" % TalkTargets.display_name(talk_attr),
+		var talk_pos := (
 			Vector2(talk_cell.x + 0.5, talk_cell.y) * MapDefinition.TILE_PX - Vector2(0, 26)
 		)
+		_prompt.show_at("%s   SPACE" % TalkTargets.display_name(talk_attr), talk_pos)
 		_focus.show_cells([talk_cell])
+		_maybe_emote_cell(talk_attr, talk_pos)
 		if interact_edge:
 			_start_talk(talk_attr)
 		return
@@ -741,6 +762,8 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	add_child(renderer)
 	renderer.build(runtime)
 	_restore_opened_chests()
+	if tile_animator != null:
+		tile_animator.bind_floor(GameState.current_floor, renderer)
 	# 착지 보정 — 계단/빠른 이동 앵커가 그 층에서 막혀 있을 수 있다(층마다 지형이 다르다).
 	var landing := _nearest_body_spot(new_anchor)
 	player.attach_map(runtime, landing if landing.x >= 0 else new_anchor)
@@ -862,6 +885,8 @@ func _spawn_npcs() -> void:
 		# 그쪽이 이기게 하기 위함이다.
 		npc.set_idle_anim(StringName(str(n.get("idle_anim", NpcEntity.DEFAULT_IDLE_ANIM))))
 		npcs.append(npc)
+		if wander_range > 0:
+			npc.step_landed.connect(_on_npc_step_landed)
 		# 고정 액터는 실체가 있어야 한다 — 통과해 지나가지 못하게 몸 셀을 막는다.
 		# Placement가 문간과 길목을 피해 자리를 골랐으므로 통로는 끊기지 않는다.
 		for c in npc.body_cells():
@@ -1092,6 +1117,51 @@ func _walker_in_front() -> WalkerEntity:
 	return null
 
 
+## 말풍선 — 첫 조우 "…"와 새 대사 "?"를 세션당 한 번씩만 띄운다.
+## 빨간 "!"는 괴물 위험 전용이라 대화에 쓰지 않는다(EmoteBubble 어휘 분리 참조).
+## seq는 지금 고를 대사(대화 시작 시 기록한 것과 다르면 = 플래그로 새 말이 생겼다).
+func _maybe_emote(actor_key: String, actor: Node2D, seq: StringName) -> void:
+	if actor_key.is_empty():
+		return
+	if not _emoted_first.has(actor_key):
+		_emoted_first[actor_key] = true
+		_emoted_seq[actor_key] = String(seq)
+		EmoteBubble.pop(actor, "...", EmoteBubble.COLOR_SPOT)
+		return
+	if String(_emoted_seq.get(actor_key, "")) != String(seq):
+		_emoted_seq[actor_key] = String(seq)
+		EmoteBubble.pop(actor, "?", EmoteBubble.COLOR_NEWINFO)
+
+
+## 배회 착지 — 발걸음 먼지. 조용히 미끄러지면 유령처럼 보인다.
+func _on_npc_step_landed(cell: Vector2i) -> void:
+	if fx != null:
+		fx.step_puff(cell)
+
+
+## 맵아트 인물(타일 대화점) 말풍선 — 몸이 없어 셀 좌표 앵커에 띄운다.
+## 첫 조우 "…" + 갈래 변경(새 정보) "?" — 빨간 "!"는 괴물 위험 전용이라 쓰지 않는다.
+func _maybe_emote_cell(attr: int, at: Vector2) -> void:
+	var key := "att_%d" % attr
+	var bkey := TalkTargets.branch_key(attr)
+	if not _emoted_first.has(key):
+		_emoted_first[key] = true
+		_emoted_seq[key] = bkey
+		_pop_cell_emote(at, "...", EmoteBubble.COLOR_SPOT)
+	elif not bkey.is_empty() and String(_emoted_seq.get(key, "")) != bkey:
+		_emoted_seq[key] = bkey
+		_pop_cell_emote(at, "?", EmoteBubble.COLOR_NEWINFO)
+
+
+## 셀 앵커 — 말풍선 하나가 붙는 가벼운 자리. 프롬프트는 단일 대상이라 하나로 충분하다.
+func _pop_cell_emote(at: Vector2, glyph: String, color: Color) -> void:
+	if _emote_anchor == null or not is_instance_valid(_emote_anchor):
+		_emote_anchor = Node2D.new()
+		add_child(_emote_anchor)
+	_emote_anchor.position = at + Vector2(0, -24)
+	EmoteBubble.pop(_emote_anchor, glyph, color)
+
+
 func _start_dialogue(npc: NpcEntity) -> void:
 	_talking_npc = npc
 	player.mover.enabled = false
@@ -1100,6 +1170,7 @@ func _start_dialogue(npc: NpcEntity) -> void:
 	npc.set_talking(true)
 	# **지금 상태에 맞는 대사**를 고른다 — 두 번째로 찾아가면 다른 말을 할 수 있다.
 	var seq := npc.resolve_sequence()
+	_emoted_seq[String(npc.npc_id)] = String(seq)
 	var steps: Array = Database.sequence(seq)
 	if steps.is_empty():
 		push_warning("빈 시퀀스: %s" % seq)
@@ -1116,6 +1187,7 @@ func _start_walker_dialogue(walker: WalkerEntity) -> void:
 	walker.face_towards(player.mover.grid_pos)
 	walker.set_talking(true)
 	var seq := walker.resolve_sequence()
+	_emoted_seq[String(walker.walker_id)] = String(seq)
 	var steps: Array = Database.sequence(seq)
 	if steps.is_empty():
 		push_warning("빈 시퀀스: %s" % seq)

@@ -110,6 +110,18 @@ func _make_layer(shared_tileset: TileSet, z_index_value: int) -> TileMapLayer:
 	return layer
 
 
+## 실시간 오브젝트 타일 교체 — 맵아트 인물 최소 움직임용 공개 창구(MapTileAnimator가 쓴다).
+## 데이터 파일은 손대지 않는다(원본 바이트 일치 관문) — 교체는 런타임에만 산다.
+## tile_id는 obj 메타의 그 id다. 그려진 층에만 얹는다(없는 층에 찍으면 허공에 뜬다).
+func swap_object_tile(cell: Vector2i, tile_id: int) -> void:
+	if _layers.size() < 3:
+		return
+	for li in [1, 2]:
+		var layer: TileMapLayer = _layers[li]
+		if layer.get_cell_source_id(cell) != -1:
+			_set_object(layer, _object_meta, tile_id, cell)
+
+
 func _set_ground(layer: TileMapLayer, grid: Vector2i, id: int, cell: Vector2i) -> void:
 	var span := _bank_rows * grid.x if _bank_rows > 0 else grid.x * grid.y
 	if id < 0 or id >= span:

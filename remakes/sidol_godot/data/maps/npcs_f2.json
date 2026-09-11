@@ -104,7 +104,10 @@
         26
       ],
       "sequence_id": "f2_dev2",
-      "repeat_sequence_id": "f2_dev2_repeat",
+      "repeat_sequence_id": [
+        "f2_dev2_repeat",
+        "f2_dev2_repeat_2"
+      ],
       "sequence_variants": [
         {
           "requires_flag": "Q_F2_POSTER",

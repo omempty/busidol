@@ -42,7 +42,10 @@
       "sprite": "lost_squire",
       "name": "미아 모험가",
       "sequence_id": "lost_squire_f1",
-      "repeat_sequence_id": "lost_squire_f1_repeat",
+      "repeat_sequence_id": [
+        "lost_squire_f1_repeat",
+        "lost_squire_f1_repeat_2"
+      ],
       "_comment": "오마주 워커 파일럿 — CC-BY-SA 시트(Conrad 개조, 32px native x2). 좌우 매핑 교정됨.",
       "pos": [
         85,
@@ -64,7 +67,10 @@
       "sprite": "rogue_vending",
       "name": "방랑 자판기",
       "sequence_id": "vending_f1_first",
-      "repeat_sequence_id": "vending_f1_repeat",
+      "repeat_sequence_id": [
+        "vending_f1_repeat",
+        "vending_f1_repeat_2"
+      ],
       "sequence_variants": [
         {
           "requires_flag": "Q_F1_BLAST",
@@ -101,7 +107,10 @@
       "sprite": "guard_idle",
       "name": "전직 경비",
       "sequence_id": "guard_ex_first",
-      "repeat_sequence_id": "guard_ex_repeat",
+      "repeat_sequence_id": [
+        "guard_ex_repeat",
+        "guard_ex_repeat_2"
+      ],
       "sequence_variants": [
         {
           "requires_flag": "Q_F1_BLAST",

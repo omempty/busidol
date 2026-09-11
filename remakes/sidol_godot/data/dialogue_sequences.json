@@ -104,6 +104,15 @@
       ],
       "_comment": "씬 3-1 화공과 교수 대면 — 해독제 의뢰가 여기서 시작된다. 여기서 세우는 Q_F3_CURE_REQ가 사슬의 뿌리다(안 세우면 F3 시약 세 퀘스트의 선행이 영영 안 선다). 그리고 그 플래그가 **다시 찾아갔을 때의 대사**를 연다 — npcs_f3.json의 sequence_variants가 prof_chem_cure_request로 갈아 끼운다. 2026-08-29 이전에는 NPC 하나에 시퀀스 하나뿐이라 그 뒷대사가 데이터에만 있고 영영 재생되지 않았다."
     },
+    "prof_chem_repeat": {
+      "_comment": "화공과 교수 반복 대사 — 기존 반복키 없음(매번 전문 반복) 해소. op 금지(스킬·플래그 중복 지급 방지)",
+      "steps": [
+        {
+          "speaker": "화공과 교수",
+          "text": "@c701"
+        }
+      ]
+    },
     "prof_chem_cure_request": {
       "_comment": "해독제 의뢰 — v_Howa 플래그 연동",
       "steps": [
@@ -197,6 +206,15 @@
         }
       ]
     },
+    "lost_squire_f1_repeat_2": {
+      "_comment": "미아 모험가 반복 2 — 1줄씩 교대",
+      "steps": [
+        {
+          "speaker": "미아 모험가",
+          "text": "@c704"
+        }
+      ]
+    },
     "vending_f1_first": {
       "_comment": "방랑 자판기 첫 대화 — 로그 벤딩 선긋기.",
       "steps": [
@@ -216,6 +234,15 @@
         {
           "speaker": "방랑 자판기",
           "text": "@c669"
+        }
+      ]
+    },
+    "vending_f1_repeat_2": {
+      "_comment": "방랑 자판기 반복 2 — 1줄씩 교대",
+      "steps": [
+        {
+          "speaker": "방랑 자판기",
+          "text": "@c705"
         }
       ]
     },
@@ -241,6 +268,15 @@
         }
       ]
     },
+    "guard_ex_repeat_2": {
+      "_comment": "전직 경비 반복 2 — 1줄씩 교대",
+      "steps": [
+        {
+          "speaker": "전직 경비",
+          "text": "@c706"
+        }
+      ]
+    },
     "lost_orc_first": {
       "_comment": "길 잃은 오크 첫 대화 — 적 오인 개그.",
       "steps": [
@@ -263,6 +299,15 @@
         }
       ]
     },
+    "lost_orc_repeat_2": {
+      "_comment": "길 잃은 오크 반복 2 — 1줄씩 교대",
+      "steps": [
+        {
+          "speaker": "길 잃은 오크",
+          "text": "@c702"
+        }
+      ]
+    },
     "lost_princess_first": {
       "_comment": "납치 공주 첫 대화 — 납치 클리셰.",
       "steps": [
@@ -282,6 +327,15 @@
         {
           "speaker": "납치 공주",
           "text": "@c678"
+        }
+      ]
+    },
+    "lost_princess_repeat_2": {
+      "_comment": "납치 공주 반복 2 — 1줄씩 교대",
+      "steps": [
+        {
+          "speaker": "납치 공주",
+          "text": "@c703"
         }
       ]
     },
@@ -540,6 +594,12 @@
     "f2_dev2_repeat": {
       "steps": [
         { "speaker": "개발자 2", "text": "@c252" }
+      ]
+    },
+    "f2_dev2_repeat_2": {
+      "_comment": "개발자2 반복 2 — 1줄씩 교대",
+      "steps": [
+        { "speaker": "개발자 2", "text": "@c700" }
       ]
     },
     "f2_dev2_f2": {

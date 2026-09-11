@@ -62,9 +62,9 @@
  "shot": {
   "dir": -1,
   "flip": true,
-  "muzzle": [
-   127,
-   101
-  ]
+   "muzzle": [
+    194,
+    61
+   ]
  }
 }

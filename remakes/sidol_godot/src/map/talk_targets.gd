@@ -96,6 +96,15 @@ static func steps_for(attr: int) -> Array:
 		var alt: Array = t.get("repeat_texts", [])
 		if not alt.is_empty():
 			texts = alt
+	elif count > 1:
+		# 3순위 잡담 — 기본도 들었고 반복 차례도 아니면 역할 풀에서 꺼낸다.
+		# 변형 갈래가 아닐 때만(사슬 무결) + 첫 청취는 언제나 원문(원작 권위).
+		# sets_flag는 1회차 기본 대사에서 이미 서므로(래치) 건너뛰어도 된다.
+		var role := str(t.get("chatter_role", ""))
+		if not role.is_empty() and branch == t:
+			var chat: Array = ChatterBank.lines_for(role, count)
+			if not chat.is_empty():
+				texts = chat
 	var speaker := str(t.get("name", ""))
 	var out: Array = []
 	for key: String in texts:
@@ -105,6 +114,19 @@ static func steps_for(attr: int) -> Array:
 
 static func display_name(attr: int) -> String:
 	return str(find(attr).get("name", ""))
+
+
+## 세션 누적 대화 횟수(말풍선 장식 판단용). steps_for를 부르면 오르므로 프롬프트 시점에 본다.
+static func talk_count(attr: int) -> int:
+	return int(_talk_counts.get(attr, 0))
+
+
+## 지금 고를 갈래 키 — requires_flag 또는 "base". 갈래가 바뀌면 새 정보가 생긴 것이다.
+static func branch_key(attr: int) -> String:
+	var t := find(attr)
+	if t.is_empty():
+		return ""
+	return str(_branch(t).get("requires_flag", "base"))
 
 
 ## 새 게임·불러오기 — 반복 카운터를 비운다.

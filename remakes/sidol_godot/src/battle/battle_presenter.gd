@@ -134,7 +134,8 @@ var _fx_meta_cache: Dictionary = {}
 ## 재생 중 대형 컷 — {spr, cell, frames, fps, clock, hidden}. hidden은 컷이 대신하는
 ## 작은 액터 스프라이트(컷이 끝나면 되돌린다).
 var _cut_playing: Array[Dictionary] = []
-## 재생 중 시트 애니 — {spr, cell, row, frames, fps, clock, loop}. 끝나면 idle로 돌아간다.
+## 재생 중 시트 애니 — {spr, cell, row, frames, fps, clock, loop, frame_flip}. 끝나면 idle로 돌아간다.
+## frame_flip: 프레임별 좌우 반전(없으면 빈 배열 — bake_battle_sheets.HURT_FRAME_FLIP 자리).
 var _anim_playing: Array[Dictionary] = []
 ## 액터별 시트 메타 캐시(경로 조회·JSON 파싱을 매 프레임 하지 않기 위해).
 var _sheet_meta_cache: Dictionary = {}
@@ -347,6 +348,10 @@ func play_anim(spr: Sprite2D, anim_name: String, asset_id: String = "", hold: bo
 	var at := spr.texture as AtlasTexture
 	if at == null:
 		return false
+	# 프레임별 좌우 반전(마드아이 hurt col0 — WARMODE.C:278). 없으면 빈 배열이다.
+	var frame_flip: Array = []
+	if anim.has("frame_flip") and anim["frame_flip"] is Array:
+		frame_flip = anim["frame_flip"]
 	# 이미 이 스프라이트가 애니 중이면 새 것으로 갈아탄다(연타 시 마지막 것이 이긴다).
 	_stop_anim(spr)
 	at.region.position = Vector2(0, float(int(anim.get("row", 0)) * cell.y))
@@ -362,6 +367,7 @@ func play_anim(spr: Sprite2D, anim_name: String, asset_id: String = "", hold: bo
 				"clock": 0.0,
 				"loop": bool(anim.get("loop", false)),
 				"hold": hold,
+				"frame_flip": frame_flip,
 			}
 		)
 	)
@@ -466,9 +472,22 @@ func _advance_anims(delta: float) -> void:
 			else:
 				at.region.position = Vector2.ZERO  # idle 행으로 복귀
 				continue
+		_apply_anim_frame_flip(a, spr, idx)
 		at.region.position = Vector2(float(idx * cell.x), float(int(a["row"]) * cell.y))
 		still.append(a)
 	_anim_playing = still
+
+
+## 프레임별 좌우 반전 — 한 행 안의 프레임이 서로 다른 방향을 볼 때(마드아이 hurt [4,5]).
+## 공격·특수는 `play_enemy_anim`이 `shot.flip`으로 한 번에 뒤집고, hurt는 그 경로를 안 타서
+## 여기서만 뒤집으면 된다. 종료 시 복원은 `end_enemy_action` 몫이다.
+func _apply_anim_frame_flip(a: Dictionary, spr: Sprite2D, idx: int) -> void:
+	if not a.has("frame_flip") or not (a["frame_flip"] is Array):
+		return
+	var flips: Array = a["frame_flip"]
+	if flips.is_empty():
+		return
+	spr.flip_h = bool(flips[clampi(idx, 0, flips.size() - 1)])
 
 
 ## 잔상 — 지금 포즈를 복제해 뒤에 흘린다. 프레임 수를 늘리지 않고 속도감만 얻는 값싼 수단.

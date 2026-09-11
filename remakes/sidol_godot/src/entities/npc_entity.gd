@@ -50,6 +50,9 @@ const DEFAULT_IDLE_ANIM := &"bob"
 ## 관문·스크린샷 도구가 idle_motion을 직접 꺼도 계약 이름은 남는다.
 var idle_anim := DEFAULT_IDLE_ANIM
 
+## 배회 착지 — 필드가 발먼지 등 착지 연출을 붙이는 자리.
+signal step_landed(cell: Vector2i)
+
 var _paths: Dictionary = {}
 var _meta: Dictionary = {}
 var _runtime: MapRuntime
@@ -174,6 +177,15 @@ func face_towards(target_cell: Vector2i) -> void:
 	if next == _facing:
 		return  # 매 프레임 접근 반응으로 불러도 같은 방향이면 손대지 않는다
 	_apply_facing(next)
+
+
+## 접근 주목 — 3칸 안에 들어온 플레이어를 idle 중에만 본다(멀리서 알아보는 느낌).
+## 랜덤 둘러보기와 겹치지 않게 look 타이머를 갱신한다. 대화·배회 중에는 손대지 않는다.
+func notice(target_cell: Vector2i) -> void:
+	if _is_talking or _is_wandering or not idle_motion:
+		return
+	face_towards(target_cell)
+	_look_wait = randf_range(LOOK_MIN, LOOK_MAX)
 
 
 func _build_visual() -> void:
@@ -365,6 +377,7 @@ func _try_wander_step() -> bool:
 		tw.finished.connect(
 			func() -> void:
 				_is_wandering = false
+				step_landed.emit(cell)
 				_apply_facing(_facing)
 		)
 		return true

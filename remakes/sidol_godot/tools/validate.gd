@@ -612,10 +612,20 @@ func _validate_talk_targets() -> void:
 	for need: String in _talk_needed:
 		if not _talk_sets.has(need):
 			_err("대화 마커 ATT %d가 요구하는 플래그 '%s'를 세우는 곳이 없다" % [int(_talk_needed[need]), need])
+	# 잡담 은행 — 역할 풀이 가리키는 대사 키도 dialogue.json에 있어야 한다.
+	# 본문이 끊기면 빈 줄이 나와 고장으로 읽힌다(마커 검사와 같은 등급).
+	var chatter_raw: Variant = _load_json(DATA + "chatter.json")
+	var chatter_n := 0
+	if typeof(chatter_raw) == TYPE_DICTIONARY:
+		for role: String in (chatter_raw as Dictionary).get("roles", {}):
+			for ck: Variant in ((chatter_raw as Dictionary)["roles"] as Dictionary)[role]:
+				chatter_n += 1
+				if not _dialogue.has(str(ck)):
+					_err("잡담 은행 역할 %s가 쓰는 대사 키 %s가 dialogue.json에 없음" % [role, ck])
 	print(
 		(
-			"[validate] 대화 마커 %d종 · 맵에 깔린 칸 %d개 · 사슬 플래그 %d개"
-			% [targets.size(), placed, _talk_sets.size()]
+			"[validate] 대화 마커 %d종 · 맵에 깔린 칸 %d개 · 사슬 플래그 %d개 · 잡담 %d줄"
+			% [targets.size(), placed, _talk_sets.size(), chatter_n]
 		)
 	)
 

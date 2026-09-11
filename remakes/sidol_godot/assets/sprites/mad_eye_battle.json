@@ -40,12 +40,16 @@
    "fps": 6,
    "loop": false
   },
-  "hurt": {
-   "row": 3,
-   "frames": 2,
-   "fps": 8,
-   "loop": false
-  },
+   "hurt": {
+    "row": 3,
+    "frames": 2,
+    "fps": 8,
+    "loop": false,
+    "frame_flip": [
+     true,
+     false
+    ]
+   },
   "death": {
    "row": 4,
    "frames": 2,
@@ -62,9 +66,9 @@
  "shot": {
   "dir": -1,
   "flip": false,
-  "muzzle": [
-   127,
-   102
-  ]
+   "muzzle": [
+    139,
+    79
+   ]
  }
 }

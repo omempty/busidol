@@ -38,7 +38,10 @@
       "sprite": "lost_orc",
       "name": "길 잃은 오크",
       "sequence_id": "lost_orc_first",
-      "repeat_sequence_id": "lost_orc_repeat",
+      "repeat_sequence_id": [
+        "lost_orc_repeat",
+        "lost_orc_repeat_2"
+      ],
       "_comment": "오마주 워커 — 적 오인 개그. 기존 walker_f2 복도(70~130행 검증 구간) 서쪽 짧은 왕복.",
       "pos": [
         78,
@@ -60,7 +63,10 @@
       "sprite": "lost_princess",
       "name": "납치 공주",
       "sequence_id": "lost_princess_first",
-      "repeat_sequence_id": "lost_princess_repeat",
+      "repeat_sequence_id": [
+        "lost_princess_repeat",
+        "lost_princess_repeat_2"
+      ],
       "_comment": "오마주 워커 — 납치 클리셰. 오크 옆 복도 짧은 왕복(듀오).",
       "pos": [
         90,

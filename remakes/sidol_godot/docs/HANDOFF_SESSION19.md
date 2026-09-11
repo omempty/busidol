@@ -559,3 +559,160 @@ DWorm 노즐 반영 확인: `dworm_battle.json` `shot.muzzle=[148,62]`가 적환
    브레이크 게이지는 상시 표시 중(`_break_bars`) — 후보 소진.
 3. 에셋 게이트(`player_battle`·대형컷 5종·보스 2종 대형시트)는 코드로 메울 게 아니라 의뢰 추적(`asset_status`) 유지.
 4. **커밋** — §I 미커밋분 + §J 전부. 다음 세션은 미납품 에셋 입고 시 배선·실플레이 피드백 반영.
+
+---
+
+## K. 잔여 원작 대조 (2026-09-11)
+
+### K.1 마드아이 hurt 반전 + 노즐 실측
+
+I.4#1·I.4#2(§J.4#1)의 해소다. 둘 다 "원작 대조가 남긴 자리"라 한 묶음으로 했다.
+
+**원작 근거** — `WARMODE.C:278` `EnemyAvoid()`:
+
+```
+if ( SprNum == 0 && sprnum == 4 ) RPut_Spr(i,0,&S[sprnum],1);
+else  RPut_Spr(i,0,&S[sprnum],0);
+```
+
+마드아이(`SprNum 0` = e1)의 4번 프레임만 `flag=1`(좌우 반전)로 그린다. e1의 4·5번
+프레임은 서로 반대를 향해 저장돼 있어 한 장을 뒤집어야 같은 방향이 된다.
+리메이크 hurt 행은 원작 프레임 [4, 5]를 col0·col1에 이어 붙여 교대 재생하므로
+**col0(=4번)만** 뒤집어야 한다. 행 단위 flip으로는 안 되는 2차원 자리다.
+
+**hurt flip 구현** (`tools/dev/bake_battle_sheets.py` · `src/battle/battle_presenter.gd` ·
+`assets/sprites/mad_eye_battle.json`):
+
+- 베이커 상수 `HURT_FRAME_FLIP = {"mad_eye": [True, False]}`(`SHOT_MUZZLE` 근처).
+  `bake()`가 적 시트 hurt 행 메타에 `"frame_flip"`을 싣는다(해당 종만 — 다른 종·다른 행은 없음).
+- `mad_eye_battle.json` hurt 애니에 `"frame_flip": [true, false]` 손 추가(들여쓰기 1칸 유지,
+  PNG 그대로). 베이크 출력(`json.dumps` indent=1)과 바이트 대조済 — 다시 구워도 diff 0.
+- `play_anim()`이 메타 애니의 `frame_flip`을 `_anim_playing` 항목에 싣고,
+  `_advance_anims()`가 항목에 비어 있지 않은 `frame_flip`이 있으면 표시 프레임 idx에 맞춰
+  `spr.flip_h`를 갱신한다(`_apply_anim_frame_flip` 신설 — 루프/홀드/종료 경로와 충돌 없음).
+- hurt는 `play_enemy_anim`이 flip을 안 건드리는 경로라 `_advance_anims`에서만 뒤집으면 된다.
+  종료 시 flip 복원은 기존 `end_enemy_action` 담당(마드아이 hurt는 col1=false에서 끝나
+  자연히 false로 닫힌다).
+
+**노즐 실측** — 공격 프레임은 각 `*_battle.png`의 row 2(0-base) col 0
+(셀 320×200 자리 `(0,400)-(320,600)`). PIL로 뽑아 `%TEMP%\opencode\`에 마커 포함 2배 크롭
+(`nozzle_<종>_marked_2x.png` + 손끝·동공 줌 2종)을 저장하고 눈으로 검증했다.
+좌표는 반전 전(저장 방향) 기준이다.
+
+형태 대조 먼저: vulgar·ozzy·o_ray 공격 프레임은 **같은 그림**이다 —
+원작 `E2·E4·E7 frame3 md5 `3606cf48…` 동일` + 베이크 시트 알파 마스크 md5
+`492bf3ae…` 3종 동일(색상 변주만 다름). 그래서 3종은 같은 좌표를 쓴다.
+
+| 종 | muzzle(반전 전) | 선정 근거 |
+|---|---|---|
+| mad_eye | [139, 79] | 동공(검은 구멍) 중심. 연결요소 분석: 동공 덩어리 362px(x128~148·y68~89) 중심 (138.54, 78.62) → 반올림. 윗눈꺼풀 외곽선(296px)은 제외. flip=false라 눈이 이미 왼쪽을 본다 |
+| vulgar | [194, 61] | 내민 손 중지 끝. 손색(밝은 살색) 최우측 픽셀 (194,61~62). 붉은 화염 후광(최우측 x=208)은 몸이 아니라 제외 — dworm의 빨간 링 중심을 잡던 기준과 같은 자리 |
+| ozzy | [194, 61] | vulgar와 바이트 동일 → 같은 좌표 |
+| o_ray | [194, 61] | vulgar와 바이트 동일 → 같은 좌표 |
+| dworm | [148, 62] | 기존값 유지. 빨간 링 중심 실측 (148.49, 61.76)과 일치 확인 |
+
+폴백(bbox 중심)과 비교하면 mad_eye [127,102]→[139,79](몸통 중심에서 동공으로 12·23px 이동),
+vulgar 계열 [127,101]→[194,61](몸통 중심에서 손끝으로 67·40px 이동) — 구 폴백이 빔을
+몸통 한가운데서 쏘게 하던 어긋남이다. 런타임 코드는 손대지 않았다(좌표만 메타로).
+
+**변경 파일** — `tools/dev/bake_battle_sheets.py`(`SHOT_MUZZLE` 4종 추가 + `HURT_FRAME_FLIP`
+신설·`bake()` 배선) · `src/battle/battle_presenter.gd`(`play_anim` 싣기 +
+`_apply_anim_frame_flip` 신설 + `_advance_anims` 호출 1줄, 주석 2줄) ·
+`assets/sprites/{mad_eye,vulgar,ozzy,o_ray}_battle.json`(muzzle + mad_eye hurt `frame_flip`).
+PNG·다른 종·다른 행은 그대로.
+
+**검증 (실측)**:
+
+- `gdformat --check src/battle/battle_presenter.gd` → `1 file would be left unchanged`
+- `godot --headless --path . --script tools/validate.gd` → `done - 0 errors`
+- `godot --headless --path . res://tests/smoke_battle.tscn` → `PASS`
+  (`_tick_effects` string-formatting ERROR 3건은 J차 신규 키 3종이 stale `.translation`
+  (09-10 빌드)에 걸린 것으로, 본 변경과 무관·테스트 PASS. 손대지 않았다.)
+  → **정정(메인, 09-11)**: `--import`로 `.translation` 재빌드 후 ERROR 0건·PASS 확인.
+  stale 번역이 `tr()`을 키 그대로 돌려 `%` 연산이 터지던 것이다. garc 무시 금지 —
+  ERROR는 ERROR다.
+
+### K.2 밸런스 재측정 (2026-09-11, 층당 200회)
+
+- 결과: 전 층 평균턴 Δ≤0.1·연전 Δ≤0.5판·f4 승률 90→91.5(3전투분, 시행 노이즈).
+  **§7 표 갱신 불필요** — "평타 연전 3~4판이면 위험" 그대로 성립.
+- f0 특이 1건(에러 아님): 모으기 23회 중 발산 0회 — 3.2턴 단기전에 격파·브레이크로
+  모으기가 소멸되는 구조적 결과. f1~f5 발산 정상.
+- 실측 로그: `%TEMP%\opencode\battle_sim_200.txt`(2,479B).
+
+### K.3 장식NPC 생동감 트릭 (2026-09-11, 유저 질문)
+
+> 전제 정정: 고정 NPC는 이미 호흡·몸짓·둘러보기·배회·접근응시·프롬프트를 갖고 있다.
+> 진짜 구멍은 (1) 외부 3인방(lost_orc·princess·f1 squire)이 말 걸리는 워커인데
+> 개그 2줄+반복 1줄·무기능이라 존재감이 없고, (2) 스케일·회전은 리샘플 실측상
+> 금지라(0.6667 배율) 정수 오프셋 외에 몸을 건드릴 수단이 없다는 것이다.
+
+| # | 꼼수 | 파일 |
+|---|---|---|
+| 1 | **말풍선**(→K.5에서 `…`/`?`로 어휘 분리, 빨강 `!`는 괴물 전용 유지) — 첫 조우 1회 + 플래그로 새 대사가 생기면 1회(세션 한정 기록). UI 텍스트라 리샘플 없음 | `src/entities/emote_bubble.gd`(신설) · `scenes/field.gd` |
+| 2 | **주목** — 3칸 안 NPC가 idle 중에 플레이어를 본다(look 타이머 갱신, 대화·배회 제외) | `npc_entity.gd` `notice()` · `field.gd` |
+| 3 | **발먼지** — 배회 착지에 `step_landed` 시그널 → `FieldFx.step_puff` (무음 미끄럼이 유령처럼 보이던 자리) | `npc_entity.gd` · `field_fx.gd` · `field.gd` |
+
+- 검증: `gdformat --check` 4파일 unchanged · `validate` 0 errors · `smoke_f1_events` PASS.
+- 남긴 것: 외부 3인방에 깃발분기·힌트기능 부여는 시나리오 작업(대사+`sequence_variants`),
+  말풍선 `?`·`...`는 호출 1줄이면 열리는 자리(`EmoteBubble.pop`).
+
+### K.4 고정인물 대사 반복 (2026-09-11, 유저 질문)
+
+> 원인 둘. (1) 동일 대사: 홍교수(@t48~51)≒남교수(@t54~57) 첫 4줄이 원작 TALK.TXT부터
+> 복붙으로 같다 — 변환 버그가 아니라 원작 그대로. 남교수를 듣고 홍교수 심화갈래를
+> 열면 같은 4줄이 또 나온다. (2) 단조 반복: 변형·반복풀이 없는 마커(21·26·75·78 등)는
+> 매 방문 같은 전문을 재생한다(황교수 23줄 통암송이 대표).
+> 처방: 원문 불변 유지 + 재방문만 1줄 리메이크 대사로. 체인-안전한 4곳만
+> `repeat_after: 2` — 21→@c683·26→@c684·75→@c685·78→@c686(`dialogue.json` @c683~686 신설).
+> 16(talk_hong_deep)·56(talk_howa_done)·71/77(보상 갈래)은 반복 갈래가 사슬을 깨서 제외.
+> 주의: `talk_convert.py` 쓰기 모드는 `dialogue.json`을 @t만으로 덮어써 @c 283개를
+> 날린다 — --check만 쓸 것.
+> 검증: `validate` 0 errors(신규 키 대조 포함) · `smoke_f1_events` PASS.
+
+### K.5 맵아트 최소 움직임 (2026-09-11, 유저 질문 "위치는 고수하고 타일만 교체")
+
+> 확인: 지도는 ground/object/attr 3층, 인물은 object층 2×2 클러스터(obj 121~148).
+> 위치 고정 + `TileMapLayer.set_cell` 실시간 교체가 된다. 데이터 파일은 안 건드린다
+> (원본 바이트 일치 관문과 무관 — 교체는 런타임에만 산다).
+
+| # | 무엇 | 상태 |
+|---|---|---|
+| 1 | **말풍선 어휘 분리** — 빨강 `!`는 괴물 위험 전용 유지, 대화는 `…`(첫 조우)+`?`(새 정보). 셀 앵커(`_emote_anchor`)로 맵아트 대화점(ATT)에도 띄운다 | 구현·PASS |
+| 2 | **`MapTileAnimator`** — `data/maps/tile_anim.json` 표대로 오브젝트 타일 교대. 해시 위상, steady-state 난수 없음, 빈 표=no-op | 기반 구현·PASS(표 비어 있음) |
+| 3 | 교대 아트(눈감은 머리 등 obj 셀) | 미납품 — `_wanted`에 발주 자리 기록 |
+
+- `MapRenderer.swap_object_tile` — 그려진 층에만 얹는다(없는 층에 찍으면 허공).
+- `TalkTargets.talk_count`·`branch_key` 신설(말풍선 판단용).
+- 검증: `gdformat` unchanged · `validate` 0 errors · `smoke_f1_events` PASS.
+
+### K.6 잡담 은행 (2026-09-11, 유저 질문 "대사 늘리기·인터넷·제네레이터")
+
+> 결론: 인터넷 스크랩은 무리수(출처·저작권·톤 불명 + 오프라인 게임).
+> 슬롯형 템플릿도 무리수에 가까움(한국어 조사 때문에 빈칸 채우기는 어미가 깨짐).
+> **풀 회전형은 무리수 아님** — 완성문을 역할별로 묶어 count로 돌리면 문법이 안 깨지고,
+> 파이프라인도 키 참조 그대로라 손댈 곳이 없다.
+
+- `data/chatter.json` 신설(역할 3종·12줄: 교수 속담 5·학생 4·조교 3 — 자작+민속, @c687~698).
+- `src/map/chatter_bank.gd` 신설 — `lines_for(역할, 횟수)` 2줄 회전(실측: prof/2→689·690, /3→690·691).
+- `talk_targets.gd` 3순위 갈래: 반복 차례가 아니면 + 기본 갈래 + 2회차부터만. 변형·반복·플래그에 손대지 않음.
+- `chatter_role` 13곳(16·21·26·31·36·41·44·46·47·71·75·77·78). 56 제외(1회차 후 기본 갈래에 영영 안 닿는 죽은 설정이 되므로).
+- `validate` 잡담 참조 검사 추가(역할 풀이 가리키는 키가 dialogue.json에 있어야 함).
+- 검증: `gdformat` unchanged · `validate` 0 errors · `talk_convert --check` 정상 ·
+  `smoke_f1_events` PASS(ChatterBank 신규 class_name은 `--import`로 캐시 갱신 필요했음).
+- NPC 액터(dialogue_sequences 2줄 풀) 확장은 미착수 — 데이터에 역할 키가 없어 같은 기구를 못 얹는다.
+
+### K.7 NPC 반복키 잔여 (2026-09-11)
+
+> 감사 스크립트 출력 오판 1건 정정: 반복키 없음 7명이라 했으나 grep·원본 대조 결과
+> 진짜 없음은 `prof_chem` 1명뿐이었다(나머지는 키가 있고 시퀀스도 있다).
+> 교훈: 감사 스크립트 출력은 원본 1건을 뜯어보기 전에는 결론이 아니다.
+
+- `prof_chem`에 `prof_chem_repeat` 신설·배선(@c701, op 금지 — 스킬·플래그 중복 방지).
+  덤으로 깃발 전 2회차 전문+op 재발사도 막힌다.
+- 1줄 반복 6곳을 2연째와 교대: dev2(@c700)·orc(@c702)·princess(@c703)·squire(@c704)·
+  vending(@c705)·exguard(@c706). tutor는 기존 2줄이라 손대지 않음.
+- 작업 중 중복 키 2건(tutor_sample_repeat·f2_dev2_repeat)을 내가 만들었다가 즉시 제거 —
+  추가 전 `count` 확인을 생략한 탓이다.
+- 검증: 전수 대조(배치 참조 시퀀스 누락 0·신규 @c 전원 사용처 있음·고아 @c699 삭제) ·
+  `validate` 0 errors · `smoke_f1_events` PASS.

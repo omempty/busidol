@@ -32,6 +32,7 @@
     "26": {
       "id": "prof_nam",
       "name": "남교수",
+      "chatter_role": "professor",
       "texts": [
         "@t54",
         "@t55",
@@ -46,11 +47,16 @@
         "@t64"
       ],
       "sets_flag": "talk_nam_done",
-      "_note": "Talk_Nam_F — 끝까지 들으면 홍교수가 모교수 이야기를 더 해 준다(원작 v_Hong=1)"
+      "repeat_after": 2,
+      "repeat_texts": [
+        "@c684"
+      ],
+      "_note": "Talk_Nam_F — 끝까지 들으면 홍교수가 모교수 이야기를 더 해 준다(원작 v_Hong=1). 재방문은 짧은 리메이크 대사로(2026-09-11 — sets_flag는 1회차에 이미 서므로 반복 갈래가 사슬을 안 깬다)"
     },
     "31": {
       "id": "prof_quan",
       "name": "권교수",
+      "chatter_role": "professor",
       "texts": [
         "@t65",
         "@t66",
@@ -61,6 +67,7 @@
     "36": {
       "id": "prof_kim",
       "name": "김교수",
+      "chatter_role": "professor",
       "texts": [
         "@c225",
         "@c226"
@@ -69,6 +76,7 @@
     "41": {
       "id": "prof_na",
       "name": "나교수",
+      "chatter_role": "professor",
       "texts": [
         "@c227",
         "@c228"
@@ -77,6 +85,7 @@
     "46": {
       "id": "hang_jo_1",
       "name": "항공과 조교",
+      "chatter_role": "assistant",
       "texts": [
         "@c229",
         "@c230"
@@ -85,6 +94,7 @@
     "47": {
       "id": "hang_jo_2",
       "name": "항공과 조교",
+      "chatter_role": "assistant",
       "texts": [
         "@c231",
         "@c232"
@@ -93,6 +103,7 @@
     "71": {
       "id": "sil_jo",
       "name": "실습 조교",
+      "chatter_role": "assistant",
       "texts": [
         "@c233",
         "@c234"
@@ -112,12 +123,17 @@
     "75": {
       "id": "hongbo_bsd",
       "name": "홍보하는 사람",
+      "chatter_role": "student",
       "texts": [
         "@t139",
         "@t140",
         "@t141",
         "@t142",
         "@t143"
+      ],
+      "repeat_after": 2,
+      "repeat_texts": [
+        "@c685"
       ]
     },
     "97": {
@@ -167,6 +183,7 @@
     "16": {
       "id": "prof_hong",
       "name": "홍교수",
+      "chatter_role": "professor",
       "texts": [
         "@t48",
         "@t49",
@@ -210,6 +227,7 @@
     "21": {
       "id": "prof_hwang",
       "name": "황교수",
+      "chatter_role": "professor",
       "texts": [
         "@t101",
         "@t102",
@@ -235,7 +253,11 @@
         "@t123",
         "@t124"
       ],
-      "_note": "Hwang_P의 v_Howang==0 — 윤동주 「서시」 20줄 + 주인공의 속마음(@t122~124)"
+      "repeat_after": 2,
+      "repeat_texts": [
+        "@c683"
+      ],
+      "_note": "Hwang_P의 v_Howang==0 — 윤동주 「서시」 20줄 + 주인공의 속마음(@t122~124). 23줄 통암송이 매 방문 반복되던 것을 재방문 1줄로(2026-09-11)"
     },
     "56": {
       "id": "howa_jo",
@@ -277,6 +299,7 @@
     "77": {
       "id": "elin",
       "name": "앨린에 대해 아는 사람",
+      "chatter_role": "student",
       "texts": [
         "@c305",
         "@c306"
@@ -296,9 +319,14 @@
     "78": {
       "id": "felin",
       "name": "팰린에 대해 아는 사람",
+      "chatter_role": "student",
       "texts": [
         "@c307",
         "@c308"
+      ],
+      "repeat_after": 2,
+      "repeat_texts": [
+        "@c686"
       ],
       "_note": "원작 v_Howa==2 조건. 그 값은 화공과 조교(56)와 두 번 이야기하면 선다 — 리메이크 퀘스트 플래그를 빌리지 않고 **원작의 사슬을 그대로** 쓴다",
       "variants": [
@@ -329,6 +357,7 @@
     "44": {
       "id": "quiz_man_hint",
       "name": "퀴즈맨을 아는 사람",
+      "chatter_role": "student",
       "texts": [
         "@c131",
         "@c132"
