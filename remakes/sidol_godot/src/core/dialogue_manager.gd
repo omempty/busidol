@@ -18,7 +18,7 @@ extends RefCounted
 ## 2. 정체/아이들 상태 (Idle Chatter Pool):
 ##    해당 마일스톤 반응을 이미 들었거나 정체 중일 때 -> 90년대 대학가 밈/개그 대사를 신선하게 순환(cycling) 출력.
 static func resolve_npc_sequence(
-	base_seq: StringName, variants: Array, repeat_seq: Variant = null
+	base_seq: StringName, variants: Array, repeat_seq: Variant = null, record_seen: bool = true
 ) -> StringName:
 	var chosen_seq := base_seq
 	var chosen_repeat: Variant = repeat_seq
@@ -44,6 +44,9 @@ static func resolve_npc_sequence(
 	var seen_count := GameState.get_sequence_seen_count(chosen_seq)
 	# **청취 기록은 여기(고르는 순간)에 남긴다 — 대화가 끝나는 순간이 아니다.**
 	#
+	# 미리보기(말풍선 장식 판단)는 기록 없이 골라야 한다 — 프롬프트가 매 프레임
+	# 고르는데 그때마다 기록하면 앞에 서 있기만 해도 회차가 돌아가 버린다
+	# (2026-09-11 실측: 첫 대화가 전문이 아니라 반복으로 열렸다).
 	# 끝나는 순간(`DialogueBox.finished`)으로 옮기고 싶어지는 게 자연스럽지만 두 가지가 막는다.
 	#  1. 카운터의 키는 **여기서 고른 chosen_seq(기준 시퀀스)**인데, finished가 실어 보내는 건
 	#     실제로 재생된 시퀀스다. 순환 중이면 그건 repeat 풀의 항목(…_repeat_1)이라 서로 다르다.
@@ -54,7 +57,7 @@ static func resolve_npc_sequence(
 	# 즉 옮겨도 이득이 없고 회귀만 진다. 대신 **읽을 줄이 하나도 없는 시퀀스는 세지 않는다** —
 	# 정확히 그 경우(빈 시퀀스, op 전용 시퀀스)만 예외로 판다. 필드도 빈 시퀀스면 대화를 열지 않고
 	# 되돌아가므로(scenes/field.gd `_start_dialogue`), 그때 카운터만 오르던 어긋남도 같이 닫힌다.
-	if _has_readable_line(chosen_seq):
+	if _has_readable_line(chosen_seq) and record_seen:
 		GameState.record_sequence_seen(chosen_seq)
 
 	# 해당 상태를 이미 한 번 이상 들었고, 반복/아이들 대사 풀이 정의되어 있다면 아이들 밈 대사로 순환

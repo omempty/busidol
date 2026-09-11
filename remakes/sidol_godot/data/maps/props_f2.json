@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "floor": 2,
+  "_comment": "F2 정적 소품 덧층 — props_f1.json과 같은 규약(맵 원본 불변, 덧씌움 계층). 남부 빈방 읽기물부터 둔다.",
+  "_layers": "footprint = 칸 속성 층, 그 밖 = 소품 속성 층(props_f1.json _layers와 같음).",
+  "_placement_rule": "문 아래 첫 바닥 행에 붙인다. 문 진입로(문 x좌표 ±1, 아래 3행)는 비운다.",
+  "_attr_grid": "키 큰 소품은 윗행 2·밑행 1이 기본(props_f1.json _attr_grid와 같음).",
+  "props": [
+    {
+      "id": "f2_south_terminal",
+      "sprite": "desk_pc",
+      "name_ko": "잔상 단말기",
+      "footprint": {
+        "anchor": [131, 50],
+        "size": [1, 2],
+        "attr_grid": [
+          [2],
+          [1]
+        ]
+      },
+      "inspect": {
+        "lines": [
+          "잔상만 남은 게시판 글.",
+          "「불타는 놈은 불이 약점. 믿기 힘들겠지만 사실이다 - 3층」"
+        ]
+      },
+      "_comment": "남부 빈방(x131~137 y50~52, 문 (133~134,48)) 읽기물 1 — 약점 힌트(전투 발견 축). x131 y50~51 attr 0 · object 0 실측. 문 진입로에서 서쪽으로 떨어져 있다."
+    },
+    {
+      "id": "f2_south_shelf",
+      "sprite": "shelf_books",
+      "name_ko": "실험일지 선반",
+      "footprint": {
+        "anchor": [136, 50],
+        "size": [1, 2],
+        "attr_grid": [
+          [2],
+          [1]
+        ]
+      },
+      "inspect": {
+        "lines": [
+          "먼지 쌓인 실험일지.",
+          "「D-... 점액, 산성. 고무장갑 필수」 ...뒤는 찢겼다."
+        ]
+      },
+      "_comment": "같은 방 읽기물 2 — 산성 점액(dworm) 복선. x136 y50~51 attr 0 · object 0 실측. 문 (141~142,48) 진입로와 5칸 이상 떨어져 있다."
+    }
+  ]
+}

@@ -83,6 +83,13 @@ func resolve_sequence() -> StringName:
 	return DialogueManager.resolve_npc_sequence(sequence_id, sequence_variants, repeat_sequence_id)
 
 
+## 기록 없는 미리보기 — 말풍선 장식 판단용(NpcEntity.peek_sequence와 같은 이유).
+func peek_sequence() -> StringName:
+	return DialogueManager.resolve_npc_sequence(
+		sequence_id, sequence_variants, repeat_sequence_id, false
+	)
+
+
 func occupies(c: Vector2i) -> bool:
 	return c in Placement.body_cells(cell)
 

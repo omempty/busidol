@@ -147,6 +147,14 @@ func resolve_sequence() -> StringName:
 	return DialogueManager.resolve_npc_sequence(sequence_id, sequence_variants, repeat_sequence_id)
 
 
+## 기록 없는 미리보기 — 말풍선 장식 판단용. resolve_sequence()는 고를 때마다
+## 청취 기록을 남기므로 프롬프트(매 프레임)에서 부르면 앞에 서 있기만 해도 회차가 돈다.
+func peek_sequence() -> StringName:
+	return DialogueManager.resolve_npc_sequence(
+		sequence_id, sequence_variants, repeat_sequence_id, false
+	)
+
+
 func body_cells() -> Array[Vector2i]:
 	return Placement.body_cells(cell)
 

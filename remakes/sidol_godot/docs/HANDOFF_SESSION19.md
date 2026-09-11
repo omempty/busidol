@@ -686,6 +686,17 @@ PNG·다른 종·다른 행은 그대로.
 - `TalkTargets.talk_count`·`branch_key` 신설(말풍선 판단용).
 - 검증: `gdformat` unchanged · `validate` 0 errors · `smoke_f1_events` PASS.
 
+### K.11 빈방 읽기물 (2026-09-11, 유저 질문 "방 기믹")
+
+> 전수 결과: 퀘스트방은 기믹 완비, 남부열·F4/F5 측방은 상자뿐 빈방(인벤토리는 K.11 본문 전단 참조).
+> 지형 불변(원본 바이트 일치)이라 덧씌움층(소품 읽기물)으로만 메운다.
+
+- `props_f1.json` +2(남부방 단말기 퀴즈 힌트·시간표 선반), `props_f2.json` 신설(약점 힌트·산성일지),
+  `props_f4.json` 신설(F2 교수열 거울 개그·출석부 복선). 전부 기존 스프라이트 3종 재사용.
+- 배치 검증: attr/object 실측 + 문 진입로 회피(각 _comment에 좌표 기록).
+- F3 남부·F5 측방은 미착수(같은 패턴으로 10분 컷).
+- 검증: `validate` 0 errors · `smoke_all_floors` PASS.
+
 ### K.6 잡담 은행 (2026-09-11, 유저 질문 "대사 늘리기·인터넷·제네레이터")
 
 > 결론: 인터넷 스크랩은 무리수(출처·저작권·톤 불명 + 오프라인 게임).
@@ -716,3 +727,91 @@ PNG·다른 종·다른 행은 그대로.
   추가 전 `count` 확인을 생략한 탓이다.
 - 검증: 전수 대조(배치 참조 시퀀스 누락 0·신규 @c 전원 사용처 있음·고아 @c699 삭제) ·
   `validate` 0 errors · `smoke_f1_events` PASS.
+
+### K.8 말풍선이 회차를 돌리던 버그 (2026-09-11, 유저 신고 "대사가 꼬임")
+
+> 증상: 자판기 대사가 학생 대사로 나오는 것처럼 보임 + 첫 대화가 전문이 아님.
+> 원인: `resolve_npc_sequence()`는 고를 때마다 청취 기록을 남기는데, K.3 말풍선이
+> 프롬프트 표시 **매 프레임** 그것을 불렀다. 앞에 서 있기만 해도 seen이 올라
+> 첫 SPACE에 전문이 아니라 반복이 열렸다(자판기 앞을 지나다니면 더 자주).
+> 데이터·회전 로직은 실행 검증(임시 헤드리스 6연타)으로 정상 확인 — 화자·순서 일치.
+> 처방: `record_seen` 플래그 + `peek_sequence()`(NPC·워커) — 장식은 기록 없이 본다.
+> 검증: 배회 120프레임 후 seen=0, talk1 전문→talk2 반복→talk3 교대 정상.
+> `validate` 0 errors · `smoke_f1_events` PASS. 임시 검증씬은 삭제.
+
+### K.9 트래커 정체 해소 — Q_F2_FIGHTER 배선 + setter 관문 (2026-09-11)
+
+> 증상: Q_F2_HP 완료 이후 트래커가 "실습실 친구"에 영원히 멈춘다.
+> 원인: Q_F2_FIGHTER(requires Q_F1_BLAST)를 세우는 곳이 데이터·코드에 어디에도
+> 없었다(§6 후속 1번 "공회전"). 보상 [연속 펀치]는 시작 스킬이라 이미 풀려 있다.
+> 번호: 지시문은 "K.8"이었으나 파일 끝에 동시 작업자의 미커밋 K.8(말풍선 버그)이
+> 있어 겹치지 않게 K.9로 기록했다 — 그 블록은 손대지 않고 뒤에만 이었다.
+
+- **배선** — `data/dialogue_sequences.json`: dev1/dev2의 Q_F2_POSTER 이후 변형
+  `f2_dev1_f2`(@c249)·`f2_dev2_f2`(@c253) 끝에
+  `{"op": "set_flags", "args": {"Q_F2_FIGHTER": true}}`를 마지막 스텝으로 추가.
+  두 변형 모두 기존 op이 없어(첫 op만 돈다) 뒤에 붙여도 실행된다. "친구들과 합류"를
+  구출의 서사적 대체로 쓴 것. 복수 `set_flags`가 맞다 — `field.gd _on_dialogue_op`가
+  `_args`를 순회하며 `set_flag`한다(cutscene의 단수 `flag` 아님).
+  op은 반드시 마지막이어야 한다(`DialogueBox._load_step()`이 op 스텝에서 `close()`를
+  먼저 부른다 — 뒤 스텝은 대사든 op이든 영영 안 돈다).
+- **관문** — `tools/validate.gd` `_validate_quest_setters()`(멤버 `_quest_setters`는
+  `_talk_sets`와 별도 dict, 호출은 `_validate_talk_targets()` 다음).
+  quests_v2 24종 전 id에 setter를 요구하고 없으면 `_err`(경고 아님 — 트래커 정지 등급).
+  인정 모양(대소문자 구분 — `q_f5_ai_battle_won`은 `Q_F5_AI_BATTLE`이 아니다):
+  컷신 `set_flags` 키·`craft`/`grant_skill`의 `flag`·`start_battle`의 `on_win_flag`,
+  트리거 `done_flag`, `talk_targets`의 `sets_flag`(+variants),
+  시퀀스의 `set_flags` 키·`grant_skill`의 `flag`,
+  `monsters.json` 층별 species의 `first_win_flag`
+  (`field.gd _trigger_encounter`가 이를 `pending_encounter.on_win_flag`로 넘긴다 —
+  Q_F1_START의 DWORM 자리), `credits.json`의 `all_seen_flag`·`perfect_flag`
+  (`credit_room.gd`가 코드로 세운다 — Q_HP_ALL·Q_QUIZ_ALL).
+  뒤의 둘(monsters·credits)은 지시 목록에 없었으나, 빼면 멀쩡한 3종이 오탐으로
+  붉어져 `done 0 errors`가 성립하지 않으므로 실제 setter 근거와 함께 포함한 것.
+- **검증 (실측)**: 배선 제거 상태로 `setter 42종 · 미배선 1종 · done 1 errors`
+  (`퀘스트 'Q_F2_FIGHTER'를 세우는 곳이 없다`) — 부정 시험으로 관문이 붉어짐 확인.
+  복원 후 `setter 43종 · 미배선 0종 · done 0 errors` ·
+  `smoke_f1_events` PASS · `smoke_battle` PASS.
+
+### K.10 미니맵 안개 진단 (2026-09-11, 유저 신고 "미니맵 전장안개가 미구현")
+
+> 결론: **동작함 — 버그 없음, 코드 변경 없음.** 안개는 어두운 층에서만 도는 것이
+> 설계이며, 기록→표시→세이브가 전부 배선돼 있다. 밝은 층(F1~F5)에서 M을 눌러
+> 전체 지도가 보이는 것은 미구현이 아니라 설계다. 전층 안개화는 설계 변경이므로
+> 하지 않았다. 안개를 보고 싶으면 F0(잊혀진 서고)에서 M을 누른다.
+
+- 기록 경로(끝까지 추적): F0 진입 `field._ready` → `_reveal_fog()`(scenes/field.gd:214) ·
+  이동 시 `_physics_process` → `_reveal_fog()`(:222-223) · 층 전환 `rebuild_floor`(:791-792) →
+  `_reveal_fog`(:907-917, `_fog_active` 가드 → `reveal_rect(visible_cell_rect())` →
+  `minimap.on_revealed()`). M키는 `minimap._process` 토글 + 무조건 `repaint`
+  (src/ui/minimap.gd:164-170).
+- 판정 일치(어긋남 없음): `field._fog_active`(scenes/field.gd:922-923)와
+  `MinimapLayer.repaint`(src/ui/minimap.gd:123)가 문자 그대로 같은 문 —
+  `SettingsManager.fog_of_war and FloorLighting.is_dark(GameState.current_floor)`.
+- 어두운 층 정의: `FLOOR_TINT`에 F0 상시 + `_blackout` 집합(src/map/floor_lighting.gd:26-28,70-71).
+  F1~F5 전면 공개는 설계이며 FogProbe ⓪도 "밝은 층 — 안개 없음"을 정상으로 판정
+  (src/core/audit/fog_probe.gd:47-52).
+- 세이브 대칭: 저장 `fog.to_data()`(src/autoload/save_manager.gd:124) ↔ 불러오기
+  `fog.restore()`(:158) + `clear_blackout()`(:161). 새 게임 `fog.clear()` +
+  `clear_blackout()`(src/autoload/game_state.gd:282-284). 구 세이브(키 없음)는
+  안개 가득으로 시작(src/map/fog_of_war.gd:184-193).
+- 실행 증거(`world_audit`, FogProbe 전 항목 ok): f0 — 안개 적용 · 초기 시야
+  540/13000칸(4.2%, 화면만큼만) · 프론티어 69칸(미탐색 도달칸 5032) · 화면 상한
+  540≤576. f1~f5 — "밝은 층 — 안개 없음(지도 전체 공개)" 전부 ok.
+- 검증: `validate` done 0 errors · `smoke_field`/`smoke_f1_events`/`smoke_save` PASS.
+  `world_audit` FogProbe 항목은 전 층 ok이나, `field_ui` UI 화면 이탈 FAIL이
+  4~12건(실행마다 개수·좌표 변동 — 안개와 무관한 기존 플레이크, 미해결로 남김).
+
+### K.12 장착·사용 효과음 (2026-09-11, 유저 요청 "무기 탈부착·사용시 소리")
+
+> 장착 토글(`GameState.equip`)은 있었고 소리만 없었다. 사용음은 재생 경로 자체가 없었다.
+
+- 신규 절차음 4종(`make_audio.py` 레시피 + `sfx.json` 스펙 + wav):
+  `sfx_drink`(회복)·`sfx_cure`(해제)·`sfx_buff`(버프)·`sfx_menu_cancel`(취소·해제).
+- 장착은 부위별 기존음 재사용(무기 `atk_swish`·방어구 `cast_shield`), 해제는 취소음.
+  배선: 인벤 ITEMS 확정·GEAR 해제·✖ 버튼·HUD 퀵슬롯.
+- 덤: `sfx_menu_cancel`이 코드 3곳에서 참조 중인데 파일이 없어 무음이었다 — 이번에 실물 생성.
+- 사용음은 효과별 분기(`ItemEffects` — 회복/해제/버프·실드 각각).
+- 주의: `make_audio --only sfx`는 전량 재구성이라 기존 wav가 전부 더티가 된다
+  (비결정적 인코딩). 신규분만 남기고 나머지는 revert 했다.
+- 검증: `gdformat` unchanged · `validate` 0 errors · `smoke_battle`·`smoke_battle_input` PASS.

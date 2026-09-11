@@ -209,15 +209,55 @@
    "loop": "none",
    "prompt_brief": "AABBA7 AC83 - ABBB WMQ54 + AC79C6 CA75 + AD9B"
   },
-  {
-   "id": "sfx_coin",
-   "kind": "sfx_one_shot",
-   "duration_sec": [
-    0.2,
-    0.5
-   ],
-   "loop": "none",
-   "prompt_brief": "AC7D6 NW4F - B5-E6 6LA5J6 2AC4 6FC"
-  }
+   {
+    "id": "sfx_coin",
+    "kind": "sfx_one_shot",
+    "duration_sec": [
+     0.2,
+     0.5
+    ],
+    "loop": "none",
+    "prompt_brief": "AC7D6 NW4F - B5-E6 6LA5J6 2AC4 6FC"
+   },
+   {
+    "id": "sfx_drink",
+    "kind": "sfx_one_shot",
+    "duration_sec": [
+     0.2,
+     0.5
+    ],
+    "loop": "none",
+    "prompt_brief": "회복 아이템 사용 — 꿀꺽 내림 3연음"
+   },
+   {
+    "id": "sfx_cure",
+    "kind": "sfx_one_shot",
+    "duration_sec": [
+     0.2,
+     0.5
+    ],
+    "loop": "none",
+    "prompt_brief": "상태이상 해제 — 상승 알페지오"
+   },
+   {
+    "id": "sfx_buff",
+    "kind": "sfx_one_shot",
+    "duration_sec": [
+     0.2,
+     0.5
+    ],
+    "loop": "none",
+    "prompt_brief": "공격 버프·실드 — 기합 상승 스윕"
+   },
+   {
+    "id": "sfx_menu_cancel",
+    "kind": "sfx_one_shot",
+    "duration_sec": [
+     0.05,
+     0.15
+    ],
+    "loop": "none",
+    "prompt_brief": "취소·해제 — 하강 블립(코드에서 참조 중인데 파일이 없어 무음이었음)"
+   }
  ]
 }

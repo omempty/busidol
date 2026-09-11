@@ -63,7 +63,15 @@ func _on_slot_activated(idx: int) -> void:
 			GameState.inventory.remove(item_id, 1)
 			refresh()
 	elif str(def.get("kind", "")) in ["weapon", "armor"]:
+		var kind := str(def.get("kind", ""))
+		var was := str(GameState.equipped.get(kind, ""))
 		GameState.equip(item_id)
+		if was == String(item_id):
+			AudioManager.play_sfx(&"sfx_menu_cancel")
+		elif kind == "armor":
+			AudioManager.play_sfx(&"cast_shield")
+		else:
+			AudioManager.play_sfx(&"atk_swish")
 		refresh()
 
 

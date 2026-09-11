@@ -40,139 +40,158 @@
   "184": "ITEM_MONEY_1000"
  },
  "items": [
-  {
-   "id": "ITEM_WEAPON_AM_SIDOL",
-   "name_ko": "암 부싯돌",
-   "kind": "weapon",
-   "ap": 10,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_SU_SIDOL",
-   "name_ko": "수 부싯돌",
-   "kind": "weapon",
-   "ap": 15,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_DANDO",
-   "name_ko": "단도",
-   "kind": "weapon",
-   "ap": 30,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_KAL",
-   "name_ko": "칼",
-   "kind": "weapon",
-   "ap": 35,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_SHOCK_1",
-   "name_ko": "전기충격기",
-   "kind": "weapon",
-   "ap": 50,
-   "element": "electric"
-  },
-  {
-   "id": "ITEM_WEAPON_SHOCK_2",
-   "name_ko": "전기충격기 프로",
-   "kind": "weapon",
-   "ap": 80,
-   "element": "electric"
-  },
-  {
-   "id": "ITEM_WEAPON_TRIDENT_1",
-   "name_ko": "삼지창 1",
-   "kind": "weapon",
-   "ap": 30,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_TRIDENT_2",
-   "name_ko": "삼지창 2",
-   "kind": "weapon",
-   "ap": 100,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_TRIDENT_3",
-   "name_ko": "삼지창 3",
-   "kind": "weapon",
-   "ap": 300,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_GLOVER_1",
-   "name_ko": "파워원 글로버",
-   "kind": "weapon",
-   "ap": 40,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_GLOVER_2",
-   "name_ko": "파워투 글로버",
-   "kind": "weapon",
-   "ap": 200,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_GLOVER_3",
-   "name_ko": "파워쓰리 글로버",
-   "kind": "weapon",
-   "ap": 400,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_STAR_1",
-   "name_ko": "표창 원",
-   "kind": "weapon",
-   "ap": 250,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_STAR_2",
-   "name_ko": "표창 투",
-   "kind": "weapon",
-   "ap": 350,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_STAR_3",
-   "name_ko": "표창 쓰리",
-   "kind": "weapon",
-   "ap": 800,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_WHIP_1",
-   "name_ko": "채찍 원",
-   "kind": "weapon",
-   "ap": 35,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_WHIP_2",
-   "name_ko": "채찍 투",
-   "kind": "weapon",
-   "ap": 40,
-   "element": "physical"
-  },
-  {
-   "id": "ITEM_WEAPON_GASGUN_OLD",
-   "name_ko": "구형 가스총",
-   "kind": "weapon",
-   "ap": 270,
-   "element": "none"
-  },
-  {
-   "id": "ITEM_WEAPON_GASGUN_NEW",
-   "name_ko": "신형 가스총",
-   "kind": "weapon",
-   "ap": 500,
-   "element": "none"
-  },
+   {
+    "id": "ITEM_WEAPON_AM_SIDOL",
+    "name_ko": "암 부싯돌",
+    "kind": "weapon",
+    "ap": 10,
+    "price": 100,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_SU_SIDOL",
+    "name_ko": "수 부싯돌",
+    "kind": "weapon",
+    "ap": 15,
+    "price": 150,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_DANDO",
+    "name_ko": "단도",
+    "kind": "weapon",
+    "ap": 30,
+    "price": 300,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_KAL",
+    "name_ko": "칼",
+    "kind": "weapon",
+    "ap": 35,
+    "price": 400,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_SHOCK_1",
+    "name_ko": "전기충격기",
+    "kind": "weapon",
+    "ap": 50,
+    "price": 800,
+    "element": "electric"
+   },
+   {
+    "id": "ITEM_WEAPON_SHOCK_2",
+    "name_ko": "전기충격기 프로",
+    "kind": "weapon",
+    "ap": 80,
+    "price": 1300,
+    "element": "electric"
+   },
+   {
+    "id": "ITEM_WEAPON_TRIDENT_1",
+    "name_ko": "삼지창 1",
+    "kind": "weapon",
+    "ap": 30,
+    "price": 300,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_TRIDENT_2",
+    "name_ko": "삼지창 2",
+    "kind": "weapon",
+    "ap": 100,
+    "price": 1500,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_TRIDENT_3",
+    "name_ko": "삼지창 3",
+    "kind": "weapon",
+    "ap": 300,
+    "price": 4200,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_GLOVER_1",
+    "name_ko": "파워원 글로버",
+    "kind": "weapon",
+    "ap": 40,
+    "price": 500,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_GLOVER_2",
+    "name_ko": "파워투 글로버",
+    "kind": "weapon",
+    "ap": 200,
+    "price": 2800,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_GLOVER_3",
+    "name_ko": "파워쓰리 글로버",
+    "kind": "weapon",
+    "ap": 400,
+    "price": 5800,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_STAR_1",
+    "name_ko": "표창 원",
+    "kind": "weapon",
+    "ap": 250,
+    "price": 3400,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_STAR_2",
+    "name_ko": "표창 투",
+    "kind": "weapon",
+    "ap": 350,
+    "price": 5000,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_STAR_3",
+    "name_ko": "표창 쓰리",
+    "kind": "weapon",
+    "ap": 800,
+    "price": 9500,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_WHIP_1",
+    "name_ko": "채찍 원",
+    "kind": "weapon",
+    "ap": 35,
+    "price": 400,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_WHIP_2",
+    "name_ko": "채찍 투",
+    "kind": "weapon",
+    "ap": 40,
+    "price": 500,
+    "element": "physical"
+   },
+   {
+    "id": "ITEM_WEAPON_GASGUN_OLD",
+    "name_ko": "구형 가스총",
+    "kind": "weapon",
+    "ap": 270,
+    "price": 3600,
+    "element": "none"
+   },
+   {
+    "id": "ITEM_WEAPON_GASGUN_NEW",
+    "name_ko": "신형 가스총",
+    "kind": "weapon",
+    "ap": 500,
+    "price": 7000,
+    "element": "none"
+   },
   {
    "id": "ITEM_BATTERY",
    "name_ko": "건전지",

@@ -52,6 +52,7 @@ static func use_on_field(def: Dictionary) -> String:
 		return ""  # 만HP — 낭비 방지
 	stats["hp"] = mini(before + restore, max_hp)
 	GameState.state_changed.emit()
+	AudioManager.play_sfx(&"sfx_drink")
 	return String(TranslationServer.translate("UI_ITEM_HEAL")) % (int(stats["hp"]) - before)
 
 
@@ -62,10 +63,12 @@ static func use_in_battle(def: Dictionary, target: Combatant) -> Array[String]:
 	if restore > 0:
 		var healed := target.heal(restore)
 		if healed > 0:
+			AudioManager.play_sfx(&"sfx_drink")
 			out.append("HP +%d" % healed)
 
 	var cured := _cure(def, target)
 	if not cured.is_empty():
+		AudioManager.play_sfx(&"sfx_cure")
 		out.append(String(TranslationServer.translate("UI_ITEM_CURED")) % ", ".join(cured))
 
 	var applies := str(def.get("applies", ""))
@@ -101,6 +104,7 @@ static func use_in_battle(def: Dictionary, target: Combatant) -> Array[String]:
 					% [str(edef.get("_desc", applies)).split(" —")[0], dur]
 				)
 			)
+			AudioManager.play_sfx(&"sfx_buff")
 
 	var buff := int(def.get("ap_buff", 0))
 	var turns := int(def.get("ap_buff_turns", 0))
@@ -108,6 +112,7 @@ static func use_in_battle(def: Dictionary, target: Combatant) -> Array[String]:
 		var amount := buff if buff > 0 else DEFAULT_AP_BUFF
 		var dur := turns if turns > 0 else DEFAULT_AP_BUFF_TURNS
 		target.attach_effect({"kind": &"buff_attack", "turns": dur, "magnitude": amount})
+		AudioManager.play_sfx(&"sfx_buff")
 		out.append(String(TranslationServer.translate("UI_ITEM_ATK_BUFF")) % [amount, dur])
 	return out
 

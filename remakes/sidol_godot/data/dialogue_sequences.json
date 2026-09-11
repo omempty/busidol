@@ -578,7 +578,8 @@
     },
     "f2_dev1_f2": {
       "steps": [
-        { "speaker": "개발자 1", "text": "@c249" }
+        { "speaker": "개발자 1", "text": "@c249" },
+        { "op": "set_flags", "args": { "Q_F2_FIGHTER": true } }
       ]
     },
     "f2_dev1_f2_repeat": {
@@ -604,7 +605,8 @@
     },
     "f2_dev2_f2": {
       "steps": [
-        { "speaker": "개발자 2", "text": "@c253" }
+        { "speaker": "개발자 2", "text": "@c253" },
+        { "op": "set_flags", "args": { "Q_F2_FIGHTER": true } }
       ]
     },
     "f2_dev2_f2_repeat": {

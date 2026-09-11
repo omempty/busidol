@@ -37,6 +37,8 @@ var _dialogue: Dictionary
 ## 대화 마커 사슬 검사 — 요구하는 플래그 ↔ 세우는 플래그.
 var _talk_needed: Dictionary = {}
 var _talk_sets: Dictionary = {}
+## 퀘스트 setter 검사 — quests_v2 id → 세우는 곳 있음. _talk_sets와 별도 dict.
+var _quest_setters: Dictionary = {}
 var _sequences: Dictionary = {}
 var _item_ids: Dictionary = {}
 var _audio_ids: Dictionary = {}  # "bgm/xxx", "sfx/xxx", "voice/xxx"
@@ -67,6 +69,7 @@ func _initialize() -> void:
 	_validate_battle_rules()
 	_validate_keyart()
 	_validate_talk_targets()
+	_validate_quest_setters()
 
 	if _errors.is_empty():
 		print("[validate] done - 0 errors")
@@ -628,6 +631,133 @@ func _validate_talk_targets() -> void:
 			% [targets.size(), placed, _talk_sets.size(), chatter_n]
 		)
 	)
+
+
+## 퀘스트 setter 관문 — quests_v2.json의 모든 id는 어딘가에서 세워져야 한다.
+##
+## 배경: Q_F2_FIGHTER를 세우는 곳이 어디에도 없어 트래커가 "실습실 친구"에 영원히
+## 멈췄다(2026-09-11). 트래커는 사슬의 첫 ACTIVE 퀘스트를 보여주므로 setter 없는
+## 퀘스트는 진행 표시를 굳힌다 — 경고가 아니라 오류다.
+## setter로 인정하는 모양(대소문자 구분 — q_f5_ai_battle_won은 Q_F5_AI_BATTLE이 아니다):
+## - 컷신 op: set_flags의 args 키 전부 / craft·grant_skill의 args.flag
+## - 컷신 start_battle의 on_win_flag(pending_encounter로 넘어가 승리 시 세워진다)
+## - monsters.json 층별 species의 first_win_flag
+##   (field.gd _trigger_encounter가 이것을 pending_encounter.on_win_flag로 넘긴다)
+## - 트리거 done_flag(data/maps/triggers_f*.json)
+## - talk_targets의 sets_flag(+variants)
+## - dialogue_sequences의 op set_flags(args 키 전부)/grant_skill(args.flag)
+## - credits.json all_seen_flag·meta_quiz.perfect_flag(credit_room.gd가 코드로 세운다)
+## talk_* 같은 퀘스트 아닌 플래그는 검사 대상이 아니다(quests_v2 id만 본다).
+func _validate_quest_setters() -> void:
+	var setters: Dictionary = {}
+	for f in DirAccess.get_files_at(DATA + "cutscenes"):
+		if not f.ends_with(".json"):
+			continue
+		var parsed: Variant = JSON.parse_string(
+			FileAccess.get_file_as_string(DATA + "cutscenes/" + f)
+		)
+		if typeof(parsed) == TYPE_DICTIONARY:
+			_collect_cutscene_setters((parsed as Dictionary).get("steps", []), setters)
+	for floor_idx in range(0, 6):
+		var tp := "res://data/maps/triggers_f%d.json" % floor_idx
+		if not FileAccess.file_exists(tp):
+			continue
+		var traw: Variant = JSON.parse_string(FileAccess.get_file_as_string(tp))
+		if typeof(traw) != TYPE_DICTIONARY:
+			continue
+		for t: Dictionary in (traw as Dictionary).get("triggers", []):
+			var done := str(t.get("done_flag", ""))
+			if not done.is_empty():
+				setters[done] = true
+	var talk_raw: Variant = JSON.parse_string(
+		FileAccess.get_file_as_string("res://data/maps/talk_targets.json")
+	)
+	if typeof(talk_raw) == TYPE_DICTIONARY:
+		var targets2: Dictionary = (talk_raw as Dictionary).get("targets", {})
+		for key: String in targets2:
+			var t2: Dictionary = targets2[key]
+			var s0 := str(t2.get("sets_flag", ""))
+			if not s0.is_empty():
+				setters[s0] = true
+			for v: Dictionary in t2.get("variants", []):
+				var sv := str(v.get("sets_flag", ""))
+				if not sv.is_empty():
+					setters[sv] = true
+	for seq_id: String in _sequences:
+		for st: Dictionary in (_sequences[seq_id] as Dictionary).get("steps", []):
+			_collect_sequence_setter(st, setters)
+	var mraw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA + "monsters.json"))
+	if typeof(mraw) == TYPE_DICTIONARY:
+		for fk: String in (mraw as Dictionary).get("floors", {}):
+			var fdef: Dictionary = ((mraw as Dictionary)["floors"] as Dictionary)[fk]
+			for sp: Dictionary in fdef.get("species", []):
+				var fw := str(sp.get("first_win_flag", ""))
+				if not fw.is_empty():
+					setters[fw] = true
+	var craw: Variant = JSON.parse_string(FileAccess.get_file_as_string(DATA + "credits.json"))
+	if typeof(craw) == TYPE_DICTIONARY:
+		var all_seen := str((craw as Dictionary).get("all_seen_flag", ""))
+		if not all_seen.is_empty():
+			setters[all_seen] = true
+		var mq: Dictionary = (craw as Dictionary).get("meta_quiz", {})
+		var pf := str(mq.get("perfect_flag", ""))
+		if not pf.is_empty():
+			setters[pf] = true
+	_quest_setters = setters
+	var quests: Dictionary = _load_json(DATA + "quests_v2.json") as Dictionary
+	var qlist: Array = quests.get("quests", [])
+	var missing: Array[String] = []
+	for q: Dictionary in qlist:
+		var qid := str(q.get("id", ""))
+		if qid.is_empty():
+			continue
+		if not setters.has(qid):
+			missing.append(qid)
+	for mid: String in missing:
+		_err("퀘스트 '%s'를 세우는 곳이 없다 — 트래커가 이 퀘스트에서 영원히 멈춘다" % mid)
+	print(
+		(
+			"[validate] 퀘스트 setter %d종 · 퀘스트 %d종 · 미배선 %d종"
+			% [setters.size(), qlist.size(), missing.size()]
+		)
+	)
+
+
+## 컷신 steps 재귀 수집 — choice 옵션 안의 sub-steps까지 본다.
+## dialogue op 안의 대사행(speaker/text)은 op이 없어 그냥 지나간다.
+func _collect_cutscene_setters(steps: Array, setters: Dictionary) -> void:
+	for st: Dictionary in steps:
+		var op := str(st.get("op", ""))
+		var args: Dictionary = st.get("args", {})
+		if op == "set_flags":
+			for k: String in args:
+				setters[k] = true
+		elif op == "craft" or op == "grant_skill":
+			var flag := str(args.get("flag", ""))
+			if not flag.is_empty():
+				setters[flag] = true
+		elif op == "start_battle":
+			var won := str(st.get("on_win_flag", ""))
+			if not won.is_empty():
+				setters[won] = true
+		for opt: Dictionary in args.get("options", []):
+			_collect_cutscene_setters(opt.get("steps", []), setters)
+		if st.has("steps") and op != "dialogue":
+			_collect_cutscene_setters(st.get("steps", []), setters)
+
+
+## 대사 시퀀스 op 수집 — set_flags(args 키 전부)/grant_skill(args.flag).
+## shop 등은 플래그를 세우지 않으므로 무시한다.
+func _collect_sequence_setter(step: Dictionary, setters: Dictionary) -> void:
+	var op := str(step.get("op", ""))
+	var args: Dictionary = step.get("args", {})
+	if op == "set_flags":
+		for k: String in args:
+			setters[k] = true
+	elif op == "grant_skill":
+		var flag := str(args.get("flag", ""))
+		if not flag.is_empty():
+			setters[flag] = true
 
 
 ## UI 문자열 ↔ 번역표(data/l10n/ui.csv) 양방향 대조.

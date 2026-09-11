@@ -340,7 +340,7 @@ func _physics_process(_delta: float) -> void:
 		# 접근 반응 — 말을 걸기 전부터 플레이어를 쳐다본다(이동 중에는 손대지 않음).
 		if not npc._is_wandering:
 			npc.face_towards(player.mover.grid_pos)
-		_maybe_emote(String(npc.npc_id), npc, npc.resolve_sequence())
+		_maybe_emote(String(npc.npc_id), npc, npc.peek_sequence())
 		if interact_edge:
 			_start_dialogue(npc)
 		return
@@ -349,7 +349,7 @@ func _physics_process(_delta: float) -> void:
 	if walker != null and not walker.sequence_id.is_empty():
 		_prompt.show_at("%s   SPACE" % walker.display_name, walker.position + Vector2(0, -46))
 		_focus.show_cells(Placement.body_cells(walker.cell))
-		_maybe_emote(String(walker.walker_id), walker, walker.resolve_sequence())
+		_maybe_emote(String(walker.walker_id), walker, walker.peek_sequence())
 		if interact_edge:
 			_start_walker_dialogue(walker)
 		return

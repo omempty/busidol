@@ -110,6 +110,12 @@
                     "text": "@c531"
                   }
                 ]
+              },
+              {
+                "op": "set_flags",
+                "args": {
+                  "Q_ANSWER_FLAME": true
+                }
               }
             ]
           }

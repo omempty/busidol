@@ -291,6 +291,7 @@ func _confirm() -> void:
 			var equipped := str(GameState.equipped.get(slot, ""))
 			if not equipped.is_empty():
 				GameState.equip(StringName(equipped))  # 같은 것을 다시 = 해제
+				AudioManager.play_sfx(&"sfx_menu_cancel")
 				_refresh_all()
 		Tab.SYSTEM:
 			system_requested.emit(StringName(str(SYSTEM_ITEMS[_sub_index]["id"])))
@@ -306,7 +307,16 @@ func _use_selected() -> void:
 		return
 	var slot: Dictionary = _rows[clampi(_index, 0, _rows.size() - 1)]
 	var item_id := StringName(str(slot["item_id"]))
+	var kind := str(Database.get_item(item_id).get("kind", ""))
+	var was := str(GameState.equipped.get(kind, ""))
 	if GameState.equip(item_id):
+		# 장착은 부위별 효과음(무기 휘두름·방어구 전개), 해제는 취소음.
+		if was == String(item_id):
+			AudioManager.play_sfx(&"sfx_menu_cancel")
+		elif kind == "armor":
+			AudioManager.play_sfx(&"cast_shield")
+		else:
+			AudioManager.play_sfx(&"atk_swish")
 		_refresh_all()
 		return
 	var def := Database.get_item(item_id)
@@ -602,6 +612,7 @@ func _refresh_gear() -> void:
 						and e.button_index == MOUSE_BUTTON_LEFT
 					):
 						GameState.equip(unequip_id)
+						AudioManager.play_sfx(&"sfx_menu_cancel")
 						_refresh_all()
 			)
 			right_box.add_child(unequip_btn)

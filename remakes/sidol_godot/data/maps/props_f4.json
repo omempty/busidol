@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "floor": 4,
+  "_comment": "F4 정적 소품 덧층 — props_f1.json과 같은 규약(맵 원본 불변, 덧씌움 계층). F2 교수열과 거울구조인 동열 빈방 읽기물부터 둔다.",
+  "_layers": "footprint = 칸 속성 층, 그 밖 = 소품 속성 층(props_f1.json _layers와 같음).",
+  "_placement_rule": "문 아래 첫 바닥 행에 붙인다. 문 진입로(문 x좌표 ±1, 아래 3행)는 비운다.",
+  "_attr_grid": "키 큰 소품은 윗행 2·밑행 1이 기본(props_f1.json _attr_grid와 같음).",
+  "props": [
+    {
+      "id": "f4_mirror_terminal",
+      "sprite": "desk_pc",
+      "name_ko": "시간표 단말기",
+      "footprint": {
+        "anchor": [117, 27],
+        "size": [1, 2],
+        "attr_grid": [
+          [2],
+          [1]
+        ]
+      },
+      "inspect": {
+        "lines": [
+          "강의실 시간표 단말기다.",
+          "「2층과 같은 시간표로 운영합니다」 ...2층 교수님들은 여기 안 계신다."
+        ]
+      },
+      "_comment": "동열 빈방(x116~120 y27~, 문 (118~119,25)) 읽기물 1 — F2 교수열 거울구조 개그. x117 y27~28 attr 0 · object 0 실측. 문 진입로 바로 옆이라 ±1 밖(서쪽)으로 붙였다."
+    },
+    {
+      "id": "f4_mirror_shelf",
+      "sprite": "shelf_books",
+      "name_ko": "텅 빈 출석부",
+      "footprint": {
+        "anchor": [128, 27],
+        "size": [1, 2],
+        "attr_grid": [
+          [2],
+          [1]
+        ]
+      },
+      "inspect": {
+        "lines": [
+          "텅 빈 출석부.",
+          "이름 석 자가 적혀 있다가 지워졌다. ...'완종'이라고 읽히는 것 같기도 하고."
+        ]
+      },
+      "_comment": "동열 빈방(x127~131 y27~) 읽기물 2 — 후일담 복선 한 줄. x128 y27~28 attr 0 · object 0 실측."
+    }
+  ]
+}
