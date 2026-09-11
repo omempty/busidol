@@ -58,5 +58,13 @@
    "fps": 5,
    "loop": false
   }
+ },
+ "shot": {
+  "dir": -1,
+  "flip": true,
+  "muzzle": [
+   148,
+   62
+  ]
  }
 }

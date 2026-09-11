@@ -118,6 +118,28 @@ FX = [
 # Iron-Vic(4) · HellCop(5)은 근접만 한다. 이 구분이 종을 가르는 원작의 장치다.
 FIRES_BOLT = ["mad_eye", "vulgar", "dworm", "ozzy", "o_ray"]
 
+# ── 발사 종의 빔 기준점 (`shot` 메타) ────────────────────────────────────
+# `origin_muzzle`(섬광)과 `origin_bolt`(혜성)를 **적의 어디에 맞춰 띄울지**다.
+# 원작은 섬광을 화면 (0,0) 고정에 얹었는데(`WARMODE.C:607`), 그러면 노즐이 프레임
+# 어디에 있든 빔이 그 자리에서 나가야 해서 종마다 어긋난다(2026-09-11 유저 지적
+# "DWORM 입에서 나오는 빔이 안 맞는다"). 그래서 노즐 좌표를 메타에 굽는다.
+#
+# `flip`: 공격 자세를 좌우 반전할지. 원작 공격 프레임은 오른쪽을 향해 저장돼 있는데
+#   플레이어는 화면 **왼쪽**에 있다(`BackW` :1127·1129). 반전하지 않으면 적이 등을 돌리고
+#   쏘고, 노즐도 반대를 향한다. 마드아이는 눈이 이미 왼쪽을 봐서 유지한다.
+# `muzzle`[x,y]: 셀(320×200) 안에서 빔이 나갈 자리. **반전 전** 좌표로 적는다 —
+#   런타임이 flip이면 x를 `320-x`로 옮긴다. 지정이 없으면 공격 프레임(3) 내용 bbox 중심.
+SHOT_FLIP = {
+    "mad_eye": False,
+    "vulgar": True,
+    "dworm": True,
+    "ozzy": True,
+    "o_ray": True,
+}
+# 뚜렷한 노즐이 있는 종은 그 자리를 직접 잡는다(빨간 링 중심 — 공격 프레임 3 실측).
+SHOT_MUZZLE = {"dworm": [148, 62]}
+
+
 # 리메이크 종 → (원작 SPR 세트, 색상환 회전°, 설명)
 SPECIES = {
     "mad_eye": ("e1", 0, "Mad Eye — 원작 SprNum 0"),
@@ -207,9 +229,26 @@ def bake(species: str, set_id: str, degrees: int, desc: str, check: bool) -> boo
         "hue_shift": degrees,
         "animations": anims,
     }
+    shot = _shot_meta(species, frames)
+    if shot is not None:
+        doc["shot"] = shot
     meta.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     print(f"  {species:14s} {set_id} hue{degrees:+4d}°  {sheet.width}x{sheet.height} 저장")
     return True
+
+
+def _shot_meta(species: str, frames: list[Image.Image]) -> dict | None:
+    """발사 종의 빔 기준점 — 없으면 None(빔을 안 쏘는 종)."""
+    if species not in FIRES_BOLT:
+        return None
+    muzzle = SHOT_MUZZLE.get(species)
+    if muzzle is None:
+        bb = frames[3].getbbox() if len(frames) > 3 else None
+        if bb is not None:
+            muzzle = [(bb[0] + bb[2]) // 2, (bb[1] + bb[3]) // 2]
+    if muzzle is None:
+        return None
+    return {"dir": -1, "flip": SHOT_FLIP.get(species, False), "muzzle": [int(muzzle[0]), int(muzzle[1])]}
 
 
 # ── 주인공 전투 시트 ────────────────────────────────────────────────────────

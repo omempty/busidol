@@ -65,6 +65,11 @@ func enemy_turn(enemy_id: String = "") -> Dictionary:
 		enemy.broken_turns -= 1
 		enemy.pending_heavy_mult = 0.0
 		return {"skipped": "break"}
+	# 마비도 한 적 턴을 쉰다 — 플레이어 마비와 같은 수학(지속 2 = 정확히 한 번 스킵).
+	# 지속 감소는 라운드 tick(호출부 sim·실전 `_tick_effects`)이 맡는다 — 여기서 깎으면 두 번 잰다.
+	# 브레이크와 달리 모으기는 깨뜨리지 않는다 — 모으기 카운터는 브레이크의 자리다.
+	if enemy.has_paralysis():
+		return {"skipped": "paralysis"}
 	# 모은 강타가 있으면 발산이 그 턴을 잡아먹는다(특수보다 먼저).
 	if enemy.pending_heavy_mult > 0.0:
 		var raw_h := BattleEnemyPhase.heavy_damage(enemy, EnemyManager.rng)

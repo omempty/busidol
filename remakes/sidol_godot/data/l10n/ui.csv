@@ -229,17 +229,20 @@ UI_TRACKER_F4,실험 구역 돌파 및 전원 복구,Breach lab and restore powe
 UI_TRACKER_F5,시스템 빌더 제어실 도달,Reach System Builder chamber
 UI_TRACKER_DEFAULT,학교 탈출 단서 수색,Search clues to escape
 UI_BATTLE_STAMINA,기력,Stamina
+UI_BATTLE_SKILL_POWER,위력 %d,Power %d
 UI_BATTLE_STAMINA_GAIN,기력 +%d,Stamina +%d
 UI_BATTLE_NO_STAMINA,기력이 모자란다,Not enough stamina
 UI_BATTLE_STATUS_RESISTED,저항했다!,Resisted!
 UI_BLOG_STATUS_RESIST,%s의 수작을 버텨 냈다,%s's trick was resisted
 UI_BLOG_ENEMY_PARALYZE,%s의 방전! 몸이 저릿하다 (%d),%s discharges! Numbness (%d)
 UI_BLOG_ENEMY_DOT,%s의 부식 공격! 턴마다 %d,%s corrodes you! %d per turn
+UI_BLOG_DOT_TICK,%s 지속 피해 %d,%s suffers %d ongoing damage
 UI_BLOG_ENEMY_HEAVY_CHARGE,%s가 힘을 모은다! 다음 턴에 강타!,%s is charging power! Heavy strike next turn!
 UI_BLOG_ENEMY_HEAVY_HIT,%s의 강타 %d,%s heavy strike %d
 UI_BATTLE_HEAVY_WARN,다음 턴 강타! 방어로!,Heavy incoming! Guard!
 UI_BATTLE_PARALYZED,몸이 저려 움직일 수 없다!,Too numb to move!
 UI_BLOG_PLAYER_PARALYZED,마비 — 턴을 잃었다,Paralyzed — turn lost
+UI_BLOG_ENEMY_PARALYZED,%s 마비 — 꼼짝 못 한다,%s is numb and cannot move
 UI_ACQUIRE_SKILL,신기술 『%s』을(를) 익혔다!,Learned skill: %s!
 UI_ACQUIRE_HEAL,휴식 — HP +%d,Rested — HP +%d
 UI_ACQUIRE_ITEM,%s 획득,Got %s

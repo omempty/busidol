@@ -48,12 +48,21 @@ const ORIGIN_FX_DIR := "res://assets/effects/"
 ## 에너지파를 쏘는 종 — 원작 `EnemyAttackAni` WARMODE.C:601 `case 0:1:2:3:6:7`.
 ## Iron-Vic(4)·HellCop(5)은 근접만 한다. 이 구분이 종을 가르는 원작의 장치라 그대로 옮긴다.
 const BOLT_SPECIES := [&"mad_eye", &"vulgar", &"dworm", &"ozzy", &"o_ray"]
-## 에너지파 궤적 — 원작 `:613` `for(i=-100;i<200;i+=20)`. 15단계로 화면을 가로지른다.
-const BOLT_FROM := -100.0
-const BOLT_TO := 200.0
+## **발사 방향** — 원작 `:613`은 `for(i=-100;i<200;i+=20)` 으로 **오른쪽**으로 쏘고 `:607`
+## 섬광도 (0,0) 고정이라, 적이 오른쪽에 있는 리메이크 구도에서는 빔이 시돌이 반대쪽으로
+## 나가고 종마다 노즐과 어긋났다(2026-09-11 유저 지적). 플레이어가 언제나 화면 왼쪽이므로
+## 왼쪽(-1)으로 쏜다. 굽는 도구가 `shot.dir`로 종마다 싣는다.
+const BOLT_TRAVEL := 300.0  ## 화면을 가로지르는 거리 — 원작 루프의 −100→200(300px).
+## 볼트가 나아가는 부호 — 플레이어가 화면 왼쪽이므로 −1.
+const SHOT_DIR := -1.0
 ## 원작 `Delay(300)` — 섬광이 뜨고 에너지파가 나가기까지. 그동안 적은 그 자리에 머문다.
 const MUZZLE_HOLD := 0.3
 const BOLT_FLIGHT := 0.5
+## `origin_muzzle`(fire[0]) 프레임에서 섬광(별) 중심 — 좌상단 기준. 적 노즐에 이 점을 맞춘다.
+## 에셋 실측값(2026-09-11, 합성 대조)이다. 굽는 도구가 fire.spr을 바꾸면 다시 재야 한다.
+const MUZZLE_FLASH := Vector2(105, 62)
+## `origin_bolt`(fire[1]) 프레임에서 혜성 머리(밝은 핵) 중심 — 발사점에 이 점을 맞춘다.
+const BOLT_HEAD := Vector2(133, 78)
 
 ## 원작 주인공 컷 — assets/battle_cuts/origin_player.png (bake_battle_sheets.py가 굽는다).
 const ORIGIN_PLAYER_CUT := "res://assets/battle_cuts/origin_player.png"
@@ -322,7 +331,11 @@ func _player_render_scale() -> float:
 ## sprite 채널 — 액터 스프라이트를 base_pos 기준 오프셋으로 tween.
 ## 액터 시트의 이름 있는 행을 재생한다(attack/hurt/death 등). 행이 없으면 false —
 ## 호출부는 그대로 기존 연출(플래시·트윈)로 간다. 시트가 가진 것을 쓰는 것이 먼저다.
-func play_anim(spr: Sprite2D, anim_name: String, asset_id: String = "") -> bool:
+## `hold`: 1회 재생이 끝나도 마지막 프레임에 멈춰 선다(적 공격 자세). 풀어 주는 쪽은
+##   `end_enemy_action()`이다. 적 공격은 「돌진→섬광→빔」이 1.2초 남짓인데 시트의 attack
+##   행은 0.33초라, hold가 없으면 빔이 나갈 때 적이 이미 대치 자세로 돌아가 있다
+##   (2026-09-11 캡처: 노즐이 옮겨가 빔이 어긋난 원인).
+func play_anim(spr: Sprite2D, anim_name: String, asset_id: String = "", hold: bool = false) -> bool:
 	if spr == null or not is_instance_valid(spr) or not spr.has_meta(&"anim_cell"):
 		return false
 	var meta := _sheet_meta(spr, asset_id)
@@ -348,6 +361,7 @@ func play_anim(spr: Sprite2D, anim_name: String, asset_id: String = "") -> bool:
 				"fps": maxf(float(anim.get("fps", ANIM_DEFAULT_FPS)), 1.0),
 				"clock": 0.0,
 				"loop": bool(anim.get("loop", false)),
+				"hold": hold,
 			}
 		)
 	)
@@ -355,12 +369,43 @@ func play_anim(spr: Sprite2D, anim_name: String, asset_id: String = "") -> bool:
 
 
 ## 적 인덱스로 부르는 편의 함수 — 컨트롤러·적 턴이 쓴다.
+## 공격·특수 자세는 시트의 `shot.flip`에 따라 좌우 반전한다 — 원작 공격 프레임이
+## 오른쪽을 향해 저장돼 있어(플레이어는 왼쪽) 반전해야 적이 플레이어를 마주 본다.
 func play_enemy_anim(index: int, anim_name: String) -> bool:
 	if index < 0 or index >= enemy_sprites.size():
 		return false
-	return play_anim(
-		enemy_sprites[index], anim_name, str(_enemy_ids[index]) if index < _enemy_ids.size() else ""
-	)
+	var spr := enemy_sprites[index]
+	var asset_id := str(_enemy_ids[index]) if index < _enemy_ids.size() else ""
+	# 공격·특수는 마지막 프레임에 멈춰 선다 — 빔이 나갈 때까지 자세를 유지해야
+	# 노즐이 안 움직인다(`end_enemy_action`이 푼다).
+	var ok := play_anim(spr, anim_name, asset_id, anim_name in ["attack", "special"])
+	if ok and spr != null and is_instance_valid(spr):
+		var flip := false
+		if anim_name in ["attack", "special"]:
+			flip = bool(
+				(_sheet_meta(spr, asset_id).get("shot", {}) as Dictionary).get("flip", false)
+			)
+		spr.flip_h = flip
+	return ok
+
+
+## 적 행동이 끝나면 공격 자세를 풀고 대치 자세로 돌린다 — `play_enemy_anim`의 `hold` 짝.
+## 적 턴(`regular_attack`·`try_special`·`unleash_heavy`) 마지막에서 부른다.
+## 대치 행(`idle_row`)도 존중한다 — 빈사면 빈사 포즈로 돌아간다.
+func end_enemy_action(index: int) -> void:
+	if index < 0 or index >= enemy_sprites.size():
+		return
+	var spr := enemy_sprites[index]
+	if spr == null or not is_instance_valid(spr):
+		return
+	_stop_anim(spr)
+	spr.flip_h = false
+	var at := spr.texture as AtlasTexture
+	if at == null or not spr.has_meta(&"anim_cell"):
+		return
+	var cell: Vector2i = spr.get_meta(&"anim_cell")
+	var row := int(spr.get_meta(&"idle_row", 0))
+	at.region.position = Vector2(0, float(row * cell.y))
 
 
 func _stop_anim(spr: Sprite2D) -> void:
@@ -416,6 +461,8 @@ func _advance_anims(delta: float) -> void:
 		if idx >= frames:
 			if bool(a["loop"]):
 				idx = idx % frames
+			elif bool(a.get("hold", false)):
+				idx = frames - 1  # 마지막 프레임 고정 — `end_enemy_action`이 푼다
 			else:
 				at.region.position = Vector2.ZERO  # idle 행으로 복귀
 				continue
@@ -941,18 +988,21 @@ func play_origin_short_cut_async(row_name: String, col: int, hold: float) -> boo
 	return true
 
 
-## 적 돌진 박자(배속 반영 실초) — 돌진 슬라이드만의 길이.
+## 적 돌진 박자(배속 전 실초) — 돌진 슬라이드만의 길이.
 ## 적 턴은 이만큼 기다렸다가 빔·피해를 이어 간다. 빔 상영 시간은
 ## `origin_attack_fx_async`가 안에서 기다리므로 여기 두면 두 번 잰다.
 ## 필드 도트 종은 `enemy_lunge` 러지 왕복과 같은 길이.
+##
+## **배속을 여기서 나누지 않는다** — 호출부가 `_cut_beat()`로 감싸는데 그쪽도 배속을
+## 나눈다. 여기서 한 번 더 나누면 배속 2배에서 대기가 트윈의 절반이 되어, 적이
+## 돌진하는 중간에 섬광·볼트가 터진다(2026-09-11 캡처에서 적이 86% 지점에서 발사).
 func enemy_attack_beat(index: int) -> float:
-	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
 	if index < 0 or index >= enemy_sprites.size():
-		return DOT_LUNGE_TIME / speed
+		return DOT_LUNGE_TIME
 	var spr := enemy_sprites[index]
 	if spr != null and is_instance_valid(spr) and spr.has_meta(&"battle_sheet"):
-		return ORIGIN_CHARGE_TIME / speed
-	return DOT_LUNGE_TIME / speed
+		return ORIGIN_CHARGE_TIME
+	return DOT_LUNGE_TIME
 
 
 ## **원작 공격의 나머지 절반** — 돌진이 끝난 뒤 섬광이 터지고 에너지파가 화면을 가로지른다.
@@ -994,8 +1044,15 @@ func _origin_attack_fx_fire(impact: bool) -> bool:
 	var idx := target_index
 	var enemy_id := StringName(_enemy_ids[idx]) if idx < _enemy_ids.size() else &""
 	var speed := maxf(SettingsManager.battle_speed_factor(), 0.1)
-	var muzzle := _origin_fx("origin_muzzle", Vector2.ZERO)
+	# 발사점 — 적의 노즐(시트 `shot.muzzle`). 반전 자세면 노즐도 뒤집혀 있다.
+	var anchor := _enemy_muzzle_anchor()
+	# 섬광은 원작 fire[0]을 **좌우 반전**해 왼쪽(플레이어)을 향하게 하고, 섬광 중심을
+	# 노즐에 맞춘다. 원작은 (0,0) 고정이었지만 그러면 종마다 노즐과 어긋난다(2026-09-11).
+	var muzzle := _origin_fx(
+		"origin_muzzle", anchor - Vector2(ORIGIN_SCREEN_W - MUZZLE_FLASH.x, MUZZLE_FLASH.y)
+	)
 	if muzzle != null:
+		muzzle.flip_h = true
 		var mt := muzzle.create_tween()
 		mt.tween_interval(MUZZLE_HOLD / speed)
 		mt.tween_property(muzzle, "modulate:a", 0.0, 0.12 / speed)
@@ -1004,16 +1061,30 @@ func _origin_attack_fx_fire(impact: bool) -> bool:
 		return true
 	# Iron-Vic만 전용 투사체를 대각선으로 끌고 온다(`:280` `RPut_Spr(i,i,&Eff[0],0)`) —
 	# 다만 그 종은 위에서 이미 걸러졌으므로 여기 오는 것은 공용 에너지파뿐이다.
-	var bolt := _origin_fx("origin_bolt", Vector2(BOLT_FROM, 0.0))
+	# 혜성은 섬광과 같은 쪽(왼쪽·플레이어)을 향한다 — 원작 fire[1]은 오른쪽을 향해
+	# 저장돼 있어 뒤집지 않으면 머리가 오른쪽인 채 왼쪽으로 날아 거꾸로 간다.
+	var bolt := _origin_fx(
+		"origin_bolt", anchor - Vector2(ORIGIN_SCREEN_W - BOLT_HEAD.x, BOLT_HEAD.y)
+	)
 	if bolt == null:
 		return true
+	bolt.flip_h = true
+	# **섬광 대기 동안 볼트를 미리 보이면 안 된다.** 원작은 `:607`에서 fire[0]만 그리고
+	# `:613` 루프에 들어가서야 fire[1]을 그린다. 리메이크는 볼트를 화면 왼쪽 끝에
+	# 만들어 두고 0.3초를 기다려, 혜성이 미리 떠 있었다(2026-09-11 실측).
+	bolt.visible = false
 	var sc := _origin_scale()
 	var bt := bolt.create_tween()
 	bt.tween_interval(MUZZLE_HOLD / speed)
+	bt.tween_callback(
+		func() -> void:
+			if is_instance_valid(bolt):
+				bolt.visible = true
+	)
 	(
 		bt
 		. tween_property(
-			bolt, "position:x", bolt.position.x + (BOLT_TO - BOLT_FROM) * sc, BOLT_FLIGHT / speed
+			bolt, "position:x", bolt.position.x + BOLT_TRAVEL * SHOT_DIR * sc, BOLT_FLIGHT / speed
 		)
 		. set_trans(Tween.TRANS_LINEAR)
 	)
@@ -1021,13 +1092,43 @@ func _origin_attack_fx_fire(impact: bool) -> bool:
 	return true
 
 
+## 적의 발사점을 원작 좌표계로 돌려준다 — 시트 `shot.muzzle`을 **돌진 종점**에 얹는다.
+## `flip`이면 노즐도 좌우 반전된 자리(`320 - x`)로 옮긴다. `shot`이 없으면 적 몸 중심.
+##
+## 종점(`attack_slide[1]`)에 고정하는 이유: 섬광은 돌진이 다 끝난 자리에서 뜨는데
+## (`_origin_charge`가 그 자리에서 hold한다) 타이머가 몇 프레임 일찍 떨어져도 섬광이
+## 적을 따라 미끄러지지 않게 하려는 것이다. 살아 있는 `position`을 쓰면 섬광이 뜬 뒤
+## 적이 마지막 몇 px를 더 가면서 노즐과 어긋난다(2026-09-11 실측).
+func _enemy_muzzle_anchor() -> Vector2:
+	var spr := _attacker_sprite()
+	if spr == null or not is_instance_valid(spr):
+		return Vector2.ZERO
+	var meta := _sheet_meta(spr, _sprite_asset_id(spr))
+	var sc := maxf(_origin_scale(), 0.01)
+	var w := float(ProjectSettings.get_setting("display/window/size/viewport_width", 960))
+	var h := float(ProjectSettings.get_setting("display/window/size/viewport_height", 540))
+	var sprite_topleft := (spr.position - Vector2(w * 0.5, h * 0.5)) / sc
+	var shot: Dictionary = meta.get("shot", {})
+	var mz: Array = shot.get("muzzle", [])
+	if mz.size() < 2:
+		return sprite_topleft + Vector2(ORIGIN_SCREEN_W, ORIGIN_SCREEN_H) * 0.5
+	var local := Vector2(float(mz[0]), float(mz[1]))
+	if bool(shot.get("flip", false)):
+		local.x = ORIGIN_SCREEN_W - local.x
+	var slide: Array = meta.get("attack_slide", [])
+	var end_x := float(slide[1]) if slide.size() >= 2 else sprite_topleft.x
+	return Vector2(end_x, 0.0) + local
+
+
 ## 순서화 버전 — 빔이 화면을 가로지를 동안 딤을 깔고 끝까지 기다렸다가 걷는다.
 ## 적 턴은 이 await 뒤에 피해를 깎는다(원작 `EnemyAttackAni` → `MyAvoid` 순서).
 ## 원작(`:599-625`) 자리 재현:
-##   돌진 끝(-50)에 머문 적 + 섬광(0,0) → Delay(300) → Page_Clear(적 퇴장) →
+##   돌진 끝(-50)에 머문 적 + 섬광 → Delay(300) → Page_Clear(적 퇴장) →
 ##   볼트만 검은 화면을 가로지른다 → Delay(200) → MyAvoid.
 ## 그래서 섬광 동안 공격자를 딤 위(46)로 올리고, 볼트 비행 동안은 숨긴다.
 ## 발사 종이 아니면 섬광까지만(숨김 없음 — 원작이 그렇다).
+## **2026-09-11 보완**: 섬광·볼트를 적 노즐에 맞추고(종별 `shot.muzzle`), 원작의 오른쪽
+## 발사를 플레이어 쪽(왼쪽)으로 뒤집었다. 볼트는 섬광 동안 숨긴다(원작 `:613` 순서).
 func origin_attack_fx_async(impact: bool) -> bool:
 	if not _origin_fx_will_show(impact):
 		return false
@@ -1144,7 +1245,8 @@ func _pick_origin_player_cut(prefer_big: bool = false) -> Dictionary:
 
 func _play_origin_cut_anim(pick: Dictionary, with_dim_hide: bool) -> bool:
 	var row_name := str(pick["row_name"])
-	var spr := _make_origin_cut_sprite(int(pick["row"]), int(pick["col"]))
+	# 공격 3종은 원작 `flag=1`(좌우 반전)로 그린다 — `_make_origin_cut_sprite` 주석 참조.
+	var spr := _make_origin_cut_sprite(int(pick["row"]), int(pick["col"]), true)
 	if spr == null:
 		if with_dim_hide:
 			_cut_dim_hide()
@@ -1162,8 +1264,8 @@ func _play_origin_cut_anim(pick: Dictionary, with_dim_hide: bool) -> bool:
 			_origin_cut_flurry(spr, int(pick["row"]), speed, with_dim_hide)
 		_:  # `:322` `for(i=-50;i<=150;i+=30)` — 왼쪽에서 오른쪽으로 파고든다.
 			# 실제 마지막 스텝은 130이다(-50+30×6. 150은 루프 조건일 뿐 도달하지 않는다).
-			# 150까지 밀면 원작보다 54px 더 나가 몸통이 화면 밖으로 밀려 팔만 남는다
-			# (2026-09-10 유저 지적 "원투 펀치에 팔만 나온다").
+			# 반전한 a1은 몸통이 프레임 왼쪽으로 가므로 130까지 밀어도 몸통이 화면에 남는다 —
+			# 2026-09-10에 150→130으로 줄였던 것은 반전 누락을 가린 임시처방이었다(09-11 정정).
 			_origin_cut_move(spr, Vector2(-50, 0), Vector2(130, 0), 0.40 / speed, with_dim_hide)
 	origin_hit_spark()
 	return true
@@ -1261,7 +1363,18 @@ func _show_cut_actor() -> void:
 
 
 ## 컷 스프라이트 한 장 — 시트의 (행, 칸)을 잘라 원작 화면 좌표계에 얹는다.
-func _make_origin_cut_sprite(row: int, col: int) -> Sprite2D:
+##
+## `flip`: **공격 컷은 반드시 좌우 반전한다.** 원작 엔진의 `RPut_Spr(x,y,spr,flag)` 4번째
+## 인자가 좌우 반전 플래그이고, 주인공 공격 3종(`AttackAni1/2/3` — a5·a1·a3)만 `flag=1`로
+## 그린다(`WARMODE.C:306·327·344·353`). 회피·적·배경은 전부 `flag=0`이다. 근거는 두 가지다:
+##   · a1~a5는 파일에 **왼쪽을 향해** 저장돼 있는데 시돌이는 화면 왼쪽에서 적(오른쪽)을 본다.
+##     반전하지 않으면 주먹이 적 반대쪽으로 나가고, x=130까지 밀 때 몸통이 화면 밖으로 나간다
+##     (2026-09-10·09-11 유저 지적 "몸통이 안 보이고 팔만 나온다").
+##   · `EnemyAvoid`가 마드아이(e1)의 4번 프레임만 `flag=1`로 그린다(`:278`) — e1의 4·5번
+##     프레임이 서로 반대를 향해 저장돼 있어 한 장을 뒤집어야 같은 방향이 된다. 이게
+##     `flag`가 좌우 반전임을 확정한다.
+## 좌상단 앵커(`centered=false`)는 `flip_h`로도 그대로다 — 프레임 사각형 안에서만 뒤집힌다.
+func _make_origin_cut_sprite(row: int, col: int, flip: bool = false) -> Sprite2D:
 	var tex: Texture2D = load(ORIGIN_PLAYER_CUT)
 	if tex == null:
 		return null
@@ -1273,6 +1386,7 @@ func _make_origin_cut_sprite(row: int, col: int) -> Sprite2D:
 	var spr := Sprite2D.new()
 	spr.texture = at
 	spr.centered = false
+	spr.flip_h = flip
 	spr.scale = Vector2.ONE * _origin_scale()
 	spr.z_index = 50  # 적 대형 시트(기본 0)보다 앞 — 컷은 화면을 끊고 들어오는 것이다.
 	_root.add_child(spr)
@@ -1298,26 +1412,41 @@ func _origin_cut_move(
 ## 백열 장수 — 두 프레임을 교대하며 점점 빨라진다(`:347` Delay 200 → 100 → 0).
 ## 원작 그대로 20회 교대다. `i 0~4: 200ms · 5~7: 100ms · 8~19: 0(vsync)` —
 ## 현대 박자로 간격만 축소(0.2 · 0.1 · 0.03)하고 구조(5/3/12)는 유지한다.
+## a3의 1·2번 칸은 팔 오버레이 낱장이라(몸통 없음 — 실측) 그 둘만 교대하면
+## 몸통이 사라지고 팔만 남는다(2026-09-11 유저 지적 "양팔만 보이고 몸통 사라짐").
+## 원작은 몸통(0번) 위에 팔을 얹어 그렸다. 그래서 몸통 스프라이트는 0번에 고정하고
+## 팔 오버레이 한 장을 같은 자리에 겹쳐 1·2번만 교대한다.
 func _origin_cut_flurry(spr: Sprite2D, row: int, speed: float, dim_hide: bool = false) -> void:
 	_place_origin_topleft(spr, ORIGIN_PLAYER_OFFSET)
-	var at := spr.texture as AtlasTexture
-	if at == null:
+	var base_at := spr.texture as AtlasTexture
+	if base_at == null:
 		return
+	base_at.region.position.x = 0.0  # 몸통 고정 — 이 장은 다시 안 건드린다
+	var overlay := _make_origin_cut_sprite(row, 1, spr.flip_h)
+	if overlay == null:
+		return
+	_place_origin_topleft(overlay, ORIGIN_PLAYER_OFFSET)
+	overlay.z_index = spr.z_index + 1
+	var over_at := overlay.texture as AtlasTexture
 	var tw := spr.create_tween()
 	for i in 20:
-		var col := i % 2 + 1  # 원작 `S[i%2+1]` — 0번은 배경 프레임이라 건너뛴다
+		var col := i % 2 + 1  # 원작 `S[i%2+1]` — 0번은 몸통이라 오버레이에서만 돈다
 		var gap := (0.2 if i < 5 else (0.1 if i < 8 else 0.03)) / speed
 		tw.tween_callback(
 			func() -> void:
-				if is_instance_valid(spr) and at != null:
-					at.region.position.x = float(col) * ORIGIN_SCREEN_W
+				if is_instance_valid(overlay) and over_at != null:
+					over_at.region.position.x = float(col) * ORIGIN_SCREEN_W
 		)
 		tw.tween_interval(gap)
+	tw.set_parallel(true)
 	tw.tween_property(spr, "modulate:a", 0.0, 0.14)
+	tw.tween_property(overlay, "modulate:a", 0.0, 0.14)
+	tw.chain()
 	if dim_hide:
 		tw.tween_callback(_cut_dim_hide)
 		tw.tween_callback(_show_cut_actor)
 	tw.tween_callback(spr.queue_free)
+	tw.tween_callback(overlay.queue_free)
 
 
 ## 원작 `RPut_Spr(x, y, spr)`와 같은 좌상단 기준 배치.
@@ -1544,6 +1673,7 @@ func _reset_sprites() -> void:
 			if spr.has_meta(&"base_scale"):
 				spr.scale = spr.get_meta(&"base_scale")
 			spr.modulate = Color.WHITE
+			spr.flip_h = false  # 공격 자세의 좌우 반전(`shot.flip`)을 대치 자세로 되돌린다.
 
 
 ## 대치 중 유기적인 호흡(헐떡임) 연출 — 정지된 도트에 긴장감 부여

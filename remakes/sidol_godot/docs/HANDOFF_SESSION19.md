@@ -440,3 +440,122 @@ python tools/convert/install_delivery.py flying_thesis null_pointer rogue_vendin
 4. 4대장 납품 시 배선.
 5. **커밋** — 이 세션 변경분이 전부 미커밋이다.
 6. 실플레이 피드백(사용자 실행 중) 반영.
+
+---
+
+## I. 전투 연출·턴 시스템 보완 (2026-09-11)
+
+> 계기: 유저 신고 둘 — "시돌이가 주먹 찌르기에 팔만 보이고 몸통이 안 보인다",
+> "DWORM이 입에서 뿜는 빔이 DWORM 컷과 오버레이 시 위치가 안 맞는다".
+> 겸사 "다른 전투 애니도 검토 + 전투 턴 방식(공격/방어…)을 현대 턴제 트렌드로
+> 검토·보완" 요청. 아래는 그 결과다.
+
+### I.1 핵심 규명 — 원작 `RPut_Spr` 4번째 인자는 **좌우 반전**이다
+
+원작 엔진 함수 원본은 저장소에 없지만 호출부가 의미를 확정한다:
+
+- `WARMODE.C:278` — `EnemyAvoid()`가 **마드아이(e1)의 4번 프레임만** `flag=1`로 그린다.
+  e1의 4·5번 프레임은 서로 **반대를 향해** 저장돼 있어(육안 확인) 한 장을 뒤집어야 같은
+  방향이 된다. `flag=0`이면 안 뒤집힌다.
+- 주인공 공격 3종만 `flag=1`이다 — `AttackAni1`(:306) · `AttackAni2`(:327) ·
+  `AttackAni3`(:344·:353). 회피(`MAvoid1/2/3`)·적·배경은 전부 `flag=0`.
+- 그래서 `a1/a3/a5`는 파일에 **왼쪽을 향해** 저장돼 있다. 리메이크는 그 반전을 빼먹어
+  시돌이가 적 반대쪽을 때렸고, x=130까지 미는 동안 몸통이 화면 오른쪽 밖으로 나가
+  **팔만 남았다**(몸통이 프레임 왼쪽으로 가므로 반전하면 130에서도 남는다).
+
+### I.2 고친 것
+
+| # | 무엇 | 파일 |
+|---|---|---|
+| 1 | **주인공 공격 컷 좌우 반전** — `_make_origin_cut_sprite(..., flip)` + `_play_origin_cut_anim`이 공격 3종에 `flip=true`. 회피·자세·적은 그대로(원작 `flag=0`) | `src/battle/battle_presenter.gd` |
+| 2 | **DWORM 빔을 시돌이 쪽(왼쪽)으로** — 원작 `:613`은 오른쪽(`i=-100..200`), `:607` 섬광은 (0,0) 고정이라 적이 오른쪽에 있는 구도에서 빔이 반대로 나가고 종마다 노즐과 어긋났다. 종별 `shot{dir,flip,muzzle}`을 메타에 굽고 그 노즐에 섬광을 맞춘다 | `tools/dev/bake_battle_sheets.py` · `battle_presenter.gd` |
+| 3 | **볼트 조기 노출 제거** — 섬광 대기 0.3초 동안 볼트가 화면 왼쪽 끝에 미리 떠 있었다. 원작은 `:613` 루프에서 처음 그린다 | `battle_presenter.gd` |
+| 4 | **적 공격 자세 홀드** — 시트 attack 행은 0.33초라, 빔이 나갈 때쯤 적이 **대치 자세로 돌아가** 노즐이 옮겨갔다(빔 어긋남의 진짜 원인). `play_anim(hold)` + `end_enemy_action()` | `battle_presenter.gd` · `battle_enemy_phase.gd` |
+| 5 | **이중 배속 나눗셈 제거** — `enemy_attack_beat()`가 배속을 나눈 값을 `_cut_beat()`이 또 나눠, 배속 2배에서 적이 돌진 86% 지점에서 발사했다 | `battle_presenter.gd` |
+| 6 | **방어·도구·도망 실패·마비 턴의 턴 마무리** — `_end_player_defend`가 `turn_count`를 안 올리고 `set_turn_text`도 안 해 배너가 적 턴 글자로 남고 턴 수가 안 올랐다(+턴 기력도 못 받음). `_open_player_turn()` 하나로 공유 | `src/battle/battle_scene_controller.gd` |
+
+### I.3 검증 (실측)
+
+- 캡처 도구로 눈으로 확인: 주먹은 적을 향해 찌르고 몸통이 화면에 남는다 ·
+  DWORM 섬광이 노즐에 붙고 빔이 시돌이 쪽으로 날아간다 · 섬광 동안 볼트가 안 보인다.
+- `godot --headless --path . --script tools/import_all.gd` → `done(stub) - 0 errors`
+- `godot --headless --path . --script tools/validate.gd` → `done - 0 errors`
+- `res://tests/smoke.tscn` PASS · `smoke_battle.tscn` PASS · `smoke_battle_input.tscn` PASS
+- `assets/sprites/*_battle.json`에 `shot` 추가(mad_eye·vulgar·dworm·ozzy·o_ray).
+  `iron_voc`·`hellcop`은 근접만이라 `shot` 없음(원작 `:601` 발사 종 아님).
+
+### I.4 남긴 것 (다음 세션)
+
+1. **마드아이 hurt 4번 프레임 반전** — 원작은 `:278`에서 e1 frame4만 `flag=1`로 그린다.
+   리메이크 hurt 행은 [4,5]를 교대 재생하는데 프레임별 반전이 없다(2차원이라 행 단위
+   flip으로는 안 됨). 영향은 마드아이 피격 1프레임뿐 — 우선순위 낮음.
+2. **나머지 발사 종의 노즐 좌표 재확인** — `bake_battle_sheets.py`의 `SHOT_MUZZLE`은
+   dworm만 손으로 잡았고(vulgar·ozzy·o_ray·mad_eye는 공격 프레임 내용 bbox 중심).
+   실플레이에서 어긋나면 그 종의 노즐 좌표를 실측해 넣으면 된다(런타임 코드는 안 고친다).
+3. **전투 턴 시스템** — `08_battle_rules.md`와 코드는 대체로 일치했다(기력 수입/소비·
+   방어 반감·아이템 턴 소비·브레이크·강타·철벽·도망 확률 상승 모두 구현됨). 이번에
+   찾은 건 I.2#6(턴 마무리 누락) 하나뿐이다. 미검토로 남긴 후보: 스킬 메뉴 피해 미리보기,
+   상태이상 배지, 브레이크 게이지 상시 표시. 실플레이 피드백을 받아 정한다.
+4. **임시 캡처·도구 정리** — `tools/dev/tmp_async_shots.gd`·`.tscn`과 `user://` 캡처,
+   `%TEMP%\opencode\sidol_inspect`(합성 대조 PNG)는 **삭제했다**. `battle_anim_shots`와
+   `battle_anim` `user://` 폴더는 원래 있던 도구라 남긴다(단 산출물은 임시다).
+
+---
+
+## J. 전투 후속 4건 + 전투 현대 RPG 감사 (2026-09-11)
+
+> 계기: 유저 후속 — "연속 펀치에 양팔만 보이고 몸통이 사라진다"(재발),
+> "DWorm 빔 위치 수정 반영 확인 + 턴제 수행 확인 + LOSE 보이스가 승리와 같은지",
+> "전투가 현대 턴 RPG처럼 잘 구성됐는지(재미·긴장·연출)".
+
+### J.1 원인 — flurry는 팔 오버레이라 몸통 없이 띄우면 팔만 남는다
+
+I.1의 스윙 반전 수정과 다른 버그였다. `origin_player.png` row3(flurry) 실측:
+col0은 몸통(좌 4042 + 우 5467px), **col1·col2는 팔 낱장**(각 ~3500px, 높이 48px).
+`_origin_cut_flurry`가 1·2번만 교대하므로 몸통이 사라지고 팔만 남는다 —
+"몇 번 시도하는데 가끔"인 것은 스킬 대형컷이 swing/flurry/rise 중 무작위라
+flurry가 걸릴 때만 터지기 때문이다. 합성 대조(col0+col1/col2)하면 온전한 몸통+팔.
+원작이 몸통 위에 팔을 얹어 그리던 자리다.
+
+### J.2 고친 것
+
+| # | 무엇 | 파일 |
+|---|---|---|
+| 1 | **flurry 합성** — 몸통 스프라이트는 col0 고정, 팔 오버레이 한 장을 같은 자리에 겹쳐 1·2번만 교대·동시 페이드·함께 해제 | `src/battle/battle_presenter.gd` |
+| 2 | **볼트 반전 누락** — 혜성(`origin_bolt`)이 머리 오른쪽인 채 왼쪽으로 날아 거꾸로 갔다(섬광만 뒤집혀 있었다). `flip_h=true` + 발사점도 반전된 머리(`320−133=187`) 기준 | `battle_presenter.gd` |
+| 3 | **승패 동음 해소** — 원본부터 `WIN=DEAD=DOMANG.VOC`(sha256 `c4f6af…` 동일)라 LOSE가 승리와 같은 소리였다. 원작 샘플은 고증으로 유지하고 결과별 징글(`RESULT_JINGLES` — 승 상승·패 하강·도망)을 겹친다 | `src/battle/battle_scene_controller.gd` |
+| 4 | **DoT 틱 무표시** — `_tick_effects()`가 `tick_effects()` 반환을 버려 화상·부식이 조용히 깎였다. 숫자 팝 + `UI_BLOG_DOT_TICK` 로그 | `battle_scene_controller.gd` · `data/l10n/ui.csv` |
+| 5 | **스킬 위력 표기** — 메뉴에 코스트·WEAK!만 있어 "쓸까 모을까" 근거가 반쪽이었다. `UI_BATTLE_SKILL_POWER`(power>0만) 꼬리표 | `src/ui/battle_ui.gd` · `ui.csv` |
+
+DWorm 노즐 반영 확인: `dworm_battle.json` `shot.muzzle=[148,62]`가 적환(빨간 링)
+실측 중심(148.49, 61.76)과 일치. 반전·종점 고정·볼트 숨김·이중 배속 제거도 코드에 있다.
+턴제는 정상(교대+턴 공유 마무리, §I.2#6 이후) — `smoke_battle` 2턴째 공격 유효가 지킨다.
+
+### J.3 검증 (실측)
+
+- `validate` → `done - 0 errors` (신규 키 2건 양방향 대조 포함)
+- `smoke.tscn` PASS · `smoke_battle.tscn` PASS · `smoke_battle_input.tscn` PASS ·
+  `talk_convert --check` 정상
+- `08_battle_rules.md` 갱신: §2 위력 표기 · §4 DoT 틱 표시 · §5 승패 징글 · §9 flurry 합성+볼트 반전
+
+### J.3b 마비·턴 직관 피드백 (유저 질문 "마비·턴 변경이 눈에 보이는가")
+
+> 점검 결과: 칩(종류+잔여턴)·배너(TURN N/적 턴)·로그·커맨드 개폐는 있다.
+> 실제 구멍은 **적 마비가 걸려도 아무 일도 안 일어났다** — `has_paralysis()` 호출부가
+> 아군 1곳뿐이라 아크 방전 칩만 뜨고 적은 계속 때렸다. 마비 스프라이트 표현도 없었다.
+
+| # | 무엇 | 파일 |
+|---|---|---|
+| 6 | **적 마비 스킵** — 실전(`_resolve_turn`)에 `NUMB!` 팝+방전+로그, 계측(`enemy_turn`)에 `{"skipped":"paralysis"}`. 브레이크와 달리 모으기는 유지(카운터는 브레이크 자리) | `battle_scene_controller.gd` · `battle_controller.gd` |
+| 7 | **마비 스프라이트 표현** — 아군 턴 상실 시 주인공에 방전 스파크(문구·로그만으론 "왜 쉬지"가 된다) | `battle_scene_controller.gd` |
+| 8 | **지속 통일** — `skills.json` 마비 `turns: 3`→2. 3이면 적이 두 턴 연속 쉰다("정확히 한 턴" 위반, §7 관문 수학과도 어긋남) | `data/skills.json` · `data/l10n/ui.csv`(`UI_BLOG_ENEMY_PARALYZED`) |
+
+턴 전환은 배너+로그+메뉴로 충분해 손대지 않았다. `08_battle_rules.md` §4 갱신.
+검증: `validate` 0 errors · `smoke_battle` PASS(§7 마비 관문 포함) · `smoke_battle_input` PASS.
+
+### J.4 남긴 것 (다음 세션)
+1. I.4#1(마드아이 hurt 4번 반전)·I.4#2(나머지 종 노즐 실측)는 그대로 — 우선순위 낮음.
+2. I.4#3 후보 중 스킬 미리보기 1건 해소(위력 표기). 상태이상 배지는 이미 있음(`StatusChips`),
+   브레이크 게이지는 상시 표시 중(`_break_bars`) — 후보 소진.
+3. 에셋 게이트(`player_battle`·대형컷 5종·보스 2종 대형시트)는 코드로 메울 게 아니라 의뢰 추적(`asset_status`) 유지.
+4. **커밋** — §I 미커밋분 + §J 전부. 다음 세션은 미납품 에셋 입고 시 배선·실플레이 피드백 반영.

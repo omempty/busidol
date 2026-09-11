@@ -208,6 +208,13 @@ func show_skill_menu() -> void:
 	for skill: Dictionary in _skills:
 		var el := str(skill.get("element", ""))
 		var note := _element_note(skill)
+		# 위력은 "지금 쓸까 모을까"의 근거다 — 코스트만 보이면 강한 스킬인지 모른다.
+		# 자기 버프(power 0)는 위력이 아니라 효과 설명이 자리이므로 적지 않는다.
+		var power := int(skill.get("power", 0))
+		if power > 0:
+			note = (
+				((note + " ") if not note.is_empty() else "") + tr("UI_BATTLE_SKILL_POWER") % power
+			)
 		var is_weak := false
 		if target_enemy != null and not target_enemy.is_down():
 			if StringName(el) in target_enemy.weaknesses:

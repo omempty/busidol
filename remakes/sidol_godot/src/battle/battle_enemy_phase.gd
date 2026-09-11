@@ -70,6 +70,7 @@ static func try_special(
 	)
 	presenter.hurt_flash(presenter.player_sprite)
 	presenter.play_screen_kf({"shake": 3.0, "flash": "#a855f7", "a": 0.22})
+	presenter.end_enemy_action(presenter.target_index)
 	return true
 
 
@@ -156,6 +157,7 @@ static func unleash_heavy(
 	)
 	if actual > 0:
 		presenter.hitstop()
+	presenter.end_enemy_action(index)
 
 
 ## 일반 공격 — 첫 생존 적의 턴(원작 공식: (Power + rnd(10)) / 6).
@@ -198,6 +200,7 @@ static func regular_attack(
 	presenter.play_screen_kf({"shake": minf(3.0 + float(maxi(actual, 0)) / 8.0, 7.0)})
 	if actual > 0:
 		presenter.hitstop()
+	presenter.end_enemy_action(presenter.target_index)
 
 
 ## 텔레그래프 + 회피 페이즈 시퀀스 — 피격 횟수 × dodge_damage_per_hit 를

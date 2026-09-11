@@ -10,11 +10,18 @@ signal battle_ended(result: StringName, rewards: Dictionary)
 ## 결과 id → 원작 보이스. 근거: WARMODE.C:1204~1206 —
 ##   case 0: domang.voc / case 1: win.voc / case -1: dead.voc
 ## **셋은 바이트 단위로 같은 파일이다**(sha256 c4f6afcc…) — 원작에서 승리·패배·도망이
-## 한 소리였다. 고증이므로 그대로 둔다(obj 173과 같은 처리).
+## 한 소리였다. 원작 샘플은 고증으로 그대로 틀고, 그 위에 결과별 징글(sfx)을 겹쳐
+## 귀로도 승패를 가른다(2026-09-11 — 같은 소리만 나면 졌는지 이겼는지 모른다).
 const RESULT_VOICES := {
 	&"win": &"win",
 	&"lose": &"dead",
 	&"flee": &"domang",
+}
+## 원작 샘플 위에 겹치는 결과 징글 — sfx/ procedural. 같은 원작 소리의 모호함을 푼다.
+const RESULT_JINGLES := {
+	&"win": &"voice_win",
+	&"lose": &"voice_dead",
+	&"flee": &"voice_domang",
 }
 const RESULT_KEYS := {
 	&"win": "UI_BATTLE_RESULT_WIN",
@@ -537,6 +544,20 @@ func _first_alive_enemy() -> Combatant:
 	return null
 
 
+## 플레이어 차례를 연다 — 턴 수·배너·로그·턴 시작 기력을 **한 곳에서** 맞춘다.
+##
+## `_resolve_turn`(공격·스킬)과 `_end_player_defend`(방어·도구·도망 실패·마비)가 공유한다.
+## 둘로 갈라 두면 한쪽만 고치는 사고가 난다 — 실제로 `_end_player_defend`는 2026-09-11까지
+## `turn_count`를 안 올리고 `set_turn_text`도 안 해서, 방어·도구·도망 실패 턴에는 배너가
+## 적 턴 글자("…의 턴")로 남고 턴 수가 영영 안 올랐다. 턴 시작 기력(+3)도 못 받았다.
+func _open_player_turn() -> void:
+	controller.begin_player_phase()
+	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
+	_log(tr("UI_BLOG_TURN") % (controller.turn_count + 1), BattleLog.Kind.TURN)
+	# 턴마다 조금씩 회복되는 기력 — 아무것도 안 해도 아주 천천히는 찬다.
+	player_combatant.gain_stamina(int(BattleSetup.stamina_config().get("gain_on_turn", 3)))
+
+
 func _resolve_turn() -> void:
 	_busy = true
 	_ui.hide_menu()
@@ -552,6 +573,14 @@ func _resolve_turn() -> void:
 				# 브레이크 지속 — 행동 불가, 턴 소비로 해제
 				actor.broken_turns -= 1
 				_presenter.show_flag_pop("BREAK!", Color(1.0, 0.45, 0.2), idx)
+			elif actor.has_paralysis():
+				# 적 마비 — 이 턴을 쉰다(아크 방전의 보상). 걸어 놓고 때리면 사기가 아니라
+				# 버그다(2026-09-11까지 검사가 없어 마비 칩만 뜨고 적은 계속 때렸다).
+				# 지속 감소는 아래 `_tick_effects()`가 맡는다 — 여기서 깎으면 두 번 잰다.
+				_presenter.target_index = idx
+				_presenter.show_flag_pop("NUMB!", Color(0.96, 0.84, 0.32), idx)
+				_presenter.play_fx_kf({"effect": "volt_arc", "at_actor": "target"})
+				_log(tr("UI_BLOG_ENEMY_PARALYZED") % actor.display_name, BattleLog.Kind.ACCENT)
 			elif not (edef.get("dodge_phase", {}) as Dictionary).is_empty():
 				await BattleEnemyPhase.dodge_sequence(
 					_dodge, edef, _presenter, _ui, player_combatant
@@ -579,11 +608,7 @@ func _resolve_turn() -> void:
 	_busy = false
 	# 커맨드 창을 열기 전에 판정 상태도 플레이어 차례로 돌려놓는다 —
 	# 이걸 빼먹으면 창은 열리는데 명령이 무시된다(2026-08-28 실측 버그).
-	controller.begin_player_phase()
-	_ui.set_turn_text("TURN %d" % (controller.turn_count + 1))
-	_log(tr("UI_BLOG_TURN") % (controller.turn_count + 1), BattleLog.Kind.TURN)
-	# 턴마다 조금씩 회복되는 기력 — 아무것도 안 해도 아주 천천히는 찬다.
-	player_combatant.gain_stamina(int(BattleSetup.stamina_config().get("gain_on_turn", 3)))
+	_open_player_turn()
 	# **마비 — 이 턴을 잃는다.** `Combatant.has_paralysis()`는 2026-09-06까지 호출부가
 	# 0곳이라, 상태이상 데이터도 진통 파스(마비 해제)도 전부 사문화였다. 적이 마비를
 	# 걸기 시작하면서 여기가 실제 판정이 된다.
@@ -675,7 +700,10 @@ func _end_player_defend() -> void:
 	if player_combatant.is_down():
 		_show_result(&"lose")
 		return
-	controller.begin_player_phase()
+	# 방어·도구·도망 실패·마비도 한 턴을 소비한다(`08_battle_rules.md` §1) —
+	# `_resolve_turn`과 같은 마무리를 공유해야 배너·턴 수·턴 기력이 안 어긋난다.
+	controller.turn_count += 1
+	_open_player_turn()
 	# **여기서도 마비를 다시 본다.** 이 함수는 "공격하지 않고 턴만 넘기는" 네 경로가
 	# 공유한다(방어 · 도망 실패 · 아이템 · 마비 자신). 그 사이 적 턴에 마비가 새로
 	# 붙으면 지속이 2라 위 `_tick_effects()`를 살아서 넘어오는데, 검사가 없으면
@@ -695,6 +723,8 @@ func _consume_turn_if_paralyzed() -> bool:
 	if not player_combatant.has_paralysis():
 		return false
 	_presenter.show_player_note(tr("UI_BATTLE_PARALYZED"))
+	# 몸이 아니라 글자만 저리면 "왜 쉬지"가 된다 — 저릿 스파크를 주인공에 얹는다.
+	_presenter.play_fx_kf({"effect": "volt_arc", "at_actor": "self"})
 	_log(tr("UI_BLOG_PLAYER_PARALYZED"), BattleLog.Kind.DAMAGE)
 	_end_player_defend()
 	return true
@@ -716,9 +746,20 @@ func _log(text: String, kind: BattleLog.Kind = BattleLog.Kind.ACTION) -> void:
 		_ui.refresh_log()
 
 
+## 턴 종료 DoT 정산 + 표현. `tick_effects()`가 돌려주는 피해 목록을 버리면
+## 화상·부식이 조용히 깎여 "왜 피가 없지"가 된다 — 숫자 팝·로그를 남긴다.
+## 호출부(`_resolve_turn`·`_end_player_defend`)가 바로 뒤에 바·빈사를 갱신한다.
 func _tick_effects() -> void:
-	for c: Combatant in ([player_combatant] as Array[Combatant]) + enemies:
-		c.tick_effects()
+	var ticked: Array[Combatant] = [player_combatant] as Array[Combatant]
+	ticked.append_array(enemies)
+	for c: Combatant in ticked:
+		var dots: Array = c.tick_effects()
+		for dmg: int in dots:
+			_log(tr("UI_BLOG_DOT_TICK") % [c.display_name, dmg], BattleLog.Kind.DAMAGE)
+			if c == player_combatant:
+				_presenter.show_damage_number(dmg, true)
+			else:
+				_presenter.show_damage_number(dmg, false, &"none", enemies.find(c))
 
 
 func _exit_tree() -> void:
@@ -729,6 +770,7 @@ func _show_result(result: StringName) -> void:
 	AudioManager.set_low_hp_warning(false)
 	_busy = true
 	AudioManager.play_voice(StringName(str(RESULT_VOICES.get(result, ""))))
+	AudioManager.play_sfx(StringName(str(RESULT_JINGLES.get(result, ""))))
 	_log(
 		tr("UI_BLOG_RESULT") % tr(str(RESULT_KEYS.get(result, "UI_BATTLE_RESULT_WIN"))),
 		BattleLog.Kind.RESULT

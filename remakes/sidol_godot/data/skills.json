@@ -94,9 +94,9 @@
     },
     "paralysis": {
       "kind": "paralysis",
-      "turns": 3,
+      "turns": 2,
       "magnitude": 0,
-      "_desc": "행동 불가"
+      "_desc": "행동 불가 — 적·아군 공통 정확히 한 턴(monsters.json 특기와 같은 수학)"
     },
     "status_resist": {
       "kind": "buff_status_resist",
