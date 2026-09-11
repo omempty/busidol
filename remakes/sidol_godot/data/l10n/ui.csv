@@ -176,6 +176,7 @@ UI_STAIRS_UP,▲ %s,▲ %s
 UI_STAIRS_DOWN,▼ %s,▼ %s
 UI_STAIRS_LOCKED_TAG, (잠김), (locked)
 UI_STAIRS_DEAD,이 계단은 막혀 있다 — 다른 계단을 이용해라,This stairway is blocked — use other stairs
+UI_STAIRS_FAST_KEYS,SPACE=빠른이동,SPACE=Fast travel
 UI_BLOG_ACTION,%s,%s
 UI_BLOG_HIT,%s에게 %d,%s takes %d
 UI_BLOG_WEAK,%s 약점!,%s weak point!

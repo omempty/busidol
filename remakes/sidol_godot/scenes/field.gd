@@ -37,6 +37,8 @@ var fx: FieldFx
 var renderer: MapRenderer
 ## 맵아트 최소 움직임 — 타일 교체 애니메이터(표가 비면 no-op). bind는 renderer.build 직후.
 var tile_animator: MapTileAnimator
+## 맵 때·벽장식 오버레이 — 층 분위기 오염+장식. bind는 renderer.build 직후.
+var dressing_overlay: MapDressingOverlay
 var _talking_npc: NpcEntity
 var _talking_walker: WalkerEntity
 ## 말풍선 기록(세션 한정) — 첫 조우 "!"와 새 대사 "!"를 한 번씩만 띄우기 위함.
@@ -82,6 +84,9 @@ func _ready() -> void:
 	tile_animator = MapTileAnimator.new()
 	add_child(tile_animator)
 	tile_animator.bind_floor(GameState.current_floor, renderer)
+	dressing_overlay = MapDressingOverlay.new()
+	add_child(dressing_overlay)
+	dressing_overlay.bind_floor(GameState.current_floor, runtime)
 
 	fx = FieldFx.new()
 	add_child(fx)
@@ -406,6 +411,13 @@ func _physics_process(_delta: float) -> void:
 		if stair_label.is_empty() and gate.is_travel_anchor(player.mover.grid_pos):
 			stair_label = tr("UI_STAIRS_DEAD")
 		if not stair_label.is_empty():
+			var can_fast: bool = false
+			for f: int in GameState.visited_list():
+				if f != GameState.current_floor:
+					can_fast = true
+					break
+			if can_fast:
+				stair_label += "   " + tr("UI_STAIRS_FAST_KEYS")
 			_prompt.show_at(stair_label, player.position + Vector2(0, -46))
 			return
 
@@ -764,6 +776,8 @@ func rebuild_floor(new_anchor: Vector2i) -> void:
 	_restore_opened_chests()
 	if tile_animator != null:
 		tile_animator.bind_floor(GameState.current_floor, renderer)
+	if dressing_overlay != null:
+		dressing_overlay.bind_floor(GameState.current_floor, runtime)
 	# 착지 보정 — 계단/빠른 이동 앵커가 그 층에서 막혀 있을 수 있다(층마다 지형이 다르다).
 	var landing := _nearest_body_spot(new_anchor)
 	player.attach_map(runtime, landing if landing.x >= 0 else new_anchor)

@@ -215,6 +215,19 @@
         }
       ]
     },
+    "lost_squire_f2": {
+      "_comment": "미아 모험가 Q_F2_POSTER 변형 — F3 연구실 방향 힌트. 던전 개그 유지, 스포일러 금지.",
+      "steps": [
+        {
+          "speaker": "미아 모험가",
+          "text": "@c712"
+        },
+        {
+          "speaker": "미아 모험가",
+          "text": "@c713"
+        }
+      ]
+    },
     "vending_f1_first": {
       "_comment": "방랑 자판기 첫 대화 — 로그 벤딩 선긋기.",
       "steps": [
@@ -308,6 +321,19 @@
         }
       ]
     },
+    "lost_orc_f2": {
+      "_comment": "길 잃은 오크 Q_F2_POSTER 변형 — dworm 주의→F3 독안개/산성 경고. 스포일러 금지.",
+      "steps": [
+        {
+          "speaker": "길 잃은 오크",
+          "text": "@c708"
+        },
+        {
+          "speaker": "길 잃은 오크",
+          "text": "@c709"
+        }
+      ]
+    },
     "lost_princess_first": {
       "_comment": "납치 공주 첫 대화 — 납치 클리셰.",
       "steps": [
@@ -336,6 +362,19 @@
         {
           "speaker": "납치 공주",
           "text": "@c703"
+        }
+      ]
+    },
+    "lost_princess_f2": {
+      "_comment": "납치 공주 Q_F2_POSTER 변형 — 간식→F3 해독제(시약) 소문. 스포일러 금지.",
+      "steps": [
+        {
+          "speaker": "납치 공주",
+          "text": "@c710"
+        },
+        {
+          "speaker": "납치 공주",
+          "text": "@c711"
         }
       ]
     },

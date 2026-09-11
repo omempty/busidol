@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "_comment": "맵 때·벽장식 표(MapDressingOverlay). 층 분위기별 오염 밀도·틴트와 벽 장식 종류·개수. 벽 장식은 벽(attr 1) 옆 통행칸에만 둔다(좌표 측량 불필요). 결정적 해시 배치 — 재입장해도 같은 자리.",
+  "floors": {
+    "0": {
+      "grime": { "density": 40, "tint": [0.5, 0.48, 0.42] },
+      "walls": { "poster": 2, "rust": 2 }
+    },
+    "1": {
+      "grime": { "density": 30, "tint": [0.55, 0.52, 0.45] },
+      "walls": { "poster": 6, "rust": 2 }
+    },
+    "2": {
+      "grime": { "density": 35, "tint": [0.52, 0.52, 0.5] },
+      "walls": { "poster": 6, "graffiti": 2 }
+    },
+    "3": {
+      "grime": { "density": 70, "tint": [0.45, 0.5, 0.28] },
+      "walls": { "rust": 4, "poster": 3 }
+    },
+    "4": {
+      "grime": { "density": 80, "tint": [0.5, 0.3, 0.18] },
+      "walls": { "rust": 5, "graffiti": 3, "blood": 2 }
+    },
+    "5": {
+      "grime": { "density": 45, "tint": [0.4, 0.4, 0.46] },
+      "walls": { "poster": 3, "blood": 1 }
+    }
+  }
+}

@@ -46,6 +46,12 @@
         "lost_squire_f1_repeat",
         "lost_squire_f1_repeat_2"
       ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "lost_squire_f2"
+        }
+      ],
       "_comment": "오마주 워커 파일럿 — CC-BY-SA 시트(Conrad 개조, 32px native x2). 좌우 매핑 교정됨.",
       "pos": [
         85,

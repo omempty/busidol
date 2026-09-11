@@ -42,6 +42,12 @@
         "lost_orc_repeat",
         "lost_orc_repeat_2"
       ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "lost_orc_f2"
+        }
+      ],
       "_comment": "오마주 워커 — 적 오인 개그. 기존 walker_f2 복도(70~130행 검증 구간) 서쪽 짧은 왕복.",
       "pos": [
         78,
@@ -66,6 +72,12 @@
       "repeat_sequence_id": [
         "lost_princess_repeat",
         "lost_princess_repeat_2"
+      ],
+      "sequence_variants": [
+        {
+          "requires_flag": "Q_F2_POSTER",
+          "sequence_id": "lost_princess_f2"
+        }
       ],
       "_comment": "오마주 워커 — 납치 클리셰. 오크 옆 복도 짧은 왕복(듀오).",
       "pos": [

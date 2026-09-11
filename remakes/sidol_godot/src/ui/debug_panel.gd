@@ -32,6 +32,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif (event as InputEventKey).keycode == KEY_F9 and OS.is_debug_build():
 			set_developer_mode(not SettingsManager.developer_mode)
 			get_viewport().set_input_as_handled()
+		elif OS.is_debug_build() and (event as InputEventKey).ctrl_pressed:
+			# 층 직행 — Ctrl+1~6 = 패널 버튼 순서(F1·F2·F3·F0·F4·F5)와 같다.
+			# 1~6 단독은 HUD 퀵슬롯이라 Ctrl을 요구한다.
+			var f := _floor_hotkey((event as InputEventKey).keycode)
+			if f >= 0:
+				_teleport_floor(f)
+				get_viewport().set_input_as_handled()
 
 
 func toggle() -> void:
@@ -64,7 +71,7 @@ func _build() -> void:
 	add_child(vbox)
 
 	var caption := Label.new()
-	caption.text = "DEBUG (F10 닫기) — 변경은 즉시 적용"
+	caption.text = "DEBUG (F10 닫기 · Ctrl+1~6 층 직행) — 변경은 즉시 적용"
 	caption.add_theme_font_size_override("font_size", 16)
 	caption.add_theme_color_override("font_color", Color(1.0, 0.6, 0.9))
 	vbox.add_child(caption)
@@ -219,6 +226,24 @@ func _teleport_floor(floor_no: int) -> void:
 	GameState.player_cell = _entry_anchor(floor_no)
 	get_tree().paused = false
 	get_tree().change_scene_to_file(FIELD_SCENE)
+
+
+## 단축키→층. 패널 버튼 순서(F1·F2·F3·F0·F4·F5)와 같다. 해당 없음은 -1.
+func _floor_hotkey(keycode: Key) -> int:
+	match keycode:
+		KEY_1:
+			return 1
+		KEY_2:
+			return 2
+		KEY_3:
+			return 3
+		KEY_4:
+			return 0
+		KEY_5:
+			return 4
+		KEY_6:
+			return 5
+	return -1
 
 
 func _force_battle(enemy_id: String) -> void:
